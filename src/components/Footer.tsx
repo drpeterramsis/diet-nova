@@ -1,10 +1,10 @@
-import React from 'react';
-
-const Footer: React.FC = () => {
+const Footer = () => {
   return (
-    <footer className="bg-gray-200 text-gray-700 p-4 mt-10">
-      <div className="container mx-auto text-center">
-        &copy; {new Date().getFullYear()} Diet-Nova. All rights reserved.
+    <footer className="fixed bottom-0 left-0 w-full bg-[var(--color-primary-dark)] text-white py-4">
+      <div className="text-center">
+        <p className="text-lg tracking-wide">© 2025 Diet-Nova | Dr. Peter Ramsis <span className="text-sm text-[var(--color-primary-light)] mt-1">
+          All Rights Reserved </span>
+        </p>
       </div>
     </footer>
   );

@@ -30,9 +30,10 @@ const BMI: React.FC = () => {
 
   return (
     <div className="w-full flex flex-col items-center mt-5">
+      {/* Toggle Button */}
       <button
         onClick={toggleVisibility}
-        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        className="bg-primary text-white px-4 py-2 rounded hover:bg-primary-600 transition-colors"
       >
         BMI Calculator
       </button>
@@ -68,7 +69,7 @@ const BMI: React.FC = () => {
 
           <button
             onClick={calculateBMI}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 w-full"
+            className="bg-primary text-white px-4 py-2 rounded w-full hover:bg-primary-600 transition-colors"
           >
             Calculate
           </button>
