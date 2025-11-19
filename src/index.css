@@ -1,4 +1,10 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&family=Noto+Sans+Egyptian+Hieroglyphs&display=swap');
+
+
+
+
+
 
 /* ------------------------------------------------------
    🌿 Diet-Nova Green Theme — Tailwind v4
@@ -33,6 +39,8 @@
   /* Border + Shadow */
   --color-border: #d1fae5;         /* Soft green border */
   --shadow-soft: 0px 4px 12px rgba(0,0,0,0.08);
+
+    --font-main: 'Cairo', sans-serif;
 }
 
 /* ------------------------------------------------------
@@ -51,4 +59,8 @@ body {
   padding: 1.2rem;
   border-radius: 14px;
   box-shadow: var(--shadow-soft);
+}
+
+* {
+  font-family: var(--font-main);
 }
