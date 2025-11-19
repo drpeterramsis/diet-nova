@@ -4,6 +4,8 @@ import Footer from "./components/Footer";
 import ToolCard from "./components/ToolCard";
 import BmiModal from "./components/BmiModal";
 import KcalCalculator from "./components/calculations/KcalCalculator";
+import MealCreator from "./components/tools/MealCreator";
+import FoodExchange from "./components/tools/FoodExchange";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 
 const Dashboard = ({ 
@@ -43,7 +45,7 @@ const Dashboard = ({
 
       {/* Tools Section */}
       <section id="tools" className="container mx-auto px-4 py-20 mb-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <ToolCard
             title={t.tools.bmi.title}
             desc={t.tools.bmi.desc}
@@ -56,6 +58,27 @@ const Dashboard = ({
             desc={t.tools.kcal.desc}
             onClick={() => setActiveTool('kcal')}
             icon={<span className="text-2xl">🔥</span>}
+          />
+
+          <ToolCard
+            title={t.tools.mealCreator.title}
+            desc={t.tools.mealCreator.desc}
+            onClick={() => setActiveTool('meal-creator')}
+            icon={<span className="text-2xl">🥗</span>}
+          />
+
+          <ToolCard
+            title={t.tools.exchangeSimple.title}
+            desc={t.tools.exchangeSimple.desc}
+            onClick={() => setActiveTool('exchange-simple')}
+            icon={<span className="text-2xl">📋</span>}
+          />
+
+           <ToolCard
+            title={t.tools.exchangePro.title}
+            desc={t.tools.exchangePro.desc}
+            onClick={() => setActiveTool('exchange-pro')}
+            icon={<span className="text-2xl">📊</span>}
           />
 
           <ToolCard
@@ -93,6 +116,9 @@ const AppContent = () => {
             </button>
             
             {activeTool === 'kcal' && <KcalCalculator />}
+            {activeTool === 'meal-creator' && <MealCreator />}
+            {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
+            {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
           </div>
         ) : (
           <Dashboard setBmiOpen={setBmiOpen} setActiveTool={setActiveTool} />

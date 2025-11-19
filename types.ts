@@ -31,6 +31,18 @@ export interface Translation {
       title: string;
       desc: string;
     };
+    mealCreator: {
+      title: string;
+      desc: string;
+    };
+    exchangeSimple: {
+      title: string;
+      desc: string;
+    };
+    exchangePro: {
+      title: string;
+      desc: string;
+    };
     bmr: {
       title: string;
       desc: string;
@@ -87,5 +99,19 @@ export interface Translation {
       overweight: string;
       obese: string;
     };
+  };
+  mealCreator: {
+    searchPlaceholder: string;
+    resetCreator: string;
+    mealSummary: string;
+    clear: string;
+    foodName: string;
+    group: string;
+    serves: string;
+    kcal: string;
+    total: string;
+    percentage: string;
+    totalCalories: string;
+    gm: string;
   };
 }

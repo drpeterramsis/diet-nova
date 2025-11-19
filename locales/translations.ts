@@ -31,9 +31,21 @@ export const en: Translation = {
       title: "Kcal Calculator",
       desc: "Advanced calorie calculations for adults.",
     },
+    mealCreator: {
+        title: "Meal Creator",
+        desc: "Create and analyze meals with detailed nutrient breakdowns.",
+    },
+    exchangeSimple: {
+        title: "Food Exchange (Simple)",
+        desc: "Quick reference for food exchanges and portion sizes.",
+    },
+    exchangePro: {
+        title: "Food Exchange (PRO)",
+        desc: "Professional food exchange list with gram measurements.",
+    },
     bmr: {
-      title: "BMR Calculator",
-      desc: "Know your basal metabolic rate.",
+        title: "BMR Calculator",
+        desc: "Calculate your Basal Metabolic Rate.",
     },
   },
   kcal: {
@@ -88,6 +100,20 @@ export const en: Translation = {
       obese: "Obese",
     }
   },
+  mealCreator: {
+    searchPlaceholder: "Search food...",
+    resetCreator: "Reset Creator",
+    mealSummary: "Total Meal Summary",
+    clear: "Clear List",
+    foodName: "Food Name",
+    group: "Group",
+    serves: "Serves",
+    kcal: "Kcal",
+    total: "Total",
+    percentage: "Percentage",
+    totalCalories: "Total Calories",
+    gm: "gm / ml"
+  }
 };
 
 export const ar: Translation = {
@@ -121,9 +147,21 @@ export const ar: Translation = {
       title: "حاسبة السعرات",
       desc: "حسابات متقدمة للسعرات الحرارية للبالغين.",
     },
+    mealCreator: {
+        title: "مبتكر الوجبات",
+        desc: "قم بإنشاء وتحليل الوجبات مع تفاصيل العناصر الغذائية.",
+    },
+    exchangeSimple: {
+        title: "قائمة البدائل (بسيط)",
+        desc: "مرجع سريع لبدائل الطعام وأحجام الحصص.",
+    },
+    exchangePro: {
+        title: "قائمة البدائل (احترافي)",
+        desc: "قائمة بدائل احترافية مع قياسات بالجرام.",
+    },
     bmr: {
-      title: "حاسبة الأيض",
-      desc: "تعرف على معدل الأيض الأساسي.",
+        title: "حاسبة الأيض",
+        desc: "احسب معدل الأيض الأساسي الخاص بك.",
     },
   },
   kcal: {
@@ -178,4 +216,18 @@ export const ar: Translation = {
       obese: "سمنة",
     }
   },
+  mealCreator: {
+    searchPlaceholder: "ابحث عن الطعام...",
+    resetCreator: "إعادة تعيين المبتكر",
+    mealSummary: "ملخص الوجبة الكلي",
+    clear: "مسح القائمة",
+    foodName: "اسم الطعام",
+    group: "المجموعة",
+    serves: "الحصص",
+    kcal: "سعرات",
+    total: "الإجمالي",
+    percentage: "النسبة المئوية",
+    totalCalories: "إجمالي السعرات",
+    gm: "جرام / مل"
+  }
 };
