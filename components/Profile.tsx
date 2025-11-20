@@ -79,26 +79,32 @@ const Profile = () => {
           }
 
           // 1. Delete user saved meals (Application Data)
-          // We handle this separately to ensure data is cleaned even if profile delete has issues
+          // This MUST happen before deleting the profile if foreign key constraints exist (RESTRICT)
+          // We await this explicitly and check for errors.
           const { error: mealsError } = await supabase
               .from('saved_meals')
               .delete()
               .eq('user_id', session.user.id);
               
           if (mealsError) {
-              console.error("Error deleting saved_meals:", mealsError);
-              // We continue even if this fails, to try deleting the profile
+             console.error("Error deleting saved_meals:", mealsError);
+             throw new Error(`Failed to delete saved data: ${mealsError.message}`);
           }
 
           // 2. Delete public profile
-          // Using count: 'exact' to verify deletion
-          const { error: profileError } = await supabase
+          // We use count: 'exact' to ensure we actually performed a deletion
+          const { error: profileError, count } = await supabase
               .from('profiles')
               .delete({ count: 'exact' })
               .eq('id', session.user.id);
               
           if (profileError) throw new Error(`Error deleting profile: ${profileError.message}`);
           
+          // If count is 0, it means the profile wasn't found or RLS prevented deletion
+          if (count === 0) {
+              console.warn("Profile deletion returned 0 rows. It might already be deleted or RLS restricted.");
+          }
+
           // 3. Sign out and redirect
           await supabase.auth.signOut();
           window.location.href = '/';

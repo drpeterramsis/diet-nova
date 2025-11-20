@@ -182,21 +182,21 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
       // If name changes, create NEW (Save As).
       const isUpdate = loadedPlanId && (planName === lastSavedName);
       
-      const basePayload: any = {
-          name: planName,
-          tool_type: 'meal-planner',
-          data: planData,
-          created_at: timestamp
-      };
-
       try {
           let data;
           if (isUpdate) {
              // Explicit UPDATE
-             // Fix: Exclude user_id from payload during update to avoid RLS permission denied errors if user_id column is restricted
+             // Fix: Exclude user_id and created_at from payload during update 
+             // to avoid RLS permission denied errors if these columns are not updatable.
+             const updatePayload = {
+                name: planName,
+                data: planData,
+                // tool_type remains same
+             };
+
              const response = await supabase
                 .from('saved_meals')
-                .update(basePayload)
+                .update(updatePayload)
                 .eq('id', loadedPlanId)
                 .eq('user_id', session.user.id)
                 .select();
@@ -210,7 +210,14 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
              data = response.data[0];
           } else {
              // Explicit INSERT
-             const insertPayload = { ...basePayload, user_id: session.user.id };
+             const insertPayload = {
+                user_id: session.user.id,
+                name: planName,
+                tool_type: 'meal-planner',
+                data: planData,
+                created_at: timestamp
+             };
+
              const response = await supabase
                 .from('saved_meals')
                 .insert(insertPayload)

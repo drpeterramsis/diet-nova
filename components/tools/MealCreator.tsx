@@ -133,22 +133,23 @@ const MealCreator: React.FC = () => {
     // If no loadedPlanId -> Create New.
     const isUpdate = loadedPlanId && (planName === lastSavedName);
 
-    const basePayload: any = {
-        name: planName,
-        tool_type: 'meal-creator',
-        data: planData,
-        created_at: timestamp
-    };
-
     try {
         let data;
         
         if (isUpdate) {
             // Explicit UPDATE
-            // Fix: Exclude user_id from payload during update to avoid RLS permission denied errors if user_id column is restricted
+            // IMPORTANT: We must ONLY update fields that are allowed. 
+            // Updating 'user_id' or 'created_at' can cause RLS violation errors even if the value hasn't changed.
+            const updatePayload = {
+                name: planName,
+                data: planData,
+                // tool_type is constant, but usually safe to include or exclude if it doesn't change.
+                // timestamp for created_at should NOT be updated.
+            };
+
             const response = await supabase
                 .from('saved_meals')
-                .update(basePayload)
+                .update(updatePayload)
                 .eq('id', loadedPlanId)
                 .eq('user_id', session.user.id) // Explicit RLS match
                 .select();
@@ -161,7 +162,15 @@ const MealCreator: React.FC = () => {
             data = response.data[0];
         } else {
             // Explicit INSERT
-            const insertPayload = { ...basePayload, user_id: session.user.id };
+            // Here we MUST include user_id and created_at
+            const insertPayload = {
+                user_id: session.user.id,
+                name: planName,
+                tool_type: 'meal-creator',
+                data: planData,
+                created_at: timestamp
+            };
+
             const response = await supabase
                 .from('saved_meals')
                 .insert(insertPayload)
