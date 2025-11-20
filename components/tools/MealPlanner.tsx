@@ -173,16 +173,40 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
       };
 
       try {
-          const { error } = await supabase.from('saved_meals').insert([{
-              user_id: session.user.id,
-              name: planName,
-              tool_type: 'meal-planner',
-              data: planData
-          }]);
+          // 1. Check for existing plan
+          const { data: existing } = await supabase
+            .from('saved_meals')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .eq('tool_type', 'meal-planner')
+            .eq('name', planName)
+            .single();
 
-          if (error) throw error;
-          
-          setStatusMsg(t.common.saveSuccess);
+          if (existing) {
+              if (!window.confirm(`A plan named "${planName}" already exists. Update it?`)) {
+                  return;
+              }
+              // UPDATE
+              const { error } = await supabase
+                  .from('saved_meals')
+                  .update({ data: planData, created_at: new Date() })
+                  .eq('id', existing.id);
+              
+              if (error) throw error;
+              setStatusMsg("Updated successfully!");
+          } else {
+              // INSERT
+              const { error } = await supabase.from('saved_meals').insert([{
+                  user_id: session.user.id,
+                  name: planName,
+                  tool_type: 'meal-planner',
+                  data: planData
+              }]);
+              
+              if (error) throw error;
+              setStatusMsg(t.common.saveSuccess);
+          }
+
           setTimeout(() => setStatusMsg(''), 3000);
           setShowSaveModal(false);
           setPlanName('');
@@ -199,6 +223,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
       setTargetKcal(plan.data.targetKcal || 0);
       setManualGm(plan.data.manualGm || {cho:0, pro:0, fat:0});
       setManualPerc(plan.data.manualPerc || {cho:0, pro:0, fat:0});
+      setPlanName(plan.name); // Auto-fill name for easy updating
       
       setShowLoadModal(false);
       setStatusMsg(t.common.loadSuccess);
@@ -206,6 +231,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
   };
 
   const deletePlan = async (id: string) => {
+      if (!window.confirm("Are you sure you want to delete this plan?")) return;
       try {
           const { error } = await supabase.from('saved_meals').delete().eq('id', id);
           if (error) throw error;

@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova v2.0.25",
-  "description": "UI Enhancements, Role Renaming, Meal Creator Save/Load, and Password Visibility Toggle",
+  "name": "Diet-Nova v2.0.26",
+  "description": "Features: User Menu, Enhanced Save with Duplicate Detection, and UI Refinements",
   "requestFramePermissions": []
 }

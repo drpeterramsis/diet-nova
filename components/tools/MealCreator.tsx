@@ -117,16 +117,40 @@ const MealCreator: React.FC = () => {
     const planData = { addedFoods };
 
     try {
-        const { error } = await supabase.from('saved_meals').insert([{
-            user_id: session.user.id,
-            name: planName,
-            tool_type: 'meal-creator',
-            data: planData
-        }]);
+        // 1. Check for existing plan with same name for this user
+        const { data: existing } = await supabase
+          .from('saved_meals')
+          .select('id')
+          .eq('user_id', session.user.id)
+          .eq('tool_type', 'meal-creator')
+          .eq('name', planName)
+          .single();
 
-        if (error) throw error;
+        if (existing) {
+            if (!window.confirm(`A plan named "${planName}" already exists. Update it?`)) {
+                return; 
+            }
+            // UPDATE existing
+            const { error } = await supabase
+                .from('saved_meals')
+                .update({ data: planData, created_at: new Date() }) // Update timestamp too
+                .eq('id', existing.id);
+            
+            if (error) throw error;
+            setStatusMsg("Updated successfully!");
+        } else {
+            // INSERT new
+            const { error } = await supabase.from('saved_meals').insert([{
+                user_id: session.user.id,
+                name: planName,
+                tool_type: 'meal-creator',
+                data: planData
+            }]);
+
+            if (error) throw error;
+            setStatusMsg(t.common.saveSuccess);
+        }
         
-        setStatusMsg(t.common.saveSuccess);
         setTimeout(() => setStatusMsg(''), 3000);
         setShowSaveModal(false);
         setPlanName('');
@@ -139,12 +163,15 @@ const MealCreator: React.FC = () => {
   const loadPlan = (plan: SavedMeal) => {
     if (!plan.data || !plan.data.addedFoods) return;
     setAddedFoods(plan.data.addedFoods);
+    // Optionally auto-fill name to update easily
+    setPlanName(plan.name); 
     setShowLoadModal(false);
     setStatusMsg(t.common.loadSuccess);
     setTimeout(() => setStatusMsg(''), 3000);
   };
 
   const deletePlan = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this meal?")) return;
     try {
         const { error } = await supabase.from('saved_meals').delete().eq('id', id);
         if (error) throw error;
