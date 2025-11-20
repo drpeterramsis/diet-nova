@@ -1,6 +1,21 @@
 
 export type Language = 'en' | 'ar';
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string;
+  role: 'doctor' | 'patient';
+}
+
+export interface SavedMeal {
+  id: string;
+  name: string;
+  created_at: string;
+  data: any; // JSON data of the meal plan
+  tool_type: 'meal-planner' | 'meal-creator';
+}
+
 export interface Translation {
   common: {
     backHome: string;
@@ -14,6 +29,30 @@ export interface Translation {
     viewAll: string;
     resetView: string;
     copyright: string;
+    save: string;
+    load: string;
+    delete: string;
+    saveSuccess: string;
+    loadSuccess: string;
+    logout: string;
+    loginRequired: string;
+    locked: string;
+  };
+  auth: {
+    loginTitle: string;
+    signupTitle: string;
+    email: string;
+    password: string;
+    fullName: string;
+    role: string;
+    doctor: string;
+    patient: string;
+    submitLogin: string;
+    submitSignup: string;
+    switchSignup: string;
+    switchLogin: string;
+    errorGeneric: string;
+    successSignup: string;
   };
   header: {
     home: string;

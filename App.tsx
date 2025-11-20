@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ToolCard from "./components/ToolCard";
@@ -9,16 +9,23 @@ import MealCreator from "./components/tools/MealCreator";
 import FoodExchange from "./components/tools/FoodExchange";
 import MealPlanner from "./components/tools/MealPlanner";
 import ScrollToTopButton from "./components/ScrollToTopButton";
+import Login from "./components/Login";
+import Loading from "./components/Loading";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { Session } from "@supabase/supabase-js";
 
 const Dashboard = ({ 
   setBmiOpen, 
-  setActiveTool 
+  onToolClick,
+  session
 }: { 
   setBmiOpen: (v: boolean) => void, 
-  setActiveTool: (v: string) => void 
+  onToolClick: (toolId: string) => void,
+  session: Session | null
 }) => {
   const { t, isRTL } = useLanguage();
+  const { profile } = useAuth();
   
   return (
     <>
@@ -31,6 +38,12 @@ const Dashboard = ({
         </div>
 
         <div className="relative z-10 container mx-auto px-4 animate-fade-in">
+          {session && (
+              <div className="mb-4 inline-block px-4 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">
+                {profile?.role === 'doctor' ? `👨‍⚕️ ${t.auth.doctor}` : `👤 ${t.auth.patient}`} : {profile?.full_name}
+              </div>
+          )}
+          
           <h2 className="text-4xl md:text-6xl font-extrabold text-[var(--color-heading)] mb-6 leading-tight">
             {t.home.welcome}
           </h2>
@@ -59,35 +72,36 @@ const Dashboard = ({
           <ToolCard
             title={t.tools.kcal.title}
             desc={t.tools.kcal.desc}
-            onClick={() => setActiveTool('kcal')}
+            onClick={() => onToolClick('kcal')}
             icon={<span className="text-2xl">🔥</span>}
           />
 
           <ToolCard
             title={t.tools.mealCreator.title}
             desc={t.tools.mealCreator.desc}
-            onClick={() => setActiveTool('meal-creator')}
+            onClick={() => onToolClick('meal-creator')}
             icon={<span className="text-2xl">🥗</span>}
+            locked={!session}
           />
 
            <ToolCard
             title={t.tools.mealPlanner.title}
             desc={t.tools.mealPlanner.desc}
-            onClick={() => setActiveTool('meal-planner')}
+            onClick={() => onToolClick('meal-planner')}
             icon={<span className="text-2xl">📅</span>}
           />
 
           <ToolCard
             title={t.tools.exchangeSimple.title}
             desc={t.tools.exchangeSimple.desc}
-            onClick={() => setActiveTool('exchange-simple')}
+            onClick={() => onToolClick('exchange-simple')}
             icon={<span className="text-2xl">📋</span>}
           />
 
            <ToolCard
             title={t.tools.exchangePro.title}
             desc={t.tools.exchangePro.desc}
-            onClick={() => setActiveTool('exchange-pro')}
+            onClick={() => onToolClick('exchange-pro')}
             icon={<span className="text-2xl">📊</span>}
           />
 
@@ -108,12 +122,28 @@ const AppContent = () => {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [previousTool, setPreviousTool] = useState<string | null>(null);
   const [plannedKcal, setPlannedKcal] = useState<number>(0);
+  const [showLogin, setShowLogin] = useState(false);
+  
   const { t, isRTL } = useLanguage();
+  const { session, loading } = useAuth();
 
   // Auto scroll to top when activeTool changes
-  React.useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  useEffect(() => {
+    if (activeTool) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }, [activeTool]);
+
+  // Close login modal automatically on successful login
+  useEffect(() => {
+    if (session) {
+        setShowLogin(false);
+    }
+  }, [session]);
+
+  if (loading) {
+    return <Loading fullScreen text="Initializing Diet-Nova..." />;
+  }
 
   const handleNavHome = () => {
     setActiveTool(null);
@@ -130,6 +160,15 @@ const AppContent = () => {
         toolsSection.scrollIntoView({ behavior: 'smooth' });
       }
     }, 100);
+  };
+
+  const handleToolClick = (toolId: string) => {
+      // Check restrictions
+      if (toolId === 'meal-creator' && !session) {
+          setShowLogin(true);
+          return;
+      }
+      setActiveTool(toolId);
   };
 
   const handlePlanMeals = (kcal: number) => {
@@ -152,7 +191,11 @@ const AppContent = () => {
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[var(--color-bg)]">
-      <Header onNavigateHome={handleNavHome} onNavigateTools={handleNavTools} />
+      <Header 
+        onNavigateHome={handleNavHome} 
+        onNavigateTools={handleNavTools} 
+        onLoginClick={() => setShowLogin(true)}
+      />
 
       <main className="flex-grow">
         {activeTool ? (
@@ -192,14 +235,20 @@ const AppContent = () => {
 
           </div>
         ) : (
-          <Dashboard setBmiOpen={setBmiOpen} setActiveTool={setActiveTool} />
+          <Dashboard setBmiOpen={setBmiOpen} onToolClick={handleToolClick} session={session} />
         )}
       </main>
 
-      {/* ScrollToTopButton moved outside of main container to escape CSS transforms/animations */}
+      {/* ScrollToTopButton */}
       <ScrollToTopButton />
 
+      {/* Modals */}
       <BmiModal open={bmiOpen} onClose={() => setBmiOpen(false)} />
+      
+      {showLogin && (
+        <Login onClose={() => setShowLogin(false)} />
+      )}
+      
       <Footer />
     </div>
   );
@@ -208,7 +257,9 @@ const AppContent = () => {
 function App() {
   return (
     <LanguageProvider>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </LanguageProvider>
   );
 }

@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 
@@ -9,7 +10,8 @@ const Footer = () => {
       <div className="text-center">
         <p className="text-sm tracking-wide px-4">
           © 2025 Diet-Nova | Dr. Peter Ramsis
-          <span className="block text-xs text-[var(--color-primary-light)] mt-1 opacity-80">
+          <span className="mx-2 text-[var(--color-primary-light)] opacity-50">|</span>
+          <span className="text-xs text-[var(--color-primary-light)] opacity-80 uppercase">
             {t.common.copyright}
           </span>
         </p>
