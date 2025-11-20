@@ -61,6 +61,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [planName, setPlanName] = useState('');
   const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
+  const [lastSavedName, setLastSavedName] = useState<string>('');
   const [savedPlans, setSavedPlans] = useState<SavedMeal[]>([]);
   const [statusMsg, setStatusMsg] = useState('');
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
@@ -177,36 +178,39 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
       };
       const timestamp = new Date().toISOString();
 
+      const payload: any = {
+          user_id: session.user.id,
+          name: planName,
+          tool_type: 'meal-planner',
+          data: planData,
+          created_at: timestamp
+      };
+
+      // Logic: If loadedPlanId is present AND name is the same -> Update.
+      // If name changes, create NEW (Save As).
+      const isUpdate = loadedPlanId && (planName === lastSavedName);
+
+      if (isUpdate) {
+         payload.id = loadedPlanId;
+      }
+
       try {
-          if (loadedPlanId) {
-              // Update existing (Allow Rename)
-              const { error } = await supabase
-                  .from('saved_meals')
-                  .update({ 
-                      name: planName,
-                      data: planData, 
-                      created_at: timestamp 
-                  })
-                  .eq('id', loadedPlanId)
-                  .eq('user_id', session.user.id);
+          const { data, error } = await supabase
+                .from('saved_meals')
+                .upsert(payload)
+                .select()
+                .single();
               
-              if (error) throw error;
-              setStatusMsg("Plan updated successfully!");
-          } else {
-              // Insert New
-              const { data, error } = await supabase.from('saved_meals').insert([{
-                  user_id: session.user.id,
-                  name: planName,
-                  tool_type: 'meal-planner',
-                  data: planData,
-                  created_at: timestamp
-              }]).select();
-              
-              if (error) throw error;
-              if (data && data[0]) {
-                  setLoadedPlanId(data[0].id);
+          if (error) throw error;
+          
+          if (data) {
+              setLoadedPlanId(data.id);
+              setLastSavedName(data.name);
+              if (isUpdate) {
+                  setStatusMsg("Plan Updated Successfully!");
+              } else {
+                  setStatusMsg("Plan Saved as New Entry!");
               }
-              setStatusMsg(t.common.saveSuccess);
           }
 
           fetchPlans();
@@ -227,6 +231,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
       setManualPerc(plan.data.manualPerc || {cho:0, pro:0, fat:0});
       setPlanName(plan.name);
       setLoadedPlanId(plan.id);
+      setLastSavedName(plan.name);
       
       setShowLoadModal(false);
       setStatusMsg(t.common.loadSuccess);
@@ -242,6 +247,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
           if (loadedPlanId === id) {
               setLoadedPlanId(null);
               setPlanName('');
+              setLastSavedName('');
           }
       } catch (err) {
           console.error("Error deleting:", err);
@@ -257,6 +263,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
       setTargetKcal(0);
       setPlanName('');
       setLoadedPlanId(null);
+      setLastSavedName('');
   };
 
   return (
@@ -276,7 +283,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
            <div className="relative flex-grow md:flex-grow-0">
                 <input 
                     type="text"
-                    placeholder="Enter Meal Name..."
+                    placeholder="Enter Plan Name..."
                     value={planName}
                     onChange={(e) => setPlanName(e.target.value)}
                     className="w-full md:w-64 px-4 py-2 pl-9 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-gray-800 font-medium"

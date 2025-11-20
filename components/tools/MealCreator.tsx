@@ -16,6 +16,7 @@ const MealCreator: React.FC = () => {
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [planName, setPlanName] = useState('');
   const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
+  const [lastSavedName, setLastSavedName] = useState<string>(''); // Track name to detect changes
   const [savedPlans, setSavedPlans] = useState<SavedMeal[]>([]);
   const [statusMsg, setStatusMsg] = useState('');
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
@@ -53,6 +54,7 @@ const MealCreator: React.FC = () => {
     setSearchQuery("");
     setPlanName("");
     setLoadedPlanId(null);
+    setLastSavedName("");
   };
 
   // Calculations
@@ -122,41 +124,48 @@ const MealCreator: React.FC = () => {
     }
     if (!session) return;
     
-    // Construct payload with current state
     const planData = { addedFoods };
     const timestamp = new Date().toISOString();
 
-    try {
-        if (loadedPlanId) {
-            // UPDATE EXISTING (Rename supported)
-            const { error } = await supabase
-                .from('saved_meals')
-                .update({ 
-                    name: planName,
-                    data: planData, 
-                    created_at: timestamp 
-                })
-                .eq('id', loadedPlanId)
-                .eq('user_id', session.user.id); // Safety check
-            
-            if (error) throw error;
-            setStatusMsg("Meal updated successfully!");
-        } else {
-            // SAVE NEW
-            const { data, error } = await supabase.from('saved_meals').insert([{
-                user_id: session.user.id,
-                name: planName,
-                tool_type: 'meal-creator',
-                data: planData,
-                created_at: timestamp
-            }]).select();
+    const payload: any = {
+        user_id: session.user.id,
+        name: planName,
+        tool_type: 'meal-creator',
+        data: planData,
+        created_at: timestamp // Updating timestamp forces an update if ID matches
+    };
 
-            if (error) throw error;
-            
-            if (data && data[0]) {
-                setLoadedPlanId(data[0].id);
+    // Logic: 
+    // If we have a loadedPlanId AND the name hasn't changed -> Update existing.
+    // If we have a loadedPlanId BUT the name CHANGED -> Treat as New (Save As).
+    // If no loadedPlanId -> Create New.
+    
+    const isUpdate = loadedPlanId && (planName === lastSavedName);
+
+    if (isUpdate) {
+        payload.id = loadedPlanId;
+    } else {
+        // It's a new entry, so we don't send ID. Supabase generates a new one.
+        // Note: If the name changed, we treat it as "Save As"
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('saved_meals')
+            .upsert(payload)
+            .select()
+            .single();
+
+        if (error) throw error;
+        
+        if (data) {
+            setLoadedPlanId(data.id);
+            setLastSavedName(data.name);
+            if (isUpdate) {
+                setStatusMsg("Meal Updated Successfully!");
+            } else {
+                setStatusMsg("Meal Saved as New Entry!");
             }
-            setStatusMsg(t.common.saveSuccess);
         }
         
         fetchPlans(); // Refresh list
@@ -169,10 +178,10 @@ const MealCreator: React.FC = () => {
 
   const loadPlan = (plan: SavedMeal) => {
     if (!plan.data || !plan.data.addedFoods) return;
-    // Ensure state is completely replaced
     setAddedFoods([...plan.data.addedFoods]);
     setPlanName(plan.name);
     setLoadedPlanId(plan.id); 
+    setLastSavedName(plan.name); // Set baseline for name change detection
     setShowLoadModal(false);
     setStatusMsg(t.common.loadSuccess);
     setTimeout(() => setStatusMsg(''), 3000);
@@ -186,6 +195,7 @@ const MealCreator: React.FC = () => {
         setSavedPlans(prev => prev.filter(p => p.id !== id));
         if (loadedPlanId === id) {
             setLoadedPlanId(null);
+            setLastSavedName("");
             setPlanName('');
         }
     } catch (err) {
@@ -209,7 +219,7 @@ const MealCreator: React.FC = () => {
                     <div className="relative flex-grow">
                         <input 
                             type="text"
-                            placeholder="Meal Name..."
+                            placeholder="Enter Meal Name..."
                             value={planName}
                             onChange={(e) => setPlanName(e.target.value)}
                             className="w-full md:w-64 px-4 py-2 pl-9 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"

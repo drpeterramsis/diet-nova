@@ -48,9 +48,15 @@ const Profile = () => {
         if (authError) throw authError;
       }
 
-      setMsg({ type: 'success', content: 'Profile updated successfully!' });
+      setMsg({ type: 'success', content: 'Profile updated successfully! Reloading...' });
       setPassword('');
       setConfirmPassword('');
+
+      // Reload the page to apply settings to Header and app context
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+
     } catch (error: any) {
       setMsg({ type: 'error', content: error.message });
     } finally {
@@ -72,6 +78,7 @@ const Profile = () => {
           if (!session?.user.id) return;
 
           // 1. Delete user saved meals (Application Data)
+          // Explicitly delete all rows linked to this user_id
           const { error: mealsError } = await supabase
               .from('saved_meals')
               .delete()
@@ -89,6 +96,7 @@ const Profile = () => {
           
           // 3. Sign out (Auth user deletion is restricted via client usually, this clears session)
           await supabase.auth.signOut();
+          window.location.reload();
       } catch (err: any) {
           console.error(err);
           setMsg({ type: 'error', content: "Failed to delete account: " + err.message });
