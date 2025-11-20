@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.15",
-  "description": "Login addition",
+  "name": "Diet-Nova v2.0.17",
+  "description": "Fix Vercel deployment build error",
   "requestFramePermissions": []
 }
