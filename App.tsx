@@ -6,6 +6,7 @@ import BmiModal from "./components/BmiModal";
 import KcalCalculator from "./components/calculations/KcalCalculator";
 import MealCreator from "./components/tools/MealCreator";
 import FoodExchange from "./components/tools/FoodExchange";
+import ScrollToTopButton from "./components/ScrollToTopButton";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 
 const Dashboard = ({ 
@@ -98,9 +99,29 @@ const AppContent = () => {
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const { t, isRTL } = useLanguage();
 
+  // Auto scroll to top when activeTool changes
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeTool]);
+
+  const handleNavHome = () => {
+    setActiveTool(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNavTools = () => {
+    setActiveTool(null);
+    setTimeout(() => {
+      const toolsSection = document.getElementById('tools');
+      if (toolsSection) {
+        toolsSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[var(--color-bg)]">
-      <Header />
+      <Header onNavigateHome={handleNavHome} onNavigateTools={handleNavTools} />
 
       <main className="flex-grow">
         {activeTool ? (
@@ -119,11 +140,15 @@ const AppContent = () => {
             {activeTool === 'meal-creator' && <MealCreator />}
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
             {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
+
           </div>
         ) : (
           <Dashboard setBmiOpen={setBmiOpen} setActiveTool={setActiveTool} />
         )}
       </main>
+
+      {/* ScrollToTopButton moved outside of main container to escape CSS transforms/animations */}
+      <ScrollToTopButton />
 
       <BmiModal open={bmiOpen} onClose={() => setBmiOpen(false)} />
       <Footer />

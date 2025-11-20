@@ -221,9 +221,12 @@ const MealCreator: React.FC = () => {
               <h4 className="font-bold text-sm text-gray-600 mb-2">Group Breakdown</h4>
               <div className="space-y-1 text-xs">
                 {Object.entries(summary.groupSummary).map(([group, val]: [string, any]) => (
-                  <div key={group} className="flex justify-between p-1 border-b border-gray-50 last:border-0">
-                    <span>{group}</span>
-                    <span className="font-mono text-[var(--color-primary)]">{val.kcal.toFixed(0)} kcal</span>
+                  <div key={group} className="flex justify-between items-center p-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition">
+                    <span className="font-medium text-gray-700">{group}</span>
+                    <div className="text-right">
+                        <span className="font-mono text-[var(--color-primary)] font-bold block">{val.kcal.toFixed(0)} kcal</span>
+                        <span className="text-[10px] text-gray-500 block">{val.serves.toFixed(2)} Serves</span>
+                    </div>
                   </div>
                 ))}
               </div>
