@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { ProgressBar } from '../Visuals';
+import { ProgressBar, MacroDonut } from '../Visuals';
 
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
   starch: { cho: 15, pro: 3, fat: 0, kcal: 80 },
@@ -21,6 +21,30 @@ const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kca
 const GROUPS = Object.keys(GROUP_FACTORS);
 const MEALS = ['snack1', 'breakfast', 'snack2', 'lunch', 'snack3', 'dinner', 'snack4'];
 
+// --- Extracted Component to prevent re-renders/focus loss ---
+interface TargetKcalInputProps {
+  value: number;
+  onChange: (val: number) => void;
+  label: string;
+}
+
+const TargetKcalInput: React.FC<TargetKcalInputProps> = ({ value, onChange, label }) => (
+    <div className="mb-6">
+        <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">{label}</label>
+        <div className="relative">
+            <input 
+                type="number" 
+                className="w-full p-2 border-2 border-[var(--color-primary)] rounded-lg text-center font-bold text-xl text-[var(--color-primary-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] bg-white"
+                placeholder="0"
+                value={value || ''} 
+                onChange={(e) => onChange(parseFloat(e.target.value))}
+                dir="ltr"
+            />
+            <span className="absolute right-3 top-3 text-gray-400 text-xs font-medium">Kcal</span>
+        </div>
+    </div>
+);
+
 interface MealPlannerProps {
   initialTargetKcal?: number;
   onBack?: () => void;
@@ -39,8 +63,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
   const [targetKcal, setTargetKcal] = useState<number>(0);
   const [manualGm, setManualGm] = useState({ cho: 0, pro: 0, fat: 0 });
   const [manualPerc, setManualPerc] = useState({ cho: 0, pro: 0, fat: 0 });
-  const [showTargetGm, setShowTargetGm] = useState(false);
-  const [showTargetPerc, setShowTargetPerc] = useState(false);
+  const [activeTargetTab, setActiveTargetTab] = useState<'none' | 'gm' | 'perc'>('none');
 
   // Initialize target if provided prop
   useEffect(() => {
@@ -87,14 +110,6 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
     const tot = exchangeTotals.totals;
     const remainKcal = targetKcal - tot.kcal;
     
-    // % relative to Target Kcal
-    const percTarget = targetKcal > 0 ? {
-       cho: (tot.cho * 4 / targetKcal) * 100,
-       pro: (tot.pro * 4 / targetKcal) * 100,
-       fat: (tot.fat * 9 / targetKcal) * 100,
-       kcal: (tot.kcal / targetKcal) * 100
-    } : { cho: 0, pro: 0, fat: 0, kcal: 0 };
-
     // % relative to Calculated Total Kcal
     const percCalc = tot.kcal > 0 ? {
       cho: (tot.cho * 4 / tot.kcal) * 100,
@@ -102,7 +117,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
       fat: (tot.fat * 9 / tot.kcal) * 100
     } : { cho: 0, pro: 0, fat: 0 };
 
-    return { remainKcal, percTarget, percCalc };
+    return { remainKcal, percCalc };
   }, [exchangeTotals, targetKcal]);
 
   // 3. Manual Target Calcs
@@ -119,8 +134,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
        cho: (manualGm.cho * 4 / targetKcal) * 100,
        pro: (manualGm.pro * 4 / targetKcal) * 100,
        fat: (manualGm.fat * 9 / targetKcal) * 100,
-       total: ((manualGm.cho * 4 + manualGm.pro * 4 + manualGm.fat * 9) / targetKcal) * 100
-     } : { cho: 0, pro: 0, fat: 0, total: 0 };
+     } : { cho: 0, pro: 0, fat: 0 };
 
      return { totalInputKcal, remain, targetPercFromGm };
   }, [manualGm, exchangeTotals, targetKcal]);
@@ -149,11 +163,9 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
   // 4. Meal Planner Calculations
   const plannerCalculations = useMemo(() => {
      const groupUsed: Record<string, number> = {};
-     let totalUsedServes = 0;
      
      GROUPS.forEach(g => {
        groupUsed[g] = MEALS.reduce((acc, m) => acc + (distribution[g]?.[m] || 0), 0);
-       totalUsedServes += groupUsed[g];
      });
      
      const remainingServes: Record<string, number> = {};
@@ -172,9 +184,6 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
        pTotals.kcal += s * f.kcal;
      });
      
-     const pRemainKcal = targetKcal - pTotals.kcal;
-     
-     // Planner % of Target
      const pPercTarget = targetKcal > 0 ? {
         cho: (pTotals.cho * 4 / targetKcal) * 100,
         pro: (pTotals.pro * 4 / targetKcal) * 100,
@@ -182,7 +191,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
         kcal: (pTotals.kcal / targetKcal) * 100
      } : { cho: 0, pro: 0, fat: 0, kcal: 0 };
 
-     return { groupUsed, remainingServes, pTotals, pRemainKcal, pPercTarget };
+     return { groupUsed, remainingServes, pTotals, pPercTarget };
 
   }, [distribution, servings, targetKcal]);
 
@@ -208,292 +217,309 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
     setManualGm({ cho: 0, pro: 0, fat: 0 });
     setManualPerc({ cho: 0, pro: 0, fat: 0 });
     setTargetKcal(0);
+    setActiveTargetTab('none');
   };
 
-  // Helper to color numbers
   const colorNum = (val: number, isZeroRed = false) => {
-     if (val === 0) return isZeroRed ? 'text-red-500' : 'text-gray-400';
+     if (val === 0) return isZeroRed ? 'text-red-400' : 'text-gray-300';
      return 'text-blue-600';
   };
 
   const T = t.mealPlannerTool;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in pb-20">
+    <div className="max-w-[1600px] mx-auto space-y-6 animate-fade-in pb-20">
       
-      {/* Top Controls */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-[var(--color-border)]">
-         <div className="flex gap-2 w-full md:w-auto flex-wrap">
+      {/* Top Navigation Bar */}
+      <div className="flex flex-wrap gap-4 justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-[var(--color-border)] sticky top-0 z-20">
+         <div className="flex items-center gap-3">
              {onBack && (
                  <button 
                    onClick={onBack}
-                   className="flex-1 md:flex-none px-4 py-2 rounded-lg transition bg-green-100 text-green-800 hover:bg-green-200 font-medium flex items-center justify-center gap-2"
+                   className="px-4 py-2 rounded-lg bg-green-100 text-green-800 hover:bg-green-200 font-medium flex items-center gap-2 transition"
                  >
-                   <span className="transform rotate-180">➥</span> {t.common.backToCalculator}
+                   <span className="transform rotate-180 text-xl">➥</span> 
+                   <span className="hidden sm:inline">{t.common.backToCalculator}</span>
                  </button>
              )}
-             <button onClick={() => setViewMode('calculator')} className={`flex-1 md:flex-none px-4 py-2 rounded-lg transition ${viewMode === 'calculator' ? 'bg-[var(--color-primary)] text-white' : 'bg-gray-100'}`}>
+             <h1 className="text-xl font-bold text-[var(--color-heading)] hidden md:block">
+                {viewMode === 'calculator' ? T.modeCalculator : viewMode === 'planner' ? T.modePlanner : T.modeBoth}
+             </h1>
+         </div>
+
+         <div className="flex bg-gray-100 p-1 rounded-lg">
+             <button onClick={() => setViewMode('calculator')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${viewMode === 'calculator' ? 'bg-white text-[var(--color-primary)] shadow' : 'text-gray-500'}`}>
                {T.modeCalculator}
              </button>
-             <button onClick={() => setViewMode('planner')} className={`flex-1 md:flex-none px-4 py-2 rounded-lg transition ${viewMode === 'planner' ? 'bg-[var(--color-primary)] text-white' : 'bg-gray-100'}`}>
+             <button onClick={() => setViewMode('planner')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${viewMode === 'planner' ? 'bg-white text-[var(--color-primary)] shadow' : 'text-gray-500'}`}>
                {T.modePlanner}
              </button>
-             <button onClick={() => setViewMode('both')} className={`flex-1 md:flex-none px-4 py-2 rounded-lg transition ${viewMode === 'both' ? 'bg-[var(--color-primary)] text-white' : 'bg-gray-100'}`}>
+             <button onClick={() => setViewMode('both')} className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${viewMode === 'both' ? 'bg-white text-[var(--color-primary)] shadow' : 'text-gray-500'}`}>
                {T.modeBoth}
              </button>
          </div>
-         <button onClick={resetAll} className="px-6 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition w-full md:w-auto">
+         
+         <button onClick={resetAll} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition text-sm font-medium">
             {t.common.reset}
          </button>
       </div>
 
-      <div className={`grid grid-cols-1 ${viewMode === 'both' ? 'xl:grid-cols-2' : ''} gap-8`}>
+      {/* MAIN CONTENT GRID */}
+      <div className="grid grid-cols-1 gap-8">
         
-        {/* CALCULATOR SECTION */}
+        {/* --- MODE: CALCULATOR --- */}
         {(viewMode === 'calculator' || viewMode === 'both') && (
-          <div className="space-y-6">
-             <div className="card bg-white shadow-lg border-0 ring-1 ring-gray-200">
-                <div className="text-center mb-4 border-b pb-4">
-                   <h2 className="text-2xl font-bold text-[var(--color-heading)]">{T.modeCalculator}</h2>
-                   {targetKcal === 0 && <p className="text-xs bg-yellow-100 text-yellow-800 inline-block px-2 py-1 rounded mt-2">{T.addTotalKcalFirst}</p>}
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-[var(--color-bg-soft)] text-[var(--color-heading)] border-b border-green-100">
-                        <th className="p-3 text-left">{T.foodGroup}</th>
-                        <th className="p-3 w-20 text-center">{T.serves}</th>
-                        <th className="p-3 text-center">{T.cho}</th>
-                        <th className="p-3 text-center">{T.pro}</th>
-                        <th className="p-3 text-center">{T.fat}</th>
-                        <th className="p-3 text-center">{T.kcal}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                       {GROUPS.map(g => (
-                         <tr key={g} className="hover:bg-gray-50">
-                           <td className="p-2 font-medium">{T.groups[g as keyof typeof T.groups]}</td>
-                           <td className="p-2 text-center">
-                             <input 
-                               type="number" min="0" step="0.5" 
-                               value={servings[g]} 
-                               onChange={(e) => handleServeChange(g, Number(e.target.value))}
-                               className="w-16 p-1 border rounded text-center focus:ring-2 focus:ring-[var(--color-primary)]"
-                               dir="ltr"
-                             />
-                           </td>
-                           <td className={`p-2 text-center font-mono ${colorNum(exchangeTotals.groupDetails[g].cho)}`}>{exchangeTotals.groupDetails[g].cho}</td>
-                           <td className={`p-2 text-center font-mono ${colorNum(exchangeTotals.groupDetails[g].pro)}`}>{exchangeTotals.groupDetails[g].pro}</td>
-                           <td className={`p-2 text-center font-mono ${colorNum(exchangeTotals.groupDetails[g].fat)}`}>{exchangeTotals.groupDetails[g].fat}</td>
-                           <td className={`p-2 text-center font-mono font-bold ${colorNum(exchangeTotals.groupDetails[g].kcal)}`}>{exchangeTotals.groupDetails[g].kcal}</td>
-                         </tr>
-                       ))}
-                       
-                       {/* Totals Row */}
-                       <tr className="bg-yellow-50 font-bold border-t-2 border-yellow-200">
-                          <td className="p-3 text-yellow-900">{T.totals}</td>
-                          <td className="p-3 text-center">
-                             <input 
-                               type="number" placeholder="Target" 
-                               value={targetKcal || ''} onChange={(e) => setTargetKcal(Number(e.target.value))}
-                               className="w-20 p-1 border border-yellow-300 rounded text-center bg-white"
-                               dir="ltr"
-                             />
-                             <div className="text-[10px] text-gray-500 mt-1">Target Kcal</div>
-                          </td>
-                          <td className="p-3 text-center">{exchangeTotals.totals.cho}</td>
-                          <td className="p-3 text-center">{exchangeTotals.totals.pro}</td>
-                          <td className="p-3 text-center">{exchangeTotals.totals.fat}</td>
-                          <td className="p-3 text-center text-red-700">{exchangeTotals.totals.kcal}</td>
-                       </tr>
-
-                       {/* Comparison Rows with Progress Bars */}
-                       <tr className="text-xs text-gray-600 bg-gray-50">
-                          <td className="p-2" colSpan={6}>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
-                               <ProgressBar 
-                                  label="Target Kcal Progress" 
-                                  current={exchangeTotals.totals.kcal} 
-                                  target={targetKcal} 
-                                  unit="kcal"
-                                  color="bg-blue-500"
-                               />
-                               <div className="flex justify-between items-end pb-1">
-                                 <span>Remaining:</span>
-                                 <span className={`font-bold ${comparisons.remainKcal < 0 ? 'text-red-500' : 'text-green-500'}`}>
-                                    {comparisons.remainKcal} kcal
-                                 </span>
-                               </div>
-                             </div>
-                          </td>
-                       </tr>
-                    </tbody>
-                  </table>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+             {/* Left Column: Input Table */}
+             <div className="lg:col-span-2">
+                <div className="card bg-white shadow-md border-0 ring-1 ring-gray-200 h-full">
+                    <div className="p-4 border-b border-gray-100 bg-[var(--color-bg-soft)] rounded-t-xl">
+                       <h2 className="text-lg font-bold text-[var(--color-heading)] flex items-center gap-2">
+                          📊 {T.modeCalculator}
+                          <span className="text-xs font-normal bg-white px-2 py-1 rounded border text-gray-500">Enter servings below</span>
+                       </h2>
+                    </div>
+                    <div className="overflow-x-auto p-2">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-gray-500 border-b border-gray-100">
+                            <th className="p-3 text-left">{T.foodGroup}</th>
+                            <th className="p-3 w-24 text-center bg-blue-50/50 rounded-t-lg">{T.serves}</th>
+                            <th className="p-3 text-center hidden sm:table-cell">{T.cho}</th>
+                            <th className="p-3 text-center hidden sm:table-cell">{T.pro}</th>
+                            <th className="p-3 text-center hidden sm:table-cell">{T.fat}</th>
+                            <th className="p-3 text-center font-bold">{T.kcal}</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                           {GROUPS.map(g => (
+                             <tr key={g} className="hover:bg-gray-50 transition-colors group">
+                               <td className="p-3 font-medium text-gray-700">{T.groups[g as keyof typeof T.groups]}</td>
+                               <td className="p-2 text-center bg-blue-50/30 group-hover:bg-blue-50 transition-colors">
+                                 <input 
+                                   type="number" min="0" step="0.5" 
+                                   value={servings[g]} 
+                                   onChange={(e) => handleServeChange(g, Number(e.target.value))}
+                                   className={`w-full p-2 border rounded-lg text-center focus:ring-2 focus:ring-[var(--color-primary)] outline-none ${servings[g] > 0 ? 'border-blue-300 bg-white font-bold text-blue-700 shadow-sm' : 'bg-transparent border-gray-200'}`}
+                                   dir="ltr"
+                                 />
+                               </td>
+                               <td className={`p-3 text-center hidden sm:table-cell font-mono ${colorNum(exchangeTotals.groupDetails[g].cho)}`}>{exchangeTotals.groupDetails[g].cho}</td>
+                               <td className={`p-3 text-center hidden sm:table-cell font-mono ${colorNum(exchangeTotals.groupDetails[g].pro)}`}>{exchangeTotals.groupDetails[g].pro}</td>
+                               <td className={`p-3 text-center hidden sm:table-cell font-mono ${colorNum(exchangeTotals.groupDetails[g].fat)}`}>{exchangeTotals.groupDetails[g].fat}</td>
+                               <td className={`p-3 text-center font-mono font-bold ${colorNum(exchangeTotals.groupDetails[g].kcal)}`}>{exchangeTotals.groupDetails[g].kcal}</td>
+                             </tr>
+                           ))}
+                        </tbody>
+                      </table>
+                    </div>
                 </div>
              </div>
-             
-             {/* Manual Targets Toggles */}
-             <div className="flex gap-2">
-                <button onClick={() => setShowTargetGm(!showTargetGm)} className="text-sm text-[var(--color-primary)] underline hover:text-[var(--color-primary-dark)]">
-                  {showTargetGm ? 'Hide' : 'Show'} {T.manualTargetGm}
-                </button>
-                <span className="text-gray-300">|</span>
-                <button onClick={() => setShowTargetPerc(!showTargetPerc)} className="text-sm text-[var(--color-primary)] underline hover:text-[var(--color-primary-dark)]">
-                  {showTargetPerc ? 'Hide' : 'Show'} {T.manualTargetPerc}
-                </button>
-             </div>
 
-             {/* Manual Grams Panel */}
-             {showTargetGm && (
-               <div className="card bg-blue-50 p-4 text-sm animate-fade-in">
-                  <h4 className="font-bold mb-3 text-blue-800">{T.manualTargetGm}</h4>
-                  <div className="grid grid-cols-5 gap-2 mb-2 font-semibold text-xs text-center text-gray-600">
-                     <div className="col-span-2 text-left">Metric</div>
-                     <div>CHO (g)</div>
-                     <div>PRO (g)</div>
-                     <div>FAT (g)</div>
-                  </div>
-                  <div className="grid grid-cols-5 gap-2 items-center mb-3">
-                     <div className="col-span-2">
-                        <div className="font-bold text-gray-700">Inputs</div>
-                        <div className="text-xs text-gray-500">{manualGmCalcs.totalInputKcal} Kcal</div>
-                     </div>
-                     <input type="number" className="p-1 rounded text-center" value={manualGm.cho || ''} onChange={(e) => setManualGm({...manualGm, cho: Number(e.target.value)})} />
-                     <input type="number" className="p-1 rounded text-center" value={manualGm.pro || ''} onChange={(e) => setManualGm({...manualGm, pro: Number(e.target.value)})} />
-                     <input type="number" className="p-1 rounded text-center" value={manualGm.fat || ''} onChange={(e) => setManualGm({...manualGm, fat: Number(e.target.value)})} />
-                  </div>
-                   <div className="grid grid-cols-5 gap-2 items-center text-xs text-gray-600 border-t border-blue-200 pt-2">
-                     <div className="col-span-2">{T.targetPerc}</div>
-                     <div className="text-center" dir="ltr">{manualGmCalcs.targetPercFromGm.cho.toFixed(1)}%</div>
-                     <div className="text-center" dir="ltr">{manualGmCalcs.targetPercFromGm.pro.toFixed(1)}%</div>
-                     <div className="text-center" dir="ltr">{manualGmCalcs.targetPercFromGm.fat.toFixed(1)}%</div>
-                  </div>
-                  <div className="grid grid-cols-5 gap-2 items-center text-xs font-bold text-blue-700 border-t border-blue-200 pt-2 mt-1">
-                     <div className="col-span-2">{T.remainManual}</div>
-                     <div className="text-center" dir="ltr">{manualGmCalcs.remain.cho.toFixed(1)}</div>
-                     <div className="text-center" dir="ltr">{manualGmCalcs.remain.pro.toFixed(1)}</div>
-                     <div className="text-center" dir="ltr">{manualGmCalcs.remain.fat.toFixed(1)}</div>
-                  </div>
-               </div>
-             )}
+             {/* Right Column: Summary Sidebar (Inlined) */}
+             <div className="lg:col-span-1">
+                <div className="card bg-white shadow-lg border border-[var(--color-border)] sticky top-24 h-fit">
+                    <h3 className="font-bold text-lg text-[var(--color-heading)] mb-4 border-b pb-2">Smart Summary</h3>
+                    
+                    {/* 1. Target Input */}
+                    <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={T.targetKcal} />
 
-             {/* Manual Percent Panel */}
-             {showTargetPerc && (
-                <div className="card bg-purple-50 p-4 text-sm animate-fade-in">
-                   <h4 className="font-bold mb-3 text-purple-800">{T.manualTargetPerc}</h4>
-                   <div className="grid grid-cols-5 gap-2 mb-2 font-semibold text-xs text-center text-gray-600">
-                      <div className="col-span-2 text-left">Metric</div>
-                      <div>CHO (%)</div>
-                      <div>PRO (%)</div>
-                      <div>FAT (%)</div>
-                   </div>
-                   <div className="grid grid-cols-5 gap-2 items-center mb-3">
-                      <div className="col-span-2">
-                         <div className="font-bold text-gray-700">Inputs</div>
-                         <div className="text-xs text-gray-500">Total: {manualPercCalcs.totalPerc}%</div>
-                      </div>
-                      <input type="number" className="p-1 rounded text-center" value={manualPerc.cho || ''} onChange={(e) => setManualPerc({...manualPerc, cho: Number(e.target.value)})} />
-                      <input type="number" className="p-1 rounded text-center" value={manualPerc.pro || ''} onChange={(e) => setManualPerc({...manualPerc, pro: Number(e.target.value)})} />
-                      <input type="number" className="p-1 rounded text-center" value={manualPerc.fat || ''} onChange={(e) => setManualPerc({...manualPerc, fat: Number(e.target.value)})} />
-                   </div>
-                    <div className="grid grid-cols-5 gap-2 items-center text-xs text-gray-600 border-t border-purple-200 pt-2">
-                      <div className="col-span-2">{T.targetGm}</div>
-                      <div className="text-center" dir="ltr">{manualPercCalcs.targetGmFromPerc.cho.toFixed(0)}</div>
-                      <div className="text-center" dir="ltr">{manualPercCalcs.targetGmFromPerc.pro.toFixed(0)}</div>
-                      <div className="text-center" dir="ltr">{manualPercCalcs.targetGmFromPerc.fat.toFixed(0)}</div>
-                   </div>
-                   <div className="grid grid-cols-5 gap-2 items-center text-xs font-bold text-purple-700 border-t border-purple-200 pt-2 mt-1">
-                      <div className="col-span-2">{T.remainManual}</div>
-                      <div className="text-center" dir="ltr">{manualPercCalcs.remain.cho.toFixed(0)}</div>
-                      <div className="text-center" dir="ltr">{manualPercCalcs.remain.pro.toFixed(0)}</div>
-                      <div className="text-center" dir="ltr">{manualPercCalcs.remain.fat.toFixed(0)}</div>
-                   </div>
+                    {/* 2. Visuals */}
+                    <div className="mb-6 flex justify-center">
+                        {exchangeTotals.totals.kcal > 0 ? (
+                            <MacroDonut 
+                                cho={exchangeTotals.totals.cho}
+                                pro={exchangeTotals.totals.pro}
+                                fat={exchangeTotals.totals.fat}
+                                totalKcal={exchangeTotals.totals.kcal}
+                            />
+                        ) : (
+                            <div className="h-32 w-full border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center text-gray-400 text-sm">
+                                Add servings to see chart
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 3. Progress Bars */}
+                    <div className="space-y-4 mb-6">
+                        <ProgressBar 
+                            label="Budget Used"
+                            current={exchangeTotals.totals.kcal}
+                            target={targetKcal}
+                            unit="kcal"
+                            color="bg-[var(--color-primary)]"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 px-1">
+                            <span>Calculated: <strong>{exchangeTotals.totals.kcal}</strong></span>
+                            <span className={comparisons.remainKcal < 0 ? 'text-red-500 font-bold' : 'text-green-600 font-bold'}>
+                                {comparisons.remainKcal > 0 ? '+' : ''}{comparisons.remainKcal} Remain
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* 4. Manual Targets Tabs */}
+                    <div className="border-t pt-4">
+                        <div className="flex mb-2 bg-gray-100 rounded-lg p-1">
+                            <button 
+                                onClick={() => setActiveTargetTab('gm')} 
+                                className={`flex-1 text-xs py-1.5 rounded-md transition ${activeTargetTab === 'gm' ? 'bg-white shadow text-[var(--color-primary)] font-bold' : 'text-gray-500'}`}
+                            >
+                                Target (g)
+                            </button>
+                            <button 
+                                onClick={() => setActiveTargetTab('perc')} 
+                                className={`flex-1 text-xs py-1.5 rounded-md transition ${activeTargetTab === 'perc' ? 'bg-white shadow text-[var(--color-primary)] font-bold' : 'text-gray-500'}`}
+                            >
+                                Target (%)
+                            </button>
+                            <button 
+                                onClick={() => setActiveTargetTab('none')} 
+                                className={`px-3 text-xs py-1.5 rounded-md transition ${activeTargetTab === 'none' ? 'bg-white shadow text-red-500' : 'text-gray-400'}`}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        {activeTargetTab === 'gm' && (
+                            <div className="bg-blue-50 p-3 rounded-lg text-sm space-y-2 animate-fade-in">
+                                <div className="flex justify-between items-center">
+                                    <span>CHO (g)</span>
+                                    <input type="number" className="w-16 p-1 rounded border text-center" value={manualGm.cho || ''} onChange={(e) => setManualGm({...manualGm, cho: Number(e.target.value)})} />
+                                    <span className={`text-xs w-12 text-right ${manualGmCalcs.remain.cho < 0 ? 'text-red-500' : 'text-blue-600'}`}>{manualGmCalcs.remain.cho.toFixed(0)} diff</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span>PRO (g)</span>
+                                    <input type="number" className="w-16 p-1 rounded border text-center" value={manualGm.pro || ''} onChange={(e) => setManualGm({...manualGm, pro: Number(e.target.value)})} />
+                                    <span className={`text-xs w-12 text-right ${manualGmCalcs.remain.pro < 0 ? 'text-red-500' : 'text-blue-600'}`}>{manualGmCalcs.remain.pro.toFixed(0)} diff</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span>FAT (g)</span>
+                                    <input type="number" className="w-16 p-1 rounded border text-center" value={manualGm.fat || ''} onChange={(e) => setManualGm({...manualGm, fat: Number(e.target.value)})} />
+                                    <span className={`text-xs w-12 text-right ${manualGmCalcs.remain.fat < 0 ? 'text-red-500' : 'text-blue-600'}`}>{manualGmCalcs.remain.fat.toFixed(0)} diff</span>
+                                </div>
+                                <div className="text-xs text-center text-blue-800 pt-1 border-t border-blue-200 mt-1">
+                                    Manual Total: {manualGmCalcs.totalInputKcal} kcal
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTargetTab === 'perc' && (
+                            <div className="bg-purple-50 p-3 rounded-lg text-sm space-y-2 animate-fade-in">
+                                <div className="flex justify-between items-center">
+                                    <span>CHO (%)</span>
+                                    <input type="number" className="w-16 p-1 rounded border text-center" value={manualPerc.cho || ''} onChange={(e) => setManualPerc({...manualPerc, cho: Number(e.target.value)})} />
+                                    <span className="text-xs w-12 text-right text-purple-600">{manualPercCalcs.targetGmFromPerc.cho.toFixed(0)}g</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span>PRO (%)</span>
+                                    <input type="number" className="w-16 p-1 rounded border text-center" value={manualPerc.pro || ''} onChange={(e) => setManualPerc({...manualPerc, pro: Number(e.target.value)})} />
+                                    <span className="text-xs w-12 text-right text-purple-600">{manualPercCalcs.targetGmFromPerc.pro.toFixed(0)}g</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span>FAT (%)</span>
+                                    <input type="number" className="w-16 p-1 rounded border text-center" value={manualPerc.fat || ''} onChange={(e) => setManualPerc({...manualPerc, fat: Number(e.target.value)})} />
+                                    <span className="text-xs w-12 text-right text-purple-600">{manualPercCalcs.targetGmFromPerc.fat.toFixed(0)}g</span>
+                                </div>
+                                <div className="text-xs text-center text-purple-800 pt-1 border-t border-purple-200 mt-1">
+                                    Target: {manualPercCalcs.targetKcalFromPerc.toFixed(0)} kcal ({manualPercCalcs.totalPerc}%)
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
-             )}
+             </div>
           </div>
         )}
 
-        {/* PLANNER SECTION */}
+        {/* --- MODE: PLANNER --- */}
         {(viewMode === 'planner' || viewMode === 'both') && (
-           <div className="space-y-6">
-               <div className="card bg-white shadow-lg border-0 ring-1 ring-gray-200 overflow-hidden">
-                   <div className="text-center mb-4 border-b pb-4 pt-4 px-4">
-                      <h2 className="text-2xl font-bold text-[var(--color-heading)]">{T.modePlanner}</h2>
-                      {/* Visual Planner Progress */}
-                      <div className="mt-4 max-w-md mx-auto">
-                          <ProgressBar 
-                              label="Planner Budget"
-                              current={plannerCalculations.pTotals.kcal}
-                              target={targetKcal}
-                              unit="kcal"
-                          />
-                          <div className="text-right text-xs mt-1">
-                            {plannerCalculations.pRemainKcal.toFixed(0)} kcal remaining
-                          </div>
-                      </div>
-                   </div>
-                   
-                   <div className="overflow-x-auto">
-                      <table className="w-full text-xs md:text-sm">
-                         <thead>
-                            <tr className="bg-blue-50 text-blue-900">
-                               <th className="p-2 text-left min-w-[100px] sticky left-0 bg-blue-50 z-10">{T.foodGroup}</th>
-                               {MEALS.map(m => (
-                                  <th key={m} className="p-2 text-center min-w-[60px]">{T.meals[m as keyof typeof T.meals]}</th>
-                               ))}
-                               <th className="p-2 text-center min-w-[70px] bg-yellow-50 text-yellow-900 font-bold border-l">{T.meals.remain}</th>
-                            </tr>
-                         </thead>
-                         <tbody className="divide-y divide-gray-100">
-                             {GROUPS.map(g => (
-                                <tr key={g} className="hover:bg-gray-50">
-                                   <td className="p-2 font-medium sticky left-0 bg-white z-10 shadow-sm">{T.groups[g as keyof typeof T.groups]}</td>
+           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4 border-t border-dashed border-gray-300">
+               {/* Left Column: Distribution Table */}
+               <div className="lg:col-span-2">
+                   <div className="card bg-white shadow-lg border-0 ring-1 ring-gray-200 h-full overflow-hidden">
+                       <div className="p-4 border-b border-gray-100 bg-blue-50 rounded-t-xl flex justify-between items-center">
+                          <h2 className="text-lg font-bold text-blue-900">📅 {T.modePlanner}</h2>
+                          <div className="text-xs text-blue-700">Distribute servings across meals</div>
+                       </div>
+                       
+                       <div className="overflow-x-auto">
+                          <table className="w-full text-xs">
+                             <thead>
+                                <tr className="bg-gray-50 text-gray-600 border-b">
+                                   <th className="p-3 text-left min-w-[120px] sticky left-0 bg-gray-50 z-10 border-r">{T.foodGroup}</th>
                                    {MEALS.map(m => (
-                                      <td key={m} className="p-1 text-center">
-                                         <input 
-                                            type="number" min="0" step="0.5"
-                                            value={distribution[g][m] || ''}
-                                            onChange={(e) => handleDistChange(g, m, Number(e.target.value))}
-                                            className={`w-12 p-1 border rounded text-center focus:ring-1 focus:ring-blue-500 ${distribution[g][m] > 0 ? 'bg-blue-50 border-blue-200 font-bold text-blue-700' : ''}`}
-                                         />
-                                      </td>
+                                      <th key={m} className="p-2 text-center min-w-[70px]">{T.meals[m as keyof typeof T.meals]}</th>
                                    ))}
-                                   <td className={`p-2 text-center border-l font-bold ${plannerCalculations.remainingServes[g] === 0 ? 'text-green-500' : 'text-red-500 bg-red-50'}`}>
-                                      {plannerCalculations.remainingServes[g]}
-                                   </td>
+                                   <th className="p-2 text-center min-w-[80px] bg-yellow-50 text-yellow-900 font-bold border-l shadow-inner">{T.meals.remain}</th>
                                 </tr>
-                             ))}
-                         </tbody>
-                      </table>
+                             </thead>
+                             <tbody className="divide-y divide-gray-100">
+                                 {GROUPS.map(g => (
+                                    <tr key={g} className="hover:bg-gray-50 group">
+                                       <td className="p-3 font-medium text-gray-700 sticky left-0 bg-white group-hover:bg-gray-50 z-10 border-r shadow-sm">{T.groups[g as keyof typeof T.groups]}</td>
+                                       {MEALS.map(m => (
+                                          <td key={m} className="p-1 text-center">
+                                             <input 
+                                                type="number" min="0" step="0.5"
+                                                value={distribution[g][m] || ''}
+                                                onChange={(e) => handleDistChange(g, m, Number(e.target.value))}
+                                                className={`w-full p-1.5 border rounded text-center focus:ring-1 focus:ring-blue-500 outline-none transition-all ${distribution[g][m] > 0 ? 'bg-blue-50 border-blue-300 font-bold text-blue-700' : 'border-gray-100 focus:bg-white'}`}
+                                             />
+                                          </td>
+                                       ))}
+                                       <td className={`p-2 text-center border-l font-bold shadow-inner transition-colors ${plannerCalculations.remainingServes[g] === 0 ? 'bg-green-50 text-green-600' : plannerCalculations.remainingServes[g] < 0 ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'}`}>
+                                          {plannerCalculations.remainingServes[g]}
+                                       </td>
+                                    </tr>
+                                 ))}
+                             </tbody>
+                          </table>
+                       </div>
                    </div>
                </div>
-               
-               {/* Planner Summary */}
-               <div className="card bg-gray-50 p-4 border border-gray-200">
-                  <h4 className="font-bold mb-2 text-gray-700">Planner Totals</h4>
-                  <div className="grid grid-cols-4 gap-4 text-center text-sm">
-                      <div className="p-2 bg-white rounded shadow-sm">
-                          <div className="text-xs text-gray-500">{T.cho}</div>
-                          <div className="font-bold text-blue-600">{plannerCalculations.pTotals.cho}g</div>
-                          <div className="text-[10px] text-gray-400" dir="ltr">{plannerCalculations.pPercTarget.cho.toFixed(1)}%</div>
-                      </div>
-                       <div className="p-2 bg-white rounded shadow-sm">
-                          <div className="text-xs text-gray-500">{T.pro}</div>
-                          <div className="font-bold text-red-600">{plannerCalculations.pTotals.pro}g</div>
-                          <div className="text-[10px] text-gray-400" dir="ltr">{plannerCalculations.pPercTarget.pro.toFixed(1)}%</div>
-                      </div>
-                       <div className="p-2 bg-white rounded shadow-sm">
-                          <div className="text-xs text-gray-500">{T.fat}</div>
-                          <div className="font-bold text-yellow-600">{plannerCalculations.pTotals.fat}g</div>
-                          <div className="text-[10px] text-gray-400" dir="ltr">{plannerCalculations.pPercTarget.fat.toFixed(1)}%</div>
-                      </div>
-                       <div className="p-2 bg-white rounded shadow-sm border border-green-200">
-                          <div className="text-xs text-gray-500">{T.kcal}</div>
-                          <div className="font-bold text-green-700">{plannerCalculations.pTotals.kcal}</div>
-                          <div className="text-[10px] text-gray-400" dir="ltr">{plannerCalculations.pPercTarget.kcal.toFixed(1)}%</div>
-                      </div>
-                  </div>
+
+               {/* Right Column: Planner Snapshot (Inlined) */}
+               <div className="lg:col-span-1">
+                  <div className="card bg-white shadow-lg border border-[var(--color-border)] sticky top-24 h-fit">
+                        <h3 className="font-bold text-lg text-[var(--color-heading)] mb-4 border-b pb-2">Planner Snapshot</h3>
+                        
+                        {/* Added Target Input here as well */}
+                        <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={T.targetKcal} />
+
+                        <div className="mb-6">
+                            <MacroDonut 
+                                cho={plannerCalculations.pTotals.cho}
+                                pro={plannerCalculations.pTotals.pro}
+                                fat={plannerCalculations.pTotals.fat}
+                                totalKcal={plannerCalculations.pTotals.kcal}
+                            />
+                        </div>
+
+                        <div className="space-y-4 mb-4">
+                            <ProgressBar 
+                                label="Planner Budget Used"
+                                current={plannerCalculations.pTotals.kcal}
+                                target={targetKcal > 0 ? targetKcal : exchangeTotals.totals.kcal}
+                                unit="kcal"
+                                color="bg-blue-500"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2 text-center text-xs bg-gray-50 p-2 rounded-lg">
+                            <div className="p-1">
+                                <div className="font-bold text-blue-600">{plannerCalculations.pTotals.cho}g</div>
+                                <div className="text-gray-400">CHO</div>
+                            </div>
+                            <div className="p-1 border-l border-r border-gray-200">
+                                <div className="font-bold text-red-600">{plannerCalculations.pTotals.pro}g</div>
+                                <div className="text-gray-400">PRO</div>
+                            </div>
+                            <div className="p-1">
+                                <div className="font-bold text-yellow-600">{plannerCalculations.pTotals.fat}g</div>
+                                <div className="text-gray-400">FAT</div>
+                            </div>
+                        </div>
+                    </div>
                </div>
            </div>
         )}
