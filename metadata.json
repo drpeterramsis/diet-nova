@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.31",
-  "description": "Features: Fixed Save/Update logic for creating templates, Explicit Account Deletion of all data, Profile reload on update",
+  "name": "Diet-Nova v2.0.32",
+  "description": "Features: Fix RLS errors in saving meals, robust account deletion logic, version bump",
   "requestFramePermissions": []
 }

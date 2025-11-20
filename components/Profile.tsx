@@ -75,10 +75,12 @@ const Profile = () => {
 
       setLoading(true);
       try {
-          if (!session?.user.id) return;
+          if (!session?.user.id) {
+             throw new Error("No active session found.");
+          }
 
           // 1. Delete user saved meals (Application Data)
-          // Explicitly delete all rows linked to this user_id
+          // We do this first to avoid foreign key constraints if any (though unlikely with Supabase defaults)
           const { error: mealsError } = await supabase
               .from('saved_meals')
               .delete()
@@ -94,9 +96,11 @@ const Profile = () => {
               
           if (profileError) throw new Error(`Error deleting profile: ${profileError.message}`);
           
-          // 3. Sign out (Auth user deletion is restricted via client usually, this clears session)
+          // 3. Sign out
           await supabase.auth.signOut();
-          window.location.reload();
+          
+          // 4. Force reload/redirect
+          window.location.href = '/';
       } catch (err: any) {
           console.error(err);
           setMsg({ type: 'error', content: "Failed to delete account: " + err.message });
@@ -181,9 +185,10 @@ const Profile = () => {
             <p className="text-sm text-gray-600 mb-4">Deleting your account will permanently remove your profile and all saved meals.</p>
             <button 
                 onClick={handleDeleteAccount}
+                disabled={loading}
                 className="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition text-sm font-medium"
             >
-                Delete Account
+                {loading ? 'Deleting...' : 'Delete Account'}
             </button>
         </div>
       </div>

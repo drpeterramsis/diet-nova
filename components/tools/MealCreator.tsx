@@ -132,7 +132,7 @@ const MealCreator: React.FC = () => {
         name: planName,
         tool_type: 'meal-creator',
         data: planData,
-        created_at: timestamp // Updating timestamp forces an update if ID matches
+        created_at: timestamp
     };
 
     // Logic: 
@@ -142,19 +142,27 @@ const MealCreator: React.FC = () => {
     
     const isUpdate = loadedPlanId && (planName === lastSavedName);
 
-    if (isUpdate) {
-        payload.id = loadedPlanId;
-    } else {
-        // It's a new entry, so we don't send ID. Supabase generates a new one.
-        // Note: If the name changed, we treat it as "Save As"
-    }
-
     try {
-        const { data, error } = await supabase
-            .from('saved_meals')
-            .upsert(payload)
-            .select()
-            .single();
+        let result;
+        
+        if (isUpdate) {
+            // Explicit UPDATE
+            result = await supabase
+                .from('saved_meals')
+                .update(payload)
+                .eq('id', loadedPlanId)
+                .select()
+                .single();
+        } else {
+            // Explicit INSERT
+            result = await supabase
+                .from('saved_meals')
+                .insert(payload)
+                .select()
+                .single();
+        }
+
+        const { data, error } = result;
 
         if (error) throw error;
         

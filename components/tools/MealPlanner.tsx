@@ -190,17 +190,27 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
       // If name changes, create NEW (Save As).
       const isUpdate = loadedPlanId && (planName === lastSavedName);
 
-      if (isUpdate) {
-         payload.id = loadedPlanId;
-      }
-
       try {
-          const { data, error } = await supabase
+          let result;
+          if (isUpdate) {
+             // Explicit UPDATE
+             result = await supabase
                 .from('saved_meals')
-                .upsert(payload)
+                .update(payload)
+                .eq('id', loadedPlanId)
                 .select()
                 .single();
+          } else {
+             // Explicit INSERT
+             result = await supabase
+                .from('saved_meals')
+                .insert(payload)
+                .select()
+                .single();
+          }
               
+          const { data, error } = result;
+
           if (error) throw error;
           
           if (data) {
