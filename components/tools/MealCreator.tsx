@@ -14,9 +14,9 @@ const MealCreator: React.FC = () => {
   const [addedFoods, setAddedFoods] = useState<FoodItem[]>([]);
 
   // Save/Load State
-  const [showSaveModal, setShowSaveModal] = useState(false);
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [planName, setPlanName] = useState('');
+  const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
   const [savedPlans, setSavedPlans] = useState<SavedMeal[]>([]);
   const [statusMsg, setStatusMsg] = useState('');
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
@@ -50,6 +50,8 @@ const MealCreator: React.FC = () => {
   const resetCreator = () => {
     setAddedFoods([]);
     setSearchQuery("");
+    setPlanName("");
+    setLoadedPlanId(null);
   };
 
   // Calculations
@@ -112,48 +114,67 @@ const MealCreator: React.FC = () => {
   };
 
   const savePlan = async () => {
-    if (!planName.trim() || !session) return;
+    if (!planName.trim()) {
+        alert("Please enter a meal name.");
+        return;
+    }
+    if (!session) return;
     
     const planData = { addedFoods };
 
     try {
-        // 1. Check for existing plan with same name for this user
-        const { data: existing } = await supabase
-          .from('saved_meals')
-          .select('id')
-          .eq('user_id', session.user.id)
-          .eq('tool_type', 'meal-creator')
-          .eq('name', planName)
-          .single();
-
-        if (existing) {
-            if (!window.confirm(`A plan named "${planName}" already exists. Update it?`)) {
-                return; 
-            }
-            // UPDATE existing
+        if (loadedPlanId) {
+            // Update existing loaded plan
             const { error } = await supabase
                 .from('saved_meals')
-                .update({ data: planData, created_at: new Date() }) // Update timestamp too
-                .eq('id', existing.id);
+                .update({ 
+                    name: planName, 
+                    data: planData, 
+                    created_at: new Date() 
+                })
+                .eq('id', loadedPlanId);
             
             if (error) throw error;
-            setStatusMsg("Updated successfully!");
+            setStatusMsg("Meal updated successfully!");
         } else {
-            // INSERT new
-            const { error } = await supabase.from('saved_meals').insert([{
-                user_id: session.user.id,
-                name: planName,
-                tool_type: 'meal-creator',
-                data: planData
-            }]);
+            // New Plan logic
+            const { data: existing } = await supabase
+              .from('saved_meals')
+              .select('id')
+              .eq('user_id', session.user.id)
+              .eq('tool_type', 'meal-creator')
+              .eq('name', planName)
+              .single();
 
-            if (error) throw error;
-            setStatusMsg(t.common.saveSuccess);
+            if (existing) {
+                if (!window.confirm(`A meal named "${planName}" already exists. Overwrite it?`)) {
+                    return; 
+                }
+                // Update existing match
+                const { error } = await supabase
+                    .from('saved_meals')
+                    .update({ data: planData, created_at: new Date() })
+                    .eq('id', existing.id);
+                
+                if (error) throw error;
+                setLoadedPlanId(existing.id);
+                setStatusMsg("Meal updated successfully!");
+            } else {
+                // Insert new
+                const { data, error } = await supabase.from('saved_meals').insert([{
+                    user_id: session.user.id,
+                    name: planName,
+                    tool_type: 'meal-creator',
+                    data: planData
+                }]).select();
+
+                if (error) throw error;
+                if (data && data[0]) setLoadedPlanId(data[0].id);
+                setStatusMsg(t.common.saveSuccess);
+            }
         }
         
         setTimeout(() => setStatusMsg(''), 3000);
-        setShowSaveModal(false);
-        setPlanName('');
     } catch (err) {
         console.error('Error saving plan:', err);
         setStatusMsg("Failed to save.");
@@ -163,8 +184,8 @@ const MealCreator: React.FC = () => {
   const loadPlan = (plan: SavedMeal) => {
     if (!plan.data || !plan.data.addedFoods) return;
     setAddedFoods(plan.data.addedFoods);
-    // Optionally auto-fill name to update easily
-    setPlanName(plan.name); 
+    setPlanName(plan.name);
+    setLoadedPlanId(plan.id); 
     setShowLoadModal(false);
     setStatusMsg(t.common.loadSuccess);
     setTimeout(() => setStatusMsg(''), 3000);
@@ -176,6 +197,10 @@ const MealCreator: React.FC = () => {
         const { error } = await supabase.from('saved_meals').delete().eq('id', id);
         if (error) throw error;
         setSavedPlans(prev => prev.filter(p => p.id !== id));
+        if (loadedPlanId === id) {
+            setLoadedPlanId(null);
+            setPlanName('');
+        }
     } catch (err) {
         console.error("Error deleting:", err);
     }
@@ -184,33 +209,50 @@ const MealCreator: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto animate-fade-in space-y-8">
       
-      {/* Header & Search */}
-      <div className="text-center space-y-4 relative">
-        {session && (
-            <div className="absolute top-0 right-0 flex gap-2">
-                <button 
-                    onClick={() => setShowSaveModal(true)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-full shadow-md flex items-center justify-center transition"
-                    title={t.common.save}
-                >
-                    💾
-                </button>
-                <button 
-                     onClick={() => {
-                        fetchPlans();
-                        setShowLoadModal(true);
-                    }}
-                    className="bg-purple-500 hover:bg-purple-600 text-white w-10 h-10 rounded-full shadow-md flex items-center justify-center transition"
-                    title={t.common.load}
-                >
-                    📂
-                </button>
-            </div>
-        )}
+      {/* Header & Controls */}
+      <div className="text-center space-y-4 relative bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <h1 className="text-3xl font-bold text-[var(--color-heading)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)]">
+            {t.tools.mealCreator.title}
+            </h1>
 
-        <h1 className="text-3xl font-bold text-[var(--color-heading)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)]">
-          {t.tools.mealCreator.title}
-        </h1>
+            {session && (
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <div className="relative flex-grow">
+                        <input 
+                            type="text"
+                            placeholder="Meal Name..."
+                            value={planName}
+                            onChange={(e) => setPlanName(e.target.value)}
+                            className="w-full md:w-64 px-4 py-2 pl-9 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                        />
+                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">✎</span>
+                    </div>
+
+                    <button 
+                        onClick={savePlan}
+                        className="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-full shadow-md flex items-center justify-center transition flex-shrink-0"
+                        title={t.common.save}
+                    >
+                        💾
+                    </button>
+                    <button 
+                        onClick={() => {
+                            fetchPlans();
+                            setShowLoadModal(true);
+                        }}
+                        className="bg-purple-500 hover:bg-purple-600 text-white w-10 h-10 rounded-full shadow-md flex items-center justify-center transition flex-shrink-0"
+                        title={t.common.load}
+                    >
+                        📂
+                    </button>
+                    <button onClick={resetCreator} className="text-red-500 hover:text-red-700 font-medium text-sm px-3 py-2 border border-red-200 rounded-full hover:bg-red-50 transition whitespace-nowrap">
+                        {t.mealCreator.resetCreator}
+                    </button>
+                </div>
+            )}
+        </div>
         
         <div className="relative max-w-xl mx-auto">
           <input
@@ -249,7 +291,7 @@ const MealCreator: React.FC = () => {
         <div className="lg:col-span-2 card bg-white shadow-lg overflow-hidden">
            <div className="flex justify-between items-center mb-4 px-2">
               <h3 className="font-bold text-lg text-[var(--color-heading)]">Meal Items</h3>
-              <button onClick={resetCreator} className="text-red-500 text-sm hover:underline">{t.mealCreator.clear}</button>
+              <button onClick={() => setAddedFoods([])} className="text-red-500 text-sm hover:underline">{t.mealCreator.clear}</button>
            </div>
            
            <div className="overflow-x-auto">
@@ -374,26 +416,6 @@ const MealCreator: React.FC = () => {
 
       {/* --- MODALS --- */}
       
-      {/* Save Modal */}
-      {showSaveModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl">
-                <h3 className="text-xl font-bold mb-4">{t.common.save}</h3>
-                <input 
-                    className="w-full p-3 border rounded-lg mb-4 focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
-                    placeholder="Meal Name (e.g., Breakfast Plan A)"
-                    value={planName}
-                    onChange={(e) => setPlanName(e.target.value)}
-                    autoFocus
-                />
-                <div className="flex justify-end gap-2">
-                    <button onClick={() => setShowSaveModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">{t.common.close}</button>
-                    <button onClick={savePlan} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-green-700">{t.common.save}</button>
-                </div>
-            </div>
-        </div>
-      )}
-
       {/* Load Modal */}
       {showLoadModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
