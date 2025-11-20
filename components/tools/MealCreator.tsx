@@ -1,13 +1,25 @@
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
 import { MacroDonut } from "../Visuals";
+import { supabase } from "../../lib/supabase";
+import { useAuth } from "../../contexts/AuthContext";
+import { SavedMeal } from "../../types";
 
 const MealCreator: React.FC = () => {
   const { t, isRTL } = useLanguage();
+  const { session } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [addedFoods, setAddedFoods] = useState<FoodItem[]>([]);
+
+  // Save/Load State
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [planName, setPlanName] = useState('');
+  const [savedPlans, setSavedPlans] = useState<SavedMeal[]>([]);
+  const [statusMsg, setStatusMsg] = useState('');
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
 
   // Search Logic
   const filteredFoods = useMemo(() => {
@@ -78,11 +90,97 @@ const MealCreator: React.FC = () => {
      }
   }, [summary]);
 
+  // --- Database Operations ---
+  const fetchPlans = async () => {
+    if (!session) return;
+    setIsLoadingPlans(true);
+    try {
+        const { data, error } = await supabase
+          .from('saved_meals')
+          .select('*')
+          .eq('tool_type', 'meal-creator')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        if (data) setSavedPlans(data);
+    } catch (err) {
+        console.error('Error fetching plans:', err);
+        setStatusMsg("Error loading plans.");
+    } finally {
+        setIsLoadingPlans(false);
+    }
+  };
+
+  const savePlan = async () => {
+    if (!planName.trim() || !session) return;
+    
+    const planData = { addedFoods };
+
+    try {
+        const { error } = await supabase.from('saved_meals').insert([{
+            user_id: session.user.id,
+            name: planName,
+            tool_type: 'meal-creator',
+            data: planData
+        }]);
+
+        if (error) throw error;
+        
+        setStatusMsg(t.common.saveSuccess);
+        setTimeout(() => setStatusMsg(''), 3000);
+        setShowSaveModal(false);
+        setPlanName('');
+    } catch (err) {
+        console.error('Error saving plan:', err);
+        setStatusMsg("Failed to save.");
+    }
+  };
+
+  const loadPlan = (plan: SavedMeal) => {
+    if (!plan.data || !plan.data.addedFoods) return;
+    setAddedFoods(plan.data.addedFoods);
+    setShowLoadModal(false);
+    setStatusMsg(t.common.loadSuccess);
+    setTimeout(() => setStatusMsg(''), 3000);
+  };
+
+  const deletePlan = async (id: string) => {
+    try {
+        const { error } = await supabase.from('saved_meals').delete().eq('id', id);
+        if (error) throw error;
+        setSavedPlans(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+        console.error("Error deleting:", err);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto animate-fade-in space-y-8">
       
       {/* Header & Search */}
-      <div className="text-center space-y-4">
+      <div className="text-center space-y-4 relative">
+        {session && (
+            <div className="absolute top-0 right-0 flex gap-2">
+                <button 
+                    onClick={() => setShowSaveModal(true)}
+                    className="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-full shadow-md flex items-center justify-center transition"
+                    title={t.common.save}
+                >
+                    💾
+                </button>
+                <button 
+                     onClick={() => {
+                        fetchPlans();
+                        setShowLoadModal(true);
+                    }}
+                    className="bg-purple-500 hover:bg-purple-600 text-white w-10 h-10 rounded-full shadow-md flex items-center justify-center transition"
+                    title={t.common.load}
+                >
+                    📂
+                </button>
+            </div>
+        )}
+
         <h1 className="text-3xl font-bold text-[var(--color-heading)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)]">
           {t.tools.mealCreator.title}
         </h1>
@@ -114,6 +212,7 @@ const MealCreator: React.FC = () => {
             </ul>
           )}
         </div>
+        {statusMsg && <div className="text-sm text-green-600 bg-green-50 inline-block px-4 py-1 rounded-full">{statusMsg}</div>}
       </div>
 
       {/* Main Content */}
@@ -245,6 +344,61 @@ const MealCreator: React.FC = () => {
           
         </div>
       </div>
+
+      {/* --- MODALS --- */}
+      
+      {/* Save Modal */}
+      {showSaveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+            <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl">
+                <h3 className="text-xl font-bold mb-4">{t.common.save}</h3>
+                <input 
+                    className="w-full p-3 border rounded-lg mb-4 focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                    placeholder="Meal Name (e.g., Breakfast Plan A)"
+                    value={planName}
+                    onChange={(e) => setPlanName(e.target.value)}
+                    autoFocus
+                />
+                <div className="flex justify-end gap-2">
+                    <button onClick={() => setShowSaveModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">{t.common.close}</button>
+                    <button onClick={savePlan} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-green-700">{t.common.save}</button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Load Modal */}
+      {showLoadModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+            <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-2xl h-[80vh] flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold">{t.common.load}</h3>
+                    <button onClick={() => setShowLoadModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+                
+                <div className="flex-grow overflow-y-auto space-y-2 pr-2">
+                    {isLoadingPlans ? (
+                        <div className="text-center py-10 text-gray-400">Loading...</div>
+                    ) : savedPlans.length === 0 ? (
+                        <div className="text-center py-10 text-gray-400">No saved meals found.</div>
+                    ) : (
+                        savedPlans.map(plan => (
+                            <div key={plan.id} className="flex justify-between items-center p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-100 group">
+                                <div>
+                                    <div className="font-bold text-gray-800">{plan.name}</div>
+                                    <div className="text-xs text-gray-500">{new Date(plan.created_at).toLocaleDateString()}</div>
+                                </div>
+                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                                    <button onClick={() => loadPlan(plan)} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Load</button>
+                                    <button onClick={() => deletePlan(plan.id)} className="px-3 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200">Del</button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

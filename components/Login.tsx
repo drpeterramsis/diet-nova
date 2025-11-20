@@ -13,6 +13,7 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<'doctor' | 'patient'>('doctor');
   const [loading, setLoading] = useState(false);
@@ -38,7 +39,6 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
           email,
           password,
           options: {
-            // Crucial: Redirect to the current domain, not localhost default
             emailRedirectTo: window.location.origin, 
             data: {
               full_name: fullName,
@@ -50,24 +50,27 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
         if (error) throw error;
 
         if (data.session) {
-           // Auto-login successful (Email confirmation is disabled in Supabase)
-           setSuccess("Account created and logged in!");
-           setTimeout(() => {
-               if (onClose) onClose();
-           }, 1500);
+           setSuccess("Success! Logging you in...");
         } else if (data.user) {
-           // Email confirmation is required by Supabase settings
-           setSuccess(t.auth.successSignup + " (Please check your email to confirm)");
-           setIsSignUp(false);
+           const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+             email,
+             password
+           });
+
+           if (signInData.session) {
+             setSuccess("Success! Logging you in...");
+           } else {
+             console.warn("Login failed after signup:", signInError?.message);
+             setSuccess(t.auth.successSignup);
+             setIsSignUp(false);
+           }
         }
       } else {
-        // Sign In Logic
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        // Login successful, modal will close via AuthContext listener in App.tsx
       }
     } catch (err: any) {
         setError(err.message || t.auth.errorGeneric);
@@ -140,14 +143,33 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{t.auth.password}</label>
-            <input
-              type="password"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              dir="ltr"
-              required
-            />
+            <div className="relative">
+                <input
+                    type={showPassword ? "text" : "password"}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none pr-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    dir="ltr"
+                    required
+                />
+                <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-gray-600"
+                >
+                    {showPassword ? (
+                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                            <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                        </svg>
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                        </svg>
+                    )}
+                </button>
+            </div>
           </div>
 
           {isSignUp && (

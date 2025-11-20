@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova v2.0.23",
-  "description": "Stable release with Supabase Auth, Meal Planner, and Kcal Calculator",
+  "name": "Diet-Nova v2.0.25",
+  "description": "UI Enhancements, Role Renaming, Meal Creator Save/Load, and Password Visibility Toggle",
   "requestFramePermissions": []
 }

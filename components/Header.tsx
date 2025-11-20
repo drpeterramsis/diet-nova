@@ -11,7 +11,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onLoginClick }) => {
   const { t, lang, toggleLanguage } = useLanguage();
-  const { session, signOut } = useAuth();
+  const { session, profile, signOut } = useAuth();
 
   return (
     <header className="bg-[var(--color-primary)] text-white shadow-md sticky top-0 z-50">
@@ -20,7 +20,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onLogi
           <h1 className="text-2xl font-bold tracking-wide flex items-center">
             Diet<span className="text-[var(--color-primary-light)]">Nova</span>
             <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full hidden sm:inline-block">
-              v2.0.23
+              v2.0.25
             </span>
           </h1>
         </div>
@@ -53,7 +53,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onLogi
               </button>
             </li>
             {session ? (
-                <li>
+                <li className="flex items-center gap-3">
+                   <span className="hidden md:inline text-sm font-medium text-green-50">
+                     {profile?.full_name || session.user.email?.split('@')[0]}
+                   </span>
                    <button 
                     onClick={signOut}
                     className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition text-sm"
