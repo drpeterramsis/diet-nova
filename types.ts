@@ -43,6 +43,10 @@ export interface Translation {
       title: string;
       desc: string;
     };
+    mealPlanner: {
+      title: string;
+      desc: string;
+    };
     bmr: {
       title: string;
       desc: string;
@@ -113,5 +117,50 @@ export interface Translation {
     percentage: string;
     totalCalories: string;
     gm: string;
+  };
+  mealPlannerTool: {
+    modeCalculator: string;
+    modePlanner: string;
+    modeBoth: string;
+    addTotalKcalFirst: string;
+    foodGroup: string;
+    serves: string;
+    cho: string;
+    pro: string;
+    fat: string;
+    kcal: string;
+    totals: string;
+    targetKcal: string;
+    remainKcal: string;
+    calcKcal: string;
+    manualTargetGm: string;
+    manualTargetPerc: string;
+    remainManual: string;
+    targetGm: string;
+    targetPerc: string;
+    meals: {
+      snack1: string;
+      breakfast: string;
+      snack2: string;
+      lunch: string;
+      snack3: string;
+      dinner: string;
+      snack4: string;
+      remain: string;
+    };
+    groups: {
+      starch: string;
+      veg: string;
+      fruit: string;
+      meatLean: string;
+      meatMed: string;
+      meatHigh: string;
+      milkSkim: string;
+      milkLow: string;
+      milkWhole: string;
+      legumes: string;
+      fats: string;
+      sugar: string;
+    }
   };
 }

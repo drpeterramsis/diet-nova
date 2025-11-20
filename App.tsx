@@ -6,6 +6,7 @@ import BmiModal from "./components/BmiModal";
 import KcalCalculator from "./components/calculations/KcalCalculator";
 import MealCreator from "./components/tools/MealCreator";
 import FoodExchange from "./components/tools/FoodExchange";
+import MealPlanner from "./components/tools/MealPlanner";
 import ScrollToTopButton from "./components/ScrollToTopButton";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 
@@ -66,6 +67,13 @@ const Dashboard = ({
             desc={t.tools.mealCreator.desc}
             onClick={() => setActiveTool('meal-creator')}
             icon={<span className="text-2xl">🥗</span>}
+          />
+
+           <ToolCard
+            title={t.tools.mealPlanner.title}
+            desc={t.tools.mealPlanner.desc}
+            onClick={() => setActiveTool('meal-planner')}
+            icon={<span className="text-2xl">📅</span>}
           />
 
           <ToolCard
@@ -138,6 +146,7 @@ const AppContent = () => {
             
             {activeTool === 'kcal' && <KcalCalculator />}
             {activeTool === 'meal-creator' && <MealCreator />}
+            {activeTool === 'meal-planner' && <MealPlanner />}
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
             {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
 
