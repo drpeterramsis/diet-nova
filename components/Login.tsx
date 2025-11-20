@@ -34,11 +34,12 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
     try {
       if (isSignUp) {
         // Sign Up Logic
-        // We pass full_name and role as metadata so the Postgres Trigger can handle profile creation
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            // Crucial: Redirect to the current domain, not localhost default
+            emailRedirectTo: window.location.origin, 
             data: {
               full_name: fullName,
               role: role,
@@ -48,9 +49,16 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
 
         if (error) throw error;
 
-        if (data.user) {
-          setSuccess(t.auth.successSignup);
-          setIsSignUp(false);
+        if (data.session) {
+           // Auto-login successful (Email confirmation is disabled in Supabase)
+           setSuccess("Account created and logged in!");
+           setTimeout(() => {
+               if (onClose) onClose();
+           }, 1500);
+        } else if (data.user) {
+           // Email confirmation is required by Supabase settings
+           setSuccess(t.auth.successSignup + " (Please check your email to confirm)");
+           setIsSignUp(false);
         }
       } else {
         // Sign In Logic
@@ -59,6 +67,7 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
           password,
         });
         if (error) throw error;
+        // Login successful, modal will close via AuthContext listener in App.tsx
       }
     } catch (err: any) {
         setError(err.message || t.auth.errorGeneric);
