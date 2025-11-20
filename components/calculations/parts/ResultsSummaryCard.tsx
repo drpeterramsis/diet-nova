@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { KcalResults } from '../hooks/useKcalCalculations';
 
@@ -14,10 +14,12 @@ const ResultRow = ({ label, val, sub, col }: any) => (
 
 interface ResultsSummaryProps {
   results: KcalResults;
+  onPlanMeals?: (kcal: number) => void;
 }
 
-const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r }) => {
+const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanMeals }) => {
   const { t } = useLanguage();
+  const [reqKcal, setReqKcal] = useState<number | ''>('');
 
   return (
     <div className="card bg-white shadow-xl ring-1 ring-[var(--color-border)]">
@@ -48,6 +50,30 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r }) => {
               col={r.bmiSelColor}
           />
       </div>
+
+      {/* Action Area */}
+      {onPlanMeals && (
+        <div className="mt-6 pt-4 border-t border-gray-100">
+           <div className="mb-3">
+             <label className="block text-sm font-medium text-gray-700 mb-1">{t.kcal.kcalRequired}</label>
+             <input 
+               type="number" 
+               className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-center font-bold text-lg"
+               placeholder="2000"
+               value={reqKcal}
+               onChange={(e) => setReqKcal(Number(e.target.value))}
+               dir="ltr"
+             />
+           </div>
+           <button 
+             onClick={() => reqKcal && onPlanMeals(Number(reqKcal))}
+             disabled={!reqKcal}
+             className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 rounded-lg transition font-medium shadow-sm flex items-center justify-center gap-2"
+           >
+             <span>📅</span> {t.kcal.planMeals}
+           </button>
+        </div>
+      )}
     </div>
   );
 };

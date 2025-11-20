@@ -90,6 +90,8 @@ export const en: Translation = {
     idealWeightAccurate: "Ideal Body Weight (Accurate)",
     adjustedWeight: "Adjusted Body Weight",
     deficit: "Deficit (Kcal)",
+    kcalRequired: "Kcal Required",
+    planMeals: "Plan Meals",
     activityLevels: {
       sedentary: "Sedentary",
       mild: "Mild",
@@ -255,6 +257,8 @@ export const ar: Translation = {
     idealWeightAccurate: "الوزن المثالي (دقيق)",
     adjustedWeight: "الوزن المعدل",
     deficit: "العجز (سعرات)",
+    kcalRequired: "السعرات المطلوبة",
+    planMeals: "تخطيط الوجبات",
     activityLevels: {
       sedentary: "خامل",
       mild: "خفيف",

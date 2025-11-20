@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
+import { BmiGauge } from "./Visuals";
 
 interface Props {
   open: boolean;
@@ -125,8 +127,8 @@ function BmiModal({ open, onClose }: Props) {
 
         {bmi !== null && !hint && (
           <div className="mt-6 bg-[var(--color-bg-soft)] border border-[var(--color-border)] p-4 rounded-xl text-center">
-            <p className="text-sm text-gray-600 uppercase tracking-wider font-semibold mb-1">Result</p>
-            <p className="font-bold text-3xl text-[var(--color-heading)] mb-1">{bmi}</p>
+            <BmiGauge value={bmi} />
+            <p className="font-bold text-3xl text-[var(--color-heading)] mb-1 mt-2">{bmi}</p>
             <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
                category === t.kcal.status.normal ? 'bg-green-100 text-green-800' : 'bg-orange-100 text-orange-800'
             }`}>

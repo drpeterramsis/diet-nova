@@ -1,5 +1,7 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { ProgressBar } from '../Visuals';
 
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
   starch: { cho: 15, pro: 3, fat: 0, kcal: 80 },
@@ -19,7 +21,11 @@ const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kca
 const GROUPS = Object.keys(GROUP_FACTORS);
 const MEALS = ['snack1', 'breakfast', 'snack2', 'lunch', 'snack3', 'dinner', 'snack4'];
 
-const MealPlanner: React.FC = () => {
+interface MealPlannerProps {
+  initialTargetKcal?: number;
+}
+
+const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal }) => {
   const { t, isRTL } = useLanguage();
   const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both'>('calculator');
   
@@ -34,6 +40,13 @@ const MealPlanner: React.FC = () => {
   const [manualPerc, setManualPerc] = useState({ cho: 0, pro: 0, fat: 0 });
   const [showTargetGm, setShowTargetGm] = useState(false);
   const [showTargetPerc, setShowTargetPerc] = useState(false);
+
+  // Initialize target if provided prop
+  useEffect(() => {
+    if (initialTargetKcal && initialTargetKcal > 0) {
+      setTargetKcal(initialTargetKcal);
+    }
+  }, [initialTargetKcal]);
 
   // State for Planner Distribution
   const [distribution, setDistribution] = useState<Record<string, Record<string, number>>>(
@@ -193,6 +206,7 @@ const MealPlanner: React.FC = () => {
     }), {}));
     setManualGm({ cho: 0, pro: 0, fat: 0 });
     setManualPerc({ cho: 0, pro: 0, fat: 0 });
+    setTargetKcal(0);
   };
 
   // Helper to color numbers
@@ -273,7 +287,7 @@ const MealPlanner: React.FC = () => {
                           <td className="p-3 text-center">
                              <input 
                                type="number" placeholder="Target" 
-                               value={targetKcal} onChange={(e) => setTargetKcal(Number(e.target.value))}
+                               value={targetKcal || ''} onChange={(e) => setTargetKcal(Number(e.target.value))}
                                className="w-20 p-1 border border-yellow-300 rounded text-center bg-white"
                                dir="ltr"
                              />
@@ -285,22 +299,25 @@ const MealPlanner: React.FC = () => {
                           <td className="p-3 text-center text-red-700">{exchangeTotals.totals.kcal}</td>
                        </tr>
 
-                       {/* Comparison Rows */}
+                       {/* Comparison Rows with Progress Bars */}
                        <tr className="text-xs text-gray-600 bg-gray-50">
-                          <td className="p-2">{T.remainKcal}</td>
-                          <td className="p-2 text-center font-bold text-blue-600" dir="ltr">{comparisons.remainKcal}</td>
-                          <td className="p-2 text-center" dir="ltr">{comparisons.percTarget.cho.toFixed(1)}%</td>
-                          <td className="p-2 text-center" dir="ltr">{comparisons.percTarget.pro.toFixed(1)}%</td>
-                          <td className="p-2 text-center" dir="ltr">{comparisons.percTarget.fat.toFixed(1)}%</td>
-                          <td className="p-2 text-center" dir="ltr">{comparisons.percTarget.kcal.toFixed(1)}%</td>
-                       </tr>
-                       <tr className="text-xs text-gray-600 bg-gray-50">
-                          <td className="p-2">{T.calcKcal}</td>
-                          <td className="p-2 text-center"></td>
-                          <td className="p-2 text-center" dir="ltr">{comparisons.percCalc.cho.toFixed(1)}%</td>
-                          <td className="p-2 text-center" dir="ltr">{comparisons.percCalc.pro.toFixed(1)}%</td>
-                          <td className="p-2 text-center" dir="ltr">{comparisons.percCalc.fat.toFixed(1)}%</td>
-                          <td className="p-2 text-center"></td>
+                          <td className="p-2" colSpan={6}>
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-2">
+                               <ProgressBar 
+                                  label="Target Kcal Progress" 
+                                  current={exchangeTotals.totals.kcal} 
+                                  target={targetKcal} 
+                                  unit="kcal"
+                                  color="bg-blue-500"
+                               />
+                               <div className="flex justify-between items-end pb-1">
+                                 <span>Remaining:</span>
+                                 <span className={`font-bold ${comparisons.remainKcal < 0 ? 'text-red-500' : 'text-green-500'}`}>
+                                    {comparisons.remainKcal} kcal
+                                 </span>
+                               </div>
+                             </div>
+                          </td>
                        </tr>
                     </tbody>
                   </table>
@@ -333,9 +350,9 @@ const MealPlanner: React.FC = () => {
                         <div className="font-bold text-gray-700">Inputs</div>
                         <div className="text-xs text-gray-500">{manualGmCalcs.totalInputKcal} Kcal</div>
                      </div>
-                     <input type="number" className="p-1 rounded text-center" value={manualGm.cho} onChange={(e) => setManualGm({...manualGm, cho: Number(e.target.value)})} />
-                     <input type="number" className="p-1 rounded text-center" value={manualGm.pro} onChange={(e) => setManualGm({...manualGm, pro: Number(e.target.value)})} />
-                     <input type="number" className="p-1 rounded text-center" value={manualGm.fat} onChange={(e) => setManualGm({...manualGm, fat: Number(e.target.value)})} />
+                     <input type="number" className="p-1 rounded text-center" value={manualGm.cho || ''} onChange={(e) => setManualGm({...manualGm, cho: Number(e.target.value)})} />
+                     <input type="number" className="p-1 rounded text-center" value={manualGm.pro || ''} onChange={(e) => setManualGm({...manualGm, pro: Number(e.target.value)})} />
+                     <input type="number" className="p-1 rounded text-center" value={manualGm.fat || ''} onChange={(e) => setManualGm({...manualGm, fat: Number(e.target.value)})} />
                   </div>
                    <div className="grid grid-cols-5 gap-2 items-center text-xs text-gray-600 border-t border-blue-200 pt-2">
                      <div className="col-span-2">{T.targetPerc}</div>
@@ -367,9 +384,9 @@ const MealPlanner: React.FC = () => {
                          <div className="font-bold text-gray-700">Inputs</div>
                          <div className="text-xs text-gray-500">Total: {manualPercCalcs.totalPerc}%</div>
                       </div>
-                      <input type="number" className="p-1 rounded text-center" value={manualPerc.cho} onChange={(e) => setManualPerc({...manualPerc, cho: Number(e.target.value)})} />
-                      <input type="number" className="p-1 rounded text-center" value={manualPerc.pro} onChange={(e) => setManualPerc({...manualPerc, pro: Number(e.target.value)})} />
-                      <input type="number" className="p-1 rounded text-center" value={manualPerc.fat} onChange={(e) => setManualPerc({...manualPerc, fat: Number(e.target.value)})} />
+                      <input type="number" className="p-1 rounded text-center" value={manualPerc.cho || ''} onChange={(e) => setManualPerc({...manualPerc, cho: Number(e.target.value)})} />
+                      <input type="number" className="p-1 rounded text-center" value={manualPerc.pro || ''} onChange={(e) => setManualPerc({...manualPerc, pro: Number(e.target.value)})} />
+                      <input type="number" className="p-1 rounded text-center" value={manualPerc.fat || ''} onChange={(e) => setManualPerc({...manualPerc, fat: Number(e.target.value)})} />
                    </div>
                     <div className="grid grid-cols-5 gap-2 items-center text-xs text-gray-600 border-t border-purple-200 pt-2">
                       <div className="col-span-2">{T.targetGm}</div>
@@ -392,11 +409,19 @@ const MealPlanner: React.FC = () => {
         {(viewMode === 'planner' || viewMode === 'both') && (
            <div className="space-y-6">
                <div className="card bg-white shadow-lg border-0 ring-1 ring-gray-200 overflow-hidden">
-                   <div className="text-center mb-4 border-b pb-4 pt-4">
+                   <div className="text-center mb-4 border-b pb-4 pt-4 px-4">
                       <h2 className="text-2xl font-bold text-[var(--color-heading)]">{T.modePlanner}</h2>
-                      <div className="text-sm text-gray-500 mt-1">
-                          {T.targetKcal}: <span className="font-bold text-black">{targetKcal}</span> | 
-                          {T.remainKcal}: <span className={`font-bold ${plannerCalculations.pRemainKcal < 0 ? 'text-red-500' : 'text-green-500'}`}>{plannerCalculations.pRemainKcal}</span>
+                      {/* Visual Planner Progress */}
+                      <div className="mt-4 max-w-md mx-auto">
+                          <ProgressBar 
+                              label="Planner Budget"
+                              current={plannerCalculations.pTotals.kcal}
+                              target={targetKcal}
+                              unit="kcal"
+                          />
+                          <div className="text-right text-xs mt-1">
+                            {plannerCalculations.pRemainKcal.toFixed(0)} kcal remaining
+                          </div>
                       </div>
                    </div>
                    

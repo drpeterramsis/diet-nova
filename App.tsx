@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -105,6 +106,7 @@ const Dashboard = ({
 const AppContent = () => {
   const [bmiOpen, setBmiOpen] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [plannedKcal, setPlannedKcal] = useState<number>(0);
   const { t, isRTL } = useLanguage();
 
   // Auto scroll to top when activeTool changes
@@ -127,6 +129,11 @@ const AppContent = () => {
     }, 100);
   };
 
+  const handlePlanMeals = (kcal: number) => {
+    setPlannedKcal(kcal);
+    setActiveTool('meal-planner');
+  };
+
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[var(--color-bg)]">
       <Header onNavigateHome={handleNavHome} onNavigateTools={handleNavTools} />
@@ -144,9 +151,9 @@ const AppContent = () => {
               {t.common.backHome}
             </button>
             
-            {activeTool === 'kcal' && <KcalCalculator />}
+            {activeTool === 'kcal' && <KcalCalculator onPlanMeals={handlePlanMeals} />}
             {activeTool === 'meal-creator' && <MealCreator />}
-            {activeTool === 'meal-planner' && <MealPlanner />}
+            {activeTool === 'meal-planner' && <MealPlanner initialTargetKcal={plannedKcal} />}
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
             {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
 

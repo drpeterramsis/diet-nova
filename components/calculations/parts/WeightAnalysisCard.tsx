@@ -1,6 +1,8 @@
+
 import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { KcalResults } from '../hooks/useKcalCalculations';
+import { WeightComparison } from '../../Visuals';
 
 interface WeightAnalysisProps {
   results: KcalResults;
@@ -8,12 +10,29 @@ interface WeightAnalysisProps {
 
 const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
   const { t } = useLanguage();
+  
+  // Parse numeric values for the chart
+  const idealWeight = parseFloat(r.IBW) || 0;
+  const dryWeight = parseFloat(r.dryWeight) || 0;
 
   return (
     <div className="card bg-white shadow-lg">
       <h2 className="text-xl font-bold text-[var(--color-heading)] mb-4">
           {t.kcal.weightAnalysis}
       </h2>
+
+      {/* Chart */}
+      {dryWeight > 0 && idealWeight > 0 && (
+        <div className="mb-6 border-b border-gray-100 pb-4">
+           <WeightComparison 
+              actual={dryWeight} 
+              ideal={idealWeight} 
+              labelActual={t.kcal.dryWeight}
+              labelIdeal="Ideal"
+           />
+        </div>
+      )}
+
       <div className="space-y-4 text-sm">
           <div className="p-3 bg-gray-50 rounded-lg">
               <div className="flex justify-between mb-1">

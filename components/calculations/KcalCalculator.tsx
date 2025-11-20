@@ -6,7 +6,11 @@ import MethodsCard from './parts/MethodsCard';
 import ResultsSummaryCard from './parts/ResultsSummaryCard';
 import WeightAnalysisCard from './parts/WeightAnalysisCard';
 
-const KcalCalculator: React.FC = () => {
+interface KcalCalculatorProps {
+  onPlanMeals?: (kcal: number) => void;
+}
+
+const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals }) => {
   const { inputs, results } = useKcalCalculations();
 
   return (
@@ -42,7 +46,7 @@ const KcalCalculator: React.FC = () => {
         {/* Right Column: Results */}
         <div className="lg:col-span-1 space-y-6">
             <div className="sticky top-24 space-y-6">
-                <ResultsSummaryCard results={results} />
+                <ResultsSummaryCard results={results} onPlanMeals={onPlanMeals} />
                 <WeightAnalysisCard results={results} />
             </div>
         </div>

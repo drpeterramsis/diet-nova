@@ -90,6 +90,8 @@ export interface Translation {
     idealWeightAccurate: string;
     adjustedWeight: string;
     deficit: string;
+    kcalRequired: string;
+    planMeals: string;
     activityLevels: {
       sedentary: string;
       mild: string;

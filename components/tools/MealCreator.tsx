@@ -1,6 +1,8 @@
+
 import React, { useState, useMemo } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
+import { MacroDonut } from "../Visuals";
 
 const MealCreator: React.FC = () => {
   const { t, isRTL } = useLanguage();
@@ -175,42 +177,50 @@ const MealCreator: React.FC = () => {
         <div className="lg:col-span-1 space-y-6">
           
           {/* Total Summary Card */}
-          <div className="card bg-gradient-to-b from-green-50 to-white border-green-200 shadow-lg">
-            <h3 className="font-bold text-center text-[var(--color-primary-dark)] mb-4 border-b border-green-200 pb-2">
+          <div className="card bg-gradient-to-b from-white to-green-50 border-green-100 shadow-lg">
+            <h3 className="font-bold text-center text-[var(--color-primary-dark)] mb-2">
               {t.mealCreator.mealSummary}
             </h3>
+
+            {/* Macro Chart */}
+            {summary.totalKcal > 0 ? (
+              <MacroDonut 
+                cho={summary.totalCHO} 
+                pro={summary.totalProtein} 
+                fat={summary.totalFat} 
+                totalKcal={summary.totalKcal} 
+              />
+            ) : (
+               <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Add food to see breakdown</div>
+            )}
             
-            <div className="space-y-3 text-sm">
+            <div className="space-y-3 text-sm px-2 pb-2">
                <div className="flex justify-between p-2 bg-yellow-50 rounded border border-yellow-100">
                   <span>{t.mealCreator.total} (Serves)</span>
                   <span className="font-bold">{summary.totalServes.toFixed(2)}</span>
                </div>
-               <div className="grid grid-cols-2 gap-2">
-                 <div className="p-2 bg-blue-50 rounded text-center">
+               
+               <div className="grid grid-cols-3 gap-2 text-center">
+                 <div className="p-2 bg-blue-50 rounded">
                    <div className="text-xs text-gray-500">CHO</div>
                    <div className="font-bold text-blue-700">{summary.totalCHO.toFixed(1)}g</div>
                    <div className="text-[10px] text-blue-400">{percentages.cho}%</div>
                  </div>
-                 <div className="p-2 bg-red-50 rounded text-center">
-                   <div className="text-xs text-gray-500">Protein</div>
+                 <div className="p-2 bg-red-50 rounded">
+                   <div className="text-xs text-gray-500">Prot</div>
                    <div className="font-bold text-red-700">{summary.totalProtein.toFixed(1)}g</div>
                    <div className="text-[10px] text-red-400">{percentages.pro}%</div>
                  </div>
-                 <div className="p-2 bg-yellow-50 rounded text-center">
+                 <div className="p-2 bg-yellow-50 rounded">
                    <div className="text-xs text-gray-500">Fat</div>
                    <div className="font-bold text-yellow-700">{summary.totalFat.toFixed(1)}g</div>
                    <div className="text-[10px] text-yellow-400">{percentages.fat}%</div>
                  </div>
-                 <div className="p-2 bg-green-50 rounded text-center">
-                   <div className="text-xs text-gray-500">Fiber</div>
-                   <div className="font-bold text-green-700">{summary.totalFiber.toFixed(1)}g</div>
-                 </div>
                </div>
                
-               <div className="mt-4 p-4 bg-[var(--color-primary)] text-white rounded-xl text-center shadow-md">
-                 <div className="text-sm opacity-90">{t.mealCreator.totalCalories}</div>
-                 <div className="text-3xl font-bold">{summary.totalKcal.toFixed(0)}</div>
-                 <div className="text-xs opacity-80">Kcal</div>
+               <div className="flex justify-between items-center p-2 bg-green-100 rounded text-green-800">
+                   <span className="text-xs">Fiber</span>
+                   <span className="font-bold">{summary.totalFiber.toFixed(1)}g</span>
                </div>
             </div>
           </div>
@@ -219,7 +229,7 @@ const MealCreator: React.FC = () => {
           {Object.keys(summary.groupSummary).length > 0 && (
             <div className="card bg-white shadow">
               <h4 className="font-bold text-sm text-gray-600 mb-2">Group Breakdown</h4>
-              <div className="space-y-1 text-xs">
+              <div className="space-y-1 text-xs max-h-60 overflow-y-auto pr-1">
                 {Object.entries(summary.groupSummary).map(([group, val]: [string, any]) => (
                   <div key={group} className="flex justify-between items-center p-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition">
                     <span className="font-medium text-gray-700">{group}</span>
