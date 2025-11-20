@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.32",
+  "name": "Diet-Nova v2.0.33",
   "description": "Features: Fix RLS errors in saving meals, robust account deletion logic, version bump",
   "requestFramePermissions": []
 }

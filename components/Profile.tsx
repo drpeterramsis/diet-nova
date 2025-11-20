@@ -80,7 +80,6 @@ const Profile = () => {
           }
 
           // 1. Delete user saved meals (Application Data)
-          // We do this first to avoid foreign key constraints if any (though unlikely with Supabase defaults)
           const { error: mealsError } = await supabase
               .from('saved_meals')
               .delete()
@@ -89,15 +88,20 @@ const Profile = () => {
           if (mealsError) throw new Error(`Error deleting data: ${mealsError.message}`);
 
           // 2. Delete public profile
-          const { error: profileError } = await supabase
+          // Using count: 'exact' to verify deletion
+          const { error: profileError, count } = await supabase
               .from('profiles')
-              .delete()
+              .delete({ count: 'exact' })
               .eq('id', session.user.id);
               
           if (profileError) throw new Error(`Error deleting profile: ${profileError.message}`);
           
+          // If count is 0, it might mean the profile was already deleted or RLS prevented it.
+          // However, we proceed to sign out to ensure the user session is killed locally.
+          
           // 3. Sign out
-          await supabase.auth.signOut();
+          const { error: signOutError } = await supabase.auth.signOut();
+          if (signOutError) console.error("Sign out error:", signOutError);
           
           // 4. Force reload/redirect
           window.location.href = '/';

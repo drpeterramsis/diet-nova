@@ -191,28 +191,34 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
       const isUpdate = loadedPlanId && (planName === lastSavedName);
 
       try {
-          let result;
+          let data;
           if (isUpdate) {
              // Explicit UPDATE
-             result = await supabase
+             const response = await supabase
                 .from('saved_meals')
                 .update(payload)
                 .eq('id', loadedPlanId)
-                .select()
-                .single();
+                .select();
+
+             if (response.error) throw response.error;
+             
+             // Verify update succeeded
+             if (!response.data || response.data.length === 0) {
+                throw new Error("Update failed: Plan not found or permission denied.");
+             }
+             data = response.data[0];
           } else {
              // Explicit INSERT
-             result = await supabase
+             const response = await supabase
                 .from('saved_meals')
                 .insert(payload)
                 .select()
                 .single();
+             
+             if (response.error) throw response.error;
+             data = response.data;
           }
               
-          const { data, error } = result;
-
-          if (error) throw error;
-          
           if (data) {
               setLoadedPlanId(data.id);
               setLastSavedName(data.name);
@@ -225,9 +231,9 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
 
           fetchPlans();
           setTimeout(() => setStatusMsg(''), 3000);
-      } catch (err) {
+      } catch (err: any) {
           console.error('Error saving plan:', err);
-          setStatusMsg("Failed to save.");
+          setStatusMsg("Failed to save: " + err.message);
       }
   };
 

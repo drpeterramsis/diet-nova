@@ -143,28 +143,33 @@ const MealCreator: React.FC = () => {
     const isUpdate = loadedPlanId && (planName === lastSavedName);
 
     try {
-        let result;
+        let data;
         
         if (isUpdate) {
             // Explicit UPDATE
-            result = await supabase
+            const response = await supabase
                 .from('saved_meals')
                 .update(payload)
                 .eq('id', loadedPlanId)
-                .select()
-                .single();
+                .select();
+                
+            if (response.error) throw response.error;
+            // Check if update actually happened (row might have been deleted)
+            if (!response.data || response.data.length === 0) {
+               throw new Error("Update failed: Meal not found or permission denied.");
+            }
+            data = response.data[0];
         } else {
             // Explicit INSERT
-            result = await supabase
+            const response = await supabase
                 .from('saved_meals')
                 .insert(payload)
                 .select()
                 .single();
+
+            if (response.error) throw response.error;
+            data = response.data;
         }
-
-        const { data, error } = result;
-
-        if (error) throw error;
         
         if (data) {
             setLoadedPlanId(data.id);
