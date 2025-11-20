@@ -209,7 +209,6 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
 
           setTimeout(() => setStatusMsg(''), 3000);
           setShowSaveModal(false);
-          setPlanName('');
       } catch (err) {
           console.error('Error saving plan:', err);
           setStatusMsg("Failed to save.");
@@ -223,7 +222,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
       setTargetKcal(plan.data.targetKcal || 0);
       setManualGm(plan.data.manualGm || {cho:0, pro:0, fat:0});
       setManualPerc(plan.data.manualPerc || {cho:0, pro:0, fat:0});
-      setPlanName(plan.name); // Auto-fill name for easy updating
+      setPlanName(plan.name); // Auto-fill name
       
       setShowLoadModal(false);
       setStatusMsg(t.common.loadSuccess);
@@ -244,15 +243,27 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
   return (
     <div className="max-w-[1920px] mx-auto animate-fade-in">
       
-      {/* Top Control Bar */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 gap-4 sticky top-20 z-30">
-        <div className="flex items-center gap-3">
+      {/* Top Control Bar (Static, Non-Floating) */}
+      <div className="relative flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 gap-4">
+        <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
            {onBack && (
-               <button onClick={onBack} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition flex items-center gap-2">
+               <button onClick={onBack} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm whitespace-nowrap">
                    <span>←</span> {t.common.backToCalculator}
                </button>
            )}
-           <h1 className="text-2xl font-bold text-[var(--color-heading)] hidden md:block">{t.tools.mealPlanner.title}</h1>
+           <h1 className="text-2xl font-bold text-[var(--color-heading)] hidden xl:block whitespace-nowrap">{t.tools.mealPlanner.title}</h1>
+           
+           {/* Plan Name Input */}
+           <div className="relative flex-grow md:flex-grow-0">
+                <input 
+                    type="text"
+                    placeholder="Enter Meal Name..."
+                    value={planName}
+                    onChange={(e) => setPlanName(e.target.value)}
+                    className="w-full md:w-64 px-4 py-2 pl-9 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-gray-800 font-medium"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">✎</span>
+           </div>
         </div>
 
         <div className="flex bg-gray-100 p-1 rounded-lg">
@@ -270,23 +281,25 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
             </button>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
             {session && (
                 <>
                 <button 
                     onClick={() => setShowSaveModal(true)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2"
+                    className="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm"
+                    title={t.common.save}
                 >
-                    💾 {t.common.save}
+                    <span className="text-xl">💾</span>
                 </button>
                 <button 
                     onClick={() => {
                         fetchPlans();
                         setShowLoadModal(true);
                     }}
-                    className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2"
+                    className="bg-purple-500 hover:bg-purple-600 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm"
+                    title={t.common.load}
                 >
-                    📂 {t.common.load}
+                    <span className="text-xl">📂</span>
                 </button>
                 </>
             )}
@@ -298,6 +311,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
                         [group]: MEALS.reduce((mAcc, meal) => ({ ...mAcc, [meal]: 0 }), {})
                     }), {}));
                     setTargetKcal(0);
+                    setPlanName('');
                 }}
                 className="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-lg text-sm font-medium transition"
             >

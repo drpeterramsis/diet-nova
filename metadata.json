@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova v2.0.26",
-  "description": "Features: User Menu, Enhanced Save with Duplicate Detection, and UI Refinements",
+  "name": "Diet-Nova v2.0.27",
+  "description": "Features: Profile Page, Meal Planner UI Updates (Icon-only buttons, Static Banner)",
   "requestFramePermissions": []
 }

@@ -6,10 +6,11 @@ import { useAuth } from "../contexts/AuthContext";
 interface HeaderProps {
   onNavigateHome?: () => void;
   onNavigateTools?: () => void;
+  onNavigateProfile?: () => void;
   onLoginClick?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onLoginClick }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavigateProfile, onLoginClick }) => {
   const { t, lang, toggleLanguage } = useLanguage();
   const { session, profile, signOut } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -38,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onLogi
           <h1 className="text-2xl font-bold tracking-wide flex items-center">
             Diet<span className="text-[var(--color-primary-light)]">Nova</span>
             <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full hidden sm:inline-block">
-              v2.0.26
+              v2.0.27
             </span>
           </h1>
         </div>
@@ -94,7 +95,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onLogi
                            </div>
                         </div>
                         <button 
-                           onClick={() => { alert("Profile Page Coming Soon!"); setShowUserMenu(false); }}
+                           onClick={() => { 
+                               if(onNavigateProfile) onNavigateProfile(); 
+                               setShowUserMenu(false); 
+                           }}
                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 flex items-center gap-2 transition"
                         >
                            <span>📄</span> View Profile

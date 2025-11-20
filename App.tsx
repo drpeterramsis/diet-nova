@@ -8,6 +8,7 @@ import KcalCalculator from "./components/calculations/KcalCalculator";
 import MealCreator from "./components/tools/MealCreator";
 import FoodExchange from "./components/tools/FoodExchange";
 import MealPlanner from "./components/tools/MealPlanner";
+import Profile from "./components/Profile";
 import ScrollToTopButton from "./components/ScrollToTopButton";
 import Login from "./components/Login";
 import Loading from "./components/Loading";
@@ -162,6 +163,10 @@ const AppContent = () => {
     }, 100);
   };
 
+  const handleNavProfile = () => {
+      setActiveTool('profile');
+  };
+
   const handleToolClick = (toolId: string) => {
       // Check restrictions
       if (toolId === 'meal-creator' && !session) {
@@ -193,7 +198,8 @@ const AppContent = () => {
     <div className="min-h-screen flex flex-col font-sans bg-[var(--color-bg)]">
       <Header 
         onNavigateHome={handleNavHome} 
-        onNavigateTools={handleNavTools} 
+        onNavigateTools={handleNavTools}
+        onNavigateProfile={handleNavProfile}
         onLoginClick={() => setShowLogin(true)}
       />
 
@@ -232,6 +238,7 @@ const AppContent = () => {
             {activeTool === 'meal-creator' && <MealCreator />}
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
             {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
+            {activeTool === 'profile' && <Profile />}
 
           </div>
         ) : (
