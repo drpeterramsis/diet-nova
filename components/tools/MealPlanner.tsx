@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ProgressBar, MacroDonut } from '../Visuals';
@@ -59,7 +58,6 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
   const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both'>('calculator');
   
   // --- Saving/Loading UI State ---
-  const [showSaveModal, setShowSaveModal] = useState(false); // Kept if needed for "Save As" logic in future, though mainly using header input now
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [planName, setPlanName] = useState('');
   const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
@@ -150,6 +148,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
             .from('saved_meals')
             .select('*')
             .eq('tool_type', 'meal-planner')
+            .eq('user_id', session.user.id) // Explicit user filtering
             .order('created_at', { ascending: false });
           
           if (error) throw error;
@@ -176,63 +175,42 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
           manualGm,
           manualPerc
       };
+      const timestamp = new Date().toISOString();
 
       try {
           if (loadedPlanId) {
-              // Update existing loaded plan
+              // Update existing (Allow Rename)
               const { error } = await supabase
                   .from('saved_meals')
                   .update({ 
-                      name: planName, // Allow renaming
+                      name: planName,
                       data: planData, 
-                      created_at: new Date() 
+                      created_at: timestamp 
                   })
-                  .eq('id', loadedPlanId);
+                  .eq('id', loadedPlanId)
+                  .eq('user_id', session.user.id);
               
               if (error) throw error;
               setStatusMsg("Plan updated successfully!");
           } else {
-              // Create NEW plan
-              // First check if name exists just to warn or auto-update? 
-              // Actually, if no ID is loaded, we treat it as new. 
-              // If name conflict occurs, we might want to ask, but for now let's just insert.
-              // Alternatively, check duplicate name for clean UX.
-              const { data: existing } = await supabase
-                .from('saved_meals')
-                .select('id')
-                .eq('user_id', session.user.id)
-                .eq('tool_type', 'meal-planner')
-                .eq('name', planName)
-                .single();
-
-              if (existing) {
-                   if (!window.confirm(`A plan named "${planName}" already exists. Overwrite it?`)) {
-                      return;
-                   }
-                   // Update the existing one found by name
-                   const { error } = await supabase
-                      .from('saved_meals')
-                      .update({ data: planData, created_at: new Date() })
-                      .eq('id', existing.id);
-                   if (error) throw error;
-                   setLoadedPlanId(existing.id);
-                   setStatusMsg("Plan updated successfully!");
-              } else {
-                  const { data, error } = await supabase.from('saved_meals').insert([{
-                      user_id: session.user.id,
-                      name: planName,
-                      tool_type: 'meal-planner',
-                      data: planData
-                  }]).select();
-                  
-                  if (error) throw error;
-                  if (data && data[0]) setLoadedPlanId(data[0].id);
-                  setStatusMsg(t.common.saveSuccess);
+              // Insert New
+              const { data, error } = await supabase.from('saved_meals').insert([{
+                  user_id: session.user.id,
+                  name: planName,
+                  tool_type: 'meal-planner',
+                  data: planData,
+                  created_at: timestamp
+              }]).select();
+              
+              if (error) throw error;
+              if (data && data[0]) {
+                  setLoadedPlanId(data[0].id);
               }
+              setStatusMsg(t.common.saveSuccess);
           }
 
+          fetchPlans();
           setTimeout(() => setStatusMsg(''), 3000);
-          setShowSaveModal(false);
       } catch (err) {
           console.error('Error saving plan:', err);
           setStatusMsg("Failed to save.");
@@ -241,13 +219,14 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
 
   const loadPlan = (plan: SavedMeal) => {
       if (!plan.data) return;
-      setServings(plan.data.servings || {});
-      setDistribution(plan.data.distribution || {});
+      // Ensure we replace state completely
+      setServings({ ...plan.data.servings } || {});
+      setDistribution({ ...plan.data.distribution } || {});
       setTargetKcal(plan.data.targetKcal || 0);
       setManualGm(plan.data.manualGm || {cho:0, pro:0, fat:0});
       setManualPerc(plan.data.manualPerc || {cho:0, pro:0, fat:0});
       setPlanName(plan.name);
-      setLoadedPlanId(plan.id); // Track the ID
+      setLoadedPlanId(plan.id);
       
       setShowLoadModal(false);
       setStatusMsg(t.common.loadSuccess);
@@ -257,7 +236,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
   const deletePlan = async (id: string) => {
       if (!window.confirm("Are you sure you want to delete this plan?")) return;
       try {
-          const { error } = await supabase.from('saved_meals').delete().eq('id', id);
+          const { error } = await supabase.from('saved_meals').delete().eq('id', id).eq('user_id', session?.user.id);
           if (error) throw error;
           setSavedPlans(prev => prev.filter(p => p.id !== id));
           if (loadedPlanId === id) {

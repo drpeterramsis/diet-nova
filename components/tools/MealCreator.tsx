@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
 import { MacroDonut } from "../Visuals";
@@ -31,6 +30,7 @@ const MealCreator: React.FC = () => {
   }, [searchQuery]);
 
   const addFood = (food: FoodItem) => {
+    // Ensure deep copy of added item
     setAddedFoods([...addedFoods, { ...food, serves: 1 }]);
     setSearchQuery("");
   };
@@ -43,7 +43,8 @@ const MealCreator: React.FC = () => {
 
   const updateServes = (index: number, val: number) => {
     const newFoods = [...addedFoods];
-    newFoods[index].serves = val;
+    // Deep copy the specific item to ensure React state change detection and safe mutation
+    newFoods[index] = { ...newFoods[index], serves: val };
     setAddedFoods(newFoods);
   };
 
@@ -101,6 +102,7 @@ const MealCreator: React.FC = () => {
           .from('saved_meals')
           .select('*')
           .eq('tool_type', 'meal-creator')
+          .eq('user_id', session.user.id) // Strict user filtering
           .order('created_at', { ascending: false });
         
         if (error) throw error;
@@ -120,70 +122,55 @@ const MealCreator: React.FC = () => {
     }
     if (!session) return;
     
+    // Construct payload with current state
     const planData = { addedFoods };
+    const timestamp = new Date().toISOString();
 
     try {
         if (loadedPlanId) {
-            // Update existing loaded plan
+            // UPDATE EXISTING (Rename supported)
             const { error } = await supabase
                 .from('saved_meals')
                 .update({ 
-                    name: planName, 
+                    name: planName,
                     data: planData, 
-                    created_at: new Date() 
+                    created_at: timestamp 
                 })
-                .eq('id', loadedPlanId);
+                .eq('id', loadedPlanId)
+                .eq('user_id', session.user.id); // Safety check
             
             if (error) throw error;
             setStatusMsg("Meal updated successfully!");
         } else {
-            // New Plan logic
-            const { data: existing } = await supabase
-              .from('saved_meals')
-              .select('id')
-              .eq('user_id', session.user.id)
-              .eq('tool_type', 'meal-creator')
-              .eq('name', planName)
-              .single();
+            // SAVE NEW
+            const { data, error } = await supabase.from('saved_meals').insert([{
+                user_id: session.user.id,
+                name: planName,
+                tool_type: 'meal-creator',
+                data: planData,
+                created_at: timestamp
+            }]).select();
 
-            if (existing) {
-                if (!window.confirm(`A meal named "${planName}" already exists. Overwrite it?`)) {
-                    return; 
-                }
-                // Update existing match
-                const { error } = await supabase
-                    .from('saved_meals')
-                    .update({ data: planData, created_at: new Date() })
-                    .eq('id', existing.id);
-                
-                if (error) throw error;
-                setLoadedPlanId(existing.id);
-                setStatusMsg("Meal updated successfully!");
-            } else {
-                // Insert new
-                const { data, error } = await supabase.from('saved_meals').insert([{
-                    user_id: session.user.id,
-                    name: planName,
-                    tool_type: 'meal-creator',
-                    data: planData
-                }]).select();
-
-                if (error) throw error;
-                if (data && data[0]) setLoadedPlanId(data[0].id);
-                setStatusMsg(t.common.saveSuccess);
+            if (error) throw error;
+            
+            if (data && data[0]) {
+                setLoadedPlanId(data[0].id);
             }
+            setStatusMsg(t.common.saveSuccess);
         }
         
+        fetchPlans(); // Refresh list
         setTimeout(() => setStatusMsg(''), 3000);
-    } catch (err) {
+    } catch (err: any) {
         console.error('Error saving plan:', err);
-        setStatusMsg("Failed to save.");
+        setStatusMsg("Failed to save: " + err.message);
     }
   };
 
   const loadPlan = (plan: SavedMeal) => {
     if (!plan.data || !plan.data.addedFoods) return;
-    setAddedFoods(plan.data.addedFoods);
+    // Ensure state is completely replaced
+    setAddedFoods([...plan.data.addedFoods]);
     setPlanName(plan.name);
     setLoadedPlanId(plan.id); 
     setShowLoadModal(false);
@@ -194,7 +181,7 @@ const MealCreator: React.FC = () => {
   const deletePlan = async (id: string) => {
     if (!window.confirm("Are you sure you want to delete this meal?")) return;
     try {
-        const { error } = await supabase.from('saved_meals').delete().eq('id', id);
+        const { error } = await supabase.from('saved_meals').delete().eq('id', id).eq('user_id', session?.user.id);
         if (error) throw error;
         setSavedPlans(prev => prev.filter(p => p.id !== id));
         if (loadedPlanId === id) {

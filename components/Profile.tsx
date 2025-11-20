@@ -71,17 +71,26 @@ const Profile = () => {
       try {
           if (!session?.user.id) return;
 
-          // Delete user saved meals
-          const { error: mealsError } = await supabase.from('saved_meals').delete().eq('user_id', session.user.id);
-          if (mealsError) throw mealsError;
+          // 1. Delete user saved meals (Application Data)
+          const { error: mealsError } = await supabase
+              .from('saved_meals')
+              .delete()
+              .eq('user_id', session.user.id);
+              
+          if (mealsError) throw new Error(`Error deleting data: ${mealsError.message}`);
 
-          // Delete profile
-          const { error: profileError } = await supabase.from('profiles').delete().eq('id', session.user.id);
-          if (profileError) throw profileError;
+          // 2. Delete public profile
+          const { error: profileError } = await supabase
+              .from('profiles')
+              .delete()
+              .eq('id', session.user.id);
+              
+          if (profileError) throw new Error(`Error deleting profile: ${profileError.message}`);
           
-          // Sign out
+          // 3. Sign out (Auth user deletion is restricted via client usually, this clears session)
           await supabase.auth.signOut();
       } catch (err: any) {
+          console.error(err);
           setMsg({ type: 'error', content: "Failed to delete account: " + err.message });
           setLoading(false);
       }

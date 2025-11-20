@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.29",
-  "description": "Features: Fix profile update error (remove updated_at), Delete Account option, Edit Meal Name in loaded views",
+  "name": "Diet-Nova v2.0.30",
+  "description": "Features: Fixed Meal Update/Save logic (Renaming support), Immutability fixes, Account Deletion cleanup",
   "requestFramePermissions": []
 }
