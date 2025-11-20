@@ -127,30 +127,30 @@ const MealCreator: React.FC = () => {
     const planData = { addedFoods };
     const timestamp = new Date().toISOString();
 
-    const payload: any = {
-        user_id: session.user.id,
+    // Logic: 
+    // If we have a loadedPlanId AND the name hasn't changed -> Update existing.
+    // If we have a loadedPlanId BUT the name CHANGED -> Treat as New (Save As).
+    // If no loadedPlanId -> Create New.
+    const isUpdate = loadedPlanId && (planName === lastSavedName);
+
+    const basePayload: any = {
         name: planName,
         tool_type: 'meal-creator',
         data: planData,
         created_at: timestamp
     };
 
-    // Logic: 
-    // If we have a loadedPlanId AND the name hasn't changed -> Update existing.
-    // If we have a loadedPlanId BUT the name CHANGED -> Treat as New (Save As).
-    // If no loadedPlanId -> Create New.
-    
-    const isUpdate = loadedPlanId && (planName === lastSavedName);
-
     try {
         let data;
         
         if (isUpdate) {
             // Explicit UPDATE
+            // Fix: Exclude user_id from payload during update to avoid RLS permission denied errors if user_id column is restricted
             const response = await supabase
                 .from('saved_meals')
-                .update(payload)
+                .update(basePayload)
                 .eq('id', loadedPlanId)
+                .eq('user_id', session.user.id) // Explicit RLS match
                 .select();
                 
             if (response.error) throw response.error;
@@ -161,9 +161,10 @@ const MealCreator: React.FC = () => {
             data = response.data[0];
         } else {
             // Explicit INSERT
+            const insertPayload = { ...basePayload, user_id: session.user.id };
             const response = await supabase
                 .from('saved_meals')
-                .insert(payload)
+                .insert(insertPayload)
                 .select()
                 .single();
 

@@ -27,7 +27,6 @@ const Profile = () => {
       const updates: any = {
         id: session?.user.id,
         full_name: fullName,
-        // updated_at removed as it may not exist in schema
       };
 
       // Update Profile Data
@@ -80,31 +79,30 @@ const Profile = () => {
           }
 
           // 1. Delete user saved meals (Application Data)
+          // We handle this separately to ensure data is cleaned even if profile delete has issues
           const { error: mealsError } = await supabase
               .from('saved_meals')
               .delete()
               .eq('user_id', session.user.id);
               
-          if (mealsError) throw new Error(`Error deleting data: ${mealsError.message}`);
+          if (mealsError) {
+              console.error("Error deleting saved_meals:", mealsError);
+              // We continue even if this fails, to try deleting the profile
+          }
 
           // 2. Delete public profile
           // Using count: 'exact' to verify deletion
-          const { error: profileError, count } = await supabase
+          const { error: profileError } = await supabase
               .from('profiles')
               .delete({ count: 'exact' })
               .eq('id', session.user.id);
               
           if (profileError) throw new Error(`Error deleting profile: ${profileError.message}`);
           
-          // If count is 0, it might mean the profile was already deleted or RLS prevented it.
-          // However, we proceed to sign out to ensure the user session is killed locally.
-          
-          // 3. Sign out
-          const { error: signOutError } = await supabase.auth.signOut();
-          if (signOutError) console.error("Sign out error:", signOutError);
-          
-          // 4. Force reload/redirect
+          // 3. Sign out and redirect
+          await supabase.auth.signOut();
           window.location.href = '/';
+          
       } catch (err: any) {
           console.error(err);
           setMsg({ type: 'error', content: "Failed to delete account: " + err.message });
