@@ -23,9 +23,10 @@ const MEALS = ['snack1', 'breakfast', 'snack2', 'lunch', 'snack3', 'dinner', 'sn
 
 interface MealPlannerProps {
   initialTargetKcal?: number;
+  onBack?: () => void;
 }
 
-const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal }) => {
+const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) => {
   const { t, isRTL } = useLanguage();
   const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both'>('calculator');
   
@@ -222,7 +223,15 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal }) => {
       
       {/* Top Controls */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-[var(--color-border)]">
-         <div className="flex gap-2 w-full md:w-auto">
+         <div className="flex gap-2 w-full md:w-auto flex-wrap">
+             {onBack && (
+                 <button 
+                   onClick={onBack}
+                   className="flex-1 md:flex-none px-4 py-2 rounded-lg transition bg-green-100 text-green-800 hover:bg-green-200 font-medium flex items-center justify-center gap-2"
+                 >
+                   <span className="transform rotate-180">➥</span> {t.common.backToCalculator}
+                 </button>
+             )}
              <button onClick={() => setViewMode('calculator')} className={`flex-1 md:flex-none px-4 py-2 rounded-lg transition ${viewMode === 'calculator' ? 'bg-[var(--color-primary)] text-white' : 'bg-gray-100'}`}>
                {T.modeCalculator}
              </button>

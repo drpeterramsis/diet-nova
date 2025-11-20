@@ -1,8 +1,10 @@
+
 export type Language = 'en' | 'ar';
 
 export interface Translation {
   common: {
     backHome: string;
+    backToCalculator: string;
     explore: string;
     comingSoon: string;
     calculate: string;

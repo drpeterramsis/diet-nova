@@ -106,6 +106,7 @@ const Dashboard = ({
 const AppContent = () => {
   const [bmiOpen, setBmiOpen] = useState(false);
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [previousTool, setPreviousTool] = useState<string | null>(null);
   const [plannedKcal, setPlannedKcal] = useState<number>(0);
   const { t, isRTL } = useLanguage();
 
@@ -116,11 +117,13 @@ const AppContent = () => {
 
   const handleNavHome = () => {
     setActiveTool(null);
+    setPreviousTool(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleNavTools = () => {
     setActiveTool(null);
+    setPreviousTool(null);
     setTimeout(() => {
       const toolsSection = document.getElementById('tools');
       if (toolsSection) {
@@ -131,8 +134,21 @@ const AppContent = () => {
 
   const handlePlanMeals = (kcal: number) => {
     setPlannedKcal(kcal);
+    setPreviousTool(activeTool);
     setActiveTool('meal-planner');
   };
+
+  const handleBackToCalculator = () => {
+    if (previousTool) {
+      setActiveTool(previousTool);
+      setPreviousTool(null);
+    }
+  };
+
+  // Helper to determine if complex tools should be kept alive
+  const showKcal = activeTool === 'kcal';
+  const showPlanner = activeTool === 'meal-planner';
+  const isComplexFlow = showKcal || showPlanner;
 
   return (
     <div className="min-h-screen flex flex-col font-sans bg-[var(--color-bg)]">
@@ -142,7 +158,10 @@ const AppContent = () => {
         {activeTool ? (
           <div className="container mx-auto px-4 py-8 pb-24 animate-fade-in">
             <button 
-              onClick={() => setActiveTool(null)}
+              onClick={() => {
+                setActiveTool(null);
+                setPreviousTool(null);
+              }}
               className="flex items-center gap-2 text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] font-medium mb-6 transition group"
             >
               <span className={`text-xl transform transition-transform ${isRTL ? 'rotate-180 group-hover:translate-x-1' : 'group-hover:-translate-x-1'}`}>
@@ -151,9 +170,23 @@ const AppContent = () => {
               {t.common.backHome}
             </button>
             
-            {activeTool === 'kcal' && <KcalCalculator onPlanMeals={handlePlanMeals} />}
+            {/* Complex State Persistence Logic */}
+            {isComplexFlow && (
+              <>
+                <div className={showKcal ? 'block' : 'hidden'}>
+                  <KcalCalculator onPlanMeals={handlePlanMeals} />
+                </div>
+                <div className={showPlanner ? 'block' : 'hidden'}>
+                  <MealPlanner 
+                    initialTargetKcal={plannedKcal} 
+                    onBack={previousTool === 'kcal' ? handleBackToCalculator : undefined}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Standard Tools (Unmount when inactive) */}
             {activeTool === 'meal-creator' && <MealCreator />}
-            {activeTool === 'meal-planner' && <MealPlanner initialTargetKcal={plannedKcal} />}
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
             {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
 

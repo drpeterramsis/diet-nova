@@ -1,8 +1,10 @@
+
 import { Translation } from "../types";
 
 export const en: Translation = {
   common: {
     backHome: "Back to Home",
+    backToCalculator: "Back to Calculator",
     explore: "Explore Tools",
     comingSoon: "Coming soon",
     calculate: "Calculate",
@@ -170,6 +172,7 @@ export const en: Translation = {
 export const ar: Translation = {
   common: {
     backHome: "العودة للرئيسية",
+    backToCalculator: "العودة للحاسبة",
     explore: "تصفح الأدوات",
     comingSoon: "قريباً",
     calculate: "حساب",
