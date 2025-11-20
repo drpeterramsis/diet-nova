@@ -1,9 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Helper to safely access environment variables in a way that:
-// 1. Works with Vite's static replacement (must use full path import.meta.env.VITE_...)
-// 2. Bypasses TypeScript errors if config is strict
-// 3. Provides a runtime fallback
+// Helper functions to safely access environment variables.
+// We use try-catch to handle cases where import.meta.env is undefined.
+// We maintain the full static string 'import.meta.env.VITE_...' to allow Vite to replace it during build.
 
 const getSupabaseUrl = () => {
   try {
@@ -23,21 +22,25 @@ const getSupabaseAnonKey = () => {
   }
 };
 
-// Configuration: Try Environment Variables first, fallback to provided hardcoded values
-const supabaseUrl = getSupabaseUrl() || 'https://vxrvmrvlzigmnaxdacah.supabase.co';
-const supabaseAnonKey = getSupabaseAnonKey() || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4cnZtcnZsemlnbW5heGRhY2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MDQ2NjAsImV4cCI6MjA3OTE4MDY2MH0.qTAK0iEcOUI1pSR_4alvvX4hO0n4uL_q22yW1u7SgBU';
+// 1. Try to get from environment
+const envUrl = getSupabaseUrl();
+const envKey = getSupabaseAnonKey();
 
-// Flag to check if real credentials are present
+// 2. Fallback to hardcoded values if env vars are missing
+const supabaseUrl = envUrl || 'https://vxrvmrvlzigmnaxdacah.supabase.co';
+const supabaseAnonKey = envKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4cnZtcnZsemlnbW5heGRhY2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MDQ2NjAsImV4cCI6MjA3OTE4MDY2MH0.qTAK0iEcOUI1pSR_4alvvX4hO0n4uL_q22yW1u7SgBU';
+
+// 3. Validation flag
 export const isSupabaseConfigured = 
   !!supabaseUrl && 
   !!supabaseAnonKey && 
   supabaseUrl !== 'https://placeholder.supabase.co';
 
 if (!isSupabaseConfigured) {
-  console.warn("⚠️ Supabase credentials are missing or invalid. Authentication features will be disabled.");
+  console.warn("⚠️ Supabase credentials are missing or invalid.");
 }
 
-// Initialize Supabase client
+// 4. Initialize Client
 export const supabase = createClient(
   supabaseUrl,
   supabaseAnonKey
