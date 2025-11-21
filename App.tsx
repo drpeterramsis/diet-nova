@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -7,6 +8,7 @@ import KcalCalculator from "./components/calculations/KcalCalculator";
 import MealCreator from "./components/tools/MealCreator";
 import FoodExchange from "./components/tools/FoodExchange";
 import MealPlanner from "./components/tools/MealPlanner";
+import ClientManager from "./components/tools/ClientManager";
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -139,6 +141,10 @@ const AppContent = () => {
           setShowLogin(true);
           return;
       }
+      if (toolId === 'client-manager' && !session) {
+        setShowLogin(true);
+        return;
+      }
       if (loadId) {
           setSelectedLoadId(loadId);
       } else {
@@ -211,6 +217,7 @@ const AppContent = () => {
             {activeTool === 'meal-creator' && <MealCreator initialLoadId={selectedLoadId} />}
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
             {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
+            {activeTool === 'client-manager' && <ClientManager />}
             {activeTool === 'profile' && <Profile />}
 
           </div>

@@ -1,4 +1,5 @@
 
+
 import { Translation } from "../types";
 
 export const en: Translation = {
@@ -17,11 +18,15 @@ export const en: Translation = {
     save: "Save",
     load: "Load",
     delete: "Delete",
+    edit: "Edit",
     saveSuccess: "Saved successfully!",
     loadSuccess: "Loaded successfully.",
     logout: "Logout",
     loginRequired: "Login Required",
     locked: "Locked",
+    search: "Search...",
+    cancel: "Cancel",
+    actions: "Actions"
   },
   auth: {
     loginTitle: "Login to Diet-Nova",
@@ -77,6 +82,24 @@ export const en: Translation = {
         title: "BMR Calculator",
         desc: "Calculate your Basal Metabolic Rate.",
     },
+    clients: {
+      title: "My Clients",
+      desc: "Manage your clients, track visits, and store clinical notes.",
+    },
+  },
+  clients: {
+    title: "Client Management",
+    addClient: "Add New Client",
+    editClient: "Edit Client",
+    clientProfile: "Client Profile",
+    name: "Full Name",
+    visitDate: "Date of Visit",
+    clinic: "Clinic / Location",
+    phone: "Phone Number",
+    notes: "Clinical Notes",
+    age: "Age",
+    gender: "Gender",
+    noClients: "No clients found. Add your first client!",
   },
   kcal: {
     title: "Advanced Calorie Calculator",
@@ -209,11 +232,15 @@ export const ar: Translation = {
     save: "حفظ",
     load: "تحميل",
     delete: "حذف",
+    edit: "تعديل",
     saveSuccess: "تم الحفظ بنجاح",
     loadSuccess: "تم التحميل",
     logout: "خروج",
     loginRequired: "يجب تسجيل الدخول",
     locked: "مغلق",
+    search: "بحث...",
+    cancel: "إلغاء",
+    actions: "إجراءات"
   },
   auth: {
     loginTitle: "تسجيل الدخول",
@@ -269,6 +296,24 @@ export const ar: Translation = {
         title: "حاسبة الأيض",
         desc: "احسب معدل الأيض الأساسي الخاص بك.",
     },
+    clients: {
+      title: "عملائي",
+      desc: "إدارة ملفات العملاء، متابعة الزيارات، وتخزين الملاحظات.",
+    },
+  },
+  clients: {
+    title: "إدارة العملاء",
+    addClient: "إضافة عميل جديد",
+    editClient: "تعديل بيانات العميل",
+    clientProfile: "ملف العميل",
+    name: "الاسم بالكامل",
+    visitDate: "تاريخ الزيارة",
+    clinic: "العيادة / المكان",
+    phone: "رقم الهاتف",
+    notes: "ملاحظات طبية",
+    age: "العمر",
+    gender: "النوع",
+    noClients: "لا يوجد عملاء. أضف عميلك الأول!",
   },
   kcal: {
     title: "حاسبة السعرات المتقدمة",

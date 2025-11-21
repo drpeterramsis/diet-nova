@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
@@ -24,6 +25,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId }) => {
   const [savedPlans, setSavedPlans] = useState<SavedMeal[]>([]);
   const [statusMsg, setStatusMsg] = useState('');
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
+  const [loadSearchQuery, setLoadSearchQuery] = useState('');
 
   // Search Logic
   const filteredFoods = useMemo(() => {
@@ -33,6 +35,13 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId }) => {
       (food) => food.name.toLowerCase().includes(q) || food.group.toLowerCase().includes(q)
     );
   }, [searchQuery]);
+
+  // Filter Saved Plans Logic
+  const filteredSavedPlans = useMemo(() => {
+      if (!loadSearchQuery) return savedPlans;
+      const q = loadSearchQuery.toLowerCase();
+      return savedPlans.filter(plan => plan.name.toLowerCase().includes(q));
+  }, [savedPlans, loadSearchQuery]);
 
   // Auto-load effect
   useEffect(() => {
@@ -126,6 +135,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId }) => {
   const fetchPlans = async () => {
     if (!session) return;
     setIsLoadingPlans(true);
+    setLoadSearchQuery(''); // Reset search on open
     try {
         const { data, error } = await supabase
           .from('saved_meals')
@@ -463,13 +473,23 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId }) => {
                     <button onClick={() => setShowLoadModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
                 </div>
                 
+                <div className="mb-4">
+                    <input 
+                        type="text" 
+                        placeholder={t.common.search}
+                        value={loadSearchQuery}
+                        onChange={(e) => setLoadSearchQuery(e.target.value)}
+                        className="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                    />
+                </div>
+
                 <div className="flex-grow overflow-y-auto space-y-2 pr-2">
                     {isLoadingPlans ? (
                         <div className="text-center py-10 text-gray-400">Loading...</div>
-                    ) : savedPlans.length === 0 ? (
+                    ) : filteredSavedPlans.length === 0 ? (
                         <div className="text-center py-10 text-gray-400">No saved meals found.</div>
                     ) : (
-                        savedPlans.map(plan => (
+                        filteredSavedPlans.map(plan => (
                             <div key={plan.id} className="flex justify-between items-center p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-100 group">
                                 <div>
                                     <div className="font-bold text-gray-800">{plan.name}</div>

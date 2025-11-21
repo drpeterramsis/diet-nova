@@ -1,6 +1,8 @@
+
 import React from 'react';
 import ToolCard from './ToolCard';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ToolsGridProps {
   onToolClick: (toolId: string) => void;
@@ -10,6 +12,9 @@ interface ToolsGridProps {
 
 const ToolsGrid: React.FC<ToolsGridProps> = ({ onToolClick, setBmiOpen, isAuthenticated }) => {
   const { t } = useLanguage();
+  const { profile } = useAuth();
+
+  const isDoctor = profile?.role === 'doctor';
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -55,6 +60,16 @@ const ToolsGrid: React.FC<ToolsGridProps> = ({ onToolClick, setBmiOpen, isAuthen
         onClick={() => onToolClick('exchange-pro')}
         icon={<span className="text-2xl">📊</span>}
       />
+
+       {isDoctor && (
+          <ToolCard
+            title={t.tools.clients.title}
+            desc={t.tools.clients.desc}
+            onClick={() => onToolClick('client-manager')}
+            icon={<span className="text-2xl">👥</span>}
+            locked={!isAuthenticated}
+          />
+       )}
 
       <ToolCard
         title={t.tools.bmr.title}

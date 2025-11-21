@@ -1,4 +1,5 @@
 
+
 export type Language = 'en' | 'ar';
 
 export interface UserProfile {
@@ -14,6 +15,20 @@ export interface SavedMeal {
   created_at: string;
   data: any; // JSON data of the meal plan
   tool_type: 'meal-planner' | 'meal-creator';
+  user_id: string;
+}
+
+export interface Client {
+  id: string;
+  doctor_id: string;
+  full_name: string;
+  visit_date: string;
+  clinic: string;
+  phone?: string;
+  notes?: string;
+  age?: number;
+  gender?: 'male' | 'female';
+  created_at: string;
 }
 
 export interface Translation {
@@ -32,11 +47,15 @@ export interface Translation {
     save: string;
     load: string;
     delete: string;
+    edit: string;
     saveSuccess: string;
     loadSuccess: string;
     logout: string;
     loginRequired: string;
     locked: string;
+    search: string;
+    cancel: string;
+    actions: string;
   };
   auth: {
     loginTitle: string;
@@ -92,6 +111,24 @@ export interface Translation {
       title: string;
       desc: string;
     };
+    clients: {
+      title: string;
+      desc: string;
+    };
+  };
+  clients: {
+    title: string;
+    addClient: string;
+    editClient: string;
+    clientProfile: string;
+    name: string;
+    visitDate: string;
+    clinic: string;
+    phone: string;
+    notes: string;
+    age: string;
+    gender: string;
+    noClients: string;
   };
   kcal: {
     title: string;
