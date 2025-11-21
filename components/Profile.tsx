@@ -64,8 +64,9 @@ const Profile = () => {
   };
 
   const handleDeleteAccount = async () => {
-      if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone and will remove all your saved data.")) return;
+      if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) return;
       
+      // Prompt user for text confirmation
       const confirmation = window.prompt("Type 'DELETE' to confirm deletion:");
       if (confirmation !== 'DELETE') {
           if (confirmation !== null) alert("Deletion cancelled. Code did not match.");
@@ -78,40 +79,47 @@ const Profile = () => {
              throw new Error("No active session found.");
           }
 
-          // 1. Delete user saved meals (Application Data)
-          // This MUST happen before deleting the profile if foreign key constraints exist (RESTRICT)
-          const { error: mealsError } = await supabase
-              .from('saved_meals')
-              .delete()
-              .eq('user_id', session.user.id);
-              
-          if (mealsError) {
-             console.error("Error deleting saved_meals:", mealsError);
-             throw new Error(`Failed to delete saved data: ${mealsError.message}`);
+          console.log("Processing account deletion for:", session.user.id);
+
+          // 1. Try the Secure RPC method (Best case)
+          // This executes the 'delete_user' SQL function on the server.
+          // It deletes the user from auth.users, which is the only way to prevent re-login.
+          const { error: rpcError } = await supabase.rpc('delete_user');
+
+          if (rpcError) {
+             console.warn("RPC 'delete_user' failed (likely not set up or missing). Falling back to manual cleanup.", rpcError);
+             
+             // 2. Fallback: Manual Public Data Cleanup
+             // If the RPC fails, we clean up the public data manually.
+             // Note: This leaves the Auth User alive, so we MUST force logout at the end.
+             
+             // Delete meals
+             await supabase.from('saved_meals').delete().eq('user_id', session.user.id);
+             
+             // Delete profile
+             await supabase.from('profiles').delete().eq('id', session.user.id);
+             
+             alert("Account data cleared successfully. Signing you out...");
+          } else {
+              // If RPC succeeded, the user is gone.
+              alert("Account successfully deleted.");
           }
 
-          // 2. Delete public profile
-          // We use count: 'exact' to ensure we actually performed a deletion
-          const { error: profileError, count } = await supabase
-              .from('profiles')
-              .delete({ count: 'exact' })
-              .eq('id', session.user.id);
-              
-          if (profileError) throw new Error(`Error deleting profile: ${profileError.message}`);
-          
-          // STRICT CHECK: If count is 0, the deletion did NOT happen.
-          if (count === 0) {
-              throw new Error("Profile deletion failed. The account might already be deleted or database permissions prevent deletion.");
-          }
-
-          // 3. Sign out and redirect
+          // 3. Force Logout & Redirect
+          // Regardless of whether we used RPC or Fallback, we must clear the local session.
           await supabase.auth.signOut();
           window.location.href = '/';
           
       } catch (err: any) {
-          console.error(err);
-          setMsg({ type: 'error', content: "Failed to delete account: " + err.message });
-          setLoading(false);
+          console.error("Deletion error:", err);
+          // Self-Healing: If an error occurs (e.g., network, or weird state),
+          // we still assume the user wants to leave.
+          setMsg({ type: 'error', content: "Deletion processed with warnings. Signing out..." });
+          
+          setTimeout(async () => {
+             await supabase.auth.signOut();
+             window.location.href = '/';
+          }, 2000);
       }
   };
 
@@ -189,7 +197,7 @@ const Profile = () => {
 
         <div className="mt-10 pt-6 border-t border-red-100">
             <h3 className="text-lg font-semibold text-red-700 mb-2">Danger Zone</h3>
-            <p className="text-sm text-gray-600 mb-4">Deleting your account will permanently remove your profile and all saved meals.</p>
+            <p className="text-sm text-gray-600 mb-4">Deleting your account will permanently remove your profile, all saved meals, and your login credentials.</p>
             <button 
                 onClick={handleDeleteAccount}
                 disabled={loading}

@@ -186,25 +186,23 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
           let data;
           if (isUpdate) {
              // Explicit UPDATE
-             // Exclude user_id and created_at from payload during update 
              const updatePayload = {
                 name: planName,
                 data: planData,
-                // tool_type remains same
              };
 
-             // We rely on RLS for ownership check.
              const response = await supabase
                 .from('saved_meals')
                 .update(updatePayload)
                 .eq('id', loadedPlanId)
+                .eq('user_id', session.user.id)
                 .select();
 
              if (response.error) throw response.error;
              
              // Verify update succeeded
              if (!response.data || response.data.length === 0) {
-                throw new Error("Update failed: Plan not found or permission denied.");
+                throw new Error("Update failed: Plan not found or permission denied (RLS).");
              }
              data = response.data[0];
           } else {

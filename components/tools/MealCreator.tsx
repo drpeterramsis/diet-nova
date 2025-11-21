@@ -127,10 +127,6 @@ const MealCreator: React.FC = () => {
     const planData = { addedFoods };
     const timestamp = new Date().toISOString();
 
-    // Logic: 
-    // If we have a loadedPlanId AND the name hasn't changed -> Update existing.
-    // If we have a loadedPlanId BUT the name CHANGED -> Treat as New (Save As).
-    // If no loadedPlanId -> Create New.
     const isUpdate = loadedPlanId && (planName === lastSavedName);
 
     try {
@@ -138,29 +134,26 @@ const MealCreator: React.FC = () => {
         
         if (isUpdate) {
             // Explicit UPDATE
-            // We must ONLY update fields that are allowed. 
+            // We only update mutable fields (name, data)
             const updatePayload = {
                 name: planName,
                 data: planData,
             };
 
-            // We rely on RLS (Auth) to ensure the user owns the row.
-            // Adding .eq('user_id', session.user.id) sometimes conflicts with restrictive RLS.
             const response = await supabase
                 .from('saved_meals')
                 .update(updatePayload)
                 .eq('id', loadedPlanId)
+                .eq('user_id', session.user.id) // Strict check for security
                 .select();
                 
             if (response.error) throw response.error;
-            // Check if update actually happened (row might have been deleted)
             if (!response.data || response.data.length === 0) {
-               throw new Error("Update failed: Meal not found or permission denied.");
+               throw new Error("Update failed: Meal not found or permission denied (RLS).");
             }
             data = response.data[0];
         } else {
             // Explicit INSERT
-            // Here we MUST include user_id and created_at
             const insertPayload = {
                 user_id: session.user.id,
                 name: planName,
@@ -189,7 +182,7 @@ const MealCreator: React.FC = () => {
             }
         }
         
-        fetchPlans(); // Refresh list
+        fetchPlans(); 
         setTimeout(() => setStatusMsg(''), 3000);
     } catch (err: any) {
         console.error('Error saving plan:', err);
@@ -202,7 +195,7 @@ const MealCreator: React.FC = () => {
     setAddedFoods([...plan.data.addedFoods]);
     setPlanName(plan.name);
     setLoadedPlanId(plan.id); 
-    setLastSavedName(plan.name); // Set baseline for name change detection
+    setLastSavedName(plan.name); 
     setShowLoadModal(false);
     setStatusMsg(t.common.loadSuccess);
     setTimeout(() => setStatusMsg(''), 3000);
