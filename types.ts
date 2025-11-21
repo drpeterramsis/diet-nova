@@ -31,6 +31,15 @@ export interface Client {
   created_at: string;
 }
 
+export interface ClientVisit {
+  id: string;
+  client_id: string;
+  visit_date: string;
+  weight?: number;
+  notes?: string;
+  created_at: string;
+}
+
 export interface Translation {
   common: {
     backHome: string;
