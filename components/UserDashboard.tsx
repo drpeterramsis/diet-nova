@@ -86,12 +86,20 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
       {/* Welcome Header */}
       <div className="bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)] rounded-2xl p-8 text-white shadow-xl mb-10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl"></div>
-        <div className="relative z-10">
-            <div className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm font-medium mb-2">
-                {roleLabel}
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+                <div className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm font-medium mb-2">
+                    {roleLabel}
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold mb-2">{welcomeMsg}</h1>
+                <p className="text-white/80">{session?.user.email}</p>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">{welcomeMsg}</h1>
-            <p className="text-white/80">{session?.user.email}</p>
+            <button 
+                onClick={() => document.getElementById('dashboard-tools')?.scrollIntoView({ behavior: 'smooth' })}
+                className="bg-white text-[var(--color-primary-dark)] px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-gray-100 transition transform hover:-translate-y-1"
+            >
+                {t.common.explore}
+            </button>
         </div>
       </div>
 
@@ -240,7 +248,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
       </div>
       
       {/* Tools Section */}
-      <div className="mt-12 border-t border-gray-200 pt-10">
+      <div id="dashboard-tools" className="mt-12 border-t border-gray-200 pt-10">
         <h2 className="text-2xl font-bold text-[var(--color-heading)] mb-6 flex items-center gap-2">
            <span>🛠️</span> {t.header.tools}
         </h2>

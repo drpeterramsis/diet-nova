@@ -110,21 +110,23 @@ const AppContent = () => {
   };
 
   const handleNavTools = () => {
-    if (session) {
-       // If logged in, maybe just scroll to tools on dashboard or open a specific tools view
-       // For now, we can just treat it as home/dashboard navigation
-       handleNavHome();
-    } else {
-       // Landing page behavior
-       setActiveTool(null);
-       setPreviousTool(null);
-       setTimeout(() => {
-         const toolsSection = document.getElementById('tools');
-         if (toolsSection) {
-           toolsSection.scrollIntoView({ behavior: 'smooth' });
-         }
-       }, 100);
+    // If inside a specific tool, go back to dashboard first
+    if (activeTool) {
+      setActiveTool(null);
+      setPreviousTool(null);
     }
+    
+    // Wait for view update then scroll
+    setTimeout(() => {
+      const toolsLanding = document.getElementById('tools'); // Landing page ID
+      const toolsDashboard = document.getElementById('dashboard-tools'); // Dashboard ID
+      
+      if (toolsLanding) {
+        toolsLanding.scrollIntoView({ behavior: 'smooth' });
+      } else if (toolsDashboard) {
+        toolsDashboard.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
   };
 
   const handleNavProfile = () => {

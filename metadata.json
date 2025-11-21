@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.45",
-  "description": "Features: User Dashboard with Tools Access, Saved Data Summaries, Deep-linking to saved meals, Role-based UI",
+  "name": "Diet-Nova v2.0.48",
+  "description": "Features: Auto-cleanup for zombie accounts, dashboard integration, navigation fixes, database schema consolidation",
   "requestFramePermissions": []
 }

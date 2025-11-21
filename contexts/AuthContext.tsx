@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
 
         if (data && data.session) {
            setSession(data.session);
-           fetchProfile(data.session.user.id);
+           fetchProfile(data.session);
         } else {
            setLoading(false);
         }
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
-          fetchProfile(session.user.id);
+          fetchProfile(session);
       } else {
         setProfile(null);
         setLoading(false);
@@ -65,8 +65,10 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string, retryCount = 0) => {
-    if (!isSupabaseConfigured) return;
+  const fetchProfile = async (currentSession: Session, retryCount = 0) => {
+    if (!isSupabaseConfigured || !currentSession.user) return;
+    const userId = currentSession.user.id;
+
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -78,36 +80,44 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
         setProfile(data as UserProfile);
         setLoading(false);
       } else {
-          // Profile not found.
-          // Check if this is a "New" account (created in last 45 seconds).
-          // If account is older than 45s and has no profile, it is a "Zombie" (Deleted) account.
-          // We log them out IMMEDIATELY without waiting for retries to avoid the 3s delay.
-          
-          const { data: authData } = await supabase.auth.getUser();
-          const createdAt = authData.user?.created_at;
+          // Profile missing.
+          const createdAt = currentSession.user.created_at;
           const isNewUser = createdAt && (Date.now() - new Date(createdAt).getTime() < 45000);
 
           if (isNewUser && retryCount < 3) {
-             // It's a new user, give the DB trigger a moment to create the profile
+             // New user: Wait for DB trigger to create profile
              console.log(`Profile not found (New User). Retrying (${retryCount + 1}/3)...`);
-             setTimeout(() => fetchProfile(userId, retryCount + 1), 1000);
+             setTimeout(() => fetchProfile(currentSession, retryCount + 1), 1000);
           } else {
-             // Established account with no profile -> ZOMBIE -> IMMEDIATE LOGOUT
-             console.warn("Profile missing for established user. Auto-cleaning zombie session.");
-             setProfile(null);
-             setLoading(false);
-             await supabase.auth.signOut();
-             setSession(null);
-             // Force redirect to home to ensure clean state
-             if (window.location.pathname !== '/') {
-                 window.location.href = '/';
-             }
+             // ZOMBIE ACCOUNT DETECTED
+             // The Auth user exists, but the Profile is gone (and it's not a new signup).
+             // Logic: We must CLEAN UP the auth user so the email is free to sign up again.
+             console.warn("Zombie account detected (Auth exists, Profile missing). Cleaning up...");
+             await cleanupZombieAccount();
           }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
       setLoading(false);
     }
+  };
+
+  const cleanupZombieAccount = async () => {
+      try {
+          // Attempt to delete the auth user using the Secure RPC
+          await supabase.rpc('delete_user');
+          console.log("Zombie account cleaned up from Auth.");
+      } catch (err) {
+          console.error("Failed to auto-clean zombie account:", err);
+      } finally {
+          // Always sign out to reset the client state
+          await supabase.auth.signOut();
+          setSession(null);
+          setProfile(null);
+          setLoading(false);
+          // Optional: Alert the user
+          alert("This account was previously deleted. Please Sign Up again to create a new profile.");
+      }
   };
 
   const signOut = async () => {
