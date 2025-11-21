@@ -12,6 +12,7 @@ import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
 import Login from "./components/Login";
 import Loading from "./components/Loading";
+import ToolsGrid from "./components/ToolsGrid";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { Session } from "@supabase/supabase-js";
@@ -62,57 +63,11 @@ const Dashboard = ({
 
       {/* Tools Section */}
       <section id="tools" className="container mx-auto px-4 py-20 mb-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <ToolCard
-            title={t.tools.bmi.title}
-            desc={t.tools.bmi.desc}
-            onClick={() => setBmiOpen(true)}
-            icon={<span className="text-2xl font-bold">BMI</span>}
-          />
-
-          <ToolCard
-            title={t.tools.kcal.title}
-            desc={t.tools.kcal.desc}
-            onClick={() => onToolClick('kcal')}
-            icon={<span className="text-2xl">🔥</span>}
-          />
-
-          <ToolCard
-            title={t.tools.mealCreator.title}
-            desc={t.tools.mealCreator.desc}
-            onClick={() => onToolClick('meal-creator')}
-            icon={<span className="text-2xl">🥗</span>}
-            locked={!session}
-          />
-
-           <ToolCard
-            title={t.tools.mealPlanner.title}
-            desc={t.tools.mealPlanner.desc}
-            onClick={() => onToolClick('meal-planner')}
-            icon={<span className="text-2xl">📅</span>}
-          />
-
-          <ToolCard
-            title={t.tools.exchangeSimple.title}
-            desc={t.tools.exchangeSimple.desc}
-            onClick={() => onToolClick('exchange-simple')}
-            icon={<span className="text-2xl">📋</span>}
-          />
-
-           <ToolCard
-            title={t.tools.exchangePro.title}
-            desc={t.tools.exchangePro.desc}
-            onClick={() => onToolClick('exchange-pro')}
-            icon={<span className="text-2xl">📊</span>}
-          />
-
-          <ToolCard
-            title={t.tools.bmr.title}
-            desc={t.tools.bmr.desc}
-            onClick={() => {}} // Placeholder
-            icon={<span className="text-2xl">⚡</span>}
-          />
-        </div>
+        <ToolsGrid 
+            onToolClick={onToolClick} 
+            setBmiOpen={setBmiOpen} 
+            isAuthenticated={!!session} 
+        />
       </section>
     </>
   );
@@ -259,7 +214,7 @@ const AppContent = () => {
           </div>
         ) : (
            session ? (
-             <UserDashboard onNavigateTool={handleToolClick} />
+             <UserDashboard onNavigateTool={handleToolClick} setBmiOpen={setBmiOpen} />
            ) : (
              <Dashboard setBmiOpen={setBmiOpen} onToolClick={handleToolClick} session={session} />
            )

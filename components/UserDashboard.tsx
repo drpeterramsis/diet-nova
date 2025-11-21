@@ -4,12 +4,14 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
 import { SavedMeal } from '../types';
 import Loading from './Loading';
+import ToolsGrid from './ToolsGrid';
 
 interface UserDashboardProps {
   onNavigateTool: (toolId: string, loadId?: string) => void;
+  setBmiOpen: (v: boolean) => void;
 }
 
-const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool }) => {
+const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpen }) => {
   const { session, profile } = useAuth();
   const { t, lang, isRTL } = useLanguage();
   const [loading, setLoading] = useState(true);
@@ -235,7 +237,18 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool }) => {
                 )}
             </div>
         </div>
-
+      </div>
+      
+      {/* Tools Section */}
+      <div className="mt-12 border-t border-gray-200 pt-10">
+        <h2 className="text-2xl font-bold text-[var(--color-heading)] mb-6 flex items-center gap-2">
+           <span>🛠️</span> {t.header.tools}
+        </h2>
+        <ToolsGrid 
+            onToolClick={onNavigateTool} 
+            setBmiOpen={setBmiOpen} 
+            isAuthenticated={true} 
+        />
       </div>
     </div>
   );
