@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, PropsWithChildren } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { UserProfile } from '../types';
@@ -55,8 +54,9 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) fetchProfile(session.user.id);
-      else {
+      if (session) {
+          fetchProfile(session.user.id);
+      } else {
         setProfile(null);
         setLoading(false);
       }
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, retryCount = 0) => {
     if (!isSupabaseConfigured) return;
     try {
       const { data, error } = await supabase
@@ -76,10 +76,26 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
 
       if (!error && data) {
         setProfile(data as UserProfile);
+        setLoading(false);
+      } else {
+          // Profile not found.
+          // This could be a "Zombie Account" (Auth exists, but profile deleted) OR a new signup pending trigger.
+          // We try 3 times (waiting 1s each) to allow the DB trigger to create the profile.
+          if (retryCount < 3) {
+             console.log(`Profile not found. Retrying (${retryCount + 1}/3)...`);
+             setTimeout(() => fetchProfile(userId, retryCount + 1), 1000);
+          } else {
+             // If after 3 seconds we still have no profile, this is a Zombie Account.
+             console.warn("Profile missing for authenticated user. Auto-cleaning zombie session.");
+             setProfile(null);
+             setLoading(false);
+             // FORCE LOGOUT to fix the "Deleted account can still login" bug
+             await supabase.auth.signOut();
+             setSession(null);
+          }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
-    } finally {
       setLoading(false);
     }
   };

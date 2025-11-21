@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.41",
-  "description": "Features: Robust self-healing account deletion, force logout on delete failure, version bump",
+  "name": "Diet-Nova v2.0.42",
+  "description": "Features: Robust self-healing account deletion, force logout on delete failure, version bump, Zombie account auto-logout",
   "requestFramePermissions": []
 }
