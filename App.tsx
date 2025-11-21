@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -9,6 +8,7 @@ import MealCreator from "./components/tools/MealCreator";
 import FoodExchange from "./components/tools/FoodExchange";
 import MealPlanner from "./components/tools/MealPlanner";
 import Profile from "./components/Profile";
+import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
 import Login from "./components/Login";
 import Loading from "./components/Loading";
@@ -124,6 +124,7 @@ const AppContent = () => {
   const [previousTool, setPreviousTool] = useState<string | null>(null);
   const [plannedKcal, setPlannedKcal] = useState<number>(0);
   const [showLogin, setShowLogin] = useState(false);
+  const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
   
   const { t, isRTL } = useLanguage();
   const { session, loading } = useAuth();
@@ -149,29 +150,42 @@ const AppContent = () => {
   const handleNavHome = () => {
     setActiveTool(null);
     setPreviousTool(null);
+    setSelectedLoadId(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleNavTools = () => {
-    setActiveTool(null);
-    setPreviousTool(null);
-    setTimeout(() => {
-      const toolsSection = document.getElementById('tools');
-      if (toolsSection) {
-        toolsSection.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100);
+    if (session) {
+       // If logged in, maybe just scroll to tools on dashboard or open a specific tools view
+       // For now, we can just treat it as home/dashboard navigation
+       handleNavHome();
+    } else {
+       // Landing page behavior
+       setActiveTool(null);
+       setPreviousTool(null);
+       setTimeout(() => {
+         const toolsSection = document.getElementById('tools');
+         if (toolsSection) {
+           toolsSection.scrollIntoView({ behavior: 'smooth' });
+         }
+       }, 100);
+    }
   };
 
   const handleNavProfile = () => {
       setActiveTool('profile');
   };
 
-  const handleToolClick = (toolId: string) => {
+  const handleToolClick = (toolId: string, loadId?: string) => {
       // Check restrictions
       if (toolId === 'meal-creator' && !session) {
           setShowLogin(true);
           return;
+      }
+      if (loadId) {
+          setSelectedLoadId(loadId);
+      } else {
+          setSelectedLoadId(null);
       }
       setActiveTool(toolId);
   };
@@ -210,6 +224,7 @@ const AppContent = () => {
               onClick={() => {
                 setActiveTool(null);
                 setPreviousTool(null);
+                setSelectedLoadId(null);
               }}
               className="flex items-center gap-2 text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] font-medium mb-6 transition group"
             >
@@ -229,20 +244,25 @@ const AppContent = () => {
                   <MealPlanner 
                     initialTargetKcal={plannedKcal} 
                     onBack={previousTool === 'kcal' ? handleBackToCalculator : undefined}
+                    initialLoadId={activeTool === 'meal-planner' ? selectedLoadId : null}
                   />
                 </div>
               </>
             )}
 
             {/* Standard Tools (Unmount when inactive) */}
-            {activeTool === 'meal-creator' && <MealCreator />}
+            {activeTool === 'meal-creator' && <MealCreator initialLoadId={selectedLoadId} />}
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
             {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
             {activeTool === 'profile' && <Profile />}
 
           </div>
         ) : (
-          <Dashboard setBmiOpen={setBmiOpen} onToolClick={handleToolClick} session={session} />
+           session ? (
+             <UserDashboard onNavigateTool={handleToolClick} />
+           ) : (
+             <Dashboard setBmiOpen={setBmiOpen} onToolClick={handleToolClick} session={session} />
+           )
         )}
       </main>
 

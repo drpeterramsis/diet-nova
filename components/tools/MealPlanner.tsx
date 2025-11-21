@@ -50,9 +50,10 @@ const TargetKcalInput: React.FC<TargetKcalInputProps> = ({ value, onChange, labe
 interface MealPlannerProps {
   initialTargetKcal?: number;
   onBack?: () => void;
+  initialLoadId?: string | null;
 }
 
-const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) => {
+const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, initialLoadId }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both'>('calculator');
@@ -83,6 +84,29 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
       setTargetKcal(initialTargetKcal);
     }
   }, [initialTargetKcal]);
+
+  // Auto-load effect
+  useEffect(() => {
+      const autoLoad = async () => {
+          if (initialLoadId && session) {
+              try {
+                  const { data, error } = await supabase
+                    .from('saved_meals')
+                    .select('*')
+                    .eq('id', initialLoadId)
+                    .eq('user_id', session.user.id)
+                    .single();
+                  
+                  if (data && !error) {
+                      loadPlan(data);
+                  }
+              } catch (err) {
+                  console.error("Auto-load failed", err);
+              }
+          }
+      };
+      autoLoad();
+  }, [initialLoadId, session]);
 
   // State for Planner Distribution
   const [distribution, setDistribution] = useState<Record<string, Record<string, number>>>(

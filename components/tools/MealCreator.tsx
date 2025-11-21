@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
 import { MacroDonut } from "../Visuals";
@@ -6,7 +6,11 @@ import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { SavedMeal } from "../../types";
 
-const MealCreator: React.FC = () => {
+interface MealCreatorProps {
+    initialLoadId?: string | null;
+}
+
+const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
@@ -29,6 +33,29 @@ const MealCreator: React.FC = () => {
       (food) => food.name.toLowerCase().includes(q) || food.group.toLowerCase().includes(q)
     );
   }, [searchQuery]);
+
+  // Auto-load effect
+  useEffect(() => {
+      const autoLoad = async () => {
+          if (initialLoadId && session) {
+              try {
+                  const { data, error } = await supabase
+                    .from('saved_meals')
+                    .select('*')
+                    .eq('id', initialLoadId)
+                    .eq('user_id', session.user.id)
+                    .single();
+                  
+                  if (data && !error) {
+                      loadPlan(data);
+                  }
+              } catch (err) {
+                  console.error("Auto-load failed", err);
+              }
+          }
+      };
+      autoLoad();
+  }, [initialLoadId, session]);
 
   const addFood = (food: FoodItem) => {
     // Ensure deep copy of added item
