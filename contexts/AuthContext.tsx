@@ -79,19 +79,29 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
         setLoading(false);
       } else {
           // Profile not found.
-          // This could be a "Zombie Account" (Auth exists, but profile deleted) OR a new signup pending trigger.
-          // We try 3 times (waiting 1s each) to allow the DB trigger to create the profile.
-          if (retryCount < 3) {
-             console.log(`Profile not found. Retrying (${retryCount + 1}/3)...`);
+          // Check if this is a "New" account (created in last 45 seconds).
+          // If account is older than 45s and has no profile, it is a "Zombie" (Deleted) account.
+          // We log them out IMMEDIATELY without waiting for retries to avoid the 3s delay.
+          
+          const { data: authData } = await supabase.auth.getUser();
+          const createdAt = authData.user?.created_at;
+          const isNewUser = createdAt && (Date.now() - new Date(createdAt).getTime() < 45000);
+
+          if (isNewUser && retryCount < 3) {
+             // It's a new user, give the DB trigger a moment to create the profile
+             console.log(`Profile not found (New User). Retrying (${retryCount + 1}/3)...`);
              setTimeout(() => fetchProfile(userId, retryCount + 1), 1000);
           } else {
-             // If after 3 seconds we still have no profile, this is a Zombie Account.
-             console.warn("Profile missing for authenticated user. Auto-cleaning zombie session.");
+             // Established account with no profile -> ZOMBIE -> IMMEDIATE LOGOUT
+             console.warn("Profile missing for established user. Auto-cleaning zombie session.");
              setProfile(null);
              setLoading(false);
-             // FORCE LOGOUT to fix the "Deleted account can still login" bug
              await supabase.auth.signOut();
              setSession(null);
+             // Force redirect to home to ensure clean state
+             if (window.location.pathname !== '/') {
+                 window.location.href = '/';
+             }
           }
       }
     } catch (error) {
