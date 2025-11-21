@@ -32,13 +32,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavi
   };
 
   return (
-    <header className="bg-[var(--color-primary)] text-white shadow-md sticky top-0 z-50">
+    <header className="bg-[var(--color-primary)] text-white shadow-md sticky top-0 z-50 no-print">
       <div className="container mx-auto flex justify-between items-center p-4">
         <div className="flex items-center gap-2 cursor-pointer" onClick={onNavigateHome}>
           <h1 className="text-2xl font-bold tracking-wide flex items-center">
             Diet<span className="text-[var(--color-primary-light)]">Nova</span>
             <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full hidden sm:inline-block">
-              v2.1.0
+              v2.2.0
             </span>
           </h1>
         </div>

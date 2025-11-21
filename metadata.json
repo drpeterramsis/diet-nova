@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.1.0 - Client Management Update",
-  "description": "Features: Client management for nutritionists (CRUD), Search functionality in Load modals, UI improvements",
+  "name": "Diet-Nova v2.2.0 - BMR & Print Support",
+  "description": "Features: New BMR Calculator, Printable Meal Plans, Dashboard Client Management, and Deep Linking.",
   "requestFramePermissions": []
 }

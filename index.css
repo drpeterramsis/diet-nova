@@ -33,3 +33,37 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out forwards;
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .card {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  /* Improve table readability in print */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  
+  th, td {
+    border: 1px solid #eee !important;
+    color: black !important;
+  }
+
+  /* Ensure inputs look like text in print */
+  input[type="number"], input[type="text"] {
+    border: none !important;
+    background: transparent !important;
+  }
+}

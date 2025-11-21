@@ -74,7 +74,7 @@ const ToolsGrid: React.FC<ToolsGridProps> = ({ onToolClick, setBmiOpen, isAuthen
       <ToolCard
         title={t.tools.bmr.title}
         desc={t.tools.bmr.desc}
-        onClick={() => {}} // Placeholder
+        onClick={() => onToolClick('bmr')}
         icon={<span className="text-2xl">⚡</span>}
       />
     </div>

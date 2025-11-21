@@ -173,6 +173,10 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
     }));
   };
 
+  const handlePrint = () => {
+      window.print();
+  };
+
   // --- Database Operations ---
   const fetchPlans = async () => {
       if (!session) return;
@@ -326,7 +330,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
     <div className="max-w-[1920px] mx-auto animate-fade-in">
       
       {/* Top Control Bar (Static, Non-Floating) */}
-      <div className="relative flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 gap-4">
+      <div className="relative flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 gap-4 no-print">
         <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
            {onBack && (
                <button onClick={onBack} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm whitespace-nowrap">
@@ -385,6 +389,13 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
                 </button>
                 </>
             )}
+             <button 
+                onClick={handlePrint}
+                className="bg-gray-700 hover:bg-gray-800 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm"
+                title="Print Plan"
+            >
+                <span className="text-xl">🖨️</span>
+            </button>
             <button 
                 onClick={resetAll}
                 className="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-lg text-sm font-medium transition"
@@ -394,7 +405,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
         </div>
       </div>
 
-      {statusMsg && <div className="mb-4 p-3 bg-green-100 text-green-800 rounded-lg text-center">{statusMsg}</div>}
+      {statusMsg && <div className="mb-4 p-3 bg-green-100 text-green-800 rounded-lg text-center no-print">{statusMsg}</div>}
 
       {/* Main Layout Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -476,7 +487,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
                                             <tr key={group} className="hover:bg-gray-50">
                                                 <td className="p-2 font-medium text-gray-700 border-r border-gray-100 bg-gray-50 sticky left-0 z-10">
                                                     {t.mealPlannerTool.groups[group as keyof typeof t.mealPlannerTool.groups]}
-                                                    <div className="text-[10px] text-gray-400 font-normal">Total: {servings[group]}</div>
+                                                    <div className="text-[10px] text-gray-400 font-normal no-print">Total: {servings[group]}</div>
                                                 </td>
                                                 {MEALS.map(meal => (
                                                     <td key={meal} className="p-1 text-center border-r border-gray-100">
@@ -501,7 +512,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
                     </div>
 
                     {/* Planner Sidebar (Inside Grid for Planner Mode) */}
-                    <div className="w-full lg:w-80 flex-shrink-0 space-y-4">
+                    <div className="w-full lg:w-80 flex-shrink-0 space-y-4 no-print">
                          <div className="card bg-white p-4 sticky top-24">
                             <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">Planner Snapshot</h3>
                             <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={t.kcal.kcalRequired} />
@@ -540,7 +551,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
 
         {/* Right Column: Sidebar (Calculator Mode Only) */}
         {viewMode === 'calculator' && (
-            <div className="lg:col-span-4 xl:col-span-3 space-y-6">
+            <div className="lg:col-span-4 xl:col-span-3 space-y-6 no-print">
                 <div className="card bg-white shadow-xl sticky top-24 border-t-4 border-t-[var(--color-primary)]">
                     <div className="p-4">
                         <h3 className="font-bold text-lg text-gray-800 mb-6 flex items-center gap-2">
@@ -617,7 +628,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
       
       {/* Load Modal */}
       {showLoadModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm no-print">
             <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-2xl h-[80vh] flex flex-col">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-bold">{t.common.load}</h3>

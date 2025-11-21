@@ -9,6 +9,7 @@ import MealCreator from "./components/tools/MealCreator";
 import FoodExchange from "./components/tools/FoodExchange";
 import MealPlanner from "./components/tools/MealPlanner";
 import ClientManager from "./components/tools/ClientManager";
+import BmrCalculator from "./components/tools/BmrCalculator";
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -84,7 +85,7 @@ const AppContent = () => {
   const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
   
   const { t, isRTL } = useLanguage();
-  const { session, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
 
   // Auto scroll to top when activeTool changes
   useEffect(() => {
@@ -141,9 +142,15 @@ const AppContent = () => {
           setShowLogin(true);
           return;
       }
-      if (toolId === 'client-manager' && !session) {
-        setShowLogin(true);
-        return;
+      if (toolId === 'client-manager') {
+        if (!session) {
+            setShowLogin(true);
+            return;
+        }
+        if (profile?.role !== 'doctor') {
+            alert("Access Restricted: This tool is for nutritionists only.");
+            return;
+        }
       }
       if (loadId) {
           setSelectedLoadId(loadId);
@@ -189,7 +196,7 @@ const AppContent = () => {
                 setPreviousTool(null);
                 setSelectedLoadId(null);
               }}
-              className="flex items-center gap-2 text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] font-medium mb-6 transition group"
+              className="flex items-center gap-2 text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] font-medium mb-6 transition group no-print"
             >
               <span className={`text-xl transform transition-transform ${isRTL ? 'rotate-180 group-hover:translate-x-1' : 'group-hover:-translate-x-1'}`}>
                 ←
@@ -217,7 +224,8 @@ const AppContent = () => {
             {activeTool === 'meal-creator' && <MealCreator initialLoadId={selectedLoadId} />}
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
             {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
-            {activeTool === 'client-manager' && <ClientManager />}
+            {activeTool === 'client-manager' && <ClientManager initialClientId={selectedLoadId} />}
+            {activeTool === 'bmr' && <BmrCalculator />}
             {activeTool === 'profile' && <Profile />}
 
           </div>
@@ -231,7 +239,9 @@ const AppContent = () => {
       </main>
 
       {/* ScrollToTopButton */}
-      <ScrollToTopButton />
+      <div className="no-print">
+        <ScrollToTopButton />
+      </div>
 
       {/* Modals */}
       <BmiModal open={bmiOpen} onClose={() => setBmiOpen(false)} />

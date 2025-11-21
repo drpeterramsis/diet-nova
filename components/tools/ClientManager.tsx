@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,7 +6,11 @@ import { supabase } from '../../lib/supabase';
 import { Client } from '../../types';
 import Loading from '../Loading';
 
-const ClientManager = () => {
+interface ClientManagerProps {
+  initialClientId?: string | null;
+}
+
+const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
@@ -16,6 +19,7 @@ const ClientManager = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isViewMode, setIsViewMode] = useState(false);
+  const [tableError, setTableError] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState<{
@@ -42,9 +46,20 @@ const ClientManager = () => {
     fetchClients();
   }, [session]);
 
+  // Deep linking effect: If initialClientId is passed, try to find and open that client
+  useEffect(() => {
+      if (initialClientId && clients.length > 0 && !showModal) {
+          const targetClient = clients.find(c => c.id === initialClientId);
+          if (targetClient) {
+              handleOpenModal(targetClient, true);
+          }
+      }
+  }, [initialClientId, clients]);
+
   const fetchClients = async () => {
     if (!session) return;
     setLoading(true);
+    setTableError(false);
     try {
       const { data, error } = await supabase
         .from('clients')
@@ -52,11 +67,18 @@ const ClientManager = () => {
         .eq('doctor_id', session.user.id)
         .order('visit_date', { ascending: false });
 
-      if (error) throw error;
-      if (data) setClients(data);
+      if (error) {
+          // Check if error relates to missing table
+          if (error.code === '42P01' || error.message.includes('does not exist')) {
+              setTableError(true);
+          } else {
+              throw error;
+          }
+      } else if (data) {
+          setClients(data);
+      }
     } catch (err: any) {
       console.error("Error fetching clients:", err);
-      // Graceful fallback if table doesn't exist yet
     } finally {
       setLoading(false);
     }
@@ -171,7 +193,8 @@ const ClientManager = () => {
         </div>
         <button 
           onClick={() => handleOpenModal()}
-          className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-6 py-3 rounded-lg shadow-md transition flex items-center gap-2 font-medium"
+          disabled={tableError}
+          className={`text-white px-6 py-3 rounded-lg shadow-md transition flex items-center gap-2 font-medium ${tableError ? 'bg-gray-300 cursor-not-allowed' : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]'}`}
         >
           <span>+</span> {t.clients.addClient}
         </button>
@@ -184,90 +207,102 @@ const ClientManager = () => {
            placeholder={`${t.common.search} (Name, Clinic)`}
            value={searchQuery}
            onChange={(e) => setSearchQuery(e.target.value)}
-           className="w-full p-4 pl-12 rounded-xl border border-gray-200 shadow-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-lg"
+           disabled={tableError}
+           className="w-full p-4 pl-12 rounded-xl border border-gray-200 shadow-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-lg disabled:bg-gray-50"
            dir={isRTL ? 'rtl' : 'ltr'}
          />
          <span className={`absolute top-1/2 -translate-y-1/2 text-gray-400 text-xl ${isRTL ? 'right-4' : 'left-4'}`}>🔍</span>
       </div>
 
-      {/* Loading / List */}
-      {loading ? (
-        <Loading />
-      ) : (
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
-          {clients.length === 0 ? (
-            <div className="p-12 text-center text-gray-400 flex flex-col items-center">
-               <div className="text-5xl mb-4">📇</div>
-               <p className="text-lg">{t.clients.noClients}</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-               <table className="w-full">
-                 <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
-                    <tr>
-                      <th className="p-4 text-left">{t.clients.name}</th>
-                      <th className="p-4 text-center">{t.clients.visitDate}</th>
-                      <th className="p-4 text-center">{t.clients.clinic}</th>
-                      <th className="p-4 text-center">{t.common.actions}</th>
-                    </tr>
-                 </thead>
-                 <tbody className="divide-y divide-gray-100">
-                   {filteredClients.map(client => (
-                     <tr key={client.id} className="hover:bg-blue-50 transition group">
-                       <td className="p-4">
-                         <div className="font-bold text-gray-800 text-lg flex items-center gap-2">
-                           {client.full_name}
-                           {client.gender && (
-                             <span className="text-sm" title={client.gender}>
-                               {client.gender === 'male' ? '👨' : '👩'}
-                             </span>
-                           )}
-                         </div>
-                         <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                            {client.age && <span>{t.clients.age}: {client.age}</span>}
-                            {client.phone && <span>📞 {client.phone}</span>}
-                         </div>
-                       </td>
-                       <td className="p-4 text-center">
-                         <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm">
-                           {new Date(client.visit_date).toLocaleDateString()}
-                         </span>
-                       </td>
-                       <td className="p-4 text-center text-gray-600">
-                         {client.clinic}
-                       </td>
-                       <td className="p-4 text-center">
-                         <div className="flex items-center justify-center gap-2 opacity-80 group-hover:opacity-100 transition">
-                            <button 
-                              onClick={() => handleOpenModal(client, true)}
-                              className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg"
-                              title={t.clients.clientProfile}
-                            >
-                              👁️
-                            </button>
-                            <button 
-                              onClick={() => handleOpenModal(client, false)}
-                              className="p-2 text-green-600 hover:bg-green-100 rounded-lg"
-                              title={t.common.edit}
-                            >
-                              ✏️
-                            </button>
-                            <button 
-                              onClick={() => handleDelete(client.id)}
-                              className="p-2 text-red-600 hover:bg-red-100 rounded-lg"
-                              title={t.common.delete}
-                            >
-                              🗑️
-                            </button>
-                         </div>
-                       </td>
-                     </tr>
-                   ))}
-                 </tbody>
-               </table>
-            </div>
-          )}
+      {/* Error State */}
+      {tableError && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-700 animate-fade-in">
+            <h3 className="text-lg font-bold mb-2">Database Configuration Error</h3>
+            <p>The 'clients' table could not be found in the database schema.</p>
+            <p className="text-sm mt-2">Please contact the administrator to initialize the database tables.</p>
         </div>
+      )}
+
+      {/* Loading / List */}
+      {!tableError && (
+          loading ? (
+            <Loading />
+          ) : (
+            <div className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-100">
+            {clients.length === 0 ? (
+                <div className="p-12 text-center text-gray-400 flex flex-col items-center">
+                <div className="text-5xl mb-4">📇</div>
+                <p className="text-lg">{t.clients.noClients}</p>
+                </div>
+            ) : (
+                <div className="overflow-x-auto">
+                <table className="w-full">
+                    <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
+                        <tr>
+                        <th className="p-4 text-left">{t.clients.name}</th>
+                        <th className="p-4 text-center">{t.clients.visitDate}</th>
+                        <th className="p-4 text-center">{t.clients.clinic}</th>
+                        <th className="p-4 text-center">{t.common.actions}</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                    {filteredClients.map(client => (
+                        <tr key={client.id} className="hover:bg-blue-50 transition group">
+                        <td className="p-4">
+                            <div className="font-bold text-gray-800 text-lg flex items-center gap-2">
+                            {client.full_name}
+                            {client.gender && (
+                                <span className="text-sm" title={client.gender}>
+                                {client.gender === 'male' ? '👨' : '👩'}
+                                </span>
+                            )}
+                            </div>
+                            <div className="flex gap-3 text-xs text-gray-500 mt-1">
+                                {client.age && <span>{t.clients.age}: {client.age}</span>}
+                                {client.phone && <span>📞 {client.phone}</span>}
+                            </div>
+                        </td>
+                        <td className="p-4 text-center">
+                            <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm">
+                            {new Date(client.visit_date).toLocaleDateString()}
+                            </span>
+                        </td>
+                        <td className="p-4 text-center text-gray-600">
+                            {client.clinic}
+                        </td>
+                        <td className="p-4 text-center">
+                            <div className="flex items-center justify-center gap-2 opacity-80 group-hover:opacity-100 transition">
+                                <button 
+                                onClick={() => handleOpenModal(client, true)}
+                                className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg"
+                                title={t.clients.clientProfile}
+                                >
+                                👁️
+                                </button>
+                                <button 
+                                onClick={() => handleOpenModal(client, false)}
+                                className="p-2 text-green-600 hover:bg-green-100 rounded-lg"
+                                title={t.common.edit}
+                                >
+                                ✏️
+                                </button>
+                                <button 
+                                onClick={() => handleDelete(client.id)}
+                                className="p-2 text-red-600 hover:bg-red-100 rounded-lg"
+                                title={t.common.delete}
+                                >
+                                🗑️
+                                </button>
+                            </div>
+                        </td>
+                        </tr>
+                    ))}
+                    </tbody>
+                </table>
+                </div>
+            )}
+            </div>
+          )
       )}
 
       {/* Modal Form */}

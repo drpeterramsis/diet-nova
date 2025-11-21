@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
-import { SavedMeal } from '../types';
+import { SavedMeal, Client } from '../types';
 import Loading from './Loading';
 import ToolsGrid from './ToolsGrid';
 
@@ -13,20 +14,25 @@ interface UserDashboardProps {
 
 const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpen }) => {
   const { session, profile } = useAuth();
-  const { t, lang, isRTL } = useLanguage();
+  const { t, lang } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [meals, setMeals] = useState<SavedMeal[]>([]);
   const [plans, setPlans] = useState<SavedMeal[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientsError, setClientsError] = useState(false);
+
+  const isDoctor = profile?.role === 'doctor';
 
   useEffect(() => {
     fetchData();
-  }, [session]);
+  }, [session, isDoctor]);
 
   const fetchData = async () => {
     if (!session?.user.id) return;
     setLoading(true);
+    
+    // 1. Fetch Meals and Plans (Common for all users)
     try {
-      // Fetch Meal Creator Data
       const { data: mealsData } = await supabase
         .from('saved_meals')
         .select('*')
@@ -34,7 +40,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
         .eq('tool_type', 'meal-creator')
         .order('created_at', { ascending: false });
 
-      // Fetch Meal Planner Data
       const { data: plansData } = await supabase
         .from('saved_meals')
         .select('*')
@@ -44,12 +49,38 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
 
       if (mealsData) setMeals(mealsData);
       if (plansData) setPlans(plansData);
-
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error loading meals/plans:', error);
     }
+
+    // 2. Fetch Clients (Doctor Only) - Isolated try/catch to prevent crashes if table missing
+    if (isDoctor) {
+        try {
+            const { data: clientsData, error } = await supabase
+            .from('clients')
+            .select('*')
+            .eq('doctor_id', session.user.id)
+            .order('visit_date', { ascending: false });
+            
+            if (error) {
+                // Check specifically for "relation does not exist" (table missing)
+                if (error.code === '42P01' || error.message.includes('does not exist')) {
+                    console.warn("Clients table missing in DB");
+                    setClientsError(true);
+                } else {
+                    console.error("Error loading clients:", error);
+                }
+            } else if (clientsData) {
+                setClients(clientsData);
+                setClientsError(false);
+            }
+        } catch (err) {
+            console.warn("Exception loading clients (likely table missing):", err);
+            setClientsError(true);
+        }
+    }
+
+    setLoading(false);
   };
 
   const deleteItem = async (id: string, type: 'meal' | 'plan') => {
@@ -104,7 +135,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${isDoctor ? 'lg:grid-cols-3' : ''} gap-6 mb-10`}>
         <div className="card bg-white border-l-4 border-l-blue-500 shadow-md hover:shadow-lg transition p-6 flex items-center justify-between">
             <div>
                 <p className="text-gray-500 text-sm font-medium mb-1">{t.tools.mealCreator.title}</p>
@@ -123,9 +154,20 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                 📅
             </div>
         </div>
+        {isDoctor && (
+             <div className="card bg-white border-l-4 border-l-green-500 shadow-md hover:shadow-lg transition p-6 flex items-center justify-between">
+                <div>
+                    <p className="text-gray-500 text-sm font-medium mb-1">{t.tools.clients.title}</p>
+                    <h3 className="text-3xl font-bold text-gray-800">{clientsError ? '-' : clients.length}</h3>
+                </div>
+                <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center text-2xl">
+                    👥
+                </div>
+            </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className={`grid grid-cols-1 ${isDoctor ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-8`}>
         
         {/* Recent Meals Section */}
         <div className="card bg-white shadow-lg">
@@ -172,17 +214,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                                         ✕
                                     </button>
                                 </div>
-                            </div>
-                            {/* Mini Preview */}
-                            <div className="mt-3 flex flex-wrap gap-1">
-                                {meal.data?.addedFoods?.slice(0, 3).map((f: any, idx: number) => (
-                                    <span key={idx} className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">
-                                        {f.name.split(' ')[0]}
-                                    </span>
-                                ))}
-                                {(meal.data?.addedFoods?.length || 0) > 3 && (
-                                    <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-400 rounded-full">...</span>
-                                )}
                             </div>
                         </div>
                     ))
@@ -245,6 +276,58 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                 )}
             </div>
         </div>
+
+        {/* Assigned Clients Section (Doctor Only) */}
+        {isDoctor && (
+             <div className="card bg-white shadow-lg">
+                <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <span>👥</span> {t.clients.title}
+                    </h2>
+                    <button 
+                        onClick={() => onNavigateTool('client-manager')}
+                        className="text-sm bg-[var(--color-bg-soft)] text-[var(--color-primary)] px-3 py-1 rounded-lg hover:bg-green-100 transition"
+                    >
+                        {t.clients.addClient}
+                    </button>
+                </div>
+
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                    {clientsError ? (
+                        <div className="text-center py-8 text-red-400 bg-red-50 rounded-lg border border-dashed border-red-200 text-sm p-4">
+                             <p className="font-bold">Table 'clients' not found.</p>
+                             <p className="text-xs mt-1">Please check database configuration.</p>
+                        </div>
+                    ) : clients.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                            {t.clients.noClients}
+                        </div>
+                    ) : (
+                        clients.map(client => (
+                            <div key={client.id} className="p-4 border border-gray-100 rounded-xl hover:border-green-200 hover:shadow-sm transition group bg-white">
+                                <div className="flex justify-between items-center">
+                                    <div>
+                                        <h3 className="font-bold text-gray-800 group-hover:text-green-600 transition">{client.full_name}</h3>
+                                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                            <span>📍</span> {client.clinic}
+                                            <span className="mx-1">•</span>
+                                            <span>{new Date(client.visit_date).toLocaleDateString()}</span>
+                                        </p>
+                                    </div>
+                                    <button 
+                                        onClick={() => onNavigateTool('client-manager', client.id)}
+                                        className="px-3 py-1.5 bg-green-50 text-green-600 text-xs font-medium rounded hover:bg-green-100 transition"
+                                    >
+                                        View
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        )}
+
       </div>
       
       {/* Tools Section */}
