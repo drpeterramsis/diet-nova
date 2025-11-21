@@ -39,7 +39,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
       return [...new Set(clinics)];
   }, [clients]);
 
-  // Form State
+  // Form State (Client Profile)
   const [formData, setFormData] = useState<{
     full_name: string;
     visit_date: string;
@@ -58,6 +58,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
     gender: 'male'
   });
   
+  // Form State (New Visit)
   const [newVisitData, setNewVisitData] = useState<{
       visit_date: string;
       weight: number | '';
@@ -67,6 +68,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
       weight: '',
       notes: ''
   });
+
+  // Edit Visit State
+  const [editingVisit, setEditingVisit] = useState<ClientVisit | null>(null);
 
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -114,8 +118,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
 
   const fetchVisits = async (clientId: string) => {
       setLoadingVisits(true);
+      setEditingVisit(null); // Clear edit mode when fetching new
       try {
-          // Attempt to fetch from client_visits table
           const { data, error } = await supabase
             .from('client_visits')
             .select('*')
@@ -123,7 +127,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
             .order('visit_date', { ascending: false });
           
           if (error) {
-              // If table doesn't exist yet, just return empty array
               if (error.code === '42P01') {
                    console.warn("client_visits table not found");
                    setVisits([]);
@@ -145,7 +148,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
   const processedClients = useMemo(() => {
       let list = [...clients];
 
-      // 1. Search
       if (searchQuery) {
           const q = searchQuery.toLowerCase();
           list = list.filter(c => 
@@ -155,7 +157,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
           );
       }
 
-      // 2. Sort
       list.sort((a, b) => {
           switch (sortBy) {
               case 'date_asc': return new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime();
@@ -195,6 +196,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
   const handleOpenModal = (client?: Client, viewOnly: boolean = false) => {
     setFormError('');
     setActiveTab('profile');
+    setEditingVisit(null);
     
     if (client) {
       setEditingClient(client);
@@ -207,7 +209,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
         age: client.age || '',
         gender: client.gender || 'male'
       });
-      // Fetch visits when opening
       fetchVisits(client.id);
     } else {
       setEditingClient(null);
@@ -215,7 +216,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
       setFormData({
         full_name: '',
         visit_date: new Date().toISOString().split('T')[0],
-        clinic: '', // Will populate from datalist
+        clinic: '',
         phone: '',
         notes: '',
         age: '',
@@ -261,15 +262,13 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
       if (response.data) {
         if (editingClient) {
           setClients(prev => prev.map(c => c.id === editingClient.id ? response.data : c));
-          setEditingClient(response.data); // Update local state
+          setEditingClient(response.data);
         } else {
           setClients(prev => [response.data, ...prev]);
-          setEditingClient(response.data); // Switch to edit mode for new client
+          setEditingClient(response.data);
         }
-        // If not view mode, maybe stay open? Or close. Let's stay open to add visits if needed
         if (!editingClient) {
-             // If it was a new add, ask if they want to add visits or close
-             setIsViewMode(true); // Switch to view/edit mode
+             setIsViewMode(true);
         } else {
             setShowModal(false);
         }
@@ -298,7 +297,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
 
           if (data) {
               setVisits(prev => [data, ...prev]);
-              // Also update the client's "last visit date" if this date is newer
+              // Update last visit date if new is more recent
               if (new Date(data.visit_date) > new Date(editingClient.visit_date)) {
                    const { data: updatedClient } = await supabase.from('clients').update({
                        visit_date: data.visit_date
@@ -309,7 +308,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
                        setEditingClient(updatedClient);
                    }
               }
-              // Reset form
               setNewVisitData({
                   visit_date: new Date().toISOString().split('T')[0],
                   weight: '',
@@ -320,6 +318,33 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
           alert("Failed to add visit: " + err.message);
       } finally {
           setSubmitting(false);
+      }
+  };
+
+  const handleUpdateVisit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!editingVisit) return;
+      
+      try {
+          const { data, error } = await supabase
+            .from('client_visits')
+            .update({
+                visit_date: editingVisit.visit_date,
+                weight: editingVisit.weight,
+                notes: editingVisit.notes
+            })
+            .eq('id', editingVisit.id)
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          if (data) {
+              setVisits(prev => prev.map(v => v.id === data.id ? data : v));
+              setEditingVisit(null);
+          }
+      } catch (err: any) {
+          alert("Failed to update visit: " + err.message);
       }
   };
 
@@ -619,7 +644,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
                                 rows={4}
                                 value={formData.notes}
                                 onChange={e => setFormData({...formData, notes: e.target.value})}
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-none"
+                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-none whitespace-pre-wrap"
                                 placeholder="Allergies, chronic conditions, etc."
                              ></textarea>
                         </div>
@@ -634,7 +659,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
                         <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
                             <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase">Record New Visit</h4>
                             <form onSubmit={handleAddVisit} className="flex flex-col gap-3">
-                                <div className="flex flex-col md:flex-row gap-3">
+                                <div className="flex flex-col md:flex-row gap-3 items-start">
                                     <div className="flex-1">
                                         <input 
                                             type="date" 
@@ -653,19 +678,19 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
                                             onChange={e => setNewVisitData({...newVisitData, weight: e.target.value === '' ? '' : Number(e.target.value)})}
                                         />
                                     </div>
-                                    <div className="flex-[2]">
-                                        <input 
-                                            type="text" 
+                                    <div className="flex-[2] w-full">
+                                        <textarea 
                                             placeholder="Visit notes (progress, diet changes...)"
-                                            className="w-full p-2 rounded border border-blue-200 text-sm"
+                                            className="w-full p-2 rounded border border-blue-200 text-sm resize-y whitespace-pre-wrap"
+                                            rows={2}
                                             value={newVisitData.notes}
                                             onChange={e => setNewVisitData({...newVisitData, notes: e.target.value})}
-                                        />
+                                        ></textarea>
                                     </div>
                                     <button 
                                         type="submit"
                                         disabled={submitting}
-                                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-bold disabled:opacity-50"
+                                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-bold disabled:opacity-50 h-10 mt-1"
                                     >
                                         Add
                                     </button>
@@ -686,28 +711,73 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
                                     {/* Timeline Dot */}
                                     <div className="absolute -left-[9px] top-0 w-4 h-4 bg-white border-2 border-[var(--color-primary)] rounded-full"></div>
                                     
-                                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 hover:shadow-sm transition flex justify-between items-start group">
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className="font-bold text-gray-800 text-sm">
-                                                    {new Date(visit.visit_date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-                                                </span>
-                                                {visit.weight && (
-                                                    <span className="bg-white border border-gray-200 px-2 py-0.5 rounded text-xs font-mono font-bold text-blue-600">
-                                                        {visit.weight} kg
+                                    {editingVisit?.id === visit.id ? (
+                                        /* --- EDIT MODE --- */
+                                        <form onSubmit={handleUpdateVisit} className="bg-yellow-50 rounded-lg p-3 border border-yellow-200 flex flex-col gap-3">
+                                             <div className="flex justify-between items-center border-b border-yellow-200 pb-2 mb-1">
+                                                <span className="text-xs font-bold text-yellow-800 uppercase">Editing Visit</span>
+                                                <button type="button" onClick={() => setEditingVisit(null)} className="text-xs text-gray-500 hover:text-gray-800">Cancel</button>
+                                             </div>
+                                             <div className="flex gap-3">
+                                                 <input 
+                                                    type="date" 
+                                                    required
+                                                    className="w-full p-2 rounded border border-yellow-300 text-sm"
+                                                    value={editingVisit.visit_date}
+                                                    onChange={e => setEditingVisit({...editingVisit, visit_date: e.target.value})}
+                                                 />
+                                                 <input 
+                                                    type="number" 
+                                                    placeholder="Wt"
+                                                    className="w-24 p-2 rounded border border-yellow-300 text-sm"
+                                                    value={editingVisit.weight || ''}
+                                                    onChange={e => setEditingVisit({...editingVisit, weight: e.target.value ? Number(e.target.value) : undefined})}
+                                                 />
+                                             </div>
+                                             <textarea 
+                                                className="w-full p-2 rounded border border-yellow-300 text-sm whitespace-pre-wrap"
+                                                rows={4}
+                                                value={editingVisit.notes || ''}
+                                                onChange={e => setEditingVisit({...editingVisit, notes: e.target.value})}
+                                             ></textarea>
+                                             <div className="flex justify-end gap-2">
+                                                 <button type="submit" className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600">Save Changes</button>
+                                             </div>
+                                        </form>
+                                    ) : (
+                                        /* --- VIEW MODE --- */
+                                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 hover:shadow-sm transition flex justify-between items-start group">
+                                            <div className="w-full pr-2">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="font-bold text-gray-800 text-sm">
+                                                        {new Date(visit.visit_date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
                                                     </span>
-                                                )}
+                                                    {visit.weight && (
+                                                        <span className="bg-white border border-gray-200 px-2 py-0.5 rounded text-xs font-mono font-bold text-blue-600">
+                                                            {visit.weight} kg
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-sm text-gray-600 whitespace-pre-wrap">{visit.notes || 'No notes.'}</p>
                                             </div>
-                                            <p className="text-sm text-gray-600 whitespace-pre-wrap">{visit.notes || 'No notes.'}</p>
+                                            <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition">
+                                                <button 
+                                                    onClick={() => setEditingVisit(visit)}
+                                                    className="text-blue-400 hover:text-blue-600 text-sm"
+                                                    title="Edit Visit"
+                                                >
+                                                    ✎
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleDeleteVisit(visit.id)}
+                                                    className="text-gray-300 hover:text-red-500"
+                                                    title="Delete Visit"
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
                                         </div>
-                                        <button 
-                                            onClick={() => handleDeleteVisit(visit.id)}
-                                            className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
-                                            title="Delete Visit"
-                                        >
-                                            ×
-                                        </button>
-                                    </div>
+                                    )}
                                 </div>
                             ))}
                             

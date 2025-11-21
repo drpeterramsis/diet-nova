@@ -53,7 +53,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
       console.error('Error loading meals/plans:', error);
     }
 
-    // 2. Fetch Clients (Doctor Only) - Isolated try/catch to prevent crashes if table missing
+    // 2. Fetch Clients (Doctor Only)
     if (isDoctor) {
         try {
             const { data: clientsData, error } = await supabase
@@ -63,7 +63,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
             .order('visit_date', { ascending: false });
             
             if (error) {
-                // Check specifically for "relation does not exist" (table missing)
                 if (error.code === '42P01' || error.message.includes('does not exist')) {
                     console.warn("Clients table missing in DB");
                     setClientsError(true);
@@ -134,56 +133,35 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${isDoctor ? 'lg:grid-cols-3' : ''} gap-6 mb-10`}>
-        <div className="card bg-white border-l-4 border-l-blue-500 shadow-md hover:shadow-lg transition p-6 flex items-center justify-between">
-            <div>
-                <p className="text-gray-500 text-sm font-medium mb-1">{t.tools.mealCreator.title}</p>
-                <h3 className="text-3xl font-bold text-gray-800">{meals.length}</h3>
-            </div>
-            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center text-2xl">
-                🥗
-            </div>
-        </div>
-        <div className="card bg-white border-l-4 border-l-purple-500 shadow-md hover:shadow-lg transition p-6 flex items-center justify-between">
-            <div>
-                <p className="text-gray-500 text-sm font-medium mb-1">{t.tools.mealPlanner.title}</p>
-                <h3 className="text-3xl font-bold text-gray-800">{plans.length}</h3>
-            </div>
-            <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center text-2xl">
-                📅
-            </div>
-        </div>
-        {isDoctor && (
-             <div className="card bg-white border-l-4 border-l-green-500 shadow-md hover:shadow-lg transition p-6 flex items-center justify-between">
-                <div>
-                    <p className="text-gray-500 text-sm font-medium mb-1">{t.tools.clients.title}</p>
-                    <h3 className="text-3xl font-bold text-gray-800">{clientsError ? '-' : clients.length}</h3>
-                </div>
-                <div className="w-12 h-12 bg-green-50 text-green-600 rounded-full flex items-center justify-center text-2xl">
-                    👥
-                </div>
-            </div>
-        )}
-      </div>
-
       <div className={`grid grid-cols-1 ${isDoctor ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-8`}>
         
-        {/* Recent Meals Section */}
-        <div className="card bg-white shadow-lg">
-            <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <span>🥗</span> {t.tools.mealCreator.title}
-                </h2>
-                <button 
-                    onClick={() => onNavigateTool('meal-creator')}
-                    className="text-sm bg-[var(--color-bg-soft)] text-[var(--color-primary)] px-3 py-1 rounded-lg hover:bg-green-100 transition"
-                >
-                    + New
-                </button>
+        {/* Saved Meals Section */}
+        <div className="card bg-white shadow-lg flex flex-col h-full border-t-4 border-blue-500">
+            <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <span>🥗</span> {t.tools.mealCreator.title}
+                    </h2>
+                    <span className="text-3xl font-bold text-blue-600 mt-2 block">{meals.length}</span>
+                    <p className="text-xs text-gray-500">Saved Meals</p>
+                </div>
+                <div className="flex flex-col gap-2">
+                     <button 
+                        onClick={() => onNavigateTool('meal-creator')}
+                        className="text-sm bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition font-medium"
+                    >
+                        Open Tool ↗
+                    </button>
+                    <button 
+                        onClick={() => onNavigateTool('meal-creator')}
+                        className="text-sm bg-[var(--color-bg-soft)] text-[var(--color-primary)] px-4 py-2 rounded-lg hover:bg-green-100 transition font-medium"
+                    >
+                        + Create New
+                    </button>
+                </div>
             </div>
             
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 flex-grow">
                 {meals.length === 0 ? (
                     <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
                         No saved meals yet.
@@ -221,21 +199,33 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
             </div>
         </div>
 
-        {/* Recent Plans Section */}
-        <div className="card bg-white shadow-lg">
-             <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                    <span>📅</span> {t.tools.mealPlanner.title}
-                </h2>
-                <button 
-                    onClick={() => onNavigateTool('meal-planner')}
-                    className="text-sm bg-[var(--color-bg-soft)] text-[var(--color-primary)] px-3 py-1 rounded-lg hover:bg-green-100 transition"
-                >
-                    + New
-                </button>
+        {/* Saved Plans Section */}
+        <div className="card bg-white shadow-lg flex flex-col h-full border-t-4 border-purple-500">
+             <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <span>📅</span> {t.tools.mealPlanner.title}
+                    </h2>
+                    <span className="text-3xl font-bold text-purple-600 mt-2 block">{plans.length}</span>
+                    <p className="text-xs text-gray-500">Saved Plans</p>
+                </div>
+                <div className="flex flex-col gap-2">
+                     <button 
+                        onClick={() => onNavigateTool('meal-planner')}
+                        className="text-sm bg-purple-50 text-purple-600 px-4 py-2 rounded-lg hover:bg-purple-100 transition font-medium"
+                    >
+                        Open Tool ↗
+                    </button>
+                    <button 
+                        onClick={() => onNavigateTool('meal-planner')}
+                        className="text-sm bg-[var(--color-bg-soft)] text-[var(--color-primary)] px-4 py-2 rounded-lg hover:bg-green-100 transition font-medium"
+                    >
+                        + Create New
+                    </button>
+                </div>
             </div>
 
-            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 flex-grow">
                 {plans.length === 0 ? (
                     <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
                         No saved plans yet.
@@ -279,20 +269,32 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
 
         {/* Assigned Clients Section (Doctor Only) */}
         {isDoctor && (
-             <div className="card bg-white shadow-lg">
-                <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <span>👥</span> {t.clients.title}
-                    </h2>
-                    <button 
-                        onClick={() => onNavigateTool('client-manager')}
-                        className="text-sm bg-[var(--color-bg-soft)] text-[var(--color-primary)] px-3 py-1 rounded-lg hover:bg-green-100 transition"
-                    >
-                        {t.clients.addClient}
-                    </button>
+             <div className="card bg-white shadow-lg flex flex-col h-full border-t-4 border-green-500">
+                <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <span>👥</span> {t.clients.title}
+                        </h2>
+                        <span className="text-3xl font-bold text-green-600 mt-2 block">{clientsError ? '-' : clients.length}</span>
+                        <p className="text-xs text-gray-500">Total Clients</p>
+                    </div>
+                     <div className="flex flex-col gap-2">
+                        <button 
+                            onClick={() => onNavigateTool('client-manager')}
+                            className="text-sm bg-green-50 text-green-600 px-4 py-2 rounded-lg hover:bg-green-100 transition font-medium"
+                        >
+                             Open Tool ↗
+                        </button>
+                        <button 
+                            onClick={() => onNavigateTool('client-manager')}
+                            className="text-sm bg-[var(--color-bg-soft)] text-[var(--color-primary)] px-4 py-2 rounded-lg hover:bg-green-100 transition font-medium"
+                        >
+                            {t.clients.addClient}
+                        </button>
+                     </div>
                 </div>
 
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 flex-grow">
                     {clientsError ? (
                         <div className="text-center py-8 text-red-400 bg-red-50 rounded-lg border border-dashed border-red-200 text-sm p-4">
                              <p className="font-bold">Table 'clients' not found.</p>
