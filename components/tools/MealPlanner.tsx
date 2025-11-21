@@ -186,19 +186,18 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack }) 
           let data;
           if (isUpdate) {
              // Explicit UPDATE
-             // Fix: Exclude user_id and created_at from payload during update 
-             // to avoid RLS permission denied errors if these columns are not updatable.
+             // Exclude user_id and created_at from payload during update 
              const updatePayload = {
                 name: planName,
                 data: planData,
                 // tool_type remains same
              };
 
+             // We rely on RLS for ownership check.
              const response = await supabase
                 .from('saved_meals')
                 .update(updatePayload)
                 .eq('id', loadedPlanId)
-                .eq('user_id', session.user.id)
                 .select();
 
              if (response.error) throw response.error;

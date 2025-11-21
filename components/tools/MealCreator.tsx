@@ -138,20 +138,18 @@ const MealCreator: React.FC = () => {
         
         if (isUpdate) {
             // Explicit UPDATE
-            // IMPORTANT: We must ONLY update fields that are allowed. 
-            // Updating 'user_id' or 'created_at' can cause RLS violation errors even if the value hasn't changed.
+            // We must ONLY update fields that are allowed. 
             const updatePayload = {
                 name: planName,
                 data: planData,
-                // tool_type is constant, but usually safe to include or exclude if it doesn't change.
-                // timestamp for created_at should NOT be updated.
             };
 
+            // We rely on RLS (Auth) to ensure the user owns the row.
+            // Adding .eq('user_id', session.user.id) sometimes conflicts with restrictive RLS.
             const response = await supabase
                 .from('saved_meals')
                 .update(updatePayload)
                 .eq('id', loadedPlanId)
-                .eq('user_id', session.user.id) // Explicit RLS match
                 .select();
                 
             if (response.error) throw response.error;
