@@ -163,3 +163,95 @@ export const WeightComparison: React.FC<ComparisonProps> = ({ actual, ideal, lab
     </div>
   );
 };
+
+// --- 5. Simple Line Chart (New) ---
+interface ChartDataPoint {
+    label: string;
+    value: number;
+}
+
+interface SimpleLineChartProps {
+    data: ChartDataPoint[];
+    title: string;
+    color?: string;
+    unit?: string;
+}
+
+export const SimpleLineChart: React.FC<SimpleLineChartProps> = ({ data, title, color = "#16a34a", unit = "" }) => {
+    if (!data || data.length < 2) {
+        return (
+            <div className="h-48 border border-gray-100 rounded-xl bg-gray-50 flex flex-col items-center justify-center text-gray-400">
+                <span className="text-2xl mb-2">📉</span>
+                <p className="text-sm">Not enough data for {title} chart</p>
+                <p className="text-xs">(Need at least 2 visits)</p>
+            </div>
+        );
+    }
+
+    const height = 200;
+    const width = 600; // SVG Viewbox width
+    const paddingX = 40;
+    const paddingY = 30;
+
+    const values = data.map(d => d.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    // Add buffer to range
+    const range = (max - min) || 1; 
+    const buffer = range * 0.2; 
+    const yMin = Math.max(0, min - buffer);
+    const yMax = max + buffer;
+    const yRange = yMax - yMin;
+
+    const points = data.map((d, i) => {
+        const x = paddingX + (i / (data.length - 1)) * (width - paddingX * 2);
+        const y = height - paddingY - ((d.value - yMin) / yRange) * (height - paddingY * 2);
+        return { x, y, val: d.value, label: d.label };
+    });
+
+    const pathD = `M ${points.map(p => `${p.x},${p.y}`).join(' L ')}`;
+
+    return (
+        <div className="border border-gray-100 rounded-xl bg-white p-4 shadow-sm break-inside-avoid">
+            <h4 className="text-sm font-bold text-gray-700 mb-4 text-center uppercase tracking-wide">{title} Trend</h4>
+            <div className="w-full overflow-hidden">
+                <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+                    {/* Grid Lines (Horizontal) */}
+                    {[0, 0.25, 0.5, 0.75, 1].map(pct => {
+                        const y = height - paddingY - (pct * (height - paddingY * 2));
+                        return (
+                            <line key={pct} x1={paddingX} y1={y} x2={width - paddingX} y2={y} stroke="#f3f4f6" strokeWidth="1" />
+                        );
+                    })}
+
+                    {/* Line Path */}
+                    <path d={pathD} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                    
+                    {/* Fill Gradient Area */}
+                    <defs>
+                        <linearGradient id={`grad-${title.replace(/\s/g,'')}`} x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stopColor={color} stopOpacity="0.2"/>
+                            <stop offset="100%" stopColor={color} stopOpacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    <path d={`${pathD} L ${points[points.length-1].x},${height-paddingY} L ${points[0].x},${height-paddingY} Z`} fill={`url(#grad-${title.replace(/\s/g,'')})`} stroke="none" />
+
+                    {/* Points and Labels */}
+                    {points.map((p, i) => (
+                        <g key={i}>
+                            <circle cx={p.x} cy={p.y} r="4" fill="white" stroke={color} strokeWidth="2" />
+                            {/* Value Label */}
+                            <text x={p.x} y={p.y - 10} textAnchor="middle" fontSize="12" fontWeight="bold" fill="#374151">
+                                {p.val} {unit}
+                            </text>
+                            {/* Date Label */}
+                            <text x={p.x} y={height - 10} textAnchor="middle" fontSize="10" fill="#9ca3af">
+                                {p.label}
+                            </text>
+                        </g>
+                    ))}
+                </svg>
+            </div>
+        </div>
+    );
+};

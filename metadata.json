@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.67",
-  "description": "Updates: Date inputs standardized to dd/mm/yyyy format (via en-GB locale), Version bump.",
+  "name": "Diet-Nova v2.0.68",
+  "description": "Updates: Added Client Progress Charts (Weight, BMI, Anthropometry), Printable InBody-style Reports, and Standardized DD/MM/YYYY formats.",
   "requestFramePermissions": []
 }

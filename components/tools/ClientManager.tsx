@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Client, ClientVisit } from '../../types';
 import Loading from '../Loading';
+import { SimpleLineChart } from '../Visuals';
 
 interface ClientManagerProps {
   initialClientId?: string | null;
@@ -48,6 +50,15 @@ const calculatePlanStats = (servings: Record<string, number>) => {
     return { cho, pro, fat, kcal };
 };
 
+const formatDateUK = (dateString: string | undefined) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+};
+
 // Updated Categorized Tags with Emojis
 const TAG_CATEGORIES: Record<string, string[]> = {
     "Anthropometry": ["Weight Gain 📈", "Weight Loss 📉", "Stunted Growth 📏"],
@@ -78,7 +89,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const [groupBy, setGroupBy] = useState<GroupOption>('none');
   
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'visits'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'visits' | 'report'>('profile');
   const [noJob, setNoJob] = useState(false);
   
   // Tags UI
@@ -338,6 +349,35 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       return groups;
   }, [processedClients, groupBy]);
 
+  // --- Chart Data Preparation ---
+  const chartData = useMemo(() => {
+      if (!editingClient || visits.length === 0) return null;
+      
+      // Combine profile initial data (if present) with visits for complete timeline
+      // We iterate from oldest to newest
+      const sortedVisits = [...visits].sort((a, b) => new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime());
+      
+      const mapData = (key: keyof ClientVisit) => {
+          return sortedVisits
+              .filter(v => v[key] !== null && v[key] !== undefined && Number(v[key]) > 0)
+              .map(v => ({
+                  label: new Date(v.visit_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }),
+                  value: Number(v[key])
+              }));
+      };
+
+      return {
+          weight: mapData('weight'),
+          bmi: mapData('bmi'),
+          waist: mapData('waist'),
+          hip: mapData('hip'),
+          miac: mapData('miac'),
+          height: mapData('height') // Useful for pediatrics
+      };
+
+  }, [visits, editingClient]);
+
+
   const handleOpenProfile = (client?: Client) => {
     setFormError('');
     setSaveSuccess('');
@@ -589,6 +629,10 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       onPlanMeals(editingClient, visit);
   };
 
+  const handlePrintReport = () => {
+      window.print();
+  };
+
   // --- RENDER: LIST VIEW ---
   if (viewMode === 'list') {
     return (
@@ -711,7 +755,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                     </td>
                                                     <td className="p-4 text-center">
                                                         <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-mono">
-                                                        {new Date(client.visit_date).toLocaleDateString('en-GB')}
+                                                        {formatDateUK(client.visit_date)}
                                                         </span>
                                                     </td>
                                                     <td className="p-4 text-center text-gray-600 hidden sm:table-cell">
@@ -755,8 +799,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   return (
     <div className="max-w-5xl mx-auto animate-fade-in pb-12">
          
-         {/* Profile Header & Back Button */}
-         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+         {/* Profile Header & Back Button (Hidden on Print) */}
+         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 no-print">
            <div className="flex items-center gap-4">
                <button 
                   onClick={handleBackToList}
@@ -771,18 +815,24 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
            {/* Tabs Switcher */}
            {editingClient && (
-               <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
+               <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm overflow-x-auto">
                    <button 
                     onClick={() => setActiveTab('profile')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === 'profile' ? 'bg-blue-50 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]' : 'text-gray-600 hover:bg-gray-50'}`}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition whitespace-nowrap ${activeTab === 'profile' ? 'bg-blue-50 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]' : 'text-gray-600 hover:bg-gray-50'}`}
                    >
                        Profile
                    </button>
                    <button 
                     onClick={() => setActiveTab('visits')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === 'visits' ? 'bg-blue-50 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]' : 'text-gray-600 hover:bg-gray-50'}`}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition whitespace-nowrap ${activeTab === 'visits' ? 'bg-blue-50 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]' : 'text-gray-600 hover:bg-gray-50'}`}
                    >
-                       History & Visits ({visits.length})
+                       History ({visits.length})
+                   </button>
+                   <button 
+                    onClick={() => setActiveTab('report')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition whitespace-nowrap ${activeTab === 'report' ? 'bg-blue-50 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]' : 'text-gray-600 hover:bg-gray-50'}`}
+                   >
+                       Report & Charts
                    </button>
                </div>
            )}
@@ -792,8 +842,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
             
             {/* Status Messages */}
-            {formError && <div className="bg-red-50 text-red-600 p-3 m-4 rounded-lg border border-red-100">{formError}</div>}
-            {saveSuccess && <div className="bg-green-50 text-green-600 p-3 m-4 rounded-lg border border-green-100">{saveSuccess}</div>}
+            {formError && <div className="bg-red-50 text-red-600 p-3 m-4 rounded-lg border border-red-100 no-print">{formError}</div>}
+            {saveSuccess && <div className="bg-green-50 text-green-600 p-3 m-4 rounded-lg border border-green-100 no-print">{saveSuccess}</div>}
             
             {/* TAB: PROFILE */}
             {activeTab === 'profile' && (
@@ -846,6 +896,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                         onChange={e => setFormData({...formData, dob: e.target.value})}
                                         className="w-full p-2 border rounded outline-none text-sm"
                                      />
+                                     {formData.dob && (
+                                         <span className="text-xs text-gray-400 mt-1 block text-right">
+                                             {formatDateUK(formData.dob)}
+                                         </span>
+                                     )}
                                  </div>
                                  <div>
                                      <label className="block text-xs font-bold text-gray-500 mb-1">Phone</label>
@@ -1038,7 +1093,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                     <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm">
                         <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase">Record New Follow-up</h4>
                         <div className="text-xs text-blue-600 mb-3 opacity-80">
-                            * Data auto-filled from previous visit ({visits.length > 0 ? new Date(visits[0].visit_date).toLocaleDateString('en-GB') : 'Profile'}). Adjust as needed.
+                            * Data auto-filled from previous visit ({visits.length > 0 ? formatDateUK(visits[0].visit_date) : 'Profile'}). Adjust as needed.
                         </div>
                         <form onSubmit={handleAddVisit} className="space-y-4">
                             <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -1116,7 +1171,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                             <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-3">
                                                 <div className="flex items-center gap-4">
                                                     <span className="font-bold text-gray-800 text-lg">
-                                                    {new Date(visit.visit_date).toLocaleDateString('en-GB')}
+                                                    {formatDateUK(visit.visit_date)}
                                                     </span>
                                                     {/* Badges */}
                                                     <div className="flex gap-2 text-xs font-mono">
@@ -1207,6 +1262,124 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                             );
                         })}
                     </div>
+                </div>
+            )}
+
+            {/* TAB: REPORT & CHARTS */}
+            {activeTab === 'report' && editingClient && chartData && (
+                <div className="p-8 animate-fade-in">
+                     <div className="flex justify-end mb-6 no-print">
+                        <button 
+                            onClick={handlePrintReport}
+                            className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg shadow-md flex items-center gap-2 transition"
+                        >
+                            <span>🖨️</span> Print Report
+                        </button>
+                     </div>
+
+                     {/* Printable Area */}
+                     <div className="space-y-8">
+                         {/* Header */}
+                         <div className="border-b-2 border-gray-200 pb-4 mb-6">
+                             <div className="flex justify-between items-end">
+                                 <div>
+                                     <h2 className="text-3xl font-bold text-[var(--color-heading)]">Progress Report</h2>
+                                     <p className="text-gray-500 text-sm mt-1">Generated on {new Date().toLocaleDateString('en-GB')}</p>
+                                 </div>
+                                 <div className="text-right">
+                                     <div className="text-2xl font-bold text-gray-800">{editingClient.full_name}</div>
+                                     <div className="text-sm text-gray-600">Code: {editingClient.client_code || '-'}</div>
+                                 </div>
+                             </div>
+                         </div>
+
+                         {/* Current Stats Summary */}
+                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Latest Measurements</h3>
+                             <div className="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
+                                 <div className="p-2 bg-white rounded border border-gray-200">
+                                     <div className="text-xs text-gray-400 uppercase">Weight</div>
+                                     <div className="font-bold text-lg text-[var(--color-primary)]">{editingClient.weight || '-'} <span className="text-xs">kg</span></div>
+                                 </div>
+                                 <div className="p-2 bg-white rounded border border-gray-200">
+                                     <div className="text-xs text-gray-400 uppercase">BMI</div>
+                                     <div className="font-bold text-lg text-orange-600">{editingClient.bmi || '-'}</div>
+                                 </div>
+                                 <div className="p-2 bg-white rounded border border-gray-200">
+                                     <div className="text-xs text-gray-400 uppercase">Height</div>
+                                     <div className="font-bold text-lg text-gray-700">{editingClient.height || '-'} <span className="text-xs">cm</span></div>
+                                 </div>
+                                 <div className="p-2 bg-white rounded border border-gray-200">
+                                     <div className="text-xs text-gray-400 uppercase">Waist</div>
+                                     <div className="font-bold text-lg text-gray-700">{editingClient.waist || '-'} <span className="text-xs">cm</span></div>
+                                 </div>
+                                 <div className="p-2 bg-white rounded border border-gray-200">
+                                     <div className="text-xs text-gray-400 uppercase">Hip</div>
+                                     <div className="font-bold text-lg text-gray-700">{editingClient.hip || '-'} <span className="text-xs">cm</span></div>
+                                 </div>
+                                 <div className="p-2 bg-white rounded border border-gray-200">
+                                     <div className="text-xs text-gray-400 uppercase">MIAC</div>
+                                     <div className="font-bold text-lg text-gray-700">{editingClient.miac || '-'} <span className="text-xs">cm</span></div>
+                                 </div>
+                             </div>
+                         </div>
+
+                         {/* Charts Grid */}
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 break-inside-avoid">
+                             {/* Weight Chart */}
+                             <SimpleLineChart 
+                                data={chartData.weight} 
+                                title="Body Weight" 
+                                unit="kg"
+                                color="#3b82f6"
+                             />
+                             
+                             {/* BMI Chart */}
+                             <SimpleLineChart 
+                                data={chartData.bmi} 
+                                title="BMI Score" 
+                                unit=""
+                                color="#f97316"
+                             />
+
+                             {/* Waist & Hip (Grouped or Separate) */}
+                             <SimpleLineChart 
+                                data={chartData.waist} 
+                                title="Waist Circumference" 
+                                unit="cm"
+                                color="#16a34a"
+                             />
+
+                             <SimpleLineChart 
+                                data={chartData.hip} 
+                                title="Hip Circumference" 
+                                unit="cm"
+                                color="#a855f7"
+                             />
+                            
+                            {/* MIAC (Often used for muscle mass indication) */}
+                             <SimpleLineChart 
+                                data={chartData.miac} 
+                                title="MIAC (Arm)" 
+                                unit="cm"
+                                color="#ec4899"
+                             />
+
+                            {/* Height (Only relevant for Pedia, but shown if changes exist) */}
+                            {chartData.height && chartData.height.length > 1 && (
+                                <SimpleLineChart 
+                                    data={chartData.height} 
+                                    title="Height Growth" 
+                                    unit="cm"
+                                    color="#6366f1"
+                                />
+                            )}
+                         </div>
+                         
+                         <div className="text-center text-xs text-gray-400 pt-8 mt-8 border-t border-gray-100">
+                             Diet-Nova System • Dr. Peter Ramsis
+                         </div>
+                     </div>
                 </div>
             )}
          </div>
