@@ -17,8 +17,10 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Track the last processed user ID to prevent redundant fetches on tab focus
+  // Track the last processed user ID to prevent redundant fetches
   const lastUserIdRef = useRef<string | null>(null);
+  // Track the last access token to prevent redundant session updates on window focus
+  const lastAccessTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     // 0. Check configuration
@@ -40,6 +42,7 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
 
         if (data && data.session) {
            setSession(data.session);
+           lastAccessTokenRef.current = data.session.access_token;
            lastUserIdRef.current = data.session.user.id;
            fetchProfile(data.session);
         } else {
@@ -56,21 +59,28 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
     // 2. Listen for Changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      // Only update if the session state actually changes significantly (e.g. user changed, or signed out)
-      const userId = session?.user?.id;
-      
-      if (event === 'SIGNED_OUT' || !session) {
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      // Handle Sign Out
+      if (event === 'SIGNED_OUT' || !newSession) {
           setSession(null);
           setProfile(null);
           lastUserIdRef.current = null;
+          lastAccessTokenRef.current = null;
           setLoading(false);
-      } else if (session) {
-          setSession(session);
-          // Optimization: Only fetch profile if user ID has changed or we don't have a profile yet
+          return;
+      } 
+      
+      // Handle Session Updates
+      // Only update if the access token has changed to prevent flickering on window focus
+      if (newSession.access_token !== lastAccessTokenRef.current) {
+          setSession(newSession);
+          lastAccessTokenRef.current = newSession.access_token;
+          
+          // Only fetch profile if user ID changed or we don't have profile yet
+          const userId = newSession.user.id;
           if (userId !== lastUserIdRef.current || !profile) {
-              lastUserIdRef.current = userId || null;
-              fetchProfile(session);
+              lastUserIdRef.current = userId;
+              fetchProfile(newSession);
           }
       }
     });
@@ -103,8 +113,6 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
              setTimeout(() => fetchProfile(currentSession, retryCount + 1), 1000);
           } else {
              // ZOMBIE ACCOUNT DETECTED
-             // The Auth user exists, but the Profile is gone (and it's not a new signup).
-             // Logic: We must CLEAN UP the auth user so the email is free to sign up again.
              console.warn("Zombie account detected (Auth exists, Profile missing). Cleaning up...");
              await cleanupZombieAccount();
           }
@@ -117,18 +125,15 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
 
   const cleanupZombieAccount = async () => {
       try {
-          // Attempt to delete the auth user using the Secure RPC
           await supabase.rpc('delete_user');
           console.log("Zombie account cleaned up from Auth.");
       } catch (err) {
           console.error("Failed to auto-clean zombie account:", err);
       } finally {
-          // Always sign out to reset the client state
           await supabase.auth.signOut();
           setSession(null);
           setProfile(null);
           setLoading(false);
-          // Optional: Alert the user
           alert("This account was previously deleted. Please Sign Up again to create a new profile.");
       }
   };
@@ -139,6 +144,7 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
     setProfile(null);
     setSession(null);
     lastUserIdRef.current = null;
+    lastAccessTokenRef.current = null;
   };
 
   return (

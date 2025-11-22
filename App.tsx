@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -213,6 +211,15 @@ const AppContent = () => {
     }
   };
 
+  const handleBackToClientProfile = () => {
+     if (currentVisit) {
+         setActiveTool('client-manager');
+         // Pass the client ID to auto-open the profile view in ClientManager
+         setSelectedLoadId(currentVisit.client.id); 
+         setCurrentVisit(null); // Clear visit context as we are exiting the tool
+     }
+  };
+
   const showKcal = activeTool === 'kcal';
   const showPlanner = activeTool === 'meal-planner';
   const isComplexFlow = showKcal || showPlanner;
@@ -239,11 +246,19 @@ const AppContent = () => {
                   </span>
                   {t.common.backHome}
                 </button>
+                
+                {/* Back to Client Profile Button */}
                 {currentVisit && isComplexFlow && (
-                    <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-xs font-bold shadow-sm flex items-center gap-2">
-                         <span>👥 Client Mode: {currentVisit.client.full_name}</span>
-                         <span className="hidden sm:inline text-gray-400">|</span>
-                         <span className="hidden sm:inline">{new Date(currentVisit.visit.visit_date).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-3">
+                         <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-xs font-bold shadow-sm hidden sm:flex items-center gap-2">
+                             <span>👥 Client Mode: {currentVisit.client.full_name}</span>
+                         </div>
+                         <button 
+                             onClick={handleBackToClientProfile}
+                             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm flex items-center gap-2"
+                         >
+                             <span>👤</span> Back to Profile
+                         </button>
                     </div>
                 )}
             </div>

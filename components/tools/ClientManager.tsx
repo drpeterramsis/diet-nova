@@ -29,6 +29,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   
+  // View State: 'list' or 'details'
+  const [viewMode, setViewMode] = useState<'list' | 'details'>('list');
+
   // Data State
   const [clients, setClients] = useState<Client[]>([]);
   const [visits, setVisits] = useState<ClientVisit[]>([]); 
@@ -41,7 +44,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const [sortBy, setSortBy] = useState<SortOption>('date_desc');
   const [groupBy, setGroupBy] = useState<GroupOption>('none');
   
-  const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'visits'>('profile');
   const [noJob, setNoJob] = useState(false);
@@ -126,20 +128,23 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   }, [session]);
 
   useEffect(() => {
-      if (autoOpenNew && !showModal && !initialClientId) {
-          handleOpenModal();
+      if (autoOpenNew && viewMode === 'list' && !initialClientId) {
+          handleOpenProfile();
       }
   }, [autoOpenNew]);
 
   // Deep linking effect
   useEffect(() => {
-      if (initialClientId && clients.length > 0 && !showModal) {
+      if (initialClientId && clients.length > 0) {
           const targetClient = clients.find(c => c.id === initialClientId);
           if (targetClient) {
-              handleOpenModal(targetClient);
+              // Switch to details view if we found the client
+              if (viewMode !== 'details' || editingClient?.id !== targetClient.id) {
+                  handleOpenProfile(targetClient);
+              }
           }
       }
-  }, [initialClientId, clients]);
+  }, [initialClientId, clients]); // Added dependencies
 
   // DOB / Age Calculation
   useEffect(() => {
@@ -202,6 +207,15 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       });
       notes += `[Other Notes]\n-`;
       return notes;
+  };
+
+  const insertTemplate = () => {
+      if (!confirm("This will append the default notes template to your existing notes. Continue?")) return;
+      const template = getDefaultNotes(formData.gender);
+      setFormData(prev => ({
+          ...prev,
+          notes: prev.notes ? prev.notes + "\n\n" + template : template
+      }));
   };
 
   const fetchClients = async () => {
@@ -291,7 +305,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       return groups;
   }, [processedClients, groupBy]);
 
-  const handleOpenModal = (client?: Client) => {
+  const handleOpenProfile = (client?: Client) => {
     setFormError('');
     setSaveSuccess('');
     setActiveTab('profile');
@@ -308,8 +322,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         dob: client.dob || '',
         clinic: client.clinic || '',
         phone: client.phone || '',
-        // If notes are empty/null, use default structure, else use existing
-        notes: client.notes ? client.notes : getDefaultNotes(client.gender || 'male'),
+        notes: client.notes || '', 
         age: client.age !== undefined ? client.age : '',
         gender: client.gender || 'male',
         marital_status: client.marital_status || 'single',
@@ -333,7 +346,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         dob: '',
         clinic: '',
         phone: '',
-        notes: getDefaultNotes('male'),
+        notes: getDefaultNotes('male'), // Auto-add template for new clients
         age: '',
         gender: 'male',
         marital_status: 'single',
@@ -346,26 +359,29 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         miac: ''
       });
     }
-    setShowModal(true);
+    // Switch view to 'details'
+    setViewMode('details');
+  };
+
+  const handleBackToList = () => {
+      setViewMode('list');
+      setEditingClient(null);
   };
 
   const addTag = (tag: string, categoryName: string) => {
       if (formData.notes.includes(tag)) return;
       
-      // Attempt to find the category header and append the tag after it
       const header = `[${categoryName}]`;
       const notes = formData.notes;
       
       if (notes.includes(header)) {
-          // Insert after the header line
-          // Find index of header
           const headerIndex = notes.indexOf(header);
-          const insertIndex = headerIndex + header.length;
+          const lineBreakIndex = notes.indexOf('\n', headerIndex);
+          const insertIndex = lineBreakIndex !== -1 ? lineBreakIndex + 1 : headerIndex + header.length;
           
-          const newNotes = notes.slice(0, insertIndex) + `\n• ${tag}` + notes.slice(insertIndex);
+          const newNotes = notes.slice(0, insertIndex) + (lineBreakIndex === -1 ? '\n' : '') + `• ${tag}\n` + notes.slice(insertIndex);
           setFormData(prev => ({ ...prev, notes: newNotes }));
       } else {
-          // Fallback: Append to end if header missing
           setFormData(prev => ({
               ...prev,
               notes: (prev.notes ? prev.notes + '\n' : '') + `• ${tag}`
@@ -374,9 +390,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   };
   
   const toggleAllTags = () => {
-      setAllTagsExpanded(!allTagsExpanded);
-      // If collapsing, clear single expansion too
-      if (allTagsExpanded) setExpandedCategory(null);
+      const newState = !allTagsExpanded;
+      setAllTagsExpanded(newState);
+      if (newState) setExpandedCategory(null);
   };
 
   const handleSubmitProfile = async (e: React.FormEvent) => {
@@ -413,7 +429,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       if (response.error) throw response.error;
 
       if (response.data) {
-        // If creating new client, we also want to create the first visit automatically
         if (!editingClient && (payload.weight || payload.height)) {
             await supabase.from('client_visits').insert({
                 client_id: response.data.id,
@@ -477,7 +492,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
           if (data) {
               setVisits(prev => [data, ...prev]);
-              // Update client profile last visit & latest stats
+              // Update client profile last visit & latest stats if date is newer
               if (new Date(data.visit_date) >= new Date(editingClient.visit_date)) {
                    const { data: updatedClient } = await supabase.from('clients').update({
                        visit_date: data.visit_date,
@@ -521,6 +536,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       const { error } = await supabase.from('clients').delete().eq('id', id);
       if (error) throw error;
       setClients(prev => prev.filter(c => c.id !== id));
+      // If we were editing this client, go back to list
+      if (editingClient?.id === id) {
+          setViewMode('list');
+          setEditingClient(null);
+      }
     } catch (err: any) {
       alert("Error deleting client: " + err.message);
     }
@@ -529,217 +549,227 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const openKcalForVisit = (visit: ClientVisit) => {
       if (!editingClient || !onAnalyzeInKcal) return;
       onAnalyzeInKcal(editingClient, visit);
-      setShowModal(false);
   };
 
   const openMealPlanForVisit = (visit: ClientVisit) => {
       if (!editingClient || !onPlanMeals) return;
       onPlanMeals(editingClient, visit);
-      setShowModal(false);
   };
 
-  return (
-    <div className="max-w-7xl mx-auto animate-fade-in space-y-6 pb-12">
-      
-      {/* --- Header & Controls --- */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-[var(--color-heading)] flex items-center gap-2">
-            <span>👥</span> {t.clients.title}
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">{t.tools.clients.desc}</p>
-        </div>
-        <button 
-          onClick={() => handleOpenModal()}
-          disabled={tableError}
-          className={`text-white px-6 py-3 rounded-lg shadow-md transition flex items-center gap-2 font-medium ${tableError ? 'bg-gray-300 cursor-not-allowed' : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]'}`}
-        >
-          <span>+</span> {t.clients.addClient}
-        </button>
-      </div>
-
-      {/* --- Search & Filter Bar --- */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-         <div className="md:col-span-2 relative">
-            <input 
-            type="text"
-            placeholder={`${t.common.search} (Name, Code, Clinic)`}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            disabled={tableError}
-            className="w-full p-3 pl-10 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none disabled:bg-gray-50"
-            dir={isRTL ? 'rtl' : 'ltr'}
-            />
-            <span className={`absolute top-1/2 -translate-y-1/2 text-gray-400 text-lg ${isRTL ? 'right-3' : 'left-3'}`}>🔍</span>
-         </div>
-         
-         <div className="flex items-center gap-2">
-             <label className="text-xs font-bold text-gray-500 uppercase">Sort:</label>
-             <select 
-                className="flex-grow p-2 rounded-lg border border-gray-200 text-sm bg-white"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-             >
-                 <option value="date_desc">Date (Newest)</option>
-                 <option value="date_asc">Date (Oldest)</option>
-                 <option value="name_asc">Name (A-Z)</option>
-                 <option value="name_desc">Name (Z-A)</option>
-                 <option value="clinic">Clinic</option>
-             </select>
-         </div>
-
-         <div className="flex items-center gap-2">
-             <label className="text-xs font-bold text-gray-500 uppercase">Group:</label>
-             <select 
-                className="flex-grow p-2 rounded-lg border border-gray-200 text-sm bg-white"
-                value={groupBy}
-                onChange={(e) => setGroupBy(e.target.value as GroupOption)}
-             >
-                 <option value="none">None</option>
-                 <option value="clinic">Location / Clinic</option>
-                 <option value="month">Month</option>
-             </select>
-         </div>
-      </div>
-
-      {/* Error State */}
-      {tableError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-700 animate-fade-in">
-            <h3 className="text-lg font-bold mb-2">Database Configuration Error</h3>
-            <p>The 'clients' table could not be found in the database schema.</p>
-            <p className="text-sm mt-2">Please contact the administrator to initialize the database tables.</p>
-        </div>
-      )}
-
-      {/* --- Client List --- */}
-      {!tableError && !loading && (
-          <div className="space-y-8">
-              {Object.entries(groupedClients).map(([groupName, groupList]: [string, Client[]]) => (
-                  <div key={groupName} className="animate-fade-in">
-                      {groupBy !== 'none' && (
-                          <h3 className="text-lg font-bold text-gray-700 mb-3 pl-2 border-l-4 border-[var(--color-primary)]">
-                              {groupName} <span className="text-sm font-normal text-gray-400">({groupList.length})</span>
-                          </h3>
-                      )}
-                      
-                      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-                         {groupList.length === 0 ? (
-                             <div className="p-8 text-center text-gray-400">No clients found.</div>
-                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
-                                        <tr>
-                                        <th className="p-4 text-left">{t.clients.name}</th>
-                                        <th className="p-4 text-center hidden md:table-cell">Code</th>
-                                        <th className="p-4 text-center">{t.clients.visitDate}</th>
-                                        <th className="p-4 text-center hidden sm:table-cell">{t.clients.clinic}</th>
-                                        <th className="p-4 text-center">{t.common.actions}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {groupList.map(client => (
-                                            <tr key={client.id} className="hover:bg-blue-50 transition group">
-                                                <td className="p-4">
-                                                    <div className="font-bold text-gray-800 text-lg flex items-center gap-2">
-                                                    {client.full_name}
-                                                    {client.gender && (
-                                                        <span className="text-sm" title={client.gender}>
-                                                        {client.gender === 'male' ? '👨' : '👩'}
-                                                        </span>
-                                                    )}
-                                                    </div>
-                                                    <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                                                        {client.age && <span>{t.clients.age}: {client.age}</span>}
-                                                        {client.phone && <span>📞 {client.phone}</span>}
-                                                    </div>
-                                                </td>
-                                                <td className="p-4 text-center hidden md:table-cell text-xs font-mono text-gray-500">
-                                                    {client.client_code || '-'}
-                                                </td>
-                                                <td className="p-4 text-center">
-                                                    <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-mono">
-                                                    {new Date(client.visit_date).toLocaleDateString()}
-                                                    </span>
-                                                </td>
-                                                <td className="p-4 text-center text-gray-600 hidden sm:table-cell">
-                                                    {client.clinic || '-'}
-                                                </td>
-                                                <td className="p-4 text-center">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <button 
-                                                        onClick={() => handleOpenModal(client)}
-                                                        className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
-                                                        >
-                                                        Open
-                                                        </button>
-                                                        <button 
-                                                        onClick={() => handleDeleteClient(client.id)}
-                                                        className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition"
-                                                        title={t.common.delete}
-                                                        >
-                                                        🗑️
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                         )}
-                      </div>
-                  </div>
-              ))}
+  // --- RENDER: LIST VIEW ---
+  if (viewMode === 'list') {
+    return (
+        <div className="max-w-7xl mx-auto animate-fade-in space-y-6 pb-12">
+          {/* Header */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-[var(--color-heading)] flex items-center gap-2">
+                <span>👥</span> {t.clients.title}
+              </h1>
+              <p className="text-gray-500 text-sm mt-1">{t.tools.clients.desc}</p>
+            </div>
+            <button 
+              onClick={() => handleOpenProfile()}
+              disabled={tableError}
+              className={`text-white px-6 py-3 rounded-lg shadow-md transition flex items-center gap-2 font-medium ${tableError ? 'bg-gray-300 cursor-not-allowed' : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]'}`}
+            >
+              <span>+</span> {t.clients.addClient}
+            </button>
           </div>
-      )}
-
-      {loading && <Loading />}
-
-      {/* --- Main Modal --- */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[95vh]">
-             
-             {/* Modal Header */}
-             <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-               <div className="flex items-center gap-3">
-                   <h2 className="text-xl font-bold text-gray-800">
-                       {editingClient ? editingClient.full_name : t.clients.addClient}
-                   </h2>
-                   {/* Tabs */}
-                   {editingClient && (
-                       <div className="flex bg-gray-200 rounded-lg p-1 ml-4">
-                           <button 
-                            onClick={() => setActiveTab('profile')}
-                            className={`px-3 py-1 rounded-md text-sm font-medium transition ${activeTab === 'profile' ? 'bg-white shadow text-[var(--color-primary)]' : 'text-gray-600 hover:text-gray-800'}`}
-                           >
-                               Profile
-                           </button>
-                           <button 
-                            onClick={() => setActiveTab('visits')}
-                            className={`px-3 py-1 rounded-md text-sm font-medium transition ${activeTab === 'visits' ? 'bg-white shadow text-[var(--color-primary)]' : 'text-gray-600 hover:text-gray-800'}`}
-                           >
-                               History ({visits.length})
-                           </button>
-                       </div>
-                   )}
-               </div>
-               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+    
+          {/* Search & Filter Bar */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+             <div className="md:col-span-2 relative">
+                <input 
+                type="text"
+                placeholder={`${t.common.search} (Name, Code, Clinic)`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                disabled={tableError}
+                className="w-full p-3 pl-10 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none disabled:bg-gray-50"
+                dir={isRTL ? 'rtl' : 'ltr'}
+                />
+                <span className={`absolute top-1/2 -translate-y-1/2 text-gray-400 text-lg ${isRTL ? 'right-3' : 'left-3'}`}>🔍</span>
              </div>
              
-             {/* Modal Content */}
-             <div className="p-6 overflow-y-auto flex-grow">
-                {formError && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">{formError}</div>}
-                {saveSuccess && <div className="bg-green-50 text-green-600 p-3 rounded-lg mb-4">{saveSuccess}</div>}
-                
-                {/* TAB: PROFILE */}
-                {activeTab === 'profile' && (
-                     <form id="clientForm" onSubmit={handleSubmitProfile} className="space-y-6">
+             <div className="flex items-center gap-2">
+                 <label className="text-xs font-bold text-gray-500 uppercase">Sort:</label>
+                 <select 
+                    className="flex-grow p-2 rounded-lg border border-gray-200 text-sm bg-white"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortOption)}
+                 >
+                     <option value="date_desc">Date (Newest)</option>
+                     <option value="date_asc">Date (Oldest)</option>
+                     <option value="name_asc">Name (A-Z)</option>
+                     <option value="name_desc">Name (Z-A)</option>
+                     <option value="clinic">Clinic</option>
+                 </select>
+             </div>
+    
+             <div className="flex items-center gap-2">
+                 <label className="text-xs font-bold text-gray-500 uppercase">Group:</label>
+                 <select 
+                    className="flex-grow p-2 rounded-lg border border-gray-200 text-sm bg-white"
+                    value={groupBy}
+                    onChange={(e) => setGroupBy(e.target.value as GroupOption)}
+                 >
+                     <option value="none">None</option>
+                     <option value="clinic">Location / Clinic</option>
+                     <option value="month">Month</option>
+                 </select>
+             </div>
+          </div>
+    
+          {/* Error State */}
+          {tableError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-700 animate-fade-in">
+                <h3 className="text-lg font-bold mb-2">Database Configuration Error</h3>
+                <p>The 'clients' table could not be found in the database schema.</p>
+                <p className="text-sm mt-2">Please contact the administrator to initialize the database tables.</p>
+            </div>
+          )}
+    
+          {/* Client List */}
+          {!tableError && !loading && (
+              <div className="space-y-8">
+                  {Object.entries(groupedClients).map(([groupName, groupList]: [string, Client[]]) => (
+                      <div key={groupName} className="animate-fade-in">
+                          {groupBy !== 'none' && (
+                              <h3 className="text-lg font-bold text-gray-700 mb-3 pl-2 border-l-4 border-[var(--color-primary)]">
+                                  {groupName} <span className="text-sm font-normal text-gray-400">({groupList.length})</span>
+                              </h3>
+                          )}
+                          
+                          <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+                             {groupList.length === 0 ? (
+                                 <div className="p-8 text-center text-gray-400">No clients found.</div>
+                             ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
+                                            <tr>
+                                            <th className="p-4 text-left">{t.clients.name}</th>
+                                            <th className="p-4 text-center hidden md:table-cell">Code</th>
+                                            <th className="p-4 text-center">{t.clients.visitDate}</th>
+                                            <th className="p-4 text-center hidden sm:table-cell">{t.clients.clinic}</th>
+                                            <th className="p-4 text-center">{t.common.actions}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {groupList.map(client => (
+                                                <tr key={client.id} className="hover:bg-blue-50 transition group">
+                                                    <td className="p-4">
+                                                        <div className="font-bold text-gray-800 text-lg flex items-center gap-2">
+                                                        {client.full_name}
+                                                        {client.gender && (
+                                                            <span className="text-sm" title={client.gender}>
+                                                            {client.gender === 'male' ? '👨' : '👩'}
+                                                            </span>
+                                                        )}
+                                                        </div>
+                                                        <div className="flex gap-3 text-xs text-gray-500 mt-1">
+                                                            {client.age && <span>{t.clients.age}: {client.age}</span>}
+                                                            {client.phone && <span>📞 {client.phone}</span>}
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-4 text-center hidden md:table-cell text-xs font-mono text-gray-500">
+                                                        {client.client_code || '-'}
+                                                    </td>
+                                                    <td className="p-4 text-center">
+                                                        <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-mono">
+                                                        {new Date(client.visit_date).toLocaleDateString()}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-4 text-center text-gray-600 hidden sm:table-cell">
+                                                        {client.clinic || '-'}
+                                                    </td>
+                                                    <td className="p-4 text-center">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <button 
+                                                            onClick={() => handleOpenProfile(client)}
+                                                            className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
+                                                            >
+                                                            View
+                                                            </button>
+                                                            <button 
+                                                            onClick={() => handleDeleteClient(client.id)}
+                                                            className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition"
+                                                            title={t.common.delete}
+                                                            >
+                                                            🗑️
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                             )}
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          )}
+    
+          {loading && <Loading />}
+        </div>
+      );
+  }
+
+  // --- RENDER: PROFILE (DETAILS) VIEW ---
+  return (
+    <div className="max-w-5xl mx-auto animate-fade-in pb-12">
+         
+         {/* Profile Header & Back Button */}
+         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+           <div className="flex items-center gap-4">
+               <button 
+                  onClick={handleBackToList}
+                  className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2"
+               >
+                   <span>←</span> Back to List
+               </button>
+               <h2 className="text-2xl font-bold text-gray-800">
+                   {editingClient ? editingClient.full_name : t.clients.addClient}
+               </h2>
+           </div>
+
+           {/* Tabs Switcher */}
+           {editingClient && (
+               <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
+                   <button 
+                    onClick={() => setActiveTab('profile')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === 'profile' ? 'bg-blue-50 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]' : 'text-gray-600 hover:bg-gray-50'}`}
+                   >
+                       Profile
+                   </button>
+                   <button 
+                    onClick={() => setActiveTab('visits')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === 'visits' ? 'bg-blue-50 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]' : 'text-gray-600 hover:bg-gray-50'}`}
+                   >
+                       History & Visits ({visits.length})
+                   </button>
+               </div>
+           )}
+         </div>
+         
+         {/* Content Container */}
+         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            
+            {/* Status Messages */}
+            {formError && <div className="bg-red-50 text-red-600 p-3 m-4 rounded-lg border border-red-100">{formError}</div>}
+            {saveSuccess && <div className="bg-green-50 text-green-600 p-3 m-4 rounded-lg border border-green-100">{saveSuccess}</div>}
+            
+            {/* TAB: PROFILE */}
+            {activeTab === 'profile' && (
+                 <div className="p-6">
+                    <form id="clientForm" onSubmit={handleSubmitProfile} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                              {/* Left Col: Core Info */}
-                             <div className="md:col-span-5 space-y-4 bg-gray-50 p-4 rounded-lg">
-                                 <h3 className="font-bold text-gray-700 text-sm uppercase border-b pb-1 mb-2">Core Identity</h3>
+                             <div className="md:col-span-5 space-y-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
+                                 <h3 className="font-bold text-gray-700 text-sm uppercase border-b pb-2 mb-2">Core Identity</h3>
                                  
                                  <div>
                                      <label className="block text-xs font-bold text-gray-500 mb-1">{t.clients.name} *</label>
@@ -806,7 +836,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                              </div>
 
                              {/* Right Col: Extended Info & Anthropometrics */}
-                             <div className="md:col-span-7 space-y-4">
+                             <div className="md:col-span-7 space-y-5">
                                  <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 mb-1">Marital Status</label>
@@ -856,9 +886,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                  </div>
 
                                  {/* Profile Anthropometrics */}
-                                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                                     <h3 className="font-bold text-blue-800 text-xs uppercase mb-2">1st Visit Measurements</h3>
-                                     <div className="grid grid-cols-3 gap-3">
+                                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                     <h3 className="font-bold text-blue-800 text-xs uppercase mb-3">1st Visit Measurements</h3>
+                                     <div className="grid grid-cols-3 gap-4">
                                          <div>
                                              <label className="block text-[10px] font-bold text-blue-600 uppercase">Weight (kg)</label>
                                              <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} />
@@ -891,13 +921,18 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                         {/* Categorized Tags */}
                         <div>
                              <div className="flex justify-between items-center mb-2">
-                                 <label className="block text-xs font-bold text-gray-500">Medical Notes & History</label>
+                                 <div className="flex gap-2 items-center">
+                                    <label className="block text-xs font-bold text-gray-500">Medical Notes & History</label>
+                                    <button type="button" onClick={insertTemplate} className="text-xs bg-gray-100 px-2 py-0.5 rounded border hover:bg-gray-200 text-gray-600">
+                                        Insert Template
+                                    </button>
+                                 </div>
                                  <button 
                                     type="button"
                                     onClick={toggleAllTags}
-                                    className="text-xs text-[var(--color-primary)] font-medium hover:underline"
+                                    className="text-xs text-white bg-[var(--color-primary)] px-3 py-1 rounded font-medium hover:bg-[var(--color-primary-hover)] shadow-sm"
                                  >
-                                     {allTagsExpanded ? 'Collapse All Tags' : 'Expand All Tags'}
+                                     {allTagsExpanded ? 'Collapse Tags' : 'Expand All Tags'}
                                  </button>
                              </div>
                              
@@ -909,7 +944,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                     const isExpanded = allTagsExpanded || expandedCategory === category;
 
                                     return (
-                                        <div key={category} className="bg-white">
+                                        <div key={category} className="bg-white first:rounded-t-lg last:rounded-b-lg">
                                             <button 
                                                 type="button"
                                                 onClick={() => setExpandedCategory(isExpanded && !allTagsExpanded ? null : category)}
@@ -948,153 +983,166 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                 placeholder="Allergies, chronic conditions, past operations..."
                              ></textarea>
                         </div>
+
+                        <div className="flex justify-end pt-4 border-t border-gray-100">
+                            <button 
+                                type="submit" 
+                                disabled={submitting}
+                                className="px-8 py-3 rounded-lg bg-[var(--color-primary)] text-white font-bold hover:bg-[var(--color-primary-hover)] transition disabled:opacity-50 shadow-md"
+                            >
+                                {submitting ? 'Saving...' : t.common.save}
+                            </button>
+                        </div>
                     </form>
-                )}
+                 </div>
+            )}
 
-                {/* TAB: VISITS HISTORY */}
-                {activeTab === 'visits' && editingClient && (
-                    <div className="space-y-6 animate-fade-in">
-                        
-                        {/* Add New Visit Form */}
-                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                            <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase">Record New Follow-up</h4>
-                            <div className="text-xs text-blue-600 mb-2 opacity-80">
-                                * Data auto-filled from previous visit ({visits.length > 0 ? new Date(visits[0].visit_date).toLocaleDateString() : 'Profile'}). Adjust as needed.
+            {/* TAB: VISITS HISTORY */}
+            {activeTab === 'visits' && editingClient && (
+                <div className="p-6 space-y-8 animate-fade-in">
+                    
+                    {/* Add New Visit Form */}
+                    <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm">
+                        <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase">Record New Follow-up</h4>
+                        <div className="text-xs text-blue-600 mb-3 opacity-80">
+                            * Data auto-filled from previous visit ({visits.length > 0 ? new Date(visits[0].visit_date).toLocaleDateString() : 'Profile'}). Adjust as needed.
+                        </div>
+                        <form onSubmit={handleAddVisit} className="space-y-4">
+                            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Date</label>
+                                        <input 
+                                        type="date" 
+                                        required
+                                        className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400"
+                                        value={newVisitData.visit_date}
+                                        onChange={e => setNewVisitData({...newVisitData, visit_date: e.target.value})}
+                                    />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Wt (kg)</label>
+                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.weight} onChange={e => setNewVisitData({...newVisitData, weight: e.target.value})} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Ht (cm)</label>
+                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.height} onChange={e => setNewVisitData({...newVisitData, height: e.target.value})} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Waist</label>
+                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.waist} onChange={e => setNewVisitData({...newVisitData, waist: e.target.value})} />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Hip</label>
+                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.hip} onChange={e => setNewVisitData({...newVisitData, hip: e.target.value})} />
+                                    </div>
                             </div>
-                            <form onSubmit={handleAddVisit} className="space-y-3">
-                                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-                                     <div className="md:col-span-2">
-                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Date</label>
-                                         <input 
-                                            type="date" 
-                                            required
-                                            className="w-full p-2 rounded border border-blue-200 text-sm"
-                                            value={newVisitData.visit_date}
-                                            onChange={e => setNewVisitData({...newVisitData, visit_date: e.target.value})}
-                                        />
-                                     </div>
-                                     <div>
-                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Wt (kg)</label>
-                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm" value={newVisitData.weight} onChange={e => setNewVisitData({...newVisitData, weight: e.target.value})} />
-                                     </div>
-                                     <div>
-                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Ht (cm)</label>
-                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm" value={newVisitData.height} onChange={e => setNewVisitData({...newVisitData, height: e.target.value})} />
-                                     </div>
-                                     <div>
-                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Waist</label>
-                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm" value={newVisitData.waist} onChange={e => setNewVisitData({...newVisitData, waist: e.target.value})} />
-                                     </div>
-                                     <div>
-                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Hip</label>
-                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm" value={newVisitData.hip} onChange={e => setNewVisitData({...newVisitData, hip: e.target.value})} />
-                                     </div>
+                            <div className="flex gap-3">
+                                <div className="flex-grow">
+                                    <textarea 
+                                        placeholder="Quick visit notes..."
+                                        className="w-full p-2 rounded border border-blue-200 text-sm resize-none focus:ring-1 focus:ring-blue-400"
+                                        rows={2}
+                                        value={newVisitData.notes}
+                                        onChange={e => setNewVisitData({...newVisitData, notes: e.target.value})}
+                                    ></textarea>
                                 </div>
-                                <div className="flex gap-3">
-                                    <div className="flex-grow">
-                                        <textarea 
-                                            placeholder="Visit notes..."
-                                            className="w-full p-2 rounded border border-blue-200 text-sm resize-none"
-                                            rows={1}
-                                            value={newVisitData.notes}
-                                            onChange={e => setNewVisitData({...newVisitData, notes: e.target.value})}
-                                        ></textarea>
-                                    </div>
-                                    <button 
-                                        type="submit"
-                                        disabled={submitting}
-                                        className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 text-sm font-bold disabled:opacity-50 self-start"
-                                    >
-                                        Add Visit
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-
-                        {/* Timeline List */}
-                        <div className="relative border-l-2 border-gray-200 ml-3 space-y-6 pb-4">
-                            {loadingVisits && <div className="pl-6 text-gray-400">Loading visits...</div>}
-                            
-                            {!loadingVisits && visits.length === 0 && (
-                                <div className="pl-6 text-gray-400 italic text-sm">No follow-up visits recorded yet.</div>
-                            )}
-
-                            {visits.map((visit) => (
-                                <div key={visit.id} className="relative pl-6">
-                                    {/* Timeline Dot */}
-                                    <div className="absolute -left-[9px] top-0 w-4 h-4 bg-white border-2 border-[var(--color-primary)] rounded-full"></div>
-                                    
-                                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 hover:shadow-md transition group">
-                                         <div className="flex justify-between items-start mb-2">
-                                             <div className="flex items-center gap-3">
-                                                 <span className="font-bold text-gray-800">
-                                                    {new Date(visit.visit_date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-                                                 </span>
-                                                 {/* Badges */}
-                                                 <div className="flex gap-2 text-xs font-mono">
-                                                     {visit.weight && <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700">Wt: {visit.weight}</span>}
-                                                     {visit.bmi && <span className="bg-white border px-1.5 py-0.5 rounded text-orange-700">BMI: {visit.bmi}</span>}
-                                                 </div>
-                                             </div>
-                                             <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
-                                                  <button 
-                                                    onClick={() => openKcalForVisit(visit)}
-                                                    className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold hover:bg-green-200 flex items-center gap-1"
-                                                  >
-                                                      <span>🔥</span> Kcal
-                                                  </button>
-                                                  <button 
-                                                    onClick={() => openMealPlanForVisit(visit)}
-                                                    className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-bold hover:bg-purple-200 flex items-center gap-1"
-                                                  >
-                                                      <span>📅</span> Plan
-                                                  </button>
-                                                  <button onClick={() => handleDeleteVisit(visit.id)} className="text-red-400 hover:text-red-600 px-2">×</button>
-                                             </div>
-                                         </div>
-                                         
-                                         {/* Stats Grid */}
-                                         <div className="grid grid-cols-4 gap-2 text-xs text-gray-500 mb-2 bg-white p-2 rounded border border-gray-100">
-                                             <div><span className="font-bold">Ht:</span> {visit.height || '-'}</div>
-                                             <div><span className="font-bold">Waist:</span> {visit.waist || '-'}</div>
-                                             <div><span className="font-bold">Hip:</span> {visit.hip || '-'}</div>
-                                             <div><span className="font-bold">MIAC:</span> {visit.miac || '-'}</div>
-                                         </div>
-
-                                         {visit.notes && (
-                                             <p className="text-sm text-gray-600 whitespace-pre-wrap border-l-2 border-gray-200 pl-2">{visit.notes}</p>
-                                         )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                <button 
+                                    type="submit"
+                                    disabled={submitting}
+                                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 text-sm font-bold disabled:opacity-50 self-start shadow-md"
+                                >
+                                    Add Visit
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                )}
-             </div>
 
-             {/* Footer Actions */}
-             <div className="p-6 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-                <button 
-                   onClick={() => setShowModal(false)}
-                   className="px-6 py-2.5 rounded-lg bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition"
-                >
-                   {t.common.close}
-                </button>
-                
-                {activeTab === 'profile' && (
-                    <button 
-                    type="submit" 
-                    form="clientForm"
-                    disabled={submitting}
-                    className="px-6 py-2.5 rounded-lg bg-[var(--color-primary)] text-white font-medium hover:bg-[var(--color-primary-hover)] transition disabled:opacity-50"
-                    >
-                    {submitting ? 'Saving...' : t.common.save}
-                    </button>
-                )}
-             </div>
-          </div>
-        </div>
-      )}
+                    {/* Timeline List */}
+                    <div className="relative border-l-2 border-gray-200 ml-3 space-y-8 pb-8">
+                        {loadingVisits && <div className="pl-6 text-gray-400">Loading visits...</div>}
+                        
+                        {!loadingVisits && visits.length === 0 && (
+                            <div className="pl-6 text-gray-400 italic text-sm">No follow-up visits recorded yet.</div>
+                        )}
+
+                        {visits.map((visit) => (
+                            <div key={visit.id} className="relative pl-8">
+                                {/* Timeline Dot */}
+                                <div className="absolute -left-[9px] top-0 w-4 h-4 bg-white border-2 border-[var(--color-primary)] rounded-full z-10"></div>
+                                
+                                <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition group">
+                                        <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-3">
+                                            <div className="flex items-center gap-4">
+                                                <span className="font-bold text-gray-800 text-lg">
+                                                {new Date(visit.visit_date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                                                </span>
+                                                {/* Badges */}
+                                                <div className="flex gap-2 text-xs font-mono">
+                                                    {visit.weight && <span className="bg-blue-50 border border-blue-100 px-2 py-0.5 rounded text-blue-700 font-bold">Wt: {visit.weight}</span>}
+                                                    {visit.bmi && <span className="bg-orange-50 border border-orange-100 px-2 py-0.5 rounded text-orange-700 font-bold">BMI: {visit.bmi}</span>}
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
+                                                <button 
+                                                onClick={() => openKcalForVisit(visit)}
+                                                className="bg-green-100 text-green-700 px-3 py-1 rounded text-xs font-bold hover:bg-green-200 flex items-center gap-1 transition"
+                                                >
+                                                    <span>🔥</span> Calculator
+                                                </button>
+                                                <button 
+                                                onClick={() => openMealPlanForVisit(visit)}
+                                                className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-bold hover:bg-purple-200 flex items-center gap-1 transition"
+                                                >
+                                                    <span>📅</span> Planner
+                                                </button>
+                                                <button onClick={() => handleDeleteVisit(visit.id)} className="text-red-400 hover:text-red-600 px-2 font-bold text-lg">×</button>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Measurements Stats Grid */}
+                                        <div className="grid grid-cols-4 gap-2 text-xs text-gray-600 mb-4 bg-gray-50 p-3 rounded border border-gray-100">
+                                            <div><span className="font-bold text-gray-400 uppercase block">Ht</span> {visit.height || '-'} cm</div>
+                                            <div><span className="font-bold text-gray-400 uppercase block">Waist</span> {visit.waist || '-'} cm</div>
+                                            <div><span className="font-bold text-gray-400 uppercase block">Hip</span> {visit.hip || '-'} cm</div>
+                                            <div><span className="font-bold text-gray-400 uppercase block">MIAC</span> {visit.miac || '-'} cm</div>
+                                        </div>
+
+                                        {/* Saved Data Summary */}
+                                        {(visit.kcal_data || visit.meal_plan_data) && (
+                                            <div className="mb-4 flex flex-wrap gap-4">
+                                                {/* Kcal Data Badge */}
+                                                {visit.kcal_data?.inputs?.reqKcal && (
+                                                    <div className="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-1.5 rounded-lg text-green-800 text-xs">
+                                                        <span className="text-lg">⚡</span>
+                                                        <div>
+                                                            <div className="font-bold">Required Kcal</div>
+                                                            <div className="font-mono">{visit.kcal_data.inputs.reqKcal} kcal</div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* Meal Plan Data Badge */}
+                                                {visit.meal_plan_data?.targetKcal > 0 && (
+                                                    <div className="flex items-center gap-2 bg-purple-50 border border-purple-100 px-3 py-1.5 rounded-lg text-purple-800 text-xs">
+                                                        <span className="text-lg">🍽️</span>
+                                                        <div>
+                                                            <div className="font-bold">Plan Target</div>
+                                                            <div className="font-mono">{visit.meal_plan_data.targetKcal} kcal</div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {visit.notes && (
+                                            <p className="text-sm text-gray-700 whitespace-pre-wrap border-l-2 border-gray-200 pl-3 py-1">{visit.notes}</p>
+                                        )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+         </div>
     </div>
   );
 };

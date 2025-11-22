@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.63",
-  "description": "Updates: Client Manager enhancements (Tags, Notes, Save behavior), Kcal persistence fixes, Auth optimization.",
+  "name": "Diet-Nova v2.0.64",
+  "description": "Updates: Client Profile full page view, Kcal/Meal Plan data in visits, Navigation improvements, Auth refresh fix.",
   "requestFramePermissions": []
 }
