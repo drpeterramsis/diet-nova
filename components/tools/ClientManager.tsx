@@ -163,6 +163,26 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       notes: ''
   });
 
+  // State for Editing an Existing Visit
+  const [editingVisit, setEditingVisit] = useState<ClientVisit | null>(null);
+  const [editVisitForm, setEditVisitForm] = useState<{
+      visit_date: string;
+      weight: number | '';
+      height: number | '';
+      waist: number | '';
+      hip: number | '';
+      miac: number | '';
+      notes: string;
+  }>({
+      visit_date: '',
+      weight: '',
+      height: '',
+      waist: '',
+      hip: '',
+      miac: '',
+      notes: ''
+  });
+
   const [formError, setFormError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -188,7 +208,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
               }
           }
       }
-  }, [initialClientId, clients]); // Added dependencies
+  }, [initialClientId, clients]); 
 
   // DOB / Age Calculation
   useEffect(() => {
@@ -353,8 +373,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const chartData = useMemo(() => {
       if (!editingClient || visits.length === 0) return null;
       
-      // Combine profile initial data (if present) with visits for complete timeline
-      // We iterate from oldest to newest
       const sortedVisits = [...visits].sort((a, b) => new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime());
       
       const mapData = (key: keyof ClientVisit) => {
@@ -372,7 +390,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
           waist: mapData('waist'),
           hip: mapData('hip'),
           miac: mapData('miac'),
-          height: mapData('height') // Useful for pediatrics
+          height: mapData('height')
       };
 
   }, [visits, editingClient]);
@@ -419,7 +437,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         dob: '',
         clinic: '',
         phone: '',
-        notes: getDefaultNotes('male'), // Auto-add template for new clients
+        notes: getDefaultNotes('male'),
         age: '',
         gender: 'male',
         marital_status: 'single',
@@ -592,6 +610,79 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       }
   };
 
+  // --- EDIT VISIT HANDLERS ---
+  const startEditVisit = (visit: ClientVisit) => {
+      setEditingVisit(visit);
+      setEditVisitForm({
+          visit_date: visit.visit_date,
+          weight: visit.weight || '',
+          height: visit.height || '',
+          waist: visit.waist || '',
+          hip: visit.hip || '',
+          miac: visit.miac || '',
+          notes: visit.notes || ''
+      });
+  };
+
+  const saveEditedVisit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!editingVisit) return;
+      setSubmitting(true);
+      try {
+          const weight = editVisitForm.weight === '' ? null : Number(editVisitForm.weight);
+          const height = editVisitForm.height === '' ? null : Number(editVisitForm.height);
+          let bmi = null;
+          if (weight && height) {
+              bmi = Number((weight / ((height/100) * (height/100))).toFixed(1));
+          }
+
+          const { data, error } = await supabase
+              .from('client_visits')
+              .update({
+                  visit_date: editVisitForm.visit_date,
+                  weight: weight,
+                  height: height,
+                  waist: editVisitForm.waist === '' ? null : Number(editVisitForm.waist),
+                  hip: editVisitForm.hip === '' ? null : Number(editVisitForm.hip),
+                  miac: editVisitForm.miac === '' ? null : Number(editVisitForm.miac),
+                  bmi: bmi,
+                  notes: editVisitForm.notes
+              })
+              .eq('id', editingVisit.id)
+              .select()
+              .single();
+
+          if (error) throw error;
+
+          if (data) {
+              setVisits(prev => prev.map(v => v.id === data.id ? data : v));
+              
+              // Update Client Profile if this is the latest visit
+              if (editingClient && new Date(data.visit_date) >= new Date(editingClient.visit_date)) {
+                   const { data: updatedClient } = await supabase.from('clients').update({
+                       visit_date: data.visit_date,
+                       weight: data.weight,
+                       height: data.height,
+                       waist: data.waist,
+                       hip: data.hip,
+                       miac: data.miac,
+                       bmi: data.bmi
+                   }).eq('id', editingClient.id).select().single();
+                   
+                   if (updatedClient) {
+                       setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
+                       setEditingClient(updatedClient);
+                   }
+              }
+              setEditingVisit(null);
+          }
+      } catch (err: any) {
+          alert("Error updating visit: " + err.message);
+      } finally {
+          setSubmitting(false);
+      }
+  };
+
   const handleDeleteVisit = async (visitId: string) => {
       if(!confirm("Delete this visit record?")) return;
       try {
@@ -609,7 +700,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       const { error } = await supabase.from('clients').delete().eq('id', id);
       if (error) throw error;
       setClients(prev => prev.filter(c => c.id !== id));
-      // If we were editing this client, go back to list
       if (editingClient?.id === id) {
           setViewMode('list');
           setEditingClient(null);
@@ -1180,7 +1270,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <button onClick={() => handleDeleteVisit(visit.id)} className="text-red-400 hover:text-red-600 px-2 font-bold text-lg">×</button>
+                                                    <button onClick={() => startEditVisit(visit)} className="text-blue-400 hover:text-blue-600 px-2 font-bold text-lg" title="Edit Visit">✎</button>
+                                                    <button onClick={() => handleDeleteVisit(visit.id)} className="text-red-400 hover:text-red-600 px-2 font-bold text-lg" title="Delete Visit">×</button>
                                                 </div>
                                             </div>
                                             
@@ -1192,19 +1283,38 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                 <div><span className="font-bold text-gray-400 uppercase block">MIAC</span> {visit.miac || '-'} cm</div>
                                             </div>
 
-                                            {/* Saved Data Summary */}
+                                            {/* Clinical Actions Toolbar */}
+                                            <div className="mt-4 mb-4 flex flex-wrap gap-3 border-t border-b border-gray-50 py-3">
+                                                <button 
+                                                    onClick={() => openKcalForVisit(visit)}
+                                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition border shadow-sm ${
+                                                        visit.kcal_data 
+                                                        ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' 
+                                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    <span>🔥</span> {visit.kcal_data ? 'Open Calculation' : 'Add Calculation'}
+                                                </button>
+
+                                                <button 
+                                                    onClick={() => openMealPlanForVisit(visit)}
+                                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition border shadow-sm ${
+                                                        visit.meal_plan_data 
+                                                        ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100' 
+                                                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    <span>🍽️</span> {visit.meal_plan_data ? 'Open Meal Plan' : 'Add Meal Plan'}
+                                                </button>
+                                            </div>
+
+                                            {/* Saved Data Summaries */}
                                             {(visit.kcal_data || visit.meal_plan_data) && (
-                                                <div className="mb-4 flex flex-col sm:flex-row gap-6 items-start">
-                                                    {/* Kcal Data Section */}
+                                                <div className="mb-4 flex flex-col sm:flex-row gap-6 items-start bg-gray-50/50 p-3 rounded-lg border border-dashed border-gray-200">
+                                                    {/* Kcal Data Summary */}
                                                     {visit.kcal_data?.inputs?.reqKcal && (
                                                         <div className="flex flex-col gap-2">
-                                                             <button 
-                                                                onClick={() => openKcalForVisit(visit)}
-                                                                className="text-xs font-bold text-green-700 hover:text-green-800 flex items-center gap-1 transition self-start"
-                                                             >
-                                                                <span>🔥</span> Open Calculator
-                                                             </button>
-                                                            <div className="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-1.5 rounded-lg text-green-800 text-xs h-fit">
+                                                            <div className="flex items-center gap-2 bg-green-100 border border-green-200 px-3 py-1.5 rounded-lg text-green-800 text-xs h-fit">
                                                                 <span className="text-lg">⚡</span>
                                                                 <div>
                                                                     <div className="font-bold">Required Kcal</div>
@@ -1214,16 +1324,10 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                         </div>
                                                     )}
                                                     
-                                                    {/* Meal Plan Data Section */}
+                                                    {/* Meal Plan Data Summary */}
                                                     {visit.meal_plan_data && (
                                                         <div className="flex-grow flex flex-col gap-2">
-                                                             <button 
-                                                                onClick={() => openMealPlanForVisit(visit)}
-                                                                className="text-xs font-bold text-purple-700 hover:text-purple-800 flex items-center gap-1 transition self-start"
-                                                             >
-                                                                <span>📅</span> Open Planner
-                                                             </button>
-                                                            <div className="flex flex-col gap-2 bg-purple-50 border border-purple-100 px-3 py-2 rounded-lg text-purple-800 text-xs">
+                                                            <div className="flex flex-col gap-2 bg-purple-100 border border-purple-200 px-3 py-2 rounded-lg text-purple-800 text-xs">
                                                                 <div className="flex items-center gap-2 mb-1">
                                                                     <span className="text-lg">🍽️</span>
                                                                     <div className="font-bold">Meal Plan Summary</div>
@@ -1387,6 +1491,66 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                 </div>
             )}
          </div>
+
+         {/* Edit Visit Modal */}
+         {editingVisit && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-fade-in">
+                    <div className="bg-blue-600 px-6 py-4 flex justify-between items-center">
+                        <h3 className="text-white font-bold text-lg">Edit Visit Record</h3>
+                        <button onClick={() => setEditingVisit(null)} className="text-white/80 hover:text-white text-2xl">&times;</button>
+                    </div>
+                    <form onSubmit={saveEditedVisit} className="p-6 space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                                <input 
+                                    type="date" required
+                                    className="w-full p-2 border rounded text-sm"
+                                    value={editVisitForm.visit_date}
+                                    onChange={e => setEditVisitForm({...editVisitForm, visit_date: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Weight (kg)</label>
+                                <input type="number" className="w-full p-2 border rounded text-sm" value={editVisitForm.weight} onChange={e => setEditVisitForm({...editVisitForm, weight: e.target.value === '' ? '' : Number(e.target.value)})} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Height (cm)</label>
+                                <input type="number" className="w-full p-2 border rounded text-sm" value={editVisitForm.height} onChange={e => setEditVisitForm({...editVisitForm, height: e.target.value === '' ? '' : Number(e.target.value)})} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Waist (cm)</label>
+                                <input type="number" className="w-full p-2 border rounded text-sm" value={editVisitForm.waist} onChange={e => setEditVisitForm({...editVisitForm, waist: e.target.value === '' ? '' : Number(e.target.value)})} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Hip (cm)</label>
+                                <input type="number" className="w-full p-2 border rounded text-sm" value={editVisitForm.hip} onChange={e => setEditVisitForm({...editVisitForm, hip: e.target.value === '' ? '' : Number(e.target.value)})} />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">MIAC (cm)</label>
+                                <input type="number" className="w-full p-2 border rounded text-sm" value={editVisitForm.miac} onChange={e => setEditVisitForm({...editVisitForm, miac: e.target.value === '' ? '' : Number(e.target.value)})} />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Notes</label>
+                            <textarea 
+                                rows={3}
+                                className="w-full p-3 border rounded text-sm bg-gray-50"
+                                value={editVisitForm.notes}
+                                onChange={e => setEditVisitForm({...editVisitForm, notes: e.target.value})}
+                            ></textarea>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button type="button" onClick={() => setEditingVisit(null)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded text-sm">Cancel</button>
+                            <button type="submit" disabled={submitting} className="px-6 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 text-sm shadow">
+                                {submitting ? 'Saving...' : 'Update Visit'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+         )}
     </div>
   );
 };

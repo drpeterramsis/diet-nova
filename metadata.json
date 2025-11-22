@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova v2.0.73 [Stable]",
-  "description": "Updates: User Dashboard cards are now collapsed by default to save space.",
+  "name": "Diet-Nova v2.0.74 [Stable]",
+  "description": "Updates: Restored 'Edit Visit' functionality and added buttons to create meal plans/kcal calculations for client history visits.",
   "requestFramePermissions": []
 }
