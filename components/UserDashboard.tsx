@@ -23,9 +23,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
   
   // Collapsible state for sections
   const [expanded, setExpanded] = useState({
-      clients: true,
-      plans: true,
-      meals: true
+      clients: false,
+      plans: false,
+      meals: false
   });
 
   const isDoctor = profile?.role === 'doctor';
@@ -438,3 +438,4 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
 };
 
 export default UserDashboard;
+    
