@@ -120,10 +120,10 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                 <div className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm font-medium mb-2">
                     {roleLabel}
                 </div>
-                <h1 className="text-2xl md:text-3xl font-bold mb-1">
+                <h1 className="text-sm md:text-base font-medium mb-0 opacity-90">
                     {lang === 'en' ? 'Welcome back,' : 'مرحباً بعودتك،'}
                 </h1>
-                <h2 className="text-2xl md:text-3xl font-bold mb-2 text-white/90">
+                <h2 className="text-2xl md:text-4xl font-bold mb-2 text-white">
                     {profile?.full_name}
                 </h2>
                 <p className="text-white/80 text-sm">{session?.user.email}</p>

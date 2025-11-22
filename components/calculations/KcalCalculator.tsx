@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useKcalCalculations, KcalInitialData } from './hooks/useKcalCalculations';
 import PersonalInfoCard from './parts/PersonalInfoCard';
@@ -103,6 +104,17 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               </div>
               <div className="flex items-center gap-3">
                   {saveStatus && <span className="text-sm font-medium text-green-700 animate-pulse">{saveStatus}</span>}
+                  
+                  {/* Shortcut to Plan Meals if ReqKcal exists */}
+                  {onPlanMeals && inputs.reqKcal && (
+                      <button 
+                          onClick={() => onPlanMeals(Number(inputs.reqKcal))}
+                          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow font-bold transition flex items-center gap-2"
+                      >
+                          <span>📅</span> Plan Meals
+                      </button>
+                  )}
+
                   <button 
                     onClick={handleSaveToVisit}
                     className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg shadow font-bold transition flex items-center gap-2"

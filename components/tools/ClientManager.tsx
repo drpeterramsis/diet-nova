@@ -945,7 +945,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                             <input 
                                                 type="number" 
                                                 value={formData.kids_count}
-                                                onChange={e => setFormData({...formData, kids_count: e.target.value})}
+                                                onChange={e => setFormData({...formData, kids_count: e.target.value === '' ? '' : Number(e.target.value)})}
                                                 className="w-full p-2 border rounded outline-none text-sm"
                                             />
                                         </div>
@@ -979,11 +979,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                      <div className="grid grid-cols-3 gap-4">
                                          <div>
                                              <label className="block text-[10px] font-bold text-blue-600 uppercase">Weight (kg)</label>
-                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} />
+                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value === '' ? '' : Number(e.target.value)})} />
                                          </div>
                                          <div>
                                              <label className="block text-[10px] font-bold text-blue-600 uppercase">Height (cm)</label>
-                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.height} onChange={e => setFormData({...formData, height: e.target.value})} />
+                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.height} onChange={e => setFormData({...formData, height: e.target.value === '' ? '' : Number(e.target.value)})} />
                                          </div>
                                          <div>
                                              <label className="block text-[10px] font-bold text-blue-600 uppercase">BMI</label>
@@ -991,15 +991,15 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                          </div>
                                          <div>
                                              <label className="block text-[10px] font-bold text-blue-600 uppercase">Waist (cm)</label>
-                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.waist} onChange={e => setFormData({...formData, waist: e.target.value})} />
+                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.waist} onChange={e => setFormData({...formData, waist: e.target.value === '' ? '' : Number(e.target.value)})} />
                                          </div>
                                          <div>
                                              <label className="block text-[10px] font-bold text-blue-600 uppercase">Hip (cm)</label>
-                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.hip} onChange={e => setFormData({...formData, hip: e.target.value})} />
+                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.hip} onChange={e => setFormData({...formData, hip: e.target.value === '' ? '' : Number(e.target.value)})} />
                                          </div>
                                          <div>
                                              <label className="block text-[10px] font-bold text-blue-600 uppercase">MIAC (cm)</label>
-                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.miac} onChange={e => setFormData({...formData, miac: e.target.value})} />
+                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.miac} onChange={e => setFormData({...formData, miac: e.target.value === '' ? '' : Number(e.target.value)})} />
                                          </div>
                                      </div>
                                  </div>
@@ -1109,19 +1109,19 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                     </div>
                                     <div>
                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Wt (kg)</label>
-                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.weight} onChange={e => setNewVisitData({...newVisitData, weight: e.target.value})} />
+                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.weight} onChange={e => setNewVisitData({...newVisitData, weight: e.target.value === '' ? '' : Number(e.target.value)})} />
                                     </div>
                                     <div>
                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Ht (cm)</label>
-                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.height} onChange={e => setNewVisitData({...newVisitData, height: e.target.value})} />
+                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.height} onChange={e => setNewVisitData({...newVisitData, height: e.target.value === '' ? '' : Number(e.target.value)})} />
                                     </div>
                                     <div>
                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Waist</label>
-                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.waist} onChange={e => setNewVisitData({...newVisitData, waist: e.target.value})} />
+                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.waist} onChange={e => setNewVisitData({...newVisitData, waist: e.target.value === '' ? '' : Number(e.target.value)})} />
                                     </div>
                                     <div>
                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Hip</label>
-                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.hip} onChange={e => setNewVisitData({...newVisitData, hip: e.target.value})} />
+                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.hip} onChange={e => setNewVisitData({...newVisitData, hip: e.target.value === '' ? '' : Number(e.target.value)})} />
                                     </div>
                             </div>
                             <div className="flex gap-3">
