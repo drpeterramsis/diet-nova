@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ProgressBar, MacroDonut } from '../Visuals';
@@ -52,9 +53,11 @@ interface MealPlannerProps {
   initialTargetKcal?: number;
   onBack?: () => void;
   initialLoadId?: string | null;
+  autoOpenLoad?: boolean;
+  autoOpenNew?: boolean;
 }
 
-const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, initialLoadId }) => {
+const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, initialLoadId, autoOpenLoad, autoOpenNew }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both'>('calculator');
@@ -116,6 +119,17 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
       };
       autoLoad();
   }, [initialLoadId, session]);
+
+  // Handle Auto Open
+  useEffect(() => {
+      if (autoOpenLoad && session) {
+          fetchPlans();
+          setShowLoadModal(true);
+      }
+      if (autoOpenNew) {
+          resetAll();
+      }
+  }, [autoOpenLoad, autoOpenNew, session]);
 
   // State for Planner Distribution
   const [distribution, setDistribution] = useState<Record<string, Record<string, number>>>(

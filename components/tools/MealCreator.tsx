@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
@@ -9,9 +10,11 @@ import { SavedMeal } from "../../types";
 
 interface MealCreatorProps {
     initialLoadId?: string | null;
+    autoOpenLoad?: boolean;
+    autoOpenNew?: boolean;
 }
 
-const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId }) => {
+const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, autoOpenNew }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,6 +68,17 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId }) => {
       };
       autoLoad();
   }, [initialLoadId, session]);
+
+  // Handle Auto Open Load/New
+  useEffect(() => {
+      if (autoOpenLoad && session) {
+          fetchPlans();
+          setShowLoadModal(true);
+      }
+      if (autoOpenNew) {
+          resetCreator();
+      }
+  }, [autoOpenLoad, autoOpenNew, session]);
 
   const addFood = (food: FoodItem) => {
     // Ensure deep copy of added item

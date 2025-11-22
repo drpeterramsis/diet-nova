@@ -9,25 +9,28 @@ import Loading from '../Loading';
 
 interface ClientManagerProps {
   initialClientId?: string | null;
-  onAnalyzeInKcal?: (client: Client, latestWeight?: number) => void;
+  onAnalyzeInKcal?: (client: Client, visit: ClientVisit) => void;
+  autoOpenNew?: boolean;
 }
 
 type SortOption = 'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'clinic';
 type GroupOption = 'none' | 'clinic' | 'month';
 
+// Updated Tags with Emojis
 const QUICK_TAGS = [
-    "Smoking", "Caffeine", "Water Intake: Low", "Water Intake: High",
-    "Sleep Apnea", "Fast Food", "Added Sugar: High", "Soda",
-    "Sedentary", "Active", "Vegetarian", "Previous Surgery"
+    "🚬 Smoking", "☕ Caffeine", "💧 Water Intake", 
+    "😴 Sleep Apnea", "🍔 Fast Food", "🍬 High Sugar", 
+    "🥤 Soda", "🛋️ Sedentary", "🏃 Active", 
+    "🥗 Vegetarian", "🏥 Surgery", "💊 Meds"
 ];
 
-const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal }) => {
+const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal, autoOpenNew }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   
   // Data State
   const [clients, setClients] = useState<Client[]>([]);
-  const [visits, setVisits] = useState<ClientVisit[]>([]); // Current selected client visits
+  const [visits, setVisits] = useState<ClientVisit[]>([]); 
   const [loading, setLoading] = useState(true);
   const [loadingVisits, setLoadingVisits] = useState(false);
   const [tableError, setTableError] = useState(false);
@@ -40,8 +43,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'visits'>('profile');
+  const [noJob, setNoJob] = useState(false);
 
-  // Unique Clinics for Autocomplete
+  // Unique Clinics
   const uniqueClinics = useMemo(() => {
       const clinics = clients.map(c => c.clinic).filter(Boolean);
       return [...new Set(clinics)];
@@ -61,6 +65,12 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     marital_status: string;
     kids_count: number | '';
     job: string;
+    // Anthropometrics for profile/first visit
+    weight: number | '';
+    height: number | '';
+    waist: number | '';
+    hip: number | '';
+    miac: number | '';
   }>({
     client_code: '',
     full_name: '',
@@ -73,17 +83,38 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     gender: 'male',
     marital_status: 'single',
     kids_count: '',
-    job: ''
+    job: '',
+    weight: '',
+    height: '',
+    waist: '',
+    hip: '',
+    miac: ''
   });
   
+  // Computed BMI for Profile
+  const profileBMI = useMemo(() => {
+      const w = Number(formData.weight);
+      const h = Number(formData.height) / 100;
+      if (w > 0 && h > 0) return (w / (h * h)).toFixed(1);
+      return '';
+  }, [formData.weight, formData.height]);
+
   // Form State (New Visit)
   const [newVisitData, setNewVisitData] = useState<{
       visit_date: string;
       weight: number | '';
+      height: number | '';
+      waist: number | '';
+      hip: number | '';
+      miac: number | '';
       notes: string;
   }>({
       visit_date: new Date().toISOString().split('T')[0],
       weight: '',
+      height: '',
+      waist: '',
+      hip: '',
+      miac: '',
       notes: ''
   });
 
@@ -97,6 +128,12 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     fetchClients();
   }, [session]);
 
+  useEffect(() => {
+      if (autoOpenNew && !showModal && !initialClientId) {
+          handleOpenModal();
+      }
+  }, [autoOpenNew]);
+
   // Deep linking effect
   useEffect(() => {
       if (initialClientId && clients.length > 0 && !showModal) {
@@ -107,7 +144,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       }
   }, [initialClientId, clients]);
 
-  // DOB / Age Calculation Logic
+  // DOB / Age Calculation
   useEffect(() => {
       if (formData.dob) {
           const birth = new Date(formData.dob);
@@ -126,7 +163,15 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       }
   }, [formData.dob, formData.visit_date]);
   
-  // Auto-generate client code
+  // Job Toggle Effect
+  useEffect(() => {
+      if (noJob) {
+          setFormData(prev => ({ ...prev, job: 'Unemployed / No Job' }));
+      } else if (formData.job === 'Unemployed / No Job') {
+          setFormData(prev => ({ ...prev, job: '' }));
+      }
+  }, [noJob]);
+
   const generateCode = (name: string) => {
       if (!name) return '';
       const initials = name.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 3);
@@ -164,7 +209,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
   const fetchVisits = async (clientId: string) => {
       setLoadingVisits(true);
-      setEditingVisit(null); // Clear edit mode when fetching new
+      setEditingVisit(null);
       try {
           const { data, error } = await supabase
             .from('client_visits')
@@ -172,15 +217,22 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
             .eq('client_id', clientId)
             .order('visit_date', { ascending: false });
           
-          if (error) {
-              if (error.code === '42P01') {
-                   console.warn("client_visits table not found");
-                   setVisits([]);
-              } else {
-                  throw error;
+          if (data) {
+              setVisits(data);
+              
+              // Pre-fill new visit data with latest anthropometrics
+              if (data.length > 0) {
+                  const last = data[0];
+                  setNewVisitData(prev => ({
+                      ...prev,
+                      weight: last.weight || '',
+                      height: last.height || '',
+                      waist: last.waist || '',
+                      hip: last.hip || '',
+                      miac: last.miac || '',
+                      notes: '' // notes usually clear
+                  }));
               }
-          } else {
-              setVisits(data || []);
           }
       } catch (err) {
           console.error("Error fetching visits:", err);
@@ -190,10 +242,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       }
   };
 
-  // --- Sorting & Grouping Logic ---
   const processedClients = useMemo(() => {
       let list = [...clients];
-
       if (searchQuery) {
           const q = searchQuery.toLowerCase();
           list = list.filter(c => 
@@ -203,7 +253,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
               c.client_code?.toLowerCase().includes(q)
           );
       }
-
       list.sort((a, b) => {
           switch (sortBy) {
               case 'date_asc': return new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime();
@@ -214,32 +263,24 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
               default: return 0;
           }
       });
-
       return list;
   }, [clients, searchQuery, sortBy]);
 
   const groupedClients = useMemo<Record<string, Client[]>>(() => {
       if (groupBy === 'none') return { 'All Clients': processedClients };
-
       const groups: Record<string, Client[]> = {};
-      
       processedClients.forEach(client => {
           let key = 'Other';
-          if (groupBy === 'clinic') {
-              key = client.clinic || 'Unspecified Location';
-          } else if (groupBy === 'month') {
+          if (groupBy === 'clinic') key = client.clinic || 'Unspecified Location';
+          else if (groupBy === 'month') {
               const d = new Date(client.visit_date);
               key = d.toLocaleString('default', { month: 'long', year: 'numeric' });
           }
-          
           if (!groups[key]) groups[key] = [];
           groups[key].push(client);
       });
-
       return groups;
   }, [processedClients, groupBy]);
-
-  // --- Modal Handlers ---
 
   const handleOpenModal = (client?: Client) => {
     setFormError('');
@@ -248,6 +289,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     
     if (client) {
       setEditingClient(client);
+      setNoJob(client.job === 'Unemployed / No Job');
       setFormData({
         client_code: client.client_code || generateCode(client.full_name),
         full_name: client.full_name,
@@ -260,12 +302,19 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         gender: client.gender || 'male',
         marital_status: client.marital_status || 'single',
         kids_count: client.kids_count !== undefined ? client.kids_count : '',
-        job: client.job || ''
+        job: client.job || '',
+        // Only used for new client creation, viewing client uses visits tab for this
+        weight: client.weight || '',
+        height: client.height || '',
+        waist: client.waist || '',
+        hip: client.hip || '',
+        miac: client.miac || ''
       });
       fetchVisits(client.id);
     } else {
       setEditingClient(null);
       setVisits([]);
+      setNoJob(false);
       setFormData({
         client_code: '',
         full_name: '',
@@ -278,7 +327,12 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         gender: 'male',
         marital_status: 'single',
         kids_count: '',
-        job: ''
+        job: '',
+        weight: '',
+        height: '',
+        waist: '',
+        hip: '',
+        miac: ''
       });
     }
     setShowModal(true);
@@ -287,7 +341,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const addTag = (tag: string) => {
       setFormData(prev => ({
           ...prev,
-          notes: (prev.notes ? prev.notes + '\n' : '') + `• ${tag}: `
+          notes: (prev.notes ? prev.notes + '\n' : '') + `• ${tag}`
       }));
   };
 
@@ -302,41 +356,54 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       const payload = {
         doctor_id: session?.user.id,
         ...formData,
-        // Ensure numeric types are handled safely
         age: formData.age === '' ? null : Number(formData.age),
         kids_count: formData.kids_count === '' ? null : Number(formData.kids_count),
-        // If code is empty, generate one
-        client_code: formData.client_code || generateCode(formData.full_name)
+        client_code: formData.client_code || generateCode(formData.full_name),
+        weight: formData.weight === '' ? null : Number(formData.weight),
+        height: formData.height === '' ? null : Number(formData.height),
+        waist: formData.waist === '' ? null : Number(formData.waist),
+        hip: formData.hip === '' ? null : Number(formData.hip),
+        miac: formData.miac === '' ? null : Number(formData.miac),
+        bmi: profileBMI ? Number(profileBMI) : null
       };
 
       let response;
       if (editingClient) {
-        response = await supabase
-          .from('clients')
-          .update(payload)
-          .eq('id', editingClient.id)
-          .select()
-          .single();
+        response = await supabase.from('clients').update(payload).eq('id', editingClient.id).select().single();
       } else {
-        response = await supabase
-          .from('clients')
-          .insert(payload)
-          .select()
-          .single();
+        response = await supabase.from('clients').insert(payload).select().single();
       }
 
       if (response.error) throw response.error;
 
       if (response.data) {
+        // If creating new client, we also want to create the first visit automatically
+        // to store the anthropometrics in history
+        if (!editingClient && (payload.weight || payload.height)) {
+            await supabase.from('client_visits').insert({
+                client_id: response.data.id,
+                visit_date: response.data.visit_date,
+                weight: payload.weight,
+                height: payload.height,
+                waist: payload.waist,
+                hip: payload.hip,
+                miac: payload.miac,
+                bmi: payload.bmi,
+                notes: "Initial Profile Visit"
+            });
+        }
+
         if (editingClient) {
           setClients(prev => prev.map(c => c.id === editingClient.id ? response.data : c));
           setEditingClient(response.data);
         } else {
           setClients(prev => [response.data, ...prev]);
           setEditingClient(response.data);
+          fetchVisits(response.data.id); // Load the newly created visit
         }
-        // Switch to visits tab after creating new client
-        if (!editingClient) setActiveTab('visits');
+        
+        // Switch to visits tab if we edited, or if we just created
+        if(!editingClient) setActiveTab('visits');
         else setShowModal(false);
       }
     } catch (err: any) {
@@ -350,12 +417,23 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       e.preventDefault();
       if (!editingClient) return;
       setSubmitting(true);
-
       try {
+          const weight = newVisitData.weight === '' ? null : Number(newVisitData.weight);
+          const height = newVisitData.height === '' ? null : Number(newVisitData.height);
+          let bmi = null;
+          if (weight && height) {
+              bmi = Number((weight / ((height/100) * (height/100))).toFixed(1));
+          }
+
           const { data, error } = await supabase.from('client_visits').insert({
               client_id: editingClient.id,
               visit_date: newVisitData.visit_date,
-              weight: newVisitData.weight === '' ? null : Number(newVisitData.weight),
+              weight: weight,
+              height: height,
+              waist: newVisitData.waist === '' ? null : Number(newVisitData.waist),
+              hip: newVisitData.hip === '' ? null : Number(newVisitData.hip),
+              miac: newVisitData.miac === '' ? null : Number(newVisitData.miac),
+              bmi: bmi,
               notes: newVisitData.notes
           }).select().single();
 
@@ -363,10 +441,16 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
           if (data) {
               setVisits(prev => [data, ...prev]);
-              // Update last visit date if new is more recent
-              if (new Date(data.visit_date) > new Date(editingClient.visit_date)) {
+              // Update client profile last visit & latest stats
+              if (new Date(data.visit_date) >= new Date(editingClient.visit_date)) {
                    const { data: updatedClient } = await supabase.from('clients').update({
-                       visit_date: data.visit_date
+                       visit_date: data.visit_date,
+                       weight: data.weight,
+                       height: data.height,
+                       waist: data.waist,
+                       hip: data.hip,
+                       miac: data.miac,
+                       bmi: data.bmi
                    }).eq('id', editingClient.id).select().single();
                    
                    if (updatedClient) {
@@ -374,43 +458,13 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                        setEditingClient(updatedClient);
                    }
               }
-              setNewVisitData({
-                  visit_date: new Date().toISOString().split('T')[0],
-                  weight: '',
-                  notes: ''
-              });
+              // Reset only notes, keep anthro for next entry usually
+              setNewVisitData(prev => ({ ...prev, notes: '' }));
           }
       } catch (err: any) {
           alert("Failed to add visit: " + err.message);
       } finally {
           setSubmitting(false);
-      }
-  };
-
-  const handleUpdateVisit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!editingVisit) return;
-      
-      try {
-          const { data, error } = await supabase
-            .from('client_visits')
-            .update({
-                visit_date: editingVisit.visit_date,
-                weight: editingVisit.weight,
-                notes: editingVisit.notes
-            })
-            .eq('id', editingVisit.id)
-            .select()
-            .single();
-
-          if (error) throw error;
-
-          if (data) {
-              setVisits(prev => prev.map(v => v.id === data.id ? data : v));
-              setEditingVisit(null);
-          }
-      } catch (err: any) {
-          alert("Failed to update visit: " + err.message);
       }
   };
 
@@ -436,15 +490,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     }
   };
 
-  // Analysis Handler
-  const triggerAnalysis = () => {
+  const openKcalForVisit = (visit: ClientVisit) => {
       if (!editingClient || !onAnalyzeInKcal) return;
-      
-      // Find latest weight from visits
-      const latestVisit = visits.length > 0 ? visits[0] : null;
-      const weight = latestVisit?.weight || undefined;
-      
-      onAnalyzeInKcal(editingClient, weight);
+      onAnalyzeInKcal(editingClient, visit);
       setShowModal(false);
   };
 
@@ -609,7 +657,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       {/* --- Main Modal --- */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[95vh]">
              
              {/* Modal Header */}
              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
@@ -645,131 +693,155 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                 {/* TAB: PROFILE */}
                 {activeTab === 'profile' && (
                      <form id="clientForm" onSubmit={handleSubmitProfile} className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                             <h3 className="md:col-span-2 font-bold text-gray-700 text-sm uppercase border-b pb-1 mb-1">Core Identity</h3>
-                             <div>
-                                 <label className="block text-xs font-bold text-gray-500 mb-1">{t.clients.name} *</label>
-                                 <input 
-                                    type="text" 
-                                    required
-                                    value={formData.full_name}
-                                    onChange={e => {
-                                        const val = e.target.value;
-                                        setFormData(prev => ({...prev, full_name: val, client_code: prev.client_code || generateCode(val)}));
-                                    }}
-                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
-                                 />
-                             </div>
-                             <div>
-                                 <label className="block text-xs font-bold text-gray-500 mb-1">Client Code (Auto)</label>
-                                 <input 
-                                    type="text" 
-                                    value={formData.client_code}
-                                    onChange={e => setFormData({...formData, client_code: e.target.value})}
-                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none font-mono bg-white"
-                                 />
-                             </div>
-                             <div>
-                                 <label className="block text-xs font-bold text-gray-500 mb-1">Gender</label>
-                                 <select 
-                                    value={formData.gender}
-                                    onChange={e => setFormData({...formData, gender: e.target.value as 'male' | 'female'})}
-                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none bg-white"
-                                 >
-                                     <option value="male">{t.kcal.male}</option>
-                                     <option value="female">{t.kcal.female}</option>
-                                 </select>
-                             </div>
-                             <div>
-                                 <label className="block text-xs font-bold text-gray-500 mb-1">{t.clients.phone}</label>
-                                 <input 
-                                    type="text" 
-                                    value={formData.phone}
-                                    onChange={e => setFormData({...formData, phone: e.target.value})}
-                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
-                                    dir="ltr"
-                                    placeholder="+20..."
-                                 />
-                             </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                             <h3 className="md:col-span-3 font-bold text-gray-700 text-sm uppercase border-b pb-1 mt-2">Demographics</h3>
-                             <div>
-                                 <label className="block text-xs font-bold text-gray-500 mb-1">Date of Birth</label>
-                                 <input 
-                                    type="date" 
-                                    value={formData.dob}
-                                    onChange={e => setFormData({...formData, dob: e.target.value})}
-                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
-                                 />
-                             </div>
-                             <div>
-                                 <label className="block text-xs font-bold text-gray-500 mb-1">Age (Auto-calc)</label>
-                                 <input 
-                                    type="number" 
-                                    value={formData.age}
-                                    onChange={e => setFormData({...formData, age: e.target.value === '' ? '' : Number(e.target.value)})}
-                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none bg-gray-50"
-                                    readOnly
-                                 />
-                             </div>
-                             <div>
-                                 <label className="block text-xs font-bold text-gray-500 mb-1">Job / Occupation</label>
-                                 <input 
-                                    type="text" 
-                                    value={formData.job}
-                                    onChange={e => setFormData({...formData, job: e.target.value})}
-                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
-                                 />
-                             </div>
-                             <div>
-                                 <label className="block text-xs font-bold text-gray-500 mb-1">Marital Status</label>
-                                 <select 
-                                    value={formData.marital_status}
-                                    onChange={e => setFormData({...formData, marital_status: e.target.value})}
-                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none bg-white"
-                                 >
-                                     <option value="single">Single</option>
-                                     <option value="married">Married</option>
-                                     <option value="divorced">Divorced</option>
-                                     <option value="widowed">Widowed</option>
-                                 </select>
-                             </div>
-                             {formData.marital_status !== 'single' && (
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                             {/* Left Col: Core Info */}
+                             <div className="md:col-span-5 space-y-4 bg-gray-50 p-4 rounded-lg">
+                                 <h3 className="font-bold text-gray-700 text-sm uppercase border-b pb-1 mb-2">Core Identity</h3>
+                                 
                                  <div>
-                                     <label className="block text-xs font-bold text-gray-500 mb-1">Number of Kids</label>
+                                     <label className="block text-xs font-bold text-gray-500 mb-1">{t.clients.name} *</label>
                                      <input 
-                                        type="number" 
-                                        value={formData.kids_count}
-                                        onChange={e => setFormData({...formData, kids_count: e.target.value})}
-                                        className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                                        type="text" required
+                                        value={formData.full_name}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            setFormData(prev => ({...prev, full_name: val, client_code: prev.client_code || generateCode(val)}));
+                                        }}
+                                        className="w-full p-2 border rounded focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-sm"
                                      />
                                  </div>
-                             )}
-                             <div>
-                                 <label className="block text-xs font-bold text-gray-500 mb-1">{t.clients.clinic}</label>
-                                 <input 
-                                    type="text" 
-                                    list="clinic-options"
-                                    value={formData.clinic}
-                                    onChange={e => setFormData({...formData, clinic: e.target.value})}
-                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
-                                    placeholder="Select or type..."
-                                 />
-                                 <datalist id="clinic-options">
-                                     {uniqueClinics.map(c => <option key={c} value={c} />)}
-                                 </datalist>
+                                 <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">Gender</label>
+                                        <select 
+                                            value={formData.gender}
+                                            onChange={e => setFormData({...formData, gender: e.target.value as 'male' | 'female'})}
+                                            className="w-full p-2 border rounded outline-none bg-white text-sm"
+                                        >
+                                            <option value="male">{t.kcal.male}</option>
+                                            <option value="female">{t.kcal.female}</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">Age</label>
+                                        <input 
+                                            type="number" 
+                                            value={formData.age}
+                                            onChange={e => setFormData({...formData, age: e.target.value === '' ? '' : Number(e.target.value)})}
+                                            className="w-full p-2 border rounded outline-none bg-white text-sm"
+                                        />
+                                    </div>
+                                 </div>
+                                 <div>
+                                     <label className="block text-xs font-bold text-gray-500 mb-1">DOB</label>
+                                     <input 
+                                        type="date" 
+                                        value={formData.dob}
+                                        onChange={e => setFormData({...formData, dob: e.target.value})}
+                                        className="w-full p-2 border rounded outline-none text-sm"
+                                     />
+                                 </div>
+                                 <div>
+                                     <label className="block text-xs font-bold text-gray-500 mb-1">Phone</label>
+                                     <input 
+                                        type="text" 
+                                        value={formData.phone}
+                                        onChange={e => setFormData({...formData, phone: e.target.value})}
+                                        className="w-full p-2 border rounded outline-none text-sm"
+                                        dir="ltr"
+                                     />
+                                 </div>
+                                 <div>
+                                     <label className="block text-xs font-bold text-gray-500 mb-1">Client Code</label>
+                                     <input 
+                                        type="text" 
+                                        value={formData.client_code}
+                                        onChange={e => setFormData({...formData, client_code: e.target.value})}
+                                        className="w-full p-2 border rounded outline-none font-mono text-sm bg-white"
+                                     />
+                                 </div>
                              </div>
-                             <div>
-                                 <label className="block text-xs font-bold text-gray-500 mb-1">Latest Visit Date</label>
-                                 <input 
-                                    type="date" 
-                                    required
-                                    value={formData.visit_date}
-                                    onChange={e => setFormData({...formData, visit_date: e.target.value})}
-                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
-                                 />
+
+                             {/* Right Col: Extended Info & Anthropometrics */}
+                             <div className="md:col-span-7 space-y-4">
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">Marital Status</label>
+                                        <select 
+                                            value={formData.marital_status}
+                                            onChange={e => setFormData({...formData, marital_status: e.target.value})}
+                                            className="w-full p-2 border rounded outline-none bg-white text-sm"
+                                        >
+                                            <option value="single">Single</option>
+                                            <option value="married">Married</option>
+                                            <option value="divorced">Divorced</option>
+                                            <option value="widowed">Widowed</option>
+                                        </select>
+                                    </div>
+                                    {formData.marital_status !== 'single' ? (
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">Kids Count</label>
+                                            <input 
+                                                type="number" 
+                                                value={formData.kids_count}
+                                                onChange={e => setFormData({...formData, kids_count: e.target.value})}
+                                                className="w-full p-2 border rounded outline-none text-sm"
+                                            />
+                                        </div>
+                                    ) : <div></div>}
+                                    
+                                    <div className="col-span-2">
+                                        <label className="block text-xs font-bold text-gray-500 mb-1">Job / Occupation</label>
+                                        <div className="flex gap-2">
+                                            <input 
+                                                type="text" 
+                                                value={formData.job}
+                                                disabled={noJob}
+                                                onChange={e => setFormData({...formData, job: e.target.value})}
+                                                className="flex-grow p-2 border rounded outline-none text-sm disabled:bg-gray-100"
+                                            />
+                                            <label className="flex items-center gap-1 text-xs cursor-pointer whitespace-nowrap">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={noJob} 
+                                                    onChange={e => setNoJob(e.target.checked)}
+                                                />
+                                                No Job
+                                            </label>
+                                        </div>
+                                    </div>
+                                 </div>
+
+                                 {/* Profile Anthropometrics */}
+                                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                     <h3 className="font-bold text-blue-800 text-xs uppercase mb-2">1st Visit Measurements</h3>
+                                     <div className="grid grid-cols-3 gap-3">
+                                         <div>
+                                             <label className="block text-[10px] font-bold text-blue-600 uppercase">Weight (kg)</label>
+                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value})} />
+                                         </div>
+                                         <div>
+                                             <label className="block text-[10px] font-bold text-blue-600 uppercase">Height (cm)</label>
+                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.height} onChange={e => setFormData({...formData, height: e.target.value})} />
+                                         </div>
+                                         <div>
+                                             <label className="block text-[10px] font-bold text-blue-600 uppercase">BMI</label>
+                                             <div className="w-full p-1.5 text-sm border rounded bg-white font-mono text-center">{profileBMI || '-'}</div>
+                                         </div>
+                                         <div>
+                                             <label className="block text-[10px] font-bold text-blue-600 uppercase">Waist (cm)</label>
+                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.waist} onChange={e => setFormData({...formData, waist: e.target.value})} />
+                                         </div>
+                                         <div>
+                                             <label className="block text-[10px] font-bold text-blue-600 uppercase">Hip (cm)</label>
+                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.hip} onChange={e => setFormData({...formData, hip: e.target.value})} />
+                                         </div>
+                                         <div>
+                                             <label className="block text-[10px] font-bold text-blue-600 uppercase">MIAC (cm)</label>
+                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.miac} onChange={e => setFormData({...formData, miac: e.target.value})} />
+                                         </div>
+                                     </div>
+                                 </div>
                              </div>
                         </div>
                         
@@ -791,25 +863,13 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                              </div>
 
                              <textarea 
-                                rows={4}
+                                rows={3}
                                 value={formData.notes}
                                 onChange={e => setFormData({...formData, notes: e.target.value})}
                                 className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-none whitespace-pre-wrap text-sm"
                                 placeholder="Allergies, chronic conditions, past operations..."
                              ></textarea>
                         </div>
-
-                        {editingClient && onAnalyzeInKcal && (
-                            <div className="pt-2 border-t border-gray-100">
-                                <button 
-                                    type="button" 
-                                    onClick={triggerAnalysis}
-                                    className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-lg font-bold shadow-md hover:from-orange-600 hover:to-red-600 transition flex items-center justify-center gap-2"
-                                >
-                                    <span>🔥</span> Analyze in Kcal Calculator
-                                </button>
-                            </div>
-                        )}
                     </form>
                 )}
 
@@ -819,32 +879,42 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                         
                         {/* Add New Visit Form */}
                         <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                            <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase">Record New Visit</h4>
-                            <form onSubmit={handleAddVisit} className="flex flex-col gap-3">
-                                <div className="flex flex-col md:flex-row gap-3 items-start">
-                                    <div className="flex-1">
-                                        <input 
+                            <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase">Record New Follow-up</h4>
+                            <form onSubmit={handleAddVisit} className="space-y-3">
+                                <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                                     <div className="md:col-span-2">
+                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Date</label>
+                                         <input 
                                             type="date" 
                                             required
                                             className="w-full p-2 rounded border border-blue-200 text-sm"
                                             value={newVisitData.visit_date}
                                             onChange={e => setNewVisitData({...newVisitData, visit_date: e.target.value})}
                                         />
-                                    </div>
-                                    <div className="w-24">
-                                        <input 
-                                            type="number" 
-                                            placeholder="Wt (kg)"
-                                            className="w-full p-2 rounded border border-blue-200 text-sm"
-                                            value={newVisitData.weight}
-                                            onChange={e => setNewVisitData({...newVisitData, weight: e.target.value === '' ? '' : Number(e.target.value)})}
-                                        />
-                                    </div>
-                                    <div className="flex-[2] w-full">
+                                     </div>
+                                     <div>
+                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Wt (kg)</label>
+                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm" value={newVisitData.weight} onChange={e => setNewVisitData({...newVisitData, weight: e.target.value})} />
+                                     </div>
+                                     <div>
+                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Ht (cm)</label>
+                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm" value={newVisitData.height} onChange={e => setNewVisitData({...newVisitData, height: e.target.value})} />
+                                     </div>
+                                     <div>
+                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Waist</label>
+                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm" value={newVisitData.waist} onChange={e => setNewVisitData({...newVisitData, waist: e.target.value})} />
+                                     </div>
+                                     <div>
+                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Hip</label>
+                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm" value={newVisitData.hip} onChange={e => setNewVisitData({...newVisitData, hip: e.target.value})} />
+                                     </div>
+                                </div>
+                                <div className="flex gap-3">
+                                    <div className="flex-grow">
                                         <textarea 
-                                            placeholder="Visit notes (progress, diet changes...)"
-                                            className="w-full p-2 rounded border border-blue-200 text-sm resize-y whitespace-pre-wrap"
-                                            rows={2}
+                                            placeholder="Visit notes..."
+                                            className="w-full p-2 rounded border border-blue-200 text-sm resize-none"
+                                            rows={1}
                                             value={newVisitData.notes}
                                             onChange={e => setNewVisitData({...newVisitData, notes: e.target.value})}
                                         ></textarea>
@@ -852,9 +922,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                     <button 
                                         type="submit"
                                         disabled={submitting}
-                                        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm font-bold disabled:opacity-50 h-10 mt-1"
+                                        className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 text-sm font-bold disabled:opacity-50 self-start"
                                     >
-                                        Add
+                                        Add Visit
                                     </button>
                                 </div>
                             </form>
@@ -873,82 +943,43 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                     {/* Timeline Dot */}
                                     <div className="absolute -left-[9px] top-0 w-4 h-4 bg-white border-2 border-[var(--color-primary)] rounded-full"></div>
                                     
-                                    {editingVisit?.id === visit.id ? (
-                                        /* --- EDIT MODE --- */
-                                        <form onSubmit={handleUpdateVisit} className="bg-yellow-50 rounded-lg p-3 border border-yellow-200 flex flex-col gap-3">
-                                             <div className="flex justify-between items-center border-b border-yellow-200 pb-2 mb-1">
-                                                <span className="text-xs font-bold text-yellow-800 uppercase">Editing Visit</span>
-                                                <button type="button" onClick={() => setEditingVisit(null)} className="text-xs text-gray-500 hover:text-gray-800">Cancel</button>
+                                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-100 hover:shadow-md transition group">
+                                         <div className="flex justify-between items-start mb-2">
+                                             <div className="flex items-center gap-3">
+                                                 <span className="font-bold text-gray-800">
+                                                    {new Date(visit.visit_date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                                                 </span>
+                                                 {/* Badges */}
+                                                 <div className="flex gap-2 text-xs font-mono">
+                                                     {visit.weight && <span className="bg-white border px-1.5 py-0.5 rounded text-blue-700">Wt: {visit.weight}</span>}
+                                                     {visit.bmi && <span className="bg-white border px-1.5 py-0.5 rounded text-orange-700">BMI: {visit.bmi}</span>}
+                                                 </div>
                                              </div>
-                                             <div className="flex gap-3">
-                                                 <input 
-                                                    type="date" 
-                                                    required
-                                                    className="w-full p-2 rounded border border-yellow-300 text-sm"
-                                                    value={editingVisit.visit_date}
-                                                    onChange={e => setEditingVisit({...editingVisit, visit_date: e.target.value})}
-                                                 />
-                                                 <input 
-                                                    type="number" 
-                                                    placeholder="Wt"
-                                                    className="w-24 p-2 rounded border border-yellow-300 text-sm"
-                                                    value={editingVisit.weight || ''}
-                                                    onChange={e => setEditingVisit({...editingVisit, weight: e.target.value ? Number(e.target.value) : undefined})}
-                                                 />
+                                             <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
+                                                  <button 
+                                                    onClick={() => openKcalForVisit(visit)}
+                                                    className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold hover:bg-green-200 flex items-center gap-1"
+                                                  >
+                                                      <span>🧮</span> Kcal Calc
+                                                  </button>
+                                                  <button onClick={() => handleDeleteVisit(visit.id)} className="text-red-400 hover:text-red-600 px-2">×</button>
                                              </div>
-                                             <textarea 
-                                                className="w-full p-2 rounded border border-yellow-300 text-sm whitespace-pre-wrap"
-                                                rows={4}
-                                                value={editingVisit.notes || ''}
-                                                onChange={e => setEditingVisit({...editingVisit, notes: e.target.value})}
-                                             ></textarea>
-                                             <div className="flex justify-end gap-2">
-                                                 <button type="submit" className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600">Save Changes</button>
-                                             </div>
-                                        </form>
-                                    ) : (
-                                        /* --- VIEW MODE --- */
-                                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 hover:shadow-sm transition flex justify-between items-start group">
-                                            <div className="w-full pr-2">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="font-bold text-gray-800 text-sm">
-                                                        {new Date(visit.visit_date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-                                                    </span>
-                                                    {visit.weight && (
-                                                        <span className="bg-white border border-gray-200 px-2 py-0.5 rounded text-xs font-mono font-bold text-blue-600">
-                                                            {visit.weight} kg
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="text-sm text-gray-600 whitespace-pre-wrap">{visit.notes || 'No notes.'}</p>
-                                            </div>
-                                            <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition">
-                                                <button 
-                                                    onClick={() => setEditingVisit(visit)}
-                                                    className="text-blue-400 hover:text-blue-600 text-sm"
-                                                    title="Edit Visit"
-                                                >
-                                                    ✎
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleDeleteVisit(visit.id)}
-                                                    className="text-gray-300 hover:text-red-500"
-                                                    title="Delete Visit"
-                                                >
-                                                    ×
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
+                                         </div>
+                                         
+                                         {/* Stats Grid */}
+                                         <div className="grid grid-cols-4 gap-2 text-xs text-gray-500 mb-2 bg-white p-2 rounded border border-gray-100">
+                                             <div><span className="font-bold">Ht:</span> {visit.height || '-'}</div>
+                                             <div><span className="font-bold">Waist:</span> {visit.waist || '-'}</div>
+                                             <div><span className="font-bold">Hip:</span> {visit.hip || '-'}</div>
+                                             <div><span className="font-bold">MIAC:</span> {visit.miac || '-'}</div>
+                                         </div>
+
+                                         {visit.notes && (
+                                             <p className="text-sm text-gray-600 whitespace-pre-wrap border-l-2 border-gray-200 pl-2">{visit.notes}</p>
+                                         )}
+                                    </div>
                                 </div>
                             ))}
-                            
-                            {/* Initial Profile Visit Anchor */}
-                            <div className="relative pl-6">
-                                <div className="absolute -left-[9px] top-0 w-4 h-4 bg-gray-300 rounded-full"></div>
-                                <div className="text-xs text-gray-400 uppercase font-bold pt-0.5">Profile Created</div>
-                                <div className="text-sm text-gray-500">{new Date(editingClient.created_at).toLocaleDateString()}</div>
-                            </div>
                         </div>
                     </div>
                 )}

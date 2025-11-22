@@ -21,18 +21,25 @@ export interface SavedMeal {
 export interface Client {
   id: string;
   doctor_id: string;
-  client_code?: string; // New
+  client_code?: string;
   full_name: string;
   visit_date: string;
-  dob?: string; // New
+  dob?: string;
   clinic: string;
   phone?: string;
   notes?: string;
   age?: number;
   gender?: 'male' | 'female';
-  marital_status?: string; // New
-  kids_count?: number; // New
-  job?: string; // New
+  marital_status?: string;
+  kids_count?: number;
+  job?: string;
+  // Latest anthropometrics snapshot
+  weight?: number;
+  height?: number;
+  waist?: number;
+  hip?: number; // New
+  miac?: number; // New
+  bmi?: number; // New
   created_at: string;
 }
 
@@ -41,7 +48,13 @@ export interface ClientVisit {
   client_id: string;
   visit_date: string;
   weight?: number;
+  height?: number; // New
+  waist?: number; // New
+  hip?: number; // New
+  miac?: number; // New
+  bmi?: number; // New
   notes?: string;
+  kcal_data?: any; // JSON for saved calculator state
   created_at: string;
 }
 

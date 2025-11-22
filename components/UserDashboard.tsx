@@ -9,7 +9,7 @@ import Loading from './Loading';
 import ToolsGrid from './ToolsGrid';
 
 interface UserDashboardProps {
-  onNavigateTool: (toolId: string, loadId?: string) => void;
+  onNavigateTool: (toolId: string, loadId?: string, action?: 'load' | 'new') => void;
   setBmiOpen: (v: boolean) => void;
 }
 
@@ -148,10 +148,10 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                 </div>
                 <div className="flex flex-col gap-2">
                      <button 
-                        onClick={() => onNavigateTool('meal-creator')}
-                        className="text-sm bg-blue-50 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-100 transition font-medium"
+                        onClick={() => onNavigateTool('meal-creator', undefined, 'new')}
+                        className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-bold shadow-sm"
                     >
-                        Open Tool ↗
+                        + New Meal
                     </button>
                 </div>
             </div>
@@ -163,7 +163,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                     </div>
                 ) : (
                     <>
-                        {meals.slice(0, 5).map(meal => (
+                        {meals.slice(0, 3).map(meal => (
                             <div key={meal.id} className="p-4 border border-gray-100 rounded-xl hover:border-blue-200 hover:shadow-sm transition group bg-white">
                                 <div className="flex justify-between items-start">
                                     <div>
@@ -191,12 +191,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                                 </div>
                             </div>
                         ))}
-                        {meals.length > 5 && (
+                        {meals.length > 3 && (
                              <button 
-                                onClick={() => onNavigateTool('meal-creator')}
-                                className="w-full py-2 text-center text-sm text-gray-500 hover:text-[var(--color-primary)] hover:bg-gray-50 rounded-lg transition"
+                                onClick={() => onNavigateTool('meal-creator', undefined, 'load')}
+                                className="w-full py-2 text-center text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition font-medium"
                              >
-                                 See {meals.length - 5} more...
+                                 See More & Load...
                              </button>
                         )}
                     </>
@@ -216,10 +216,10 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                 </div>
                 <div className="flex flex-col gap-2">
                      <button 
-                        onClick={() => onNavigateTool('meal-planner')}
-                        className="text-sm bg-purple-50 text-purple-600 px-4 py-2 rounded-lg hover:bg-purple-100 transition font-medium"
+                        onClick={() => onNavigateTool('meal-planner', undefined, 'new')}
+                        className="text-sm bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition font-bold shadow-sm"
                     >
-                        Open Tool ↗
+                        + New Plan
                     </button>
                 </div>
             </div>
@@ -231,7 +231,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                     </div>
                 ) : (
                     <>
-                        {plans.slice(0, 5).map(plan => (
+                        {plans.slice(0, 3).map(plan => (
                             <div key={plan.id} className="p-4 border border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-sm transition group bg-white">
                                 <div className="flex justify-between items-start">
                                     <div>
@@ -263,12 +263,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                                 </div>
                             </div>
                         ))}
-                        {plans.length > 5 && (
+                        {plans.length > 3 && (
                              <button 
-                                onClick={() => onNavigateTool('meal-planner')}
-                                className="w-full py-2 text-center text-sm text-gray-500 hover:text-[var(--color-primary)] hover:bg-gray-50 rounded-lg transition"
+                                onClick={() => onNavigateTool('meal-planner', undefined, 'load')}
+                                className="w-full py-2 text-center text-sm text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition font-medium"
                              >
-                                 See {plans.length - 5} more...
+                                 See More & Load...
                              </button>
                         )}
                     </>
@@ -289,10 +289,10 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                     </div>
                      <div className="flex flex-col gap-2">
                         <button 
-                            onClick={() => onNavigateTool('client-manager')}
-                            className="text-sm bg-green-50 text-green-600 px-4 py-2 rounded-lg hover:bg-green-100 transition font-medium"
+                            onClick={() => onNavigateTool('client-manager', undefined, 'new')}
+                            className="text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-bold shadow-sm"
                         >
-                             Open Tool ↗
+                             + New Client
                         </button>
                      </div>
                 </div>
@@ -309,7 +309,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                         </div>
                     ) : (
                         <>
-                            {clients.slice(0, 5).map(client => (
+                            {clients.slice(0, 3).map(client => (
                                 <div key={client.id} className="p-4 border border-gray-100 rounded-xl hover:border-green-200 hover:shadow-sm transition group bg-white">
                                     <div className="flex justify-between items-center">
                                         <div>
@@ -329,12 +329,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                                     </div>
                                 </div>
                             ))}
-                             {clients.length > 5 && (
+                             {clients.length > 3 && (
                                  <button 
                                     onClick={() => onNavigateTool('client-manager')}
-                                    className="w-full py-2 text-center text-sm text-gray-500 hover:text-[var(--color-primary)] hover:bg-gray-50 rounded-lg transition"
+                                    className="w-full py-2 text-center text-sm text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition font-medium"
                                  >
-                                     See {clients.length - 5} more...
+                                     See {clients.length - 3} more...
                                  </button>
                             )}
                         </>
@@ -351,7 +351,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
            <span>🛠️</span> {t.header.tools}
         </h2>
         <ToolsGrid 
-            onToolClick={onNavigateTool} 
+            onToolClick={(toolId) => onNavigateTool(toolId)} 
             setBmiOpen={setBmiOpen} 
             isAuthenticated={true} 
         />

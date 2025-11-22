@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.59",
-  "description": "Updates: Pediatric Age (Y/M/D), Advanced Client Profile, Dashboard Limits.",
+  "name": "Diet-Nova v2.0.60",
+  "description": "Updates: Client Anthropometrics (MIAC, Hip, Waist), Visit Kcal Saving, Dashboard Optimization.",
   "requestFramePermissions": []
 }

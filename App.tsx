@@ -21,7 +21,7 @@ import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { Session } from "@supabase/supabase-js";
 import { KcalInitialData } from "./components/calculations/hooks/useKcalCalculations";
-import { Client } from "./types";
+import { Client, ClientVisit } from "./types";
 
 const Dashboard = ({ 
   setBmiOpen, 
@@ -87,8 +87,14 @@ const AppContent = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
   
+  // Extra Nav Flags
+  const [autoOpenLoad, setAutoOpenLoad] = useState(false);
+  const [autoOpenNew, setAutoOpenNew] = useState(false);
+
   // Data passing between tools
   const [toolData, setToolData] = useState<any>(null);
+  // Specific to Kcal Calculator linked to a visit
+  const [currentVisit, setCurrentVisit] = useState<{client: Client, visit: ClientVisit} | null>(null);
   
   const { t, isRTL } = useLanguage();
   const { session, profile, loading } = useAuth();
@@ -116,14 +122,15 @@ const AppContent = () => {
     setPreviousTool(null);
     setSelectedLoadId(null);
     setToolData(null);
+    setCurrentVisit(null);
+    setAutoOpenLoad(false);
+    setAutoOpenNew(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleNavTools = () => {
     if (activeTool) {
-      setActiveTool(null);
-      setPreviousTool(null);
-      setToolData(null);
+      handleNavHome();
     }
     
     setTimeout(() => {
@@ -142,7 +149,7 @@ const AppContent = () => {
       setActiveTool('profile');
   };
 
-  const handleToolClick = (toolId: string, loadId?: string) => {
+  const handleToolClick = (toolId: string, loadId?: string, action?: 'load' | 'new') => {
       if (toolId === 'meal-creator' && !session) {
           setShowLogin(true);
           return;
@@ -162,7 +169,13 @@ const AppContent = () => {
       } else {
           setSelectedLoadId(null);
       }
+      
+      // Set flags for auto actions
+      setAutoOpenLoad(action === 'load');
+      setAutoOpenNew(action === 'new');
+
       setToolData(null); // Reset tool data on clean navigation
+      setCurrentVisit(null); // Reset visit linkage
       setActiveTool(toolId);
   };
 
@@ -172,14 +185,19 @@ const AppContent = () => {
     setActiveTool('meal-planner');
   };
 
-  const handleAnalyzeClient = (client: Client, weight?: number) => {
+  const handleAnalyzeClient = (client: Client, visit: ClientVisit) => {
+      // Map Client Visit data to KcalInitialData
       const initData: KcalInitialData = {
           gender: client.gender,
           age: client.age,
           dob: client.dob,
-          weight: weight
+          // Use visit data preferably, fallback to client profile
+          weight: visit.weight || client.weight,
+          height: visit.height || client.height
       };
+      
       setToolData(initData);
+      setCurrentVisit({ client, visit });
       setActiveTool('kcal');
   };
 
@@ -206,20 +224,24 @@ const AppContent = () => {
       <main className="flex-grow">
         {activeTool ? (
           <div className="container mx-auto px-4 py-8 pb-24 animate-fade-in">
-            <button 
-              onClick={() => {
-                setActiveTool(null);
-                setPreviousTool(null);
-                setSelectedLoadId(null);
-                setToolData(null);
-              }}
-              className="flex items-center gap-2 text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] font-medium mb-6 transition group no-print"
-            >
-              <span className={`text-xl transform transition-transform ${isRTL ? 'rotate-180 group-hover:translate-x-1' : 'group-hover:-translate-x-1'}`}>
-                ←
-              </span>
-              {t.common.backHome}
-            </button>
+            <div className="flex items-center justify-between mb-6 no-print">
+                <button 
+                  onClick={handleNavHome}
+                  className="flex items-center gap-2 text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] font-medium transition group"
+                >
+                  <span className={`text-xl transform transition-transform ${isRTL ? 'rotate-180 group-hover:translate-x-1' : 'group-hover:-translate-x-1'}`}>
+                    ←
+                  </span>
+                  {t.common.backHome}
+                </button>
+                {currentVisit && showKcal && (
+                    <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-xs font-bold shadow-sm flex items-center gap-2">
+                         <span>👥 Analyzing: {currentVisit.client.full_name}</span>
+                         <span className="hidden sm:inline text-gray-400">|</span>
+                         <span className="hidden sm:inline">{new Date(currentVisit.visit.visit_date).toLocaleDateString()}</span>
+                    </div>
+                )}
+            </div>
             
             {/* Complex State Persistence Logic */}
             {isComplexFlow && (
@@ -228,6 +250,7 @@ const AppContent = () => {
                   <KcalCalculator 
                     onPlanMeals={handlePlanMeals} 
                     initialData={toolData} 
+                    activeVisit={currentVisit} // Pass visit context
                   />
                 </div>
                 <div className={showPlanner ? 'block' : 'hidden'}>
@@ -235,16 +258,30 @@ const AppContent = () => {
                     initialTargetKcal={plannedKcal} 
                     onBack={previousTool === 'kcal' ? handleBackToCalculator : undefined}
                     initialLoadId={activeTool === 'meal-planner' ? selectedLoadId : null}
+                    autoOpenLoad={autoOpenLoad}
+                    autoOpenNew={autoOpenNew}
                   />
                 </div>
               </>
             )}
 
             {/* Standard Tools (Unmount when inactive) */}
-            {activeTool === 'meal-creator' && <MealCreator initialLoadId={selectedLoadId} />}
+            {activeTool === 'meal-creator' && (
+                <MealCreator 
+                    initialLoadId={selectedLoadId} 
+                    autoOpenLoad={autoOpenLoad}
+                    autoOpenNew={autoOpenNew}
+                />
+            )}
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
             {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
-            {activeTool === 'client-manager' && <ClientManager initialClientId={selectedLoadId} onAnalyzeInKcal={handleAnalyzeClient} />}
+            {activeTool === 'client-manager' && (
+                <ClientManager 
+                    initialClientId={selectedLoadId} 
+                    onAnalyzeInKcal={handleAnalyzeClient}
+                    autoOpenNew={autoOpenNew}
+                />
+            )}
             {activeTool === 'bmr' && <BmrCalculator />}
             {activeTool === 'profile' && <Profile />}
 
