@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, PropsWithChildren } from 'react';
+import React, { createContext, useContext, useState, useEffect, PropsWithChildren, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { UserProfile } from '../types';
 import { Session } from '@supabase/supabase-js';
@@ -16,6 +16,9 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Track the last processed user ID to prevent redundant fetches on tab focus
+  const lastUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     // 0. Check configuration
@@ -37,6 +40,7 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
 
         if (data && data.session) {
            setSession(data.session);
+           lastUserIdRef.current = data.session.user.id;
            fetchProfile(data.session);
         } else {
            setLoading(false);
@@ -52,13 +56,22 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
     // 2. Listen for Changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
-          fetchProfile(session);
-      } else {
-        setProfile(null);
-        setLoading(false);
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only update if the session state actually changes significantly (e.g. user changed, or signed out)
+      const userId = session?.user?.id;
+      
+      if (event === 'SIGNED_OUT' || !session) {
+          setSession(null);
+          setProfile(null);
+          lastUserIdRef.current = null;
+          setLoading(false);
+      } else if (session) {
+          setSession(session);
+          // Optimization: Only fetch profile if user ID has changed or we don't have a profile yet
+          if (userId !== lastUserIdRef.current || !profile) {
+              lastUserIdRef.current = userId || null;
+              fetchProfile(session);
+          }
       }
     });
 
@@ -125,6 +138,7 @@ export const AuthProvider = ({ children }: PropsWithChildren<{}>) => {
     await supabase.auth.signOut();
     setProfile(null);
     setSession(null);
+    lastUserIdRef.current = null;
   };
 
   return (

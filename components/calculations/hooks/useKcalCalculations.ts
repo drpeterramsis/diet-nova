@@ -1,5 +1,3 @@
-
-
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
@@ -81,6 +79,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
   const [edema, setEdema] = useState<number>(0);
   const [deficit, setDeficit] = useState<number>(0);
   
+  // Results
+  const [reqKcal, setReqKcal] = useState<number | ''>('');
   const [results, setResults] = useState<KcalResults>({} as KcalResults);
 
   // Initialize from passed data (e.g. from Client Manager)
@@ -285,7 +285,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       changeDuration, setChangeDuration,
       ascites, setAscites,
       edema, setEdema,
-      deficit, setDeficit
+      deficit, setDeficit,
+      reqKcal, setReqKcal
     },
     results
   };

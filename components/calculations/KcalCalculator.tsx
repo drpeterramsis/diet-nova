@@ -38,6 +38,9 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               if (data.inputs.ascites) inputs.setAscites(data.inputs.ascites);
               if (data.inputs.edema) inputs.setEdema(data.inputs.edema);
               if (data.inputs.changeDuration) inputs.setChangeDuration(data.inputs.changeDuration);
+              
+              // Hydrate reqKcal
+              if (data.inputs.reqKcal) inputs.setReqKcal(data.inputs.reqKcal);
           }
       }
   }, [activeVisit]); // Run once when visit changes
@@ -59,7 +62,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               deficit: inputs.deficit,
               ascites: inputs.ascites,
               edema: inputs.edema,
-              changeDuration: inputs.changeDuration
+              changeDuration: inputs.changeDuration,
+              reqKcal: inputs.reqKcal // Save the required kcal manually input by user
           },
           results: results // Save calculated results for reference
       };
@@ -146,7 +150,12 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
         {/* Right Column: Results */}
         <div className="lg:col-span-1 space-y-6">
             <div className="sticky top-24 space-y-6">
-                <ResultsSummaryCard results={results} onPlanMeals={onPlanMeals} />
+                <ResultsSummaryCard 
+                    results={results} 
+                    onPlanMeals={onPlanMeals} 
+                    reqKcal={inputs.reqKcal}
+                    setReqKcal={inputs.setReqKcal}
+                />
                 <WeightAnalysisCard results={results} />
             </div>
         </div>

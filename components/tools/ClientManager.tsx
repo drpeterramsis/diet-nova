@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -18,7 +16,7 @@ type SortOption = 'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'clinic'
 type GroupOption = 'none' | 'clinic' | 'month';
 
 // Updated Categorized Tags with Emojis
-const TAG_CATEGORIES = {
+const TAG_CATEGORIES: Record<string, string[]> = {
     "Anthropometry": ["Weight Gain 📈", "Weight Loss 📉", "Stunted Growth 📏"],
     "Special Conditions": ["Post-Op 🏥", "Bedridden 🛏️", "Wheelchair ♿", "Sedentary 🛋️", "Active 🏃", "Athlete 🏋️"],
     "Daily Habits": ["Smoker 🚬", "High Caffeine ☕", "Low Water Intake 💧", "High Sugar 🍬", "Soda Drinker 🥤", "Fast Food 🍔", "Sleep Apnea 😴", "Insomnia 🌑"],
@@ -50,12 +48,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   
   // Tags UI
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-
-  // Unique Clinics
-  const uniqueClinics = useMemo(() => {
-      const clinics = clients.map(c => c.clinic).filter(Boolean);
-      return [...new Set(clinics)];
-  }, [clients]);
+  const [allTagsExpanded, setAllTagsExpanded] = useState(false);
 
   // Form State (Client Profile)
   const [formData, setFormData] = useState<{
@@ -125,6 +118,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   });
 
   const [formError, setFormError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -178,9 +172,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   // Auto-Fill New Visit Data from History
   useEffect(() => {
       if (activeTab === 'visits' && editingClient) {
-          // Find the latest data point to prefill
-          // 1. Check latest visit in state
-          // 2. Fallback to profile data
           const lastVisit = visits.length > 0 ? visits[0] : null;
           
           setNewVisitData(prev => ({
@@ -201,6 +192,16 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       const random = Math.floor(1000 + Math.random() * 9000);
       const year = new Date().getFullYear().toString().slice(-2);
       return `${initials}-${year}-${random}`;
+  };
+
+  const getDefaultNotes = (gender: 'male' | 'female') => {
+      let notes = "";
+      Object.keys(TAG_CATEGORIES).forEach(category => {
+          if (category === "Female Only" && gender === "male") return;
+          notes += `[${category}]\n-\n\n`;
+      });
+      notes += `[Other Notes]\n-`;
+      return notes;
   };
 
   const fetchClients = async () => {
@@ -292,8 +293,10 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
   const handleOpenModal = (client?: Client) => {
     setFormError('');
+    setSaveSuccess('');
     setActiveTab('profile');
     setExpandedCategory(null);
+    setAllTagsExpanded(false);
     
     if (client) {
       setEditingClient(client);
@@ -305,7 +308,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         dob: client.dob || '',
         clinic: client.clinic || '',
         phone: client.phone || '',
-        notes: client.notes || '',
+        // If notes are empty/null, use default structure, else use existing
+        notes: client.notes ? client.notes : getDefaultNotes(client.gender || 'male'),
         age: client.age !== undefined ? client.age : '',
         gender: client.gender || 'male',
         marital_status: client.marital_status || 'single',
@@ -329,7 +333,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         dob: '',
         clinic: '',
         phone: '',
-        notes: '',
+        notes: getDefaultNotes('male'),
         age: '',
         gender: 'male',
         marital_status: 'single',
@@ -345,13 +349,34 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     setShowModal(true);
   };
 
-  const addTag = (tag: string) => {
-      // Avoid duplicates
+  const addTag = (tag: string, categoryName: string) => {
       if (formData.notes.includes(tag)) return;
-      setFormData(prev => ({
-          ...prev,
-          notes: (prev.notes ? prev.notes + '\n' : '') + `• ${tag}`
-      }));
+      
+      // Attempt to find the category header and append the tag after it
+      const header = `[${categoryName}]`;
+      const notes = formData.notes;
+      
+      if (notes.includes(header)) {
+          // Insert after the header line
+          // Find index of header
+          const headerIndex = notes.indexOf(header);
+          const insertIndex = headerIndex + header.length;
+          
+          const newNotes = notes.slice(0, insertIndex) + `\n• ${tag}` + notes.slice(insertIndex);
+          setFormData(prev => ({ ...prev, notes: newNotes }));
+      } else {
+          // Fallback: Append to end if header missing
+          setFormData(prev => ({
+              ...prev,
+              notes: (prev.notes ? prev.notes + '\n' : '') + `• ${tag}`
+          }));
+      }
+  };
+  
+  const toggleAllTags = () => {
+      setAllTagsExpanded(!allTagsExpanded);
+      // If collapsing, clear single expansion too
+      if (allTagsExpanded) setExpandedCategory(null);
   };
 
   const handleSubmitProfile = async (e: React.FormEvent) => {
@@ -361,6 +386,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       return;
     }
     setSubmitting(true);
+    setSaveSuccess('');
+    
     try {
       const payload = {
         doctor_id: session?.user.id,
@@ -387,7 +414,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
       if (response.data) {
         // If creating new client, we also want to create the first visit automatically
-        // to store the anthropometrics in history
         if (!editingClient && (payload.weight || payload.height)) {
             await supabase.from('client_visits').insert({
                 client_id: response.data.id,
@@ -405,15 +431,16 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         if (editingClient) {
           setClients(prev => prev.map(c => c.id === editingClient.id ? response.data : c));
           setEditingClient(response.data);
+          setSaveSuccess("Saved successfully!");
+          setTimeout(() => setSaveSuccess(''), 3000);
         } else {
           setClients(prev => [response.data, ...prev]);
           setEditingClient(response.data);
-          fetchVisits(response.data.id); // Load the newly created visit
+          fetchVisits(response.data.id); 
+          setActiveTab('visits'); // Auto switch to visits tab for new client
+          setSaveSuccess("Client Created!");
+          setTimeout(() => setSaveSuccess(''), 3000);
         }
-        
-        // Switch to visits tab if we edited, or if we just created
-        if(!editingClient) setActiveTab('visits');
-        else setShowModal(false);
       }
     } catch (err: any) {
       setFormError(err.message || "Failed to save client.");
@@ -509,7 +536,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       if (!editingClient || !onPlanMeals) return;
       onPlanMeals(editingClient, visit);
       setShowModal(false);
-  }
+  };
 
   return (
     <div className="max-w-7xl mx-auto animate-fade-in space-y-6 pb-12">
@@ -704,6 +731,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
              {/* Modal Content */}
              <div className="p-6 overflow-y-auto flex-grow">
                 {formError && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4">{formError}</div>}
+                {saveSuccess && <div className="bg-green-50 text-green-600 p-3 rounded-lg mb-4">{saveSuccess}</div>}
                 
                 {/* TAB: PROFILE */}
                 {activeTab === 'profile' && (
@@ -862,33 +890,44 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                         
                         {/* Categorized Tags */}
                         <div>
-                             <label className="block text-xs font-bold text-gray-500 mb-2">Medical Notes & History</label>
+                             <div className="flex justify-between items-center mb-2">
+                                 <label className="block text-xs font-bold text-gray-500">Medical Notes & History</label>
+                                 <button 
+                                    type="button"
+                                    onClick={toggleAllTags}
+                                    className="text-xs text-[var(--color-primary)] font-medium hover:underline"
+                                 >
+                                     {allTagsExpanded ? 'Collapse All Tags' : 'Expand All Tags'}
+                                 </button>
+                             </div>
                              
                              <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 mb-4">
                                 {Object.entries(TAG_CATEGORIES).map(([category, tags]) => {
                                     // Skip Female Only if gender is Male
                                     if (category === "Female Only" && formData.gender === "male") return null;
                                     
-                                    const isExpanded = expandedCategory === category;
+                                    const isExpanded = allTagsExpanded || expandedCategory === category;
 
                                     return (
                                         <div key={category} className="bg-white">
                                             <button 
                                                 type="button"
-                                                onClick={() => setExpandedCategory(isExpanded ? null : category)}
+                                                onClick={() => setExpandedCategory(isExpanded && !allTagsExpanded ? null : category)}
                                                 className="w-full px-4 py-2 text-left flex justify-between items-center hover:bg-gray-50 transition"
                                             >
                                                 <span className="text-sm font-medium text-gray-700">{category}</span>
-                                                <span className="text-gray-400">{isExpanded ? '▲' : '▼'}</span>
+                                                {!allTagsExpanded && (
+                                                    <span className="text-gray-400">{isExpanded ? '▲' : '▼'}</span>
+                                                )}
                                             </button>
                                             
                                             {isExpanded && (
-                                                <div className="px-4 pb-3 pt-1 flex flex-wrap gap-2 animate-fade-in bg-gray-50/50">
+                                                <div className="px-4 pb-3 pt-1 flex flex-wrap gap-2 animate-fade-in bg-gray-50/50 border-t border-gray-50">
                                                     {tags.map(tag => (
                                                         <button
                                                             key={tag}
                                                             type="button"
-                                                            onClick={() => addTag(tag)}
+                                                            onClick={() => addTag(tag, category)}
                                                             className="px-2 py-1 bg-white hover:bg-blue-50 text-gray-700 text-xs rounded border border-gray-200 hover:border-blue-300 transition shadow-sm"
                                                         >
                                                             + {tag}
@@ -902,10 +941,10 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                              </div>
 
                              <textarea 
-                                rows={3}
+                                rows={8}
                                 value={formData.notes}
                                 onChange={e => setFormData({...formData, notes: e.target.value})}
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-none whitespace-pre-wrap text-sm"
+                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-y whitespace-pre-wrap text-sm font-mono bg-gray-50 focus:bg-white"
                                 placeholder="Allergies, chronic conditions, past operations..."
                              ></textarea>
                         </div>

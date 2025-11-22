@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { KcalResults } from '../hooks/useKcalCalculations';
 
@@ -15,11 +15,12 @@ const ResultRow = ({ label, val, sub, col }: any) => (
 interface ResultsSummaryProps {
   results: KcalResults;
   onPlanMeals?: (kcal: number) => void;
+  reqKcal?: number | '';
+  setReqKcal?: (val: number | '') => void;
 }
 
-const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanMeals }) => {
+const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanMeals, reqKcal, setReqKcal }) => {
   const { t } = useLanguage();
-  const [reqKcal, setReqKcal] = useState<number | ''>('');
 
   return (
     <div className="card bg-white shadow-xl ring-1 ring-[var(--color-border)]">
@@ -52,7 +53,7 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
       </div>
 
       {/* Action Area */}
-      {onPlanMeals && (
+      {onPlanMeals && setReqKcal !== undefined && (
         <div className="mt-6 pt-4 border-t border-gray-100">
            <div className="mb-3">
              <label className="block text-sm font-medium text-gray-700 mb-1">{t.kcal.kcalRequired}</label>
