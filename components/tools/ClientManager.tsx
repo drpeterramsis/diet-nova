@@ -15,6 +15,39 @@ interface ClientManagerProps {
 type SortOption = 'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'clinic';
 type GroupOption = 'none' | 'clinic' | 'month';
 
+// Food Groups Factors for Calculation
+const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
+  starch: { cho: 15, pro: 3, fat: 0, kcal: 80 },
+  veg: { cho: 5, pro: 2, fat: 0, kcal: 25 },
+  fruit: { cho: 15, pro: 0, fat: 0, kcal: 60 },
+  meatLean: { cho: 0, pro: 7, fat: 3, kcal: 45 },
+  meatMed: { cho: 0, pro: 7, fat: 5, kcal: 75 },
+  meatHigh: { cho: 0, pro: 7, fat: 8, kcal: 100 },
+  milkSkim: { cho: 15, pro: 8, fat: 3, kcal: 100 },
+  milkLow: { cho: 15, pro: 8, fat: 5, kcal: 120 },
+  milkWhole: { cho: 15, pro: 8, fat: 8, kcal: 160 },
+  legumes: { cho: 15, pro: 7, fat: 0, kcal: 110 },
+  fats: { cho: 0, pro: 0, fat: 5, kcal: 45 },
+  sugar: { cho: 5, pro: 0, fat: 0, kcal: 20 },
+};
+
+const calculatePlanStats = (servings: Record<string, number>) => {
+    let cho = 0, pro = 0, fat = 0, kcal = 0;
+    if (!servings) return { cho, pro, fat, kcal };
+    
+    Object.keys(servings).forEach(group => {
+        const s = servings[group] || 0;
+        const f = GROUP_FACTORS[group];
+        if (f) {
+            cho += s * f.cho;
+            pro += s * f.pro;
+            fat += s * f.fat;
+            kcal += s * f.kcal;
+        }
+    });
+    return { cho, pro, fat, kcal };
+};
+
 // Updated Categorized Tags with Emojis
 const TAG_CATEGORIES: Record<string, string[]> = {
     "Anthropometry": ["Weight Gain 📈", "Weight Loss 📉", "Stunted Growth 📏"],
@@ -678,7 +711,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                     </td>
                                                     <td className="p-4 text-center">
                                                         <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-mono">
-                                                        {new Date(client.visit_date).toLocaleDateString()}
+                                                        {new Date(client.visit_date).toLocaleDateString('en-GB')}
                                                         </span>
                                                     </td>
                                                     <td className="p-4 text-center text-gray-600 hidden sm:table-cell">
@@ -1005,7 +1038,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                     <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm">
                         <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase">Record New Follow-up</h4>
                         <div className="text-xs text-blue-600 mb-3 opacity-80">
-                            * Data auto-filled from previous visit ({visits.length > 0 ? new Date(visits[0].visit_date).toLocaleDateString() : 'Profile'}). Adjust as needed.
+                            * Data auto-filled from previous visit ({visits.length > 0 ? new Date(visits[0].visit_date).toLocaleDateString('en-GB') : 'Profile'}). Adjust as needed.
                         </div>
                         <form onSubmit={handleAddVisit} className="space-y-4">
                             <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
@@ -1065,80 +1098,114 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                             <div className="pl-6 text-gray-400 italic text-sm">No follow-up visits recorded yet.</div>
                         )}
 
-                        {visits.map((visit) => (
-                            <div key={visit.id} className="relative pl-8">
-                                {/* Timeline Dot */}
-                                <div className="absolute -left-[9px] top-0 w-4 h-4 bg-white border-2 border-[var(--color-primary)] rounded-full z-10"></div>
-                                
-                                <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition group">
-                                        <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-3">
-                                            <div className="flex items-center gap-4">
-                                                <span className="font-bold text-gray-800 text-lg">
-                                                {new Date(visit.visit_date).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-                                                </span>
-                                                {/* Badges */}
-                                                <div className="flex gap-2 text-xs font-mono">
-                                                    {visit.weight && <span className="bg-blue-50 border border-blue-100 px-2 py-0.5 rounded text-blue-700 font-bold">Wt: {visit.weight}</span>}
-                                                    {visit.bmi && <span className="bg-orange-50 border border-orange-100 px-2 py-0.5 rounded text-orange-700 font-bold">BMI: {visit.bmi}</span>}
+                        {visits.map((visit) => {
+                            const planStats = visit.meal_plan_data?.servings ? calculatePlanStats(visit.meal_plan_data.servings) : null;
+                            const planTotalKcal = planStats ? planStats.kcal : 0;
+                            const planPcts = planTotalKcal > 0 && planStats ? {
+                                cho: (planStats.cho * 4 / planTotalKcal * 100).toFixed(0),
+                                pro: (planStats.pro * 4 / planTotalKcal * 100).toFixed(0),
+                                fat: (planStats.fat * 9 / planTotalKcal * 100).toFixed(0)
+                            } : { cho: 0, pro: 0, fat: 0 };
+
+                            return (
+                                <div key={visit.id} className="relative pl-8">
+                                    {/* Timeline Dot */}
+                                    <div className="absolute -left-[9px] top-0 w-4 h-4 bg-white border-2 border-[var(--color-primary)] rounded-full z-10"></div>
+                                    
+                                    <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition group">
+                                            <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-3">
+                                                <div className="flex items-center gap-4">
+                                                    <span className="font-bold text-gray-800 text-lg">
+                                                    {new Date(visit.visit_date).toLocaleDateString('en-GB', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                                                    </span>
+                                                    {/* Badges */}
+                                                    <div className="flex gap-2 text-xs font-mono">
+                                                        {visit.weight && <span className="bg-blue-50 border border-blue-100 px-2 py-0.5 rounded text-blue-700 font-bold">Wt: {visit.weight}</span>}
+                                                        {visit.bmi && <span className="bg-orange-50 border border-orange-100 px-2 py-0.5 rounded text-orange-700 font-bold">BMI: {visit.bmi}</span>}
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
+                                                    <button 
+                                                    onClick={() => openKcalForVisit(visit)}
+                                                    className="bg-green-100 text-green-700 px-3 py-1 rounded text-xs font-bold hover:bg-green-200 flex items-center gap-1 transition"
+                                                    >
+                                                        <span>🔥</span> Calculator
+                                                    </button>
+                                                    <button 
+                                                    onClick={() => openMealPlanForVisit(visit)}
+                                                    className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-bold hover:bg-purple-200 flex items-center gap-1 transition"
+                                                    >
+                                                        <span>📅</span> Planner
+                                                    </button>
+                                                    <button onClick={() => handleDeleteVisit(visit.id)} className="text-red-400 hover:text-red-600 px-2 font-bold text-lg">×</button>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
-                                                <button 
-                                                onClick={() => openKcalForVisit(visit)}
-                                                className="bg-green-100 text-green-700 px-3 py-1 rounded text-xs font-bold hover:bg-green-200 flex items-center gap-1 transition"
-                                                >
-                                                    <span>🔥</span> Calculator
-                                                </button>
-                                                <button 
-                                                onClick={() => openMealPlanForVisit(visit)}
-                                                className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-bold hover:bg-purple-200 flex items-center gap-1 transition"
-                                                >
-                                                    <span>📅</span> Planner
-                                                </button>
-                                                <button onClick={() => handleDeleteVisit(visit.id)} className="text-red-400 hover:text-red-600 px-2 font-bold text-lg">×</button>
+                                            
+                                            {/* Measurements Stats Grid */}
+                                            <div className="grid grid-cols-4 gap-2 text-xs text-gray-600 mb-4 bg-gray-50 p-3 rounded border border-gray-100">
+                                                <div><span className="font-bold text-gray-400 uppercase block">Ht</span> {visit.height || '-'} cm</div>
+                                                <div><span className="font-bold text-gray-400 uppercase block">Waist</span> {visit.waist || '-'} cm</div>
+                                                <div><span className="font-bold text-gray-400 uppercase block">Hip</span> {visit.hip || '-'} cm</div>
+                                                <div><span className="font-bold text-gray-400 uppercase block">MIAC</span> {visit.miac || '-'} cm</div>
                                             </div>
-                                        </div>
-                                        
-                                        {/* Measurements Stats Grid */}
-                                        <div className="grid grid-cols-4 gap-2 text-xs text-gray-600 mb-4 bg-gray-50 p-3 rounded border border-gray-100">
-                                            <div><span className="font-bold text-gray-400 uppercase block">Ht</span> {visit.height || '-'} cm</div>
-                                            <div><span className="font-bold text-gray-400 uppercase block">Waist</span> {visit.waist || '-'} cm</div>
-                                            <div><span className="font-bold text-gray-400 uppercase block">Hip</span> {visit.hip || '-'} cm</div>
-                                            <div><span className="font-bold text-gray-400 uppercase block">MIAC</span> {visit.miac || '-'} cm</div>
-                                        </div>
 
-                                        {/* Saved Data Summary */}
-                                        {(visit.kcal_data || visit.meal_plan_data) && (
-                                            <div className="mb-4 flex flex-wrap gap-4">
-                                                {/* Kcal Data Badge */}
-                                                {visit.kcal_data?.inputs?.reqKcal && (
-                                                    <div className="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-1.5 rounded-lg text-green-800 text-xs">
-                                                        <span className="text-lg">⚡</span>
-                                                        <div>
-                                                            <div className="font-bold">Required Kcal</div>
-                                                            <div className="font-mono">{visit.kcal_data.inputs.reqKcal} kcal</div>
+                                            {/* Saved Data Summary */}
+                                            {(visit.kcal_data || visit.meal_plan_data) && (
+                                                <div className="mb-4 flex flex-col sm:flex-row gap-4">
+                                                    {/* Kcal Data Badge */}
+                                                    {visit.kcal_data?.inputs?.reqKcal && (
+                                                        <div className="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-1.5 rounded-lg text-green-800 text-xs h-fit">
+                                                            <span className="text-lg">⚡</span>
+                                                            <div>
+                                                                <div className="font-bold">Required Kcal</div>
+                                                                <div className="font-mono">{visit.kcal_data.inputs.reqKcal} kcal</div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
-                                                {/* Meal Plan Data Badge */}
-                                                {visit.meal_plan_data?.targetKcal > 0 && (
-                                                    <div className="flex items-center gap-2 bg-purple-50 border border-purple-100 px-3 py-1.5 rounded-lg text-purple-800 text-xs">
-                                                        <span className="text-lg">🍽️</span>
-                                                        <div>
-                                                            <div className="font-bold">Plan Target</div>
-                                                            <div className="font-mono">{visit.meal_plan_data.targetKcal} kcal</div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+                                                    )}
+                                                    
+                                                    {/* Meal Plan Data Badge & Stats */}
+                                                    {visit.meal_plan_data && (
+                                                        <div className="flex-grow flex flex-col gap-2 bg-purple-50 border border-purple-100 px-3 py-2 rounded-lg text-purple-800 text-xs">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="text-lg">🍽️</span>
+                                                                <div className="font-bold">Meal Plan Summary</div>
+                                                            </div>
+                                                            
+                                                            {/* Target vs Actual */}
+                                                            <div className="flex justify-between items-center border-b border-purple-200 pb-1">
+                                                                <span>Target: <b>{visit.meal_plan_data.targetKcal || '-'}</b></span>
+                                                                <span>Calc: <b>{planTotalKcal.toFixed(0)}</b> kcal</span>
+                                                            </div>
 
-                                        {visit.notes && (
-                                            <p className="text-sm text-gray-700 whitespace-pre-wrap border-l-2 border-gray-200 pl-3 py-1">{visit.notes}</p>
-                                        )}
+                                                            {/* Macros */}
+                                                            {planStats && (
+                                                                <div className="grid grid-cols-3 gap-2 text-center mt-1">
+                                                                    <div>
+                                                                        <div className="font-bold text-blue-600">{planStats.cho.toFixed(0)}g</div>
+                                                                        <div className="text-[10px] text-blue-500">CHO ({planPcts.cho}%)</div>
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="font-bold text-red-600">{planStats.pro.toFixed(0)}g</div>
+                                                                        <div className="text-[10px] text-red-500">PRO ({planPcts.pro}%)</div>
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="font-bold text-yellow-600">{planStats.fat.toFixed(0)}g</div>
+                                                                        <div className="text-[10px] text-yellow-600">FAT ({planPcts.fat}%)</div>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {visit.notes && (
+                                                <p className="text-sm text-gray-700 whitespace-pre-wrap border-l-2 border-gray-200 pl-3 py-1">{visit.notes}</p>
+                                            )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}

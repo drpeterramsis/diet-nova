@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ProgressBar, MacroDonut } from '../Visuals';
@@ -58,7 +56,7 @@ interface MealPlannerProps {
   activeVisit?: { client: Client, visit: ClientVisit } | null;
 }
 
-const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, initialLoadId, autoOpenLoad, autoOpenNew, activeVisit }) => {
+export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, initialLoadId, autoOpenLoad, autoOpenNew, activeVisit }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both'>('calculator');
@@ -391,7 +389,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
                      Client: {activeVisit.client.full_name}
                   </h3>
                   <p className="text-sm text-purple-600 flex flex-wrap gap-3">
-                     <span>Visit Date: {new Date(activeVisit.visit.visit_date).toLocaleDateString()}</span>
+                     <span>Visit Date: {new Date(activeVisit.visit.visit_date).toLocaleDateString('en-GB')}</span>
                      <span>•</span>
                      <span>Clinic: {activeVisit.client.clinic || 'N/A'}</span>
                   </p>
@@ -698,11 +696,10 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
                         </div>
                     </div>
                 </div>
-            </div>
-        )}
-      </div>
+            )}
+        </div>
 
-      {/* --- MODALS --- */}
+        {/* --- MODALS --- */}
       
       {/* Load Modal */}
       {showLoadModal && (
@@ -733,7 +730,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
                             <div key={plan.id} className="flex justify-between items-center p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-100 group">
                                 <div>
                                     <div className="font-bold text-gray-800">{plan.name}</div>
-                                    <div className="text-xs text-gray-500">{new Date(plan.created_at).toLocaleDateString()}</div>
+                                    <div className="text-xs text-gray-500">{new Date(plan.created_at).toLocaleDateString('en-GB')}</div>
                                 </div>
                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
                                     <button onClick={() => loadPlan(plan)} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Load</button>
@@ -750,5 +747,3 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
     </div>
   );
 };
-
-export default MealPlanner;

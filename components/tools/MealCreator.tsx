@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
@@ -507,7 +505,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                             <div key={plan.id} className="flex justify-between items-center p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-100 group">
                                 <div>
                                     <div className="font-bold text-gray-800">{plan.name}</div>
-                                    <div className="text-xs text-gray-500">{new Date(plan.created_at).toLocaleDateString()}</div>
+                                    <div className="text-xs text-gray-500">{new Date(plan.created_at).toLocaleDateString('en-GB')}</div>
                                 </div>
                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
                                     <button onClick={() => loadPlan(plan)} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Load</button>

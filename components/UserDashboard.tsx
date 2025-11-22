@@ -98,10 +98,10 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', {
+    return new Date(dateString).toLocaleDateString('en-GB', {
       year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+      month: '2-digit',
+      day: '2-digit'
     });
   };
 
@@ -333,7 +333,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                                             <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
                                                 <span>📍</span> {client.clinic}
                                                 <span className="mx-1">•</span>
-                                                <span>{new Date(client.visit_date).toLocaleDateString()}</span>
+                                                <span>{formatDate(client.visit_date)}</span>
                                             </p>
                                         </div>
                                         <button 

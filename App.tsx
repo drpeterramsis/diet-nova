@@ -6,7 +6,7 @@ import BmiModal from "./components/BmiModal";
 import KcalCalculator from "./components/calculations/KcalCalculator";
 import MealCreator from "./components/tools/MealCreator";
 import FoodExchange from "./components/tools/FoodExchange";
-import MealPlanner from "./components/tools/MealPlanner";
+import { MealPlanner } from "./components/tools/MealPlanner";
 import ClientManager from "./components/tools/ClientManager";
 import BmrCalculator from "./components/tools/BmrCalculator";
 import Profile from "./components/Profile";

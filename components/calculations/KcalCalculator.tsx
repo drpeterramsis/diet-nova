@@ -94,7 +94,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                      Client: {activeVisit.client.full_name}
                   </h3>
                   <p className="text-sm text-green-600 flex flex-wrap gap-3">
-                     <span>Visit Date: {new Date(activeVisit.visit.visit_date).toLocaleDateString()}</span>
+                     <span>Visit Date: {new Date(activeVisit.visit.visit_date).toLocaleDateString('en-GB')}</span>
                      <span>•</span>
                      <span>Code: {activeVisit.client.client_code || '-'}</span>
                      <span>•</span>

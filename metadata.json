@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.64",
-  "description": "Updates: Client Profile full page view, Kcal/Meal Plan data in visits, Navigation improvements, Auth refresh fix.",
+  "name": "Diet-Nova v2.0.65",
+  "description": "Updates: Client Visit History meal plan summary improvements (Macros/Stats), Date format standardized to dd/mm/yyyy across app.",
   "requestFramePermissions": []
 }
