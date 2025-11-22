@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ProgressBar, MacroDonut } from '../Visuals';
@@ -696,8 +697,9 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                         </div>
                     </div>
                 </div>
-            )}
-        </div>
+            </div>
+        )}
+      </div>
 
         {/* --- MODALS --- */}
       
