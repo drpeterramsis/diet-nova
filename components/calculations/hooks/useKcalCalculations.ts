@@ -1,3 +1,5 @@
+
+
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
@@ -44,7 +46,13 @@ export const useKcalCalculations = () => {
 
   // --- State ---
   const [gender, setGender] = useState<'male' | 'female'>('male');
+  
+  // Age Logic
   const [age, setAge] = useState<number>(0);
+  const [ageMode, setAgeMode] = useState<'manual' | 'auto'>('manual');
+  const [dob, setDob] = useState<string>('');
+  const [reportDate, setReportDate] = useState<string>(new Date().toISOString().split('T')[0]);
+
   const [height, setHeight] = useState<number>(0);
   const [waist, setWaist] = useState<number>(0);
   const [physicalActivity, setPhysicalActivity] = useState<number>(0);
@@ -59,6 +67,24 @@ export const useKcalCalculations = () => {
   const [deficit, setDeficit] = useState<number>(0);
   
   const [results, setResults] = useState<KcalResults>({} as KcalResults);
+
+  // Calculate Age when using Auto mode
+  useEffect(() => {
+      if (ageMode === 'auto' && dob && reportDate) {
+          const birth = new Date(dob);
+          const report = new Date(reportDate);
+          
+          if (!isNaN(birth.getTime()) && !isNaN(report.getTime())) {
+              let calculatedAge = report.getFullYear() - birth.getFullYear();
+              const m = report.getMonth() - birth.getMonth();
+              if (m < 0 || (m === 0 && report.getDate() < birth.getDate())) {
+                  calculatedAge--;
+              }
+              // Ensure age isn't negative
+              setAge(Math.max(0, calculatedAge));
+          }
+      }
+  }, [ageMode, dob, reportDate]);
 
   useEffect(() => {
     const temp_weight = currentWeight;
@@ -177,6 +203,9 @@ export const useKcalCalculations = () => {
     inputs: {
       gender, setGender,
       age, setAge,
+      ageMode, setAgeMode,
+      dob, setDob,
+      reportDate, setReportDate,
       height, setHeight,
       waist, setWaist,
       physicalActivity, setPhysicalActivity,

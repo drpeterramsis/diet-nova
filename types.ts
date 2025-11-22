@@ -192,6 +192,14 @@ export interface Translation {
       overweight: string;
       obese: string;
     };
+    ageMode: string;
+    manual: string;
+    auto: string;
+    dob: string;
+    reportDate: string;
+    calcAge: string;
+    pediatricStatus: string;
+    adultStatus: string;
   };
   mealCreator: {
     searchPlaceholder: string;

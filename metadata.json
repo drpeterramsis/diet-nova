@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova v2.0.56 - Dashboard & Visit Updates",
-  "description": "Features: Integrated dashboard stats, editable visit history with multi-line notes.",
+  "name": "Diet-Nova v2.0.57 - Kcal Calculator Age Logic",
+  "description": "Features: Auto Age Calculation from DOB, Pediatric vs Adult indicator.",
   "requestFramePermissions": []
 }

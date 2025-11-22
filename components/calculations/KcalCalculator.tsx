@@ -1,3 +1,5 @@
+
+
 import React from 'react';
 import { useKcalCalculations } from './hooks/useKcalCalculations';
 import PersonalInfoCard from './parts/PersonalInfoCard';
@@ -21,7 +23,12 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals }) => {
         <div className="lg:col-span-2 space-y-6">
             <PersonalInfoCard 
               gender={inputs.gender} setGender={inputs.setGender}
+              
               age={inputs.age} setAge={inputs.setAge}
+              ageMode={inputs.ageMode} setAgeMode={inputs.setAgeMode}
+              dob={inputs.dob} setDob={inputs.setDob}
+              reportDate={inputs.reportDate} setReportDate={inputs.setReportDate}
+
               height={inputs.height} setHeight={inputs.setHeight}
               waist={inputs.waist} setWaist={inputs.setWaist}
               physicalActivity={inputs.physicalActivity} setPhysicalActivity={inputs.setPhysicalActivity}

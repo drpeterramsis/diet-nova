@@ -1,3 +1,5 @@
+
+
 import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { InputGroup, SelectGroup } from '../InputComponents';
@@ -5,8 +7,16 @@ import { InputGroup, SelectGroup } from '../InputComponents';
 interface PersonalInfoProps {
   gender: 'male' | 'female';
   setGender: (v: 'male' | 'female') => void;
+  
   age: number;
   setAge: (v: number) => void;
+  ageMode?: 'manual' | 'auto';
+  setAgeMode?: (v: 'manual' | 'auto') => void;
+  dob?: string;
+  setDob?: (v: string) => void;
+  reportDate?: string;
+  setReportDate?: (v: string) => void;
+
   height: number;
   setHeight: (v: number) => void;
   waist: number;
@@ -16,7 +26,9 @@ interface PersonalInfoProps {
 }
 
 const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
-  gender, setGender, age, setAge, height, setHeight, waist, setWaist, physicalActivity, setPhysicalActivity
+  gender, setGender, 
+  age, setAge, ageMode, setAgeMode, dob, setDob, reportDate, setReportDate,
+  height, setHeight, waist, setWaist, physicalActivity, setPhysicalActivity
 }) => {
   const { t } = useLanguage();
 
@@ -47,23 +59,87 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
           </div>
         </div>
 
-        <InputGroup label={t.kcal.age} value={age} onChange={setAge} error={age === 0} />
-        <InputGroup label={t.kcal.height} value={height} onChange={setHeight} error={height === 0} />
-        <InputGroup label={t.kcal.waist} value={waist} onChange={setWaist} error={waist === 0} />
+        {/* Age Section with Auto/Manual Toggle */}
+        <div className="col-span-2 md:col-span-1">
+            {setAgeMode && setDob && setReportDate ? (
+               <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                   <div className="flex justify-between items-center mb-2">
+                      <label className="block text-xs font-bold text-gray-500 uppercase">{t.kcal.ageMode}</label>
+                      <div className="flex bg-white rounded border border-gray-300 overflow-hidden text-xs">
+                          <button 
+                            onClick={() => setAgeMode('manual')}
+                            className={`px-2 py-1 ${ageMode === 'manual' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-500 hover:bg-gray-50'}`}
+                          >
+                             {t.kcal.manual}
+                          </button>
+                          <button 
+                            onClick={() => setAgeMode('auto')}
+                            className={`px-2 py-1 ${ageMode === 'auto' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-500 hover:bg-gray-50'}`}
+                          >
+                             {t.kcal.auto}
+                          </button>
+                      </div>
+                   </div>
+                   
+                   {ageMode === 'manual' ? (
+                       <InputGroup label={t.kcal.age} value={age} onChange={setAge} error={age === 0} />
+                   ) : (
+                       <div className="space-y-2">
+                           <div>
+                               <label className="block text-xs text-gray-600 mb-1">{t.kcal.dob}</label>
+                               <input 
+                                 type="date" 
+                                 className="w-full p-2 border rounded text-sm bg-white"
+                                 value={dob || ''}
+                                 onChange={(e) => setDob(e.target.value)}
+                               />
+                           </div>
+                           <div>
+                               <label className="block text-xs text-gray-600 mb-1">{t.kcal.reportDate}</label>
+                               <input 
+                                 type="date" 
+                                 className="w-full p-2 border rounded text-sm bg-white"
+                                 value={reportDate || ''}
+                                 onChange={(e) => setReportDate(e.target.value)}
+                               />
+                           </div>
+                           <div className="flex justify-between items-center pt-1">
+                               <span className="text-sm font-medium text-gray-600">{t.kcal.calcAge}:</span>
+                               <span className="text-lg font-bold text-[var(--color-primary)]">{age}</span>
+                           </div>
+                       </div>
+                   )}
+
+                   <div className={`mt-2 text-xs font-bold px-2 py-1 rounded text-center ${age < 20 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                       {age < 20 ? t.kcal.pediatricStatus : t.kcal.adultStatus}
+                   </div>
+               </div>
+            ) : (
+               /* Fallback if new props aren't passed yet */
+               <InputGroup label={t.kcal.age} value={age} onChange={setAge} error={age === 0} />
+            )}
+        </div>
+
+        <div className="col-span-2 md:col-span-1 space-y-5">
+            <InputGroup label={t.kcal.height} value={height} onChange={setHeight} error={height === 0} />
+            <InputGroup label={t.kcal.waist} value={waist} onChange={setWaist} error={waist === 0} />
+        </div>
         
-        <SelectGroup 
-          label={t.kcal.activity}
-          value={physicalActivity}
-          onChange={setPhysicalActivity}
-          options={[
-            { value: 0, label: t.kcal.selectActivity },
-            { value: 1.2, label: t.kcal.activityLevels.sedentary },
-            { value: 1.375, label: t.kcal.activityLevels.mild },
-            { value: 1.55, label: t.kcal.activityLevels.moderate },
-            { value: 1.725, label: t.kcal.activityLevels.heavy },
-            { value: 1.9, label: t.kcal.activityLevels.veryActive },
-          ]}
-        />
+        <div className="col-span-2">
+            <SelectGroup 
+            label={t.kcal.activity}
+            value={physicalActivity}
+            onChange={setPhysicalActivity}
+            options={[
+                { value: 0, label: t.kcal.selectActivity },
+                { value: 1.2, label: t.kcal.activityLevels.sedentary },
+                { value: 1.375, label: t.kcal.activityLevels.mild },
+                { value: 1.55, label: t.kcal.activityLevels.moderate },
+                { value: 1.725, label: t.kcal.activityLevels.heavy },
+                { value: 1.9, label: t.kcal.activityLevels.veryActive },
+            ]}
+            />
+        </div>
       </div>
     </div>
   );

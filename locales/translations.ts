@@ -153,7 +153,15 @@ export const en: Translation = {
       normal: "Normal",
       overweight: "Overweight",
       obese: "Obese",
-    }
+    },
+    ageMode: "Age Input Mode",
+    manual: "Manual",
+    auto: "Auto (DOB)",
+    dob: "Date of Birth",
+    reportDate: "Report Date",
+    calcAge: "Calculated Age",
+    pediatricStatus: "Pediatric (<20y)",
+    adultStatus: "Adult (20y+)"
   },
   mealCreator: {
     searchPlaceholder: "Search food...",
@@ -367,7 +375,15 @@ export const ar: Translation = {
       normal: "وزن طبيعي",
       overweight: "وزن زائد",
       obese: "سمنة",
-    }
+    },
+    ageMode: "طريقة إدخال العمر",
+    manual: "يدوي",
+    auto: "تلقائي (تاريخ الميلاد)",
+    dob: "تاريخ الميلاد",
+    reportDate: "تاريخ التقرير",
+    calcAge: "العمر المحسوب",
+    pediatricStatus: "أطفال (<20 سنة)",
+    adultStatus: "بالغ (20+ سنة)"
   },
   mealCreator: {
     searchPlaceholder: "ابحث عن الطعام...",
