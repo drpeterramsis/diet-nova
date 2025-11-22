@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from 'react';
 import { useKcalCalculations, KcalInitialData } from './hooks/useKcalCalculations';
 import PersonalInfoCard from './parts/PersonalInfoCard';
@@ -20,22 +18,26 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
   const { inputs, results } = useKcalCalculations(initialData);
   const [saveStatus, setSaveStatus] = useState('');
 
-  // Hydrate state from activeVisit.kcal_data if available and not overridden by initialData logic
+  // Hydrate state from activeVisit.kcal_data if available
   useEffect(() => {
       if (activeVisit?.visit.kcal_data) {
           const data = activeVisit.visit.kcal_data;
           if (data.inputs) {
-              // We would need to expose setters for all inputs in useKcalCalculations to fully hydrate
-              // For now, the basic anthropometrics are handled via initialData passed from App.tsx
-              // This effect handles extra Calculator-specific state if we expand it.
-              // Currently rely on App.tsx passing 'initialData' correctly.
+              // Hydrate all persistent fields from saved data
+              if (data.inputs.gender) inputs.setGender(data.inputs.gender);
+              if (data.inputs.age) inputs.setAge(data.inputs.age);
+              if (data.inputs.height) inputs.setHeight(data.inputs.height);
+              if (data.inputs.waist) inputs.setWaist(data.inputs.waist);
+              
               if (data.inputs.physicalActivity) inputs.setPhysicalActivity(data.inputs.physicalActivity);
+              if (data.inputs.currentWeight) inputs.setCurrentWeight(data.inputs.currentWeight);
+              if (data.inputs.selectedWeight) inputs.setSelectedWeight(data.inputs.selectedWeight);
+              if (data.inputs.usualWeight) inputs.setUsualWeight(data.inputs.usualWeight);
+              
               if (data.inputs.deficit) inputs.setDeficit(data.inputs.deficit);
               if (data.inputs.ascites) inputs.setAscites(data.inputs.ascites);
               if (data.inputs.edema) inputs.setEdema(data.inputs.edema);
               if (data.inputs.changeDuration) inputs.setChangeDuration(data.inputs.changeDuration);
-              if (data.inputs.selectedWeight) inputs.setSelectedWeight(data.inputs.selectedWeight);
-              if (data.inputs.usualWeight) inputs.setUsualWeight(data.inputs.usualWeight);
           }
       }
   }, [activeVisit]); // Run once when visit changes
@@ -87,8 +89,12 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                   <h3 className="font-bold text-green-800 text-lg">
                      Client: {activeVisit.client.full_name}
                   </h3>
-                  <p className="text-sm text-green-600">
-                     Visit Date: {new Date(activeVisit.visit.visit_date).toLocaleDateString()} • Code: {activeVisit.client.client_code || '-'}
+                  <p className="text-sm text-green-600 flex flex-wrap gap-3">
+                     <span>Visit Date: {new Date(activeVisit.visit.visit_date).toLocaleDateString()}</span>
+                     <span>•</span>
+                     <span>Code: {activeVisit.client.client_code || '-'}</span>
+                     <span>•</span>
+                     <span>Clinic: {activeVisit.client.clinic || 'N/A'}</span>
                   </p>
               </div>
               <div className="flex items-center gap-3">

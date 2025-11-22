@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -146,12 +144,18 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                     <span className="text-3xl font-bold text-blue-600 mt-2 block">{meals.length}</span>
                     <p className="text-xs text-gray-500">Saved Meals</p>
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 text-xs">
                      <button 
                         onClick={() => onNavigateTool('meal-creator', undefined, 'new')}
-                        className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-bold shadow-sm"
+                        className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition font-bold shadow-sm"
                     >
                         + New Meal
+                    </button>
+                    <button 
+                        onClick={() => onNavigateTool('meal-creator')}
+                        className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded hover:bg-blue-100 transition font-bold shadow-sm"
+                    >
+                        Open Tool
                     </button>
                 </div>
             </div>
@@ -214,12 +218,18 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                     <span className="text-3xl font-bold text-purple-600 mt-2 block">{plans.length}</span>
                     <p className="text-xs text-gray-500">Saved Plans</p>
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 text-xs">
                      <button 
                         onClick={() => onNavigateTool('meal-planner', undefined, 'new')}
-                        className="text-sm bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition font-bold shadow-sm"
+                        className="bg-purple-600 text-white px-3 py-1.5 rounded hover:bg-purple-700 transition font-bold shadow-sm"
                     >
                         + New Plan
+                    </button>
+                    <button 
+                        onClick={() => onNavigateTool('meal-planner')}
+                        className="bg-purple-50 text-purple-600 px-3 py-1.5 rounded hover:bg-purple-100 transition font-bold shadow-sm"
+                    >
+                        Open Tool
                     </button>
                 </div>
             </div>
@@ -287,12 +297,18 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                         <span className="text-3xl font-bold text-green-600 mt-2 block">{clientsError ? '-' : clients.length}</span>
                         <p className="text-xs text-gray-500">Total Clients</p>
                     </div>
-                     <div className="flex flex-col gap-2">
+                     <div className="flex flex-col gap-2 text-xs">
                         <button 
                             onClick={() => onNavigateTool('client-manager', undefined, 'new')}
-                            className="text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-bold shadow-sm"
+                            className="bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 transition font-bold shadow-sm"
                         >
                              + New Client
+                        </button>
+                        <button 
+                            onClick={() => onNavigateTool('client-manager')}
+                            className="bg-green-50 text-green-600 px-3 py-1.5 rounded hover:bg-green-100 transition font-bold shadow-sm"
+                        >
+                             Open Tool
                         </button>
                      </div>
                 </div>
@@ -334,7 +350,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                                     onClick={() => onNavigateTool('client-manager')}
                                     className="w-full py-2 text-center text-sm text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition font-medium"
                                  >
-                                     See {clients.length - 3} more...
+                                     See More...
                                  </button>
                             )}
                         </>
