@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.66",
-  "description": "Updates: Dashboard cards rearranged (Clients -> Planner -> Creator), Date format standardized to dd/mm/yyyy in Client History.",
+  "name": "Diet-Nova v2.0.67",
+  "description": "Updates: Date inputs standardized to dd/mm/yyyy format (via en-GB locale), Version bump.",
   "requestFramePermissions": []
 }
