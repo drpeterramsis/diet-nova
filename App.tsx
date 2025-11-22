@@ -220,6 +220,10 @@ const AppContent = () => {
      }
   };
 
+  const handleOpenCalculator = () => {
+      setActiveTool('kcal');
+  };
+
   const showKcal = activeTool === 'kcal';
   const showPlanner = activeTool === 'meal-planner';
   const isComplexFlow = showKcal || showPlanner;
@@ -277,6 +281,7 @@ const AppContent = () => {
                   <MealPlanner 
                     initialTargetKcal={plannedKcal} 
                     onBack={previousTool === 'kcal' ? handleBackToCalculator : undefined}
+                    onOpenCalculator={handleOpenCalculator}
                     initialLoadId={activeTool === 'meal-planner' ? selectedLoadId : null}
                     autoOpenLoad={autoOpenLoad}
                     autoOpenNew={autoOpenNew}

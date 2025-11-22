@@ -51,13 +51,22 @@ const TargetKcalInput: React.FC<TargetKcalInputProps> = ({ value, onChange, labe
 interface MealPlannerProps {
   initialTargetKcal?: number;
   onBack?: () => void;
+  onOpenCalculator?: () => void;
   initialLoadId?: string | null;
   autoOpenLoad?: boolean;
   autoOpenNew?: boolean;
   activeVisit?: { client: Client, visit: ClientVisit } | null;
 }
 
-export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, initialLoadId, autoOpenLoad, autoOpenNew, activeVisit }) => {
+export const MealPlanner: React.FC<MealPlannerProps> = ({ 
+    initialTargetKcal, 
+    onBack, 
+    onOpenCalculator,
+    initialLoadId, 
+    autoOpenLoad, 
+    autoOpenNew, 
+    activeVisit 
+}) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both'>('calculator');
@@ -396,6 +405,16 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                   </p>
               </div>
               <div className="flex items-center gap-3">
+                  {/* New Button */}
+                  {onOpenCalculator && (
+                      <button 
+                          onClick={onOpenCalculator}
+                          className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg shadow font-bold transition flex items-center gap-2"
+                      >
+                          <span>🔥</span> Kcal Calc
+                      </button>
+                  )}
+
                   <button 
                     onClick={handleSaveToVisit}
                     className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg shadow font-bold transition flex items-center gap-2"

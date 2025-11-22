@@ -20,6 +20,13 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
   const [plans, setPlans] = useState<SavedMeal[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsError, setClientsError] = useState(false);
+  
+  // Collapsible state for sections
+  const [expanded, setExpanded] = useState({
+      clients: true,
+      plans: true,
+      meals: true
+  });
 
   const isDoctor = profile?.role === 'doctor';
 
@@ -82,6 +89,10 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
     setLoading(false);
   };
 
+  const toggleSection = (section: keyof typeof expanded) => {
+      setExpanded(prev => ({...prev, [section]: !prev[section]}));
+  };
+
   const deleteItem = async (id: string, type: 'meal' | 'plan') => {
     if (!window.confirm(t.common.delete + "?")) return;
     try {
@@ -137,18 +148,31 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
         </div>
       </div>
 
-      <div className={`grid grid-cols-1 ${isDoctor ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-8`}>
+      <div className={`grid grid-cols-1 ${isDoctor ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-8 items-start`}>
         
         {/* 1. Assigned Clients Section (Doctor Only) */}
         {isDoctor && (
-             <div className="card bg-white shadow-lg flex flex-col h-full border-t-4 border-green-500">
-                <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                            <span>👥</span> {t.clients.title}
-                        </h2>
-                        <span className="text-3xl font-bold text-green-600 mt-2 block">{clientsError ? '-' : clients.length}</span>
-                        <p className="text-xs text-gray-500">Total Clients</p>
+             <div className="card bg-white shadow-lg flex flex-col border-t-4 border-green-500 transition-all duration-300">
+                <div className={`flex justify-between items-start ${expanded.clients ? 'mb-6 border-b border-gray-100 pb-4' : 'mb-0'}`}>
+                    <div className="flex items-start gap-3">
+                        <button 
+                           onClick={() => toggleSection('clients')}
+                           className="mt-1 text-gray-400 hover:text-green-600 transition focus:outline-none"
+                           title={expanded.clients ? "Collapse" : "Expand"}
+                        >
+                           {expanded.clients ? (
+                               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                           ) : (
+                               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                           )}
+                        </button>
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 cursor-pointer" onClick={() => toggleSection('clients')}>
+                                <span>👥</span> {t.clients.title}
+                            </h2>
+                            <span className="text-3xl font-bold text-green-600 mt-2 block">{clientsError ? '-' : clients.length}</span>
+                            {expanded.clients && <p className="text-xs text-gray-500">Total Clients</p>}
+                        </div>
                     </div>
                      <div className="flex flex-col gap-2 text-xs">
                         <button 
@@ -166,61 +190,76 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                      </div>
                 </div>
 
-                <div className="space-y-3 flex-grow">
-                    {clientsError ? (
-                        <div className="text-center py-8 text-red-400 bg-red-50 rounded-lg border border-dashed border-red-200 text-sm p-4">
-                             <p className="font-bold">Table 'clients' not found.</p>
-                             <p className="text-xs mt-1">Please check database configuration.</p>
-                        </div>
-                    ) : clients.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                            {t.clients.noClients}
-                        </div>
-                    ) : (
-                        <>
-                            {clients.slice(0, 3).map(client => (
-                                <div key={client.id} className="p-4 border border-gray-100 rounded-xl hover:border-green-200 hover:shadow-sm transition group bg-white">
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <h3 className="font-bold text-gray-800 group-hover:text-green-600 transition">{client.full_name}</h3>
-                                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                                                <span>📍</span> {client.clinic}
-                                                <span className="mx-1">•</span>
-                                                <span>{formatDate(client.visit_date)}</span>
-                                            </p>
+                {expanded.clients && (
+                    <div className="space-y-3 flex-grow animate-fade-in">
+                        {clientsError ? (
+                            <div className="text-center py-8 text-red-400 bg-red-50 rounded-lg border border-dashed border-red-200 text-sm p-4">
+                                <p className="font-bold">Table 'clients' not found.</p>
+                                <p className="text-xs mt-1">Please check database configuration.</p>
+                            </div>
+                        ) : clients.length === 0 ? (
+                            <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                {t.clients.noClients}
+                            </div>
+                        ) : (
+                            <>
+                                {clients.slice(0, 3).map(client => (
+                                    <div key={client.id} className="p-4 border border-gray-100 rounded-xl hover:border-green-200 hover:shadow-sm transition group bg-white">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <h3 className="font-bold text-gray-800 group-hover:text-green-600 transition">{client.full_name}</h3>
+                                                <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                                    <span>📍</span> {client.clinic}
+                                                    <span className="mx-1">•</span>
+                                                    <span>{formatDate(client.visit_date)}</span>
+                                                </p>
+                                            </div>
+                                            <button 
+                                                onClick={() => onNavigateTool('client-manager', client.id)}
+                                                className="px-3 py-1.5 bg-green-50 text-green-600 text-xs font-medium rounded hover:bg-green-100 transition"
+                                            >
+                                                View
+                                            </button>
                                         </div>
-                                        <button 
-                                            onClick={() => onNavigateTool('client-manager', client.id)}
-                                            className="px-3 py-1.5 bg-green-50 text-green-600 text-xs font-medium rounded hover:bg-green-100 transition"
-                                        >
-                                            View
-                                        </button>
                                     </div>
-                                </div>
-                            ))}
-                             {clients.length > 3 && (
-                                 <button 
-                                    onClick={() => onNavigateTool('client-manager')}
-                                    className="w-full py-2 text-center text-sm text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition font-medium"
-                                 >
-                                     See More...
-                                 </button>
-                            )}
-                        </>
-                    )}
-                </div>
+                                ))}
+                                {clients.length > 3 && (
+                                    <button 
+                                        onClick={() => onNavigateTool('client-manager')}
+                                        className="w-full py-2 text-center text-sm text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition font-medium"
+                                    >
+                                        See More...
+                                    </button>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
         )}
 
         {/* 2. Saved Plans Section */}
-        <div className="card bg-white shadow-lg flex flex-col h-full border-t-4 border-purple-500">
-             <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <span>📅</span> {t.tools.mealPlanner.title}
-                    </h2>
-                    <span className="text-3xl font-bold text-purple-600 mt-2 block">{plans.length}</span>
-                    <p className="text-xs text-gray-500">Saved Plans</p>
+        <div className="card bg-white shadow-lg flex flex-col border-t-4 border-purple-500 transition-all duration-300">
+             <div className={`flex justify-between items-start ${expanded.plans ? 'mb-6 border-b border-gray-100 pb-4' : 'mb-0'}`}>
+                <div className="flex items-start gap-3">
+                     <button 
+                        onClick={() => toggleSection('plans')}
+                        className="mt-1 text-gray-400 hover:text-purple-600 transition focus:outline-none"
+                        title={expanded.plans ? "Collapse" : "Expand"}
+                     >
+                        {expanded.plans ? (
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        ) : (
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                        )}
+                     </button>
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 cursor-pointer" onClick={() => toggleSection('plans')}>
+                            <span>📅</span> {t.tools.mealPlanner.title}
+                        </h2>
+                        <span className="text-3xl font-bold text-purple-600 mt-2 block">{plans.length}</span>
+                        {expanded.plans && <p className="text-xs text-gray-500">Saved Plans</p>}
+                    </div>
                 </div>
                 <div className="flex flex-col gap-2 text-xs">
                      <button 
@@ -238,67 +277,82 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                 </div>
             </div>
 
-            <div className="space-y-3 flex-grow">
-                {plans.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                        No saved plans yet.
-                    </div>
-                ) : (
-                    <>
-                        {plans.slice(0, 3).map(plan => (
-                            <div key={plan.id} className="p-4 border border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-sm transition group bg-white">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="font-bold text-gray-800 group-hover:text-purple-600 transition">{plan.name}</h3>
-                                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                                            <span>🕒</span> {formatDate(plan.created_at)}
-                                            {plan.data?.targetKcal > 0 && (
-                                                <>
-                                                    <span className="mx-1">•</span>
-                                                    <span className="text-green-600 font-medium">{plan.data.targetKcal} kcal</span>
-                                                </>
-                                            )}
-                                        </p>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button 
-                                            onClick={() => onNavigateTool('meal-planner', plan.id)}
-                                            className="px-3 py-1.5 bg-purple-50 text-purple-600 text-xs font-medium rounded hover:bg-purple-100 transition"
-                                        >
-                                            {t.common.open}
-                                        </button>
-                                        <button 
-                                            onClick={() => deleteItem(plan.id, 'plan')}
-                                            className="px-3 py-1.5 bg-red-50 text-red-500 text-xs font-medium rounded hover:bg-red-100 transition"
-                                        >
-                                            ✕
-                                        </button>
+            {expanded.plans && (
+                <div className="space-y-3 flex-grow animate-fade-in">
+                    {plans.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                            No saved plans yet.
+                        </div>
+                    ) : (
+                        <>
+                            {plans.slice(0, 3).map(plan => (
+                                <div key={plan.id} className="p-4 border border-gray-100 rounded-xl hover:border-purple-200 hover:shadow-sm transition group bg-white">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-bold text-gray-800 group-hover:text-purple-600 transition">{plan.name}</h3>
+                                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                                <span>🕒</span> {formatDate(plan.created_at)}
+                                                {plan.data?.targetKcal > 0 && (
+                                                    <>
+                                                        <span className="mx-1">•</span>
+                                                        <span className="text-green-600 font-medium">{plan.data.targetKcal} kcal</span>
+                                                    </>
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => onNavigateTool('meal-planner', plan.id)}
+                                                className="px-3 py-1.5 bg-purple-50 text-purple-600 text-xs font-medium rounded hover:bg-purple-100 transition"
+                                            >
+                                                {t.common.open}
+                                            </button>
+                                            <button 
+                                                onClick={() => deleteItem(plan.id, 'plan')}
+                                                className="px-3 py-1.5 bg-red-50 text-red-500 text-xs font-medium rounded hover:bg-red-100 transition"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                        {plans.length > 3 && (
-                             <button 
-                                onClick={() => onNavigateTool('meal-planner', undefined, 'load')}
-                                className="w-full py-2 text-center text-sm text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition font-medium"
-                             >
-                                 See More & Load...
-                             </button>
-                        )}
-                    </>
-                )}
-            </div>
+                            ))}
+                            {plans.length > 3 && (
+                                <button 
+                                    onClick={() => onNavigateTool('meal-planner', undefined, 'load')}
+                                    className="w-full py-2 text-center text-sm text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded-lg transition font-medium"
+                                >
+                                    See More & Load...
+                                </button>
+                            )}
+                        </>
+                    )}
+                </div>
+            )}
         </div>
         
         {/* 3. Saved Meals Section */}
-        <div className="card bg-white shadow-lg flex flex-col h-full border-t-4 border-blue-500">
-            <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <span>🥗</span> {t.tools.mealCreator.title}
-                    </h2>
-                    <span className="text-3xl font-bold text-blue-600 mt-2 block">{meals.length}</span>
-                    <p className="text-xs text-gray-500">Saved Meals</p>
+        <div className="card bg-white shadow-lg flex flex-col border-t-4 border-blue-500 transition-all duration-300">
+            <div className={`flex justify-between items-start ${expanded.meals ? 'mb-6 border-b border-gray-100 pb-4' : 'mb-0'}`}>
+                <div className="flex items-start gap-3">
+                    <button 
+                        onClick={() => toggleSection('meals')}
+                        className="mt-1 text-gray-400 hover:text-blue-600 transition focus:outline-none"
+                        title={expanded.meals ? "Collapse" : "Expand"}
+                    >
+                        {expanded.meals ? (
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        ) : (
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                        )}
+                    </button>
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2 cursor-pointer" onClick={() => toggleSection('meals')}>
+                            <span>🥗</span> {t.tools.mealCreator.title}
+                        </h2>
+                        <span className="text-3xl font-bold text-blue-600 mt-2 block">{meals.length}</span>
+                        {expanded.meals && <p className="text-xs text-gray-500">Saved Meals</p>}
+                    </div>
                 </div>
                 <div className="flex flex-col gap-2 text-xs">
                      <button 
@@ -316,52 +370,54 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                 </div>
             </div>
             
-            <div className="space-y-3 flex-grow">
-                {meals.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                        No saved meals yet.
-                    </div>
-                ) : (
-                    <>
-                        {meals.slice(0, 3).map(meal => (
-                            <div key={meal.id} className="p-4 border border-gray-100 rounded-xl hover:border-blue-200 hover:shadow-sm transition group bg-white">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="font-bold text-gray-800 group-hover:text-blue-600 transition">{meal.name}</h3>
-                                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                                            <span>🕒</span> {formatDate(meal.created_at)}
-                                            <span className="mx-1">•</span>
-                                            <span>{meal.data?.addedFoods?.length || 0} items</span>
-                                        </p>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button 
-                                            onClick={() => onNavigateTool('meal-creator', meal.id)}
-                                            className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded hover:bg-blue-100 transition"
-                                        >
-                                            {t.common.open}
-                                        </button>
-                                        <button 
-                                            onClick={() => deleteItem(meal.id, 'meal')}
-                                            className="px-3 py-1.5 bg-red-50 text-red-500 text-xs font-medium rounded hover:bg-red-100 transition"
-                                        >
-                                            ✕
-                                        </button>
+            {expanded.meals && (
+                <div className="space-y-3 flex-grow animate-fade-in">
+                    {meals.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                            No saved meals yet.
+                        </div>
+                    ) : (
+                        <>
+                            {meals.slice(0, 3).map(meal => (
+                                <div key={meal.id} className="p-4 border border-gray-100 rounded-xl hover:border-blue-200 hover:shadow-sm transition group bg-white">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-bold text-gray-800 group-hover:text-blue-600 transition">{meal.name}</h3>
+                                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                                <span>🕒</span> {formatDate(meal.created_at)}
+                                                <span className="mx-1">•</span>
+                                                <span>{meal.data?.addedFoods?.length || 0} items</span>
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button 
+                                                onClick={() => onNavigateTool('meal-creator', meal.id)}
+                                                className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded hover:bg-blue-100 transition"
+                                            >
+                                                {t.common.open}
+                                            </button>
+                                            <button 
+                                                onClick={() => deleteItem(meal.id, 'meal')}
+                                                className="px-3 py-1.5 bg-red-50 text-red-500 text-xs font-medium rounded hover:bg-red-100 transition"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                        {meals.length > 3 && (
-                             <button 
-                                onClick={() => onNavigateTool('meal-creator', undefined, 'load')}
-                                className="w-full py-2 text-center text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition font-medium"
-                             >
-                                 See More & Load...
-                             </button>
-                        )}
-                    </>
-                )}
-            </div>
+                            ))}
+                            {meals.length > 3 && (
+                                <button 
+                                    onClick={() => onNavigateTool('meal-creator', undefined, 'load')}
+                                    className="w-full py-2 text-center text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition font-medium"
+                                >
+                                    See More & Load...
+                                </button>
+                            )}
+                        </>
+                    )}
+                </div>
+            )}
         </div>
 
       </div>
