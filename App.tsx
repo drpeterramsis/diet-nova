@@ -201,6 +201,11 @@ const AppContent = () => {
       setActiveTool('kcal');
   };
 
+  const handlePlanMealsForClient = (client: Client, visit: ClientVisit) => {
+      setCurrentVisit({ client, visit });
+      setActiveTool('meal-planner');
+  };
+
   const handleBackToCalculator = () => {
     if (previousTool) {
       setActiveTool(previousTool);
@@ -234,9 +239,9 @@ const AppContent = () => {
                   </span>
                   {t.common.backHome}
                 </button>
-                {currentVisit && showKcal && (
+                {currentVisit && isComplexFlow && (
                     <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-xs font-bold shadow-sm flex items-center gap-2">
-                         <span>👥 Analyzing: {currentVisit.client.full_name}</span>
+                         <span>👥 Client Mode: {currentVisit.client.full_name}</span>
                          <span className="hidden sm:inline text-gray-400">|</span>
                          <span className="hidden sm:inline">{new Date(currentVisit.visit.visit_date).toLocaleDateString()}</span>
                     </div>
@@ -260,6 +265,7 @@ const AppContent = () => {
                     initialLoadId={activeTool === 'meal-planner' ? selectedLoadId : null}
                     autoOpenLoad={autoOpenLoad}
                     autoOpenNew={autoOpenNew}
+                    activeVisit={currentVisit} // Pass visit context
                   />
                 </div>
               </>
@@ -279,6 +285,7 @@ const AppContent = () => {
                 <ClientManager 
                     initialClientId={selectedLoadId} 
                     onAnalyzeInKcal={handleAnalyzeClient}
+                    onPlanMeals={handlePlanMealsForClient}
                     autoOpenNew={autoOpenNew}
                 />
             )}

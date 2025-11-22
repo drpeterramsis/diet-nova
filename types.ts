@@ -55,6 +55,7 @@ export interface ClientVisit {
   bmi?: number; // New
   notes?: string;
   kcal_data?: any; // JSON for saved calculator state
+  meal_plan_data?: any; // JSON for saved meal plan state
   created_at: string;
 }
 

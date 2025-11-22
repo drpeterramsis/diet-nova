@@ -10,21 +10,24 @@ import Loading from '../Loading';
 interface ClientManagerProps {
   initialClientId?: string | null;
   onAnalyzeInKcal?: (client: Client, visit: ClientVisit) => void;
+  onPlanMeals?: (client: Client, visit: ClientVisit) => void;
   autoOpenNew?: boolean;
 }
 
 type SortOption = 'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'clinic';
 type GroupOption = 'none' | 'clinic' | 'month';
 
-// Updated Tags with Emojis
-const QUICK_TAGS = [
-    "🚬 Smoking", "☕ Caffeine", "💧 Water Intake", 
-    "😴 Sleep Apnea", "🍔 Fast Food", "🍬 High Sugar", 
-    "🥤 Soda", "🛋️ Sedentary", "🏃 Active", 
-    "🥗 Vegetarian", "🏥 Surgery", "💊 Meds"
-];
+// Updated Categorized Tags with Emojis
+const TAG_CATEGORIES = {
+    "Anthropometry": ["Weight Gain 📈", "Weight Loss 📉", "Stunted Growth 📏"],
+    "Special Conditions": ["Post-Op 🏥", "Bedridden 🛏️", "Wheelchair ♿", "Sedentary 🛋️", "Active 🏃", "Athlete 🏋️"],
+    "Daily Habits": ["Smoker 🚬", "High Caffeine ☕", "Low Water Intake 💧", "High Sugar 🍬", "Soda Drinker 🥤", "Fast Food 🍔", "Sleep Apnea 😴", "Insomnia 🌑"],
+    "Medical History": ["Diabetes 🩸", "Hypertension 💓", "CVS Disease ❤️", "GIT Issues 🤢", "Pulmonary 🫁", "Renal 🦠", "Endocrine 🦋", "Food Allergies 🥜"],
+    "Family History": ["Family Obesity 👨‍👩‍👧", "Family Diabetes 🩸", "Family CVS ❤️"],
+    "Female Only": ["PCOS 🌸", "Pregnancy 🤰", "Lactation 🤱", "Menopause 🥀", "Contraceptives 💊", "Irregular Cycle 🗓️"]
+};
 
-const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal, autoOpenNew }) => {
+const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal, onPlanMeals, autoOpenNew }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   
@@ -44,6 +47,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'visits'>('profile');
   const [noJob, setNoJob] = useState(false);
+  
+  // Tags UI
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   // Unique Clinics
   const uniqueClinics = useMemo(() => {
@@ -118,9 +124,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       notes: ''
   });
 
-  // Edit Visit State
-  const [editingVisit, setEditingVisit] = useState<ClientVisit | null>(null);
-
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -172,6 +175,26 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       }
   }, [noJob]);
 
+  // Auto-Fill New Visit Data from History
+  useEffect(() => {
+      if (activeTab === 'visits' && editingClient) {
+          // Find the latest data point to prefill
+          // 1. Check latest visit in state
+          // 2. Fallback to profile data
+          const lastVisit = visits.length > 0 ? visits[0] : null;
+          
+          setNewVisitData(prev => ({
+              ...prev,
+              weight: lastVisit?.weight || editingClient.weight || '',
+              height: lastVisit?.height || editingClient.height || '',
+              waist: lastVisit?.waist || editingClient.waist || '',
+              hip: lastVisit?.hip || editingClient.hip || '',
+              miac: lastVisit?.miac || editingClient.miac || '',
+              notes: ''
+          }));
+      }
+  }, [activeTab, visits, editingClient]);
+
   const generateCode = (name: string) => {
       if (!name) return '';
       const initials = name.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 3);
@@ -209,7 +232,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
   const fetchVisits = async (clientId: string) => {
       setLoadingVisits(true);
-      setEditingVisit(null);
       try {
           const { data, error } = await supabase
             .from('client_visits')
@@ -219,20 +241,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
           
           if (data) {
               setVisits(data);
-              
-              // Pre-fill new visit data with latest anthropometrics
-              if (data.length > 0) {
-                  const last = data[0];
-                  setNewVisitData(prev => ({
-                      ...prev,
-                      weight: last.weight || '',
-                      height: last.height || '',
-                      waist: last.waist || '',
-                      hip: last.hip || '',
-                      miac: last.miac || '',
-                      notes: '' // notes usually clear
-                  }));
-              }
           }
       } catch (err) {
           console.error("Error fetching visits:", err);
@@ -285,7 +293,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const handleOpenModal = (client?: Client) => {
     setFormError('');
     setActiveTab('profile');
-    setEditingVisit(null);
+    setExpandedCategory(null);
     
     if (client) {
       setEditingClient(client);
@@ -303,7 +311,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         marital_status: client.marital_status || 'single',
         kids_count: client.kids_count !== undefined ? client.kids_count : '',
         job: client.job || '',
-        // Only used for new client creation, viewing client uses visits tab for this
         weight: client.weight || '',
         height: client.height || '',
         waist: client.waist || '',
@@ -339,6 +346,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   };
 
   const addTag = (tag: string) => {
+      // Avoid duplicates
+      if (formData.notes.includes(tag)) return;
       setFormData(prev => ({
           ...prev,
           notes: (prev.notes ? prev.notes + '\n' : '') + `• ${tag}`
@@ -458,7 +467,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                        setEditingClient(updatedClient);
                    }
               }
-              // Reset only notes, keep anthro for next entry usually
+              // Reset only notes
               setNewVisitData(prev => ({ ...prev, notes: '' }));
           }
       } catch (err: any) {
@@ -495,6 +504,12 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       onAnalyzeInKcal(editingClient, visit);
       setShowModal(false);
   };
+
+  const openMealPlanForVisit = (visit: ClientVisit) => {
+      if (!editingClient || !onPlanMeals) return;
+      onPlanMeals(editingClient, visit);
+      setShowModal(false);
+  }
 
   return (
     <div className="max-w-7xl mx-auto animate-fade-in space-y-6 pb-12">
@@ -845,21 +860,45 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                              </div>
                         </div>
                         
+                        {/* Categorized Tags */}
                         <div>
                              <label className="block text-xs font-bold text-gray-500 mb-2">Medical Notes & History</label>
                              
-                             {/* Quick Tags */}
-                             <div className="flex flex-wrap gap-2 mb-2">
-                                 {QUICK_TAGS.map(tag => (
-                                     <button
-                                        key={tag}
-                                        type="button"
-                                        onClick={() => addTag(tag)}
-                                        className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded border border-gray-200 transition"
-                                     >
-                                         + {tag}
-                                     </button>
-                                 ))}
+                             <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 mb-4">
+                                {Object.entries(TAG_CATEGORIES).map(([category, tags]) => {
+                                    // Skip Female Only if gender is Male
+                                    if (category === "Female Only" && formData.gender === "male") return null;
+                                    
+                                    const isExpanded = expandedCategory === category;
+
+                                    return (
+                                        <div key={category} className="bg-white">
+                                            <button 
+                                                type="button"
+                                                onClick={() => setExpandedCategory(isExpanded ? null : category)}
+                                                className="w-full px-4 py-2 text-left flex justify-between items-center hover:bg-gray-50 transition"
+                                            >
+                                                <span className="text-sm font-medium text-gray-700">{category}</span>
+                                                <span className="text-gray-400">{isExpanded ? '▲' : '▼'}</span>
+                                            </button>
+                                            
+                                            {isExpanded && (
+                                                <div className="px-4 pb-3 pt-1 flex flex-wrap gap-2 animate-fade-in bg-gray-50/50">
+                                                    {tags.map(tag => (
+                                                        <button
+                                                            key={tag}
+                                                            type="button"
+                                                            onClick={() => addTag(tag)}
+                                                            className="px-2 py-1 bg-white hover:bg-blue-50 text-gray-700 text-xs rounded border border-gray-200 hover:border-blue-300 transition shadow-sm"
+                                                        >
+                                                            + {tag}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                              </div>
 
                              <textarea 
@@ -880,6 +919,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                         {/* Add New Visit Form */}
                         <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
                             <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase">Record New Follow-up</h4>
+                            <div className="text-xs text-blue-600 mb-2 opacity-80">
+                                * Data auto-filled from previous visit ({visits.length > 0 ? new Date(visits[0].visit_date).toLocaleDateString() : 'Profile'}). Adjust as needed.
+                            </div>
                             <form onSubmit={handleAddVisit} className="space-y-3">
                                 <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                                      <div className="md:col-span-2">
@@ -960,7 +1002,13 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                     onClick={() => openKcalForVisit(visit)}
                                                     className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold hover:bg-green-200 flex items-center gap-1"
                                                   >
-                                                      <span>🧮</span> Kcal Calc
+                                                      <span>🔥</span> Kcal
+                                                  </button>
+                                                  <button 
+                                                    onClick={() => openMealPlanForVisit(visit)}
+                                                    className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-bold hover:bg-purple-200 flex items-center gap-1"
+                                                  >
+                                                      <span>📅</span> Plan
                                                   </button>
                                                   <button onClick={() => handleDeleteVisit(visit.id)} className="text-red-400 hover:text-red-600 px-2">×</button>
                                              </div>

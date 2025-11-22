@@ -5,7 +5,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { ProgressBar, MacroDonut } from '../Visuals';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { SavedMeal } from '../../types';
+import { SavedMeal, Client, ClientVisit } from '../../types';
 
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
   starch: { cho: 15, pro: 3, fat: 0, kcal: 80 },
@@ -55,9 +55,10 @@ interface MealPlannerProps {
   initialLoadId?: string | null;
   autoOpenLoad?: boolean;
   autoOpenNew?: boolean;
+  activeVisit?: { client: Client, visit: ClientVisit } | null;
 }
 
-const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, initialLoadId, autoOpenLoad, autoOpenNew }) => {
+const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, initialLoadId, autoOpenLoad, autoOpenNew, activeVisit }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both'>('calculator');
@@ -119,6 +120,18 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
       };
       autoLoad();
   }, [initialLoadId, session]);
+
+  // --- Hydrate from Visit Data (if activeVisit exists) ---
+  useEffect(() => {
+      if (activeVisit?.visit.meal_plan_data) {
+          const data = activeVisit.visit.meal_plan_data;
+          if (data.servings) setServings(data.servings);
+          if (data.distribution) setDistribution(data.distribution);
+          if (data.targetKcal) setTargetKcal(data.targetKcal);
+          if (data.manualGm) setManualGm(data.manualGm);
+          if (data.manualPerc) setManualPerc(data.manualPerc);
+      }
+  }, [activeVisit]);
 
   // Handle Auto Open
   useEffect(() => {
@@ -295,6 +308,33 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
       }
   };
 
+  const handleSaveToVisit = async () => {
+      if (!activeVisit) return;
+      setStatusMsg('Saving to Client Visit...');
+
+      const planData = {
+          servings,
+          distribution,
+          targetKcal,
+          manualGm,
+          manualPerc
+      };
+
+      try {
+          const { error } = await supabase
+            .from('client_visits')
+            .update({ meal_plan_data: planData })
+            .eq('id', activeVisit.visit.id);
+
+          if (error) throw error;
+          setStatusMsg('Saved to Client Visit Record!');
+          setTimeout(() => setStatusMsg(''), 3000);
+      } catch (err: any) {
+          console.error(err);
+          setStatusMsg('Error Saving to Visit: ' + err.message);
+      }
+  };
+
   const loadPlan = (plan: SavedMeal) => {
       if (!plan.data) return;
       // Ensure we replace state completely
@@ -343,6 +383,30 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
   return (
     <div className="max-w-[1920px] mx-auto animate-fade-in">
       
+      {/* Active Visit Toolbar */}
+      {activeVisit && (
+          <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm no-print">
+              <div>
+                  <h3 className="font-bold text-purple-800 text-lg">
+                     Client: {activeVisit.client.full_name}
+                  </h3>
+                  <p className="text-sm text-purple-600 flex flex-wrap gap-3">
+                     <span>Visit Date: {new Date(activeVisit.visit.visit_date).toLocaleDateString()}</span>
+                     <span>•</span>
+                     <span>Clinic: {activeVisit.client.clinic || 'N/A'}</span>
+                  </p>
+              </div>
+              <div className="flex items-center gap-3">
+                  <button 
+                    onClick={handleSaveToVisit}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg shadow font-bold transition flex items-center gap-2"
+                  >
+                      <span>💾</span> Save to Visit
+                  </button>
+              </div>
+          </div>
+      )}
+
       {/* Top Control Bar (Static, Non-Floating) */}
       <div className="relative flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 gap-4 no-print">
         <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
@@ -353,7 +417,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
            )}
            <h1 className="text-2xl font-bold text-[var(--color-heading)] hidden xl:block whitespace-nowrap">{t.tools.mealPlanner.title}</h1>
            
-           {/* Plan Name Input */}
+           {/* Plan Name Input - Disable in Visit Mode if preferred, but keeping enabled allows template saving */}
            <div className="relative flex-grow md:flex-grow-0">
                 <input 
                     type="text"
@@ -387,7 +451,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
                 <button 
                     onClick={() => savePlan()}
                     className="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm"
-                    title={t.common.save}
+                    title={t.common.save + " (As Template)"}
                 >
                     <span className="text-xl">💾</span>
                 </button>
@@ -397,7 +461,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, in
                         setShowLoadModal(true);
                     }}
                     className="bg-purple-500 hover:bg-purple-600 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm"
-                    title={t.common.load}
+                    title={t.common.load + " (Template)"}
                 >
                     <span className="text-xl">📂</span>
                 </button>
