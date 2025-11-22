@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,12 +9,19 @@ import Loading from '../Loading';
 
 interface ClientManagerProps {
   initialClientId?: string | null;
+  onAnalyzeInKcal?: (client: Client, latestWeight?: number) => void;
 }
 
 type SortOption = 'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'clinic';
 type GroupOption = 'none' | 'clinic' | 'month';
 
-const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
+const QUICK_TAGS = [
+    "Smoking", "Caffeine", "Water Intake: Low", "Water Intake: High",
+    "Sleep Apnea", "Fast Food", "Added Sugar: High", "Soda",
+    "Sedentary", "Active", "Vegetarian", "Previous Surgery"
+];
+
+const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   
@@ -30,7 +39,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
   
   const [showModal, setShowModal] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [isViewMode, setIsViewMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'visits'>('profile');
 
   // Unique Clinics for Autocomplete
@@ -41,21 +49,31 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
 
   // Form State (Client Profile)
   const [formData, setFormData] = useState<{
+    client_code: string;
     full_name: string;
     visit_date: string;
+    dob: string;
     clinic: string;
     phone: string;
     notes: string;
     age: number | '';
     gender: 'male' | 'female';
+    marital_status: string;
+    kids_count: number | '';
+    job: string;
   }>({
+    client_code: '',
     full_name: '',
     visit_date: new Date().toISOString().split('T')[0],
+    dob: '',
     clinic: '',
     phone: '',
     notes: '',
     age: '',
-    gender: 'male'
+    gender: 'male',
+    marital_status: 'single',
+    kids_count: '',
+    job: ''
   });
   
   // Form State (New Visit)
@@ -84,10 +102,38 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
       if (initialClientId && clients.length > 0 && !showModal) {
           const targetClient = clients.find(c => c.id === initialClientId);
           if (targetClient) {
-              handleOpenModal(targetClient, true);
+              handleOpenModal(targetClient);
           }
       }
   }, [initialClientId, clients]);
+
+  // DOB / Age Calculation Logic
+  useEffect(() => {
+      if (formData.dob) {
+          const birth = new Date(formData.dob);
+          const visit = new Date(formData.visit_date);
+          if (!isNaN(birth.getTime()) && !isNaN(visit.getTime())) {
+              let years = visit.getFullYear() - birth.getFullYear();
+              const m = visit.getMonth() - birth.getMonth();
+              if (m < 0 || (m === 0 && visit.getDate() < birth.getDate())) {
+                  years--;
+              }
+              const calculatedAge = Math.max(0, years);
+              if (formData.age !== calculatedAge) {
+                 setFormData(prev => ({ ...prev, age: calculatedAge }));
+              }
+          }
+      }
+  }, [formData.dob, formData.visit_date]);
+  
+  // Auto-generate client code
+  const generateCode = (name: string) => {
+      if (!name) return '';
+      const initials = name.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 3);
+      const random = Math.floor(1000 + Math.random() * 9000);
+      const year = new Date().getFullYear().toString().slice(-2);
+      return `${initials}-${year}-${random}`;
+  };
 
   const fetchClients = async () => {
     if (!session) return;
@@ -153,7 +199,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
           list = list.filter(c => 
               c.full_name.toLowerCase().includes(q) || 
               c.clinic?.toLowerCase().includes(q) ||
-              c.phone?.includes(q)
+              c.phone?.includes(q) ||
+              c.client_code?.toLowerCase().includes(q)
           );
       }
 
@@ -193,7 +240,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
   }, [processedClients, groupBy]);
 
   // --- Modal Handlers ---
-  const handleOpenModal = (client?: Client, viewOnly: boolean = false) => {
+
+  const handleOpenModal = (client?: Client) => {
     setFormError('');
     setActiveTab('profile');
     setEditingVisit(null);
@@ -201,30 +249,46 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
     if (client) {
       setEditingClient(client);
       setFormData({
+        client_code: client.client_code || generateCode(client.full_name),
         full_name: client.full_name,
         visit_date: client.visit_date,
+        dob: client.dob || '',
         clinic: client.clinic || '',
         phone: client.phone || '',
         notes: client.notes || '',
-        age: client.age || '',
-        gender: client.gender || 'male'
+        age: client.age !== undefined ? client.age : '',
+        gender: client.gender || 'male',
+        marital_status: client.marital_status || 'single',
+        kids_count: client.kids_count !== undefined ? client.kids_count : '',
+        job: client.job || ''
       });
       fetchVisits(client.id);
     } else {
       setEditingClient(null);
       setVisits([]);
       setFormData({
+        client_code: '',
         full_name: '',
         visit_date: new Date().toISOString().split('T')[0],
+        dob: '',
         clinic: '',
         phone: '',
         notes: '',
         age: '',
-        gender: 'male'
+        gender: 'male',
+        marital_status: 'single',
+        kids_count: '',
+        job: ''
       });
     }
-    setIsViewMode(viewOnly);
     setShowModal(true);
+  };
+
+  const addTag = (tag: string) => {
+      setFormData(prev => ({
+          ...prev,
+          notes: (prev.notes ? prev.notes + '\n' : '') + `• ${tag}: `
+      }));
   };
 
   const handleSubmitProfile = async (e: React.FormEvent) => {
@@ -238,7 +302,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
       const payload = {
         doctor_id: session?.user.id,
         ...formData,
-        age: formData.age === '' ? null : Number(formData.age)
+        // Ensure numeric types are handled safely
+        age: formData.age === '' ? null : Number(formData.age),
+        kids_count: formData.kids_count === '' ? null : Number(formData.kids_count),
+        // If code is empty, generate one
+        client_code: formData.client_code || generateCode(formData.full_name)
       };
 
       let response;
@@ -267,11 +335,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
           setClients(prev => [response.data, ...prev]);
           setEditingClient(response.data);
         }
-        if (!editingClient) {
-             setIsViewMode(true);
-        } else {
-            setShowModal(false);
-        }
+        // Switch to visits tab after creating new client
+        if (!editingClient) setActiveTab('visits');
+        else setShowModal(false);
       }
     } catch (err: any) {
       setFormError(err.message || "Failed to save client.");
@@ -370,6 +436,18 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
     }
   };
 
+  // Analysis Handler
+  const triggerAnalysis = () => {
+      if (!editingClient || !onAnalyzeInKcal) return;
+      
+      // Find latest weight from visits
+      const latestVisit = visits.length > 0 ? visits[0] : null;
+      const weight = latestVisit?.weight || undefined;
+      
+      onAnalyzeInKcal(editingClient, weight);
+      setShowModal(false);
+  };
+
   return (
     <div className="max-w-7xl mx-auto animate-fade-in space-y-6 pb-12">
       
@@ -395,7 +473,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
          <div className="md:col-span-2 relative">
             <input 
             type="text"
-            placeholder={`${t.common.search} (Name, Clinic, Phone)`}
+            placeholder={`${t.common.search} (Name, Code, Clinic)`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             disabled={tableError}
@@ -463,6 +541,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
                                     <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
                                         <tr>
                                         <th className="p-4 text-left">{t.clients.name}</th>
+                                        <th className="p-4 text-center hidden md:table-cell">Code</th>
                                         <th className="p-4 text-center">{t.clients.visitDate}</th>
                                         <th className="p-4 text-center hidden sm:table-cell">{t.clients.clinic}</th>
                                         <th className="p-4 text-center">{t.common.actions}</th>
@@ -485,6 +564,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
                                                         {client.phone && <span>📞 {client.phone}</span>}
                                                     </div>
                                                 </td>
+                                                <td className="p-4 text-center hidden md:table-cell text-xs font-mono text-gray-500">
+                                                    {client.client_code || '-'}
+                                                </td>
                                                 <td className="p-4 text-center">
                                                     <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-mono">
                                                     {new Date(client.visit_date).toLocaleDateString()}
@@ -496,7 +578,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
                                                 <td className="p-4 text-center">
                                                     <div className="flex items-center justify-center gap-2">
                                                         <button 
-                                                        onClick={() => handleOpenModal(client, true)}
+                                                        onClick={() => handleOpenModal(client)}
                                                         className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
                                                         >
                                                         Open
@@ -562,38 +644,49 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
                 
                 {/* TAB: PROFILE */}
                 {activeTab === 'profile' && (
-                     <form id="clientForm" onSubmit={handleSubmitProfile} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                             <div className="md:col-span-2">
-                                 <label className="block text-sm font-medium text-gray-700 mb-1">{t.clients.name} *</label>
+                     <form id="clientForm" onSubmit={handleSubmitProfile} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                             <h3 className="md:col-span-2 font-bold text-gray-700 text-sm uppercase border-b pb-1 mb-1">Core Identity</h3>
+                             <div>
+                                 <label className="block text-xs font-bold text-gray-500 mb-1">{t.clients.name} *</label>
                                  <input 
                                     type="text" 
                                     required
                                     value={formData.full_name}
-                                    onChange={e => setFormData({...formData, full_name: e.target.value})}
-                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
-                                    placeholder="Client Full Name"
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        setFormData(prev => ({...prev, full_name: val, client_code: prev.client_code || generateCode(val)}));
+                                    }}
+                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
                                  />
                              </div>
-                             
                              <div>
-                                 <label className="block text-sm font-medium text-gray-700 mb-1">Last Visit Date *</label>
+                                 <label className="block text-xs font-bold text-gray-500 mb-1">Client Code (Auto)</label>
                                  <input 
-                                    type="date" 
-                                    required
-                                    value={formData.visit_date}
-                                    onChange={e => setFormData({...formData, visit_date: e.target.value})}
-                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                                    type="text" 
+                                    value={formData.client_code}
+                                    onChange={e => setFormData({...formData, client_code: e.target.value})}
+                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none font-mono bg-white"
                                  />
                              </div>
-                             
                              <div>
-                                 <label className="block text-sm font-medium text-gray-700 mb-1">{t.clients.phone}</label>
+                                 <label className="block text-xs font-bold text-gray-500 mb-1">Gender</label>
+                                 <select 
+                                    value={formData.gender}
+                                    onChange={e => setFormData({...formData, gender: e.target.value as 'male' | 'female'})}
+                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none bg-white"
+                                 >
+                                     <option value="male">{t.kcal.male}</option>
+                                     <option value="female">{t.kcal.female}</option>
+                                 </select>
+                             </div>
+                             <div>
+                                 <label className="block text-xs font-bold text-gray-500 mb-1">{t.clients.phone}</label>
                                  <input 
                                     type="text" 
                                     value={formData.phone}
                                     onChange={e => setFormData({...formData, phone: e.target.value})}
-                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
                                     dir="ltr"
                                     placeholder="+20..."
                                  />
@@ -601,53 +694,122 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                             <h3 className="md:col-span-3 font-bold text-gray-700 text-sm uppercase border-b pb-1 mt-2">Demographics</h3>
                              <div>
-                                 <label className="block text-sm font-medium text-gray-700 mb-1">{t.clients.age}</label>
+                                 <label className="block text-xs font-bold text-gray-500 mb-1">Date of Birth</label>
+                                 <input 
+                                    type="date" 
+                                    value={formData.dob}
+                                    onChange={e => setFormData({...formData, dob: e.target.value})}
+                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                                 />
+                             </div>
+                             <div>
+                                 <label className="block text-xs font-bold text-gray-500 mb-1">Age (Auto-calc)</label>
                                  <input 
                                     type="number" 
                                     value={formData.age}
                                     onChange={e => setFormData({...formData, age: e.target.value === '' ? '' : Number(e.target.value)})}
-                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
-                                    dir="ltr"
+                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none bg-gray-50"
+                                    readOnly
                                  />
                              </div>
                              <div>
-                                 <label className="block text-sm font-medium text-gray-700 mb-1">{t.clients.gender}</label>
-                                 <select 
-                                    value={formData.gender}
-                                    onChange={e => setFormData({...formData, gender: e.target.value as 'male' | 'female'})}
-                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none bg-white"
-                                 >
-                                     <option value="male">{t.kcal.male}</option>
-                                     <option value="female">{t.kcal.female}</option>
-                                 </select>
+                                 <label className="block text-xs font-bold text-gray-500 mb-1">Job / Occupation</label>
+                                 <input 
+                                    type="text" 
+                                    value={formData.job}
+                                    onChange={e => setFormData({...formData, job: e.target.value})}
+                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                                 />
                              </div>
                              <div>
-                                 <label className="block text-sm font-medium text-gray-700 mb-1">{t.clients.clinic}</label>
+                                 <label className="block text-xs font-bold text-gray-500 mb-1">Marital Status</label>
+                                 <select 
+                                    value={formData.marital_status}
+                                    onChange={e => setFormData({...formData, marital_status: e.target.value})}
+                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none bg-white"
+                                 >
+                                     <option value="single">Single</option>
+                                     <option value="married">Married</option>
+                                     <option value="divorced">Divorced</option>
+                                     <option value="widowed">Widowed</option>
+                                 </select>
+                             </div>
+                             {formData.marital_status !== 'single' && (
+                                 <div>
+                                     <label className="block text-xs font-bold text-gray-500 mb-1">Number of Kids</label>
+                                     <input 
+                                        type="number" 
+                                        value={formData.kids_count}
+                                        onChange={e => setFormData({...formData, kids_count: e.target.value})}
+                                        className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                                     />
+                                 </div>
+                             )}
+                             <div>
+                                 <label className="block text-xs font-bold text-gray-500 mb-1">{t.clients.clinic}</label>
                                  <input 
                                     type="text" 
                                     list="clinic-options"
                                     value={formData.clinic}
                                     onChange={e => setFormData({...formData, clinic: e.target.value})}
-                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
                                     placeholder="Select or type..."
                                  />
                                  <datalist id="clinic-options">
                                      {uniqueClinics.map(c => <option key={c} value={c} />)}
                                  </datalist>
                              </div>
+                             <div>
+                                 <label className="block text-xs font-bold text-gray-500 mb-1">Latest Visit Date</label>
+                                 <input 
+                                    type="date" 
+                                    required
+                                    value={formData.visit_date}
+                                    onChange={e => setFormData({...formData, visit_date: e.target.value})}
+                                    className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                                 />
+                             </div>
                         </div>
                         
                         <div>
-                             <label className="block text-sm font-medium text-gray-700 mb-1">Profile Notes (Medical History)</label>
+                             <label className="block text-xs font-bold text-gray-500 mb-2">Medical Notes & History</label>
+                             
+                             {/* Quick Tags */}
+                             <div className="flex flex-wrap gap-2 mb-2">
+                                 {QUICK_TAGS.map(tag => (
+                                     <button
+                                        key={tag}
+                                        type="button"
+                                        onClick={() => addTag(tag)}
+                                        className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded border border-gray-200 transition"
+                                     >
+                                         + {tag}
+                                     </button>
+                                 ))}
+                             </div>
+
                              <textarea 
                                 rows={4}
                                 value={formData.notes}
                                 onChange={e => setFormData({...formData, notes: e.target.value})}
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-none whitespace-pre-wrap"
-                                placeholder="Allergies, chronic conditions, etc."
+                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-none whitespace-pre-wrap text-sm"
+                                placeholder="Allergies, chronic conditions, past operations..."
                              ></textarea>
                         </div>
+
+                        {editingClient && onAnalyzeInKcal && (
+                            <div className="pt-2 border-t border-gray-100">
+                                <button 
+                                    type="button" 
+                                    onClick={triggerAnalysis}
+                                    className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-lg font-bold shadow-md hover:from-orange-600 hover:to-red-600 transition flex items-center justify-center gap-2"
+                                >
+                                    <span>🔥</span> Analyze in Kcal Calculator
+                                </button>
+                            </div>
+                        )}
                     </form>
                 )}
 
@@ -784,7 +946,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId }) => {
                             {/* Initial Profile Visit Anchor */}
                             <div className="relative pl-6">
                                 <div className="absolute -left-[9px] top-0 w-4 h-4 bg-gray-300 rounded-full"></div>
-                                <div className="text-xs text-gray-400 uppercase font-bold pt-0.5">Profile Created / Initial Record</div>
+                                <div className="text-xs text-gray-400 uppercase font-bold pt-0.5">Profile Created</div>
                                 <div className="text-sm text-gray-500">{new Date(editingClient.created_at).toLocaleDateString()}</div>
                             </div>
                         </div>

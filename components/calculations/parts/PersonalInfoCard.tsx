@@ -3,6 +3,7 @@
 import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { InputGroup, SelectGroup } from '../InputComponents';
+import { PediatricAge } from '../hooks/useKcalCalculations';
 
 interface PersonalInfoProps {
   gender: 'male' | 'female';
@@ -16,6 +17,7 @@ interface PersonalInfoProps {
   setDob?: (v: string) => void;
   reportDate?: string;
   setReportDate?: (v: string) => void;
+  pediatricAge?: PediatricAge | null;
 
   height: number;
   setHeight: (v: number) => void;
@@ -27,7 +29,7 @@ interface PersonalInfoProps {
 
 const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
   gender, setGender, 
-  age, setAge, ageMode, setAgeMode, dob, setDob, reportDate, setReportDate,
+  age, setAge, ageMode, setAgeMode, dob, setDob, reportDate, setReportDate, pediatricAge,
   height, setHeight, waist, setWaist, physicalActivity, setPhysicalActivity
 }) => {
   const { t } = useLanguage();
@@ -107,6 +109,11 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
                                <span className="text-sm font-medium text-gray-600">{t.kcal.calcAge}:</span>
                                <span className="text-lg font-bold text-[var(--color-primary)]">{age}</span>
                            </div>
+                           {pediatricAge && (
+                               <div className="text-xs text-gray-500 font-mono bg-white p-1 rounded border border-gray-100 text-center">
+                                   {pediatricAge.years}Y {pediatricAge.months}M {pediatricAge.days}D
+                               </div>
+                           )}
                        </div>
                    )}
 

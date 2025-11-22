@@ -1,7 +1,7 @@
 
 
 import React from 'react';
-import { useKcalCalculations } from './hooks/useKcalCalculations';
+import { useKcalCalculations, KcalInitialData } from './hooks/useKcalCalculations';
 import PersonalInfoCard from './parts/PersonalInfoCard';
 import WeightInfoCard from './parts/WeightInfoCard';
 import MethodsCard from './parts/MethodsCard';
@@ -10,10 +10,11 @@ import WeightAnalysisCard from './parts/WeightAnalysisCard';
 
 interface KcalCalculatorProps {
   onPlanMeals?: (kcal: number) => void;
+  initialData?: KcalInitialData | null;
 }
 
-const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals }) => {
-  const { inputs, results } = useKcalCalculations();
+const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialData }) => {
+  const { inputs, results } = useKcalCalculations(initialData);
 
   return (
     <div className="max-w-7xl mx-auto animate-fade-in">
@@ -28,6 +29,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals }) => {
               ageMode={inputs.ageMode} setAgeMode={inputs.setAgeMode}
               dob={inputs.dob} setDob={inputs.setDob}
               reportDate={inputs.reportDate} setReportDate={inputs.setReportDate}
+              pediatricAge={inputs.pediatricAge}
 
               height={inputs.height} setHeight={inputs.setHeight}
               waist={inputs.waist} setWaist={inputs.setWaist}

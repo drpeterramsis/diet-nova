@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -19,6 +20,8 @@ import ToolsGrid from "./components/ToolsGrid";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { Session } from "@supabase/supabase-js";
+import { KcalInitialData } from "./components/calculations/hooks/useKcalCalculations";
+import { Client } from "./types";
 
 const Dashboard = ({ 
   setBmiOpen, 
@@ -84,6 +87,9 @@ const AppContent = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
   
+  // Data passing between tools
+  const [toolData, setToolData] = useState<any>(null);
+  
   const { t, isRTL } = useLanguage();
   const { session, profile, loading } = useAuth();
 
@@ -109,20 +115,20 @@ const AppContent = () => {
     setActiveTool(null);
     setPreviousTool(null);
     setSelectedLoadId(null);
+    setToolData(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleNavTools = () => {
-    // If inside a specific tool, go back to dashboard first
     if (activeTool) {
       setActiveTool(null);
       setPreviousTool(null);
+      setToolData(null);
     }
     
-    // Wait for view update then scroll
     setTimeout(() => {
-      const toolsLanding = document.getElementById('tools'); // Landing page ID
-      const toolsDashboard = document.getElementById('dashboard-tools'); // Dashboard ID
+      const toolsLanding = document.getElementById('tools'); 
+      const toolsDashboard = document.getElementById('dashboard-tools'); 
       
       if (toolsLanding) {
         toolsLanding.scrollIntoView({ behavior: 'smooth' });
@@ -137,7 +143,6 @@ const AppContent = () => {
   };
 
   const handleToolClick = (toolId: string, loadId?: string) => {
-      // Check restrictions
       if (toolId === 'meal-creator' && !session) {
           setShowLogin(true);
           return;
@@ -157,6 +162,7 @@ const AppContent = () => {
       } else {
           setSelectedLoadId(null);
       }
+      setToolData(null); // Reset tool data on clean navigation
       setActiveTool(toolId);
   };
 
@@ -166,6 +172,17 @@ const AppContent = () => {
     setActiveTool('meal-planner');
   };
 
+  const handleAnalyzeClient = (client: Client, weight?: number) => {
+      const initData: KcalInitialData = {
+          gender: client.gender,
+          age: client.age,
+          dob: client.dob,
+          weight: weight
+      };
+      setToolData(initData);
+      setActiveTool('kcal');
+  };
+
   const handleBackToCalculator = () => {
     if (previousTool) {
       setActiveTool(previousTool);
@@ -173,7 +190,6 @@ const AppContent = () => {
     }
   };
 
-  // Helper to determine if complex tools should be kept alive
   const showKcal = activeTool === 'kcal';
   const showPlanner = activeTool === 'meal-planner';
   const isComplexFlow = showKcal || showPlanner;
@@ -195,6 +211,7 @@ const AppContent = () => {
                 setActiveTool(null);
                 setPreviousTool(null);
                 setSelectedLoadId(null);
+                setToolData(null);
               }}
               className="flex items-center gap-2 text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] font-medium mb-6 transition group no-print"
             >
@@ -208,7 +225,10 @@ const AppContent = () => {
             {isComplexFlow && (
               <>
                 <div className={showKcal ? 'block' : 'hidden'}>
-                  <KcalCalculator onPlanMeals={handlePlanMeals} />
+                  <KcalCalculator 
+                    onPlanMeals={handlePlanMeals} 
+                    initialData={toolData} 
+                  />
                 </div>
                 <div className={showPlanner ? 'block' : 'hidden'}>
                   <MealPlanner 
@@ -224,7 +244,7 @@ const AppContent = () => {
             {activeTool === 'meal-creator' && <MealCreator initialLoadId={selectedLoadId} />}
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
             {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
-            {activeTool === 'client-manager' && <ClientManager initialClientId={selectedLoadId} />}
+            {activeTool === 'client-manager' && <ClientManager initialClientId={selectedLoadId} onAnalyzeInKcal={handleAnalyzeClient} />}
             {activeTool === 'bmr' && <BmrCalculator />}
             {activeTool === 'profile' && <Profile />}
 

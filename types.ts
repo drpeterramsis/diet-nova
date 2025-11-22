@@ -21,13 +21,18 @@ export interface SavedMeal {
 export interface Client {
   id: string;
   doctor_id: string;
+  client_code?: string; // New
   full_name: string;
   visit_date: string;
+  dob?: string; // New
   clinic: string;
   phone?: string;
   notes?: string;
   age?: number;
   gender?: 'male' | 'female';
+  marital_status?: string; // New
+  kids_count?: number; // New
+  job?: string; // New
   created_at: string;
 }
 

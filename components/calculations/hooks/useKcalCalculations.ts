@@ -41,7 +41,21 @@ export interface KcalResults {
   };
 }
 
-export const useKcalCalculations = () => {
+export interface PediatricAge {
+    years: number;
+    months: number;
+    days: number;
+}
+
+export interface KcalInitialData {
+    gender?: 'male' | 'female';
+    age?: number;
+    dob?: string;
+    height?: number;
+    weight?: number;
+}
+
+export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
   const { t } = useLanguage();
 
   // --- State ---
@@ -52,6 +66,7 @@ export const useKcalCalculations = () => {
   const [ageMode, setAgeMode] = useState<'manual' | 'auto'>('manual');
   const [dob, setDob] = useState<string>('');
   const [reportDate, setReportDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [pediatricAge, setPediatricAge] = useState<PediatricAge | null>(null);
 
   const [height, setHeight] = useState<number>(0);
   const [waist, setWaist] = useState<number>(0);
@@ -68,23 +83,77 @@ export const useKcalCalculations = () => {
   
   const [results, setResults] = useState<KcalResults>({} as KcalResults);
 
-  // Calculate Age when using Auto mode
+  // Initialize from passed data (e.g. from Client Manager)
   useEffect(() => {
-      if (ageMode === 'auto' && dob && reportDate) {
-          const birth = new Date(dob);
-          const report = new Date(reportDate);
+      if (initialData) {
+          if (initialData.gender) setGender(initialData.gender);
+          // Only set height if it's provided and non-zero (optional check)
+          if (initialData.height) setHeight(initialData.height);
+          if (initialData.weight) {
+              setCurrentWeight(initialData.weight);
+              setSelectedWeight(initialData.weight);
+          }
           
-          if (!isNaN(birth.getTime()) && !isNaN(report.getTime())) {
-              let calculatedAge = report.getFullYear() - birth.getFullYear();
-              const m = report.getMonth() - birth.getMonth();
-              if (m < 0 || (m === 0 && report.getDate() < birth.getDate())) {
-                  calculatedAge--;
-              }
-              // Ensure age isn't negative
-              setAge(Math.max(0, calculatedAge));
+          if (initialData.dob) {
+              setAgeMode('auto');
+              setDob(initialData.dob);
+              // Calculate initial pediatric age immediately if possible
+              calculateAgeFromDob(initialData.dob, reportDate);
+          } else if (initialData.age) {
+              setAgeMode('manual');
+              setAge(initialData.age);
+              // Reset pediatric if manual
+              setPediatricAge(null);
           }
       }
-  }, [ageMode, dob, reportDate]);
+  }, [initialData]);
+
+  // Helper to calculate age detail
+  const calculateAgeFromDob = (birthDateStr: string, reportDateStr: string) => {
+      const birth = new Date(birthDateStr);
+      const report = new Date(reportDateStr);
+      
+      if (!isNaN(birth.getTime()) && !isNaN(report.getTime())) {
+          let years = report.getFullYear() - birth.getFullYear();
+          let months = report.getMonth() - birth.getMonth();
+          let days = report.getDate() - birth.getDate();
+
+          if (days < 0) {
+              months--;
+              // Get days in previous month
+              const prevMonth = new Date(report.getFullYear(), report.getMonth(), 0);
+              days += prevMonth.getDate();
+          }
+          if (months < 0) {
+              years--;
+              months += 12;
+          }
+
+          const calculatedAge = Math.max(0, years);
+          setAge(calculatedAge);
+          
+          // If pediatric (< 20 years), we store detailed Y/M/D
+          if (calculatedAge < 20) {
+              setPediatricAge({ years: calculatedAge, months: Math.max(0, months), days: Math.max(0, days) });
+          } else {
+              setPediatricAge(null);
+          }
+      }
+  };
+
+  // Recalculate whenever inputs change
+  useEffect(() => {
+      if (ageMode === 'auto' && dob && reportDate) {
+          calculateAgeFromDob(dob, reportDate);
+      } else if (ageMode === 'manual') {
+          // In manual mode, simple age is set by input. 
+          // If user manually types an age < 20, we don't strictly calculate Y/M/D unless they provided a DOB.
+          // For simplicity, we just clear pediatric details in manual mode or calculate only if valid.
+          if (age >= 20) {
+              setPediatricAge(null);
+          }
+      }
+  }, [ageMode, dob, reportDate, age]);
 
   useEffect(() => {
     const temp_weight = currentWeight;
@@ -206,6 +275,7 @@ export const useKcalCalculations = () => {
       ageMode, setAgeMode,
       dob, setDob,
       reportDate, setReportDate,
+      pediatricAge,
       height, setHeight,
       waist, setWaist,
       physicalActivity, setPhysicalActivity,
