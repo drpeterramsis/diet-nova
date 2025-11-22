@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -108,8 +109,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
   if (loading) return <Loading />;
 
   const roleLabel = profile?.role === 'doctor' ? t.auth.doctor : t.auth.patient;
-  const welcomeMsg = lang === 'en' ? `Welcome back, ${profile?.full_name}` : `مرحباً بعودتك، ${profile?.full_name}`;
-
+  
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in pb-24">
       {/* Welcome Header */}
@@ -120,8 +120,13 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                 <div className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm font-medium mb-2">
                     {roleLabel}
                 </div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">{welcomeMsg}</h1>
-                <p className="text-white/80">{session?.user.email}</p>
+                <h1 className="text-2xl md:text-3xl font-bold mb-1">
+                    {lang === 'en' ? 'Welcome back,' : 'مرحباً بعودتك،'}
+                </h1>
+                <h2 className="text-2xl md:text-3xl font-bold mb-2 text-white/90">
+                    {profile?.full_name}
+                </h2>
+                <p className="text-white/80 text-sm">{session?.user.email}</p>
             </div>
             <button 
                 onClick={() => document.getElementById('dashboard-tools')?.scrollIntoView({ behavior: 'smooth' })}

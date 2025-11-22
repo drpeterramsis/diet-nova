@@ -1179,19 +1179,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                         {visit.bmi && <span className="bg-orange-50 border border-orange-100 px-2 py-0.5 rounded text-orange-700 font-bold">BMI: {visit.bmi}</span>}
                                                     </div>
                                                 </div>
-                                                <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">
-                                                    <button 
-                                                    onClick={() => openKcalForVisit(visit)}
-                                                    className="bg-green-100 text-green-700 px-3 py-1 rounded text-xs font-bold hover:bg-green-200 flex items-center gap-1 transition"
-                                                    >
-                                                        <span>🔥</span> Calculator
-                                                    </button>
-                                                    <button 
-                                                    onClick={() => openMealPlanForVisit(visit)}
-                                                    className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-xs font-bold hover:bg-purple-200 flex items-center gap-1 transition"
-                                                    >
-                                                        <span>📅</span> Planner
-                                                    </button>
+                                                <div className="flex gap-2">
                                                     <button onClick={() => handleDeleteVisit(visit.id)} className="text-red-400 hover:text-red-600 px-2 font-bold text-lg">×</button>
                                                 </div>
                                             </div>
@@ -1206,49 +1194,65 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
                                             {/* Saved Data Summary */}
                                             {(visit.kcal_data || visit.meal_plan_data) && (
-                                                <div className="mb-4 flex flex-col sm:flex-row gap-4">
-                                                    {/* Kcal Data Badge */}
+                                                <div className="mb-4 flex flex-col sm:flex-row gap-6 items-start">
+                                                    {/* Kcal Data Section */}
                                                     {visit.kcal_data?.inputs?.reqKcal && (
-                                                        <div className="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-1.5 rounded-lg text-green-800 text-xs h-fit">
-                                                            <span className="text-lg">⚡</span>
-                                                            <div>
-                                                                <div className="font-bold">Required Kcal</div>
-                                                                <div className="font-mono">{visit.kcal_data.inputs.reqKcal} kcal</div>
+                                                        <div className="flex flex-col gap-2">
+                                                             <button 
+                                                                onClick={() => openKcalForVisit(visit)}
+                                                                className="text-xs font-bold text-green-700 hover:text-green-800 flex items-center gap-1 transition self-start"
+                                                             >
+                                                                <span>🔥</span> Open Calculator
+                                                             </button>
+                                                            <div className="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-1.5 rounded-lg text-green-800 text-xs h-fit">
+                                                                <span className="text-lg">⚡</span>
+                                                                <div>
+                                                                    <div className="font-bold">Required Kcal</div>
+                                                                    <div className="font-mono">{visit.kcal_data.inputs.reqKcal} kcal</div>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )}
                                                     
-                                                    {/* Meal Plan Data Badge & Stats */}
+                                                    {/* Meal Plan Data Section */}
                                                     {visit.meal_plan_data && (
-                                                        <div className="flex-grow flex flex-col gap-2 bg-purple-50 border border-purple-100 px-3 py-2 rounded-lg text-purple-800 text-xs">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="text-lg">🍽️</span>
-                                                                <div className="font-bold">Meal Plan Summary</div>
-                                                            </div>
-                                                            
-                                                            {/* Target vs Actual */}
-                                                            <div className="flex justify-between items-center border-b border-purple-200 pb-1">
-                                                                <span>Target: <b>{visit.meal_plan_data.targetKcal || '-'}</b></span>
-                                                                <span>Calc: <b>{planTotalKcal.toFixed(0)}</b> kcal</span>
-                                                            </div>
-
-                                                            {/* Macros */}
-                                                            {planStats && (
-                                                                <div className="grid grid-cols-3 gap-2 text-center mt-1">
-                                                                    <div>
-                                                                        <div className="font-bold text-blue-600">{planStats.cho.toFixed(0)}g</div>
-                                                                        <div className="text-[10px] text-blue-500">CHO ({planPcts.cho}%)</div>
-                                                                    </div>
-                                                                    <div>
-                                                                        <div className="font-bold text-red-600">{planStats.pro.toFixed(0)}g</div>
-                                                                        <div className="text-[10px] text-red-500">PRO ({planPcts.pro}%)</div>
-                                                                    </div>
-                                                                    <div>
-                                                                        <div className="font-bold text-yellow-600">{planStats.fat.toFixed(0)}g</div>
-                                                                        <div className="text-[10px] text-yellow-600">FAT ({planPcts.fat}%)</div>
-                                                                    </div>
+                                                        <div className="flex-grow flex flex-col gap-2">
+                                                             <button 
+                                                                onClick={() => openMealPlanForVisit(visit)}
+                                                                className="text-xs font-bold text-purple-700 hover:text-purple-800 flex items-center gap-1 transition self-start"
+                                                             >
+                                                                <span>📅</span> Open Planner
+                                                             </button>
+                                                            <div className="flex flex-col gap-2 bg-purple-50 border border-purple-100 px-3 py-2 rounded-lg text-purple-800 text-xs">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <span className="text-lg">🍽️</span>
+                                                                    <div className="font-bold">Meal Plan Summary</div>
                                                                 </div>
-                                                            )}
+                                                                
+                                                                {/* Target vs Actual */}
+                                                                <div className="flex justify-between items-center border-b border-purple-200 pb-1">
+                                                                    <span>Target: <b>{visit.meal_plan_data.targetKcal || '-'}</b></span>
+                                                                    <span>Calc: <b>{planTotalKcal.toFixed(0)}</b> kcal</span>
+                                                                </div>
+
+                                                                {/* Macros */}
+                                                                {planStats && (
+                                                                    <div className="grid grid-cols-3 gap-2 text-center mt-1">
+                                                                        <div>
+                                                                            <div className="font-bold text-blue-600">{planStats.cho.toFixed(0)}g</div>
+                                                                            <div className="text-[10px] text-blue-500">CHO ({planPcts.cho}%)</div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="font-bold text-red-600">{planStats.pro.toFixed(0)}g</div>
+                                                                            <div className="text-[10px] text-red-500">PRO ({planPcts.pro}%)</div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="font-bold text-yellow-600">{planStats.fat.toFixed(0)}g</div>
+                                                                            <div className="text-[10px] text-yellow-600">FAT ({planPcts.fat}%)</div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>

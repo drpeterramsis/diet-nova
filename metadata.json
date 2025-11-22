@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.68",
-  "description": "Updates: Added Client Progress Charts (Weight, BMI, Anthropometry), Printable InBody-style Reports, and Standardized DD/MM/YYYY formats.",
+  "name": "Diet-Nova v2.0.69",
+  "description": "Updates: Dashboard header styling, Client Visit history UI improvements (action buttons relocation).",
   "requestFramePermissions": []
 }
