@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova v2.0.65",
-  "description": "Updates: Client Visit History meal plan summary improvements (Macros/Stats), Date format standardized to dd/mm/yyyy across app.",
+  "name": "Diet-Nova v2.0.66",
+  "description": "Updates: Dashboard cards rearranged (Clients -> Planner -> Creator), Date format standardized to dd/mm/yyyy in Client History.",
   "requestFramePermissions": []
 }

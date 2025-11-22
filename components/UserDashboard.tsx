@@ -134,81 +134,80 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
 
       <div className={`grid grid-cols-1 ${isDoctor ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-8`}>
         
-        {/* Saved Meals Section */}
-        <div className="card bg-white shadow-lg flex flex-col h-full border-t-4 border-blue-500">
-            <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                        <span>🥗</span> {t.tools.mealCreator.title}
-                    </h2>
-                    <span className="text-3xl font-bold text-blue-600 mt-2 block">{meals.length}</span>
-                    <p className="text-xs text-gray-500">Saved Meals</p>
-                </div>
-                <div className="flex flex-col gap-2 text-xs">
-                     <button 
-                        onClick={() => onNavigateTool('meal-creator', undefined, 'new')}
-                        className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition font-bold shadow-sm"
-                    >
-                        + New Meal
-                    </button>
-                    <button 
-                        onClick={() => onNavigateTool('meal-creator')}
-                        className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded hover:bg-blue-100 transition font-bold shadow-sm"
-                    >
-                        Open Tool
-                    </button>
-                </div>
-            </div>
-            
-            <div className="space-y-3 flex-grow">
-                {meals.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                        No saved meals yet.
+        {/* 1. Assigned Clients Section (Doctor Only) */}
+        {isDoctor && (
+             <div className="card bg-white shadow-lg flex flex-col h-full border-t-4 border-green-500">
+                <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <span>👥</span> {t.clients.title}
+                        </h2>
+                        <span className="text-3xl font-bold text-green-600 mt-2 block">{clientsError ? '-' : clients.length}</span>
+                        <p className="text-xs text-gray-500">Total Clients</p>
                     </div>
-                ) : (
-                    <>
-                        {meals.slice(0, 3).map(meal => (
-                            <div key={meal.id} className="p-4 border border-gray-100 rounded-xl hover:border-blue-200 hover:shadow-sm transition group bg-white">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="font-bold text-gray-800 group-hover:text-blue-600 transition">{meal.name}</h3>
-                                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                                            <span>🕒</span> {formatDate(meal.created_at)}
-                                            <span className="mx-1">•</span>
-                                            <span>{meal.data?.addedFoods?.length || 0} items</span>
-                                        </p>
-                                    </div>
-                                    <div className="flex gap-2">
+                     <div className="flex flex-col gap-2 text-xs">
+                        <button 
+                            onClick={() => onNavigateTool('client-manager', undefined, 'new')}
+                            className="bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 transition font-bold shadow-sm"
+                        >
+                             + New Client
+                        </button>
+                        <button 
+                            onClick={() => onNavigateTool('client-manager')}
+                            className="bg-green-50 text-green-600 px-3 py-1.5 rounded hover:bg-green-100 transition font-bold shadow-sm"
+                        >
+                             Open Tool
+                        </button>
+                     </div>
+                </div>
+
+                <div className="space-y-3 flex-grow">
+                    {clientsError ? (
+                        <div className="text-center py-8 text-red-400 bg-red-50 rounded-lg border border-dashed border-red-200 text-sm p-4">
+                             <p className="font-bold">Table 'clients' not found.</p>
+                             <p className="text-xs mt-1">Please check database configuration.</p>
+                        </div>
+                    ) : clients.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                            {t.clients.noClients}
+                        </div>
+                    ) : (
+                        <>
+                            {clients.slice(0, 3).map(client => (
+                                <div key={client.id} className="p-4 border border-gray-100 rounded-xl hover:border-green-200 hover:shadow-sm transition group bg-white">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <h3 className="font-bold text-gray-800 group-hover:text-green-600 transition">{client.full_name}</h3>
+                                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                                <span>📍</span> {client.clinic}
+                                                <span className="mx-1">•</span>
+                                                <span>{formatDate(client.visit_date)}</span>
+                                            </p>
+                                        </div>
                                         <button 
-                                            onClick={() => onNavigateTool('meal-creator', meal.id)}
-                                            className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded hover:bg-blue-100 transition"
+                                            onClick={() => onNavigateTool('client-manager', client.id)}
+                                            className="px-3 py-1.5 bg-green-50 text-green-600 text-xs font-medium rounded hover:bg-green-100 transition"
                                         >
-                                            {t.common.open}
-                                        </button>
-                                        <button 
-                                            onClick={() => deleteItem(meal.id, 'meal')}
-                                            className="px-3 py-1.5 bg-red-50 text-red-500 text-xs font-medium rounded hover:bg-red-100 transition"
-                                        >
-                                            ✕
+                                            View
                                         </button>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
-                        {meals.length > 3 && (
-                             <button 
-                                onClick={() => onNavigateTool('meal-creator', undefined, 'load')}
-                                className="w-full py-2 text-center text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition font-medium"
-                             >
-                                 See More & Load...
-                             </button>
-                        )}
-                    </>
-                )}
+                            ))}
+                             {clients.length > 3 && (
+                                 <button 
+                                    onClick={() => onNavigateTool('client-manager')}
+                                    className="w-full py-2 text-center text-sm text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition font-medium"
+                                 >
+                                     See More...
+                                 </button>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
-        </div>
+        )}
 
-        {/* Saved Plans Section */}
+        {/* 2. Saved Plans Section */}
         <div className="card bg-white shadow-lg flex flex-col h-full border-t-4 border-purple-500">
              <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
                 <div>
@@ -285,79 +284,80 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                 )}
             </div>
         </div>
-
-        {/* Assigned Clients Section (Doctor Only) */}
-        {isDoctor && (
-             <div className="card bg-white shadow-lg flex flex-col h-full border-t-4 border-green-500">
-                <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
-                    <div>
-                        <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                            <span>👥</span> {t.clients.title}
-                        </h2>
-                        <span className="text-3xl font-bold text-green-600 mt-2 block">{clientsError ? '-' : clients.length}</span>
-                        <p className="text-xs text-gray-500">Total Clients</p>
-                    </div>
-                     <div className="flex flex-col gap-2 text-xs">
-                        <button 
-                            onClick={() => onNavigateTool('client-manager', undefined, 'new')}
-                            className="bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 transition font-bold shadow-sm"
-                        >
-                             + New Client
-                        </button>
-                        <button 
-                            onClick={() => onNavigateTool('client-manager')}
-                            className="bg-green-50 text-green-600 px-3 py-1.5 rounded hover:bg-green-100 transition font-bold shadow-sm"
-                        >
-                             Open Tool
-                        </button>
-                     </div>
+        
+        {/* 3. Saved Meals Section */}
+        <div className="card bg-white shadow-lg flex flex-col h-full border-t-4 border-blue-500">
+            <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                        <span>🥗</span> {t.tools.mealCreator.title}
+                    </h2>
+                    <span className="text-3xl font-bold text-blue-600 mt-2 block">{meals.length}</span>
+                    <p className="text-xs text-gray-500">Saved Meals</p>
                 </div>
-
-                <div className="space-y-3 flex-grow">
-                    {clientsError ? (
-                        <div className="text-center py-8 text-red-400 bg-red-50 rounded-lg border border-dashed border-red-200 text-sm p-4">
-                             <p className="font-bold">Table 'clients' not found.</p>
-                             <p className="text-xs mt-1">Please check database configuration.</p>
-                        </div>
-                    ) : clients.length === 0 ? (
-                        <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
-                            {t.clients.noClients}
-                        </div>
-                    ) : (
-                        <>
-                            {clients.slice(0, 3).map(client => (
-                                <div key={client.id} className="p-4 border border-gray-100 rounded-xl hover:border-green-200 hover:shadow-sm transition group bg-white">
-                                    <div className="flex justify-between items-center">
-                                        <div>
-                                            <h3 className="font-bold text-gray-800 group-hover:text-green-600 transition">{client.full_name}</h3>
-                                            <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                                                <span>📍</span> {client.clinic}
-                                                <span className="mx-1">•</span>
-                                                <span>{formatDate(client.visit_date)}</span>
-                                            </p>
-                                        </div>
+                <div className="flex flex-col gap-2 text-xs">
+                     <button 
+                        onClick={() => onNavigateTool('meal-creator', undefined, 'new')}
+                        className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition font-bold shadow-sm"
+                    >
+                        + New Meal
+                    </button>
+                    <button 
+                        onClick={() => onNavigateTool('meal-creator')}
+                        className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded hover:bg-blue-100 transition font-bold shadow-sm"
+                    >
+                        Open Tool
+                    </button>
+                </div>
+            </div>
+            
+            <div className="space-y-3 flex-grow">
+                {meals.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                        No saved meals yet.
+                    </div>
+                ) : (
+                    <>
+                        {meals.slice(0, 3).map(meal => (
+                            <div key={meal.id} className="p-4 border border-gray-100 rounded-xl hover:border-blue-200 hover:shadow-sm transition group bg-white">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="font-bold text-gray-800 group-hover:text-blue-600 transition">{meal.name}</h3>
+                                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                            <span>🕒</span> {formatDate(meal.created_at)}
+                                            <span className="mx-1">•</span>
+                                            <span>{meal.data?.addedFoods?.length || 0} items</span>
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2">
                                         <button 
-                                            onClick={() => onNavigateTool('client-manager', client.id)}
-                                            className="px-3 py-1.5 bg-green-50 text-green-600 text-xs font-medium rounded hover:bg-green-100 transition"
+                                            onClick={() => onNavigateTool('meal-creator', meal.id)}
+                                            className="px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded hover:bg-blue-100 transition"
                                         >
-                                            View
+                                            {t.common.open}
+                                        </button>
+                                        <button 
+                                            onClick={() => deleteItem(meal.id, 'meal')}
+                                            className="px-3 py-1.5 bg-red-50 text-red-500 text-xs font-medium rounded hover:bg-red-100 transition"
+                                        >
+                                            ✕
                                         </button>
                                     </div>
                                 </div>
-                            ))}
-                             {clients.length > 3 && (
-                                 <button 
-                                    onClick={() => onNavigateTool('client-manager')}
-                                    className="w-full py-2 text-center text-sm text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition font-medium"
-                                 >
-                                     See More...
-                                 </button>
-                            )}
-                        </>
-                    )}
-                </div>
+                            </div>
+                        ))}
+                        {meals.length > 3 && (
+                             <button 
+                                onClick={() => onNavigateTool('meal-creator', undefined, 'load')}
+                                className="w-full py-2 text-center text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition font-medium"
+                             >
+                                 See More & Load...
+                             </button>
+                        )}
+                    </>
+                )}
             </div>
-        )}
+        </div>
 
       </div>
       

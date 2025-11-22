@@ -1116,7 +1116,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                             <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-3">
                                                 <div className="flex items-center gap-4">
                                                     <span className="font-bold text-gray-800 text-lg">
-                                                    {new Date(visit.visit_date).toLocaleDateString('en-GB', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                                                    {new Date(visit.visit_date).toLocaleDateString('en-GB')}
                                                     </span>
                                                     {/* Badges */}
                                                     <div className="flex gap-2 text-xs font-mono">
