@@ -20,8 +20,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
   const [clients, setClients] = useState<Client[]>([]);
   const [clientsError, setClientsError] = useState(false);
   
-  // Collapse state for sections
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  // Collapse state for sections (Default to collapsed)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+      clients: true,
+      plans: true,
+      meals: true
+  });
 
   const isDoctor = profile?.role === 'doctor';
 
@@ -109,7 +113,10 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
   };
 
   const toggleSection = (section: string) => {
-      setExpandedSection(expandedSection === section ? null : section);
+      setCollapsedSections(prev => ({
+          ...prev,
+          [section]: !prev[section]
+      }));
   };
 
   if (loading) return <Loading />;
@@ -119,7 +126,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in pb-24">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)] rounded-2xl p-8 text-white shadow-xl mb-10 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)] rounded-2xl p-8 text-white shadow-xl mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl"></div>
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
@@ -137,12 +144,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
             
             <div className="flex gap-3">
                 <button 
-                    onClick={() => onNavigateTool('encyclopedia')}
-                    className="bg-white/20 hover:bg-white/30 text-white px-5 py-3 rounded-xl font-bold shadow-lg transition flex items-center gap-2"
-                >
-                    <span>📚</span> Encyclopedia
-                </button>
-                <button 
                     onClick={() => document.getElementById('dashboard-tools')?.scrollIntoView({ behavior: 'smooth' })}
                     className="bg-white text-[var(--color-primary-dark)] px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-gray-100 transition transform hover:-translate-y-1"
                 >
@@ -152,11 +153,28 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
         </div>
       </div>
 
+      {/* Encyclopedia Sector */}
+      <div className="mb-10 bg-white rounded-xl shadow-sm border border-blue-100 p-1 flex items-center justify-between overflow-hidden">
+          <div className="p-4 pl-6 flex items-center gap-4">
+              <span className="text-3xl">📚</span>
+              <div>
+                  <h3 className="font-bold text-gray-800 text-lg">Knowledge Sector</h3>
+                  <p className="text-sm text-gray-500">Nutrient encyclopedia & reference charts</p>
+              </div>
+          </div>
+          <button 
+              onClick={() => onNavigateTool('encyclopedia')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 font-bold h-full flex items-center gap-2 transition"
+          >
+              Open Encyclopedia <span>→</span>
+          </button>
+      </div>
+
       <div className={`grid grid-cols-1 ${isDoctor ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-8`}>
         
         {/* 1. Assigned Clients Section (Doctor Only) */}
         {isDoctor && (
-             <div className="card bg-white shadow-lg flex flex-col border-t-4 border-green-500 overflow-hidden">
+             <div className="card bg-white shadow-lg flex flex-col border-t-4 border-green-500 overflow-hidden h-fit">
                 <div 
                     className="flex justify-between items-center p-6 bg-white cursor-pointer hover:bg-gray-50 transition"
                     onClick={() => toggleSection('clients')}
@@ -169,12 +187,14 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                             {clientsError ? '-' : clients.length}
                         </span>
                     </div>
-                    <span className="text-gray-400">{expandedSection === 'clients' ? '▲' : '▼'}</span>
+                    <span className="text-gray-400 transform transition-transform duration-300" style={{ transform: collapsedSections.clients ? 'rotate(0deg)' : 'rotate(180deg)' }}>
+                        ▼
+                    </span>
                 </div>
 
-                {expandedSection === 'clients' && (
+                {!collapsedSections.clients && (
                     <div className="p-6 pt-0 animate-fade-in border-t border-gray-100">
-                        <div className="flex justify-end gap-2 mb-4">
+                        <div className="flex justify-end gap-2 mb-4 pt-4">
                             <button 
                                 onClick={(e) => { e.stopPropagation(); onNavigateTool('client-manager', undefined, 'new'); }}
                                 className="bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 transition font-bold shadow-sm text-xs"
@@ -237,7 +257,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
         )}
 
         {/* 2. Saved Plans Section */}
-        <div className="card bg-white shadow-lg flex flex-col border-t-4 border-purple-500 overflow-hidden">
+        <div className="card bg-white shadow-lg flex flex-col border-t-4 border-purple-500 overflow-hidden h-fit">
              <div 
                 className="flex justify-between items-center p-6 bg-white cursor-pointer hover:bg-gray-50 transition"
                 onClick={() => toggleSection('plans')}
@@ -250,12 +270,14 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                         {plans.length}
                     </span>
                 </div>
-                <span className="text-gray-400">{expandedSection === 'plans' ? '▲' : '▼'}</span>
+                <span className="text-gray-400 transform transition-transform duration-300" style={{ transform: collapsedSections.plans ? 'rotate(0deg)' : 'rotate(180deg)' }}>
+                    ▼
+                </span>
             </div>
 
-            {expandedSection === 'plans' && (
+            {!collapsedSections.plans && (
                 <div className="p-6 pt-0 animate-fade-in border-t border-gray-100">
-                    <div className="flex justify-end gap-2 mb-4">
+                    <div className="flex justify-end gap-2 mb-4 pt-4">
                         <button 
                             onClick={() => onNavigateTool('meal-planner', undefined, 'new')}
                             className="bg-purple-600 text-white px-3 py-1.5 rounded hover:bg-purple-700 transition font-bold shadow-sm text-xs"
@@ -325,7 +347,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
         </div>
         
         {/* 3. Saved Meals Section */}
-        <div className="card bg-white shadow-lg flex flex-col border-t-4 border-blue-500 overflow-hidden">
+        <div className="card bg-white shadow-lg flex flex-col border-t-4 border-blue-500 overflow-hidden h-fit">
             <div 
                 className="flex justify-between items-center p-6 bg-white cursor-pointer hover:bg-gray-50 transition"
                 onClick={() => toggleSection('meals')}
@@ -338,12 +360,14 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                         {meals.length}
                     </span>
                 </div>
-                <span className="text-gray-400">{expandedSection === 'meals' ? '▲' : '▼'}</span>
+                <span className="text-gray-400 transform transition-transform duration-300" style={{ transform: collapsedSections.meals ? 'rotate(0deg)' : 'rotate(180deg)' }}>
+                    ▼
+                </span>
             </div>
             
-            {expandedSection === 'meals' && (
+            {!collapsedSections.meals && (
                 <div className="p-6 pt-0 animate-fade-in border-t border-gray-100">
-                    <div className="flex justify-end gap-2 mb-4">
+                    <div className="flex justify-end gap-2 mb-4 pt-4">
                         <button 
                             onClick={() => onNavigateTool('meal-creator', undefined, 'new')}
                             className="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition font-bold shadow-sm text-xs"

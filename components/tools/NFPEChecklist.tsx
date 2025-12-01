@@ -74,12 +74,17 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
             })
             .eq('id', client.id);
 
-          if (error) throw error;
+          if (error) {
+              if (error.message && error.message.includes("column \"nfpe_data\" of relation \"clients\" does not exist")) {
+                  throw new Error("Missing DB Column. Please check settings.");
+              }
+              throw error;
+          }
           setSaveStatus('Checklist Saved Successfully!');
           setTimeout(() => setSaveStatus(''), 2000);
       } catch (err: any) {
           console.error("Save State Error:", err);
-          setSaveStatus('Error saving: ' + (err.message || 'Check database schema'));
+          setSaveStatus('Error: ' + (err.message || 'Check database schema'));
       } finally {
           setIsSaving(false);
       }
@@ -218,7 +223,7 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
       </div>
 
       {saveStatus && (
-          <div className={`mb-6 p-3 rounded-lg text-center font-bold ${saveStatus.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+          <div className={`mb-6 p-3 rounded-lg text-center font-bold ${saveStatus.includes('Error') || saveStatus.includes('Missing') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
               {saveStatus}
           </div>
       )}

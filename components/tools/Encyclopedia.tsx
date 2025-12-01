@@ -119,6 +119,16 @@ const Encyclopedia: React.FC = () => {
       {/* CARD GRID VIEW */}
       {viewMode === 'cards' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+            {/* Quick Access Card for Chart */}
+            <div 
+                onClick={() => setViewMode('chart')}
+                className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 cursor-pointer p-6 flex flex-col justify-center items-center text-white text-center border border-blue-900"
+            >
+                <div className="text-5xl mb-4 bg-white/20 p-3 rounded-full">📊</div>
+                <h3 className="font-bold text-xl mb-2">Reference Chart</h3>
+                <p className="text-sm opacity-90">View full table of vitamins & minerals</p>
+            </div>
+
             {filteredItems.map(item => (
                 <div key={item.id} className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-xl transition duration-300 flex flex-col">
                     {/* Card Header */}

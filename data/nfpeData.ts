@@ -7,7 +7,6 @@ export interface NFPEItem {
   deficiencyAr: string;
   food: string;
   foodAr: string;
-  image?: string;
 }
 
 export interface NFPESystem {
@@ -112,8 +111,7 @@ export const nfpeData: NFPESystem[] = [
           deficiency: "Protein, Copper", 
           deficiencyAr: "البروتين، النحاس",
           food: "Liver, shellfish, nuts, seeds, meat",
-          foodAr: "الكبد، المحار، المكسرات، البذور، اللحوم",
-          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Flag_sign_of_kwashiorkor.jpg/320px-Flag_sign_of_kwashiorkor.jpg"
+          foodAr: "الكبد، المحار، المكسرات، البذور، اللحوم"
       },
       { 
           id: "hair_corkscrew", 
@@ -175,8 +173,7 @@ export const nfpeData: NFPESystem[] = [
           deficiency: "Iron, Folate, B12", 
           deficiencyAr: "الحديد، الفولات، ب12",
           food: "Red meat, liver, spinach, beans",
-          foodAr: "اللحوم الحمراء، الكبد، السبانخ، الفاصوليا",
-          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Pallor_of_conjunctiva.jpg/320px-Pallor_of_conjunctiva.jpg"
+          foodAr: "اللحوم الحمراء، الكبد، السبانخ، الفاصوليا"
       },
       { 
           id: "eye_bitot", 
@@ -185,8 +182,7 @@ export const nfpeData: NFPESystem[] = [
           deficiency: "Vitamin A", 
           deficiencyAr: "فيتامين أ",
           food: "Liver, sweet potato, carrots, dairy",
-          foodAr: "الكبد، البطاطا الحلوة، الجزر، الألبان",
-          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Bitot%27s_spot.jpg/320px-Bitot%27s_spot.jpg"
+          foodAr: "الكبد، البطاطا الحلوة، الجزر، الألبان"
       },
       { 
           id: "eye_night", 
@@ -204,8 +200,7 @@ export const nfpeData: NFPESystem[] = [
           deficiency: "Hyperlipidemia (Excess)", 
           deficiencyAr: "فرط دهون الدم",
           food: "Reduce saturated fats, increase fiber",
-          foodAr: "تقليل الدهون المشبعة، زيادة الألياف",
-          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Xanthelasma.jpg/320px-Xanthelasma.jpg"
+          foodAr: "تقليل الدهون المشبعة، زيادة الألياف"
       },
       { 
           id: "eye_angular", 
@@ -231,8 +226,7 @@ export const nfpeData: NFPESystem[] = [
           deficiency: "B2, B3, B6, Iron", 
           deficiencyAr: "ب2، ب3، ب6، الحديد",
           food: "Dairy, eggs, meat, fortified cereals",
-          foodAr: "الألبان، البيض، اللحوم، الحبوب المدعمة",
-          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Angular_Cheilitis.JPG/320px-Angular_Cheilitis.JPG"
+          foodAr: "الألبان، البيض، اللحوم، الحبوب المدعمة"
       },
       { 
           id: "mouth_glossitis", 
@@ -294,8 +288,7 @@ export const nfpeData: NFPESystem[] = [
           deficiency: "Niacin (B3)", 
           deficiencyAr: "النياسين (ب3)",
           food: "Poultry, tuna, peanuts, whole grains",
-          foodAr: "الدواجن، التونة، الفول السوداني، الحبوب الكاملة",
-          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Pellagra_USDA.jpg/254px-Pellagra_USDA.jpg"
+          foodAr: "الدواجن، التونة، الفول السوداني، الحبوب الكاملة"
       },
       { 
           id: "skin_petechiae", 
@@ -313,8 +306,7 @@ export const nfpeData: NFPESystem[] = [
           deficiency: "Vitamin A, Vitamin C, EFA", 
           deficiencyAr: "فيتامين أ، سي، الأحماض الدهنية",
           food: "Carrots, sweet potato, citrus, healthy oils",
-          foodAr: "الجزر، البطاطا، الحمضيات، الزيوت الصحية",
-          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Keratosis_pilaris_arm.jpg/320px-Keratosis_pilaris_arm.jpg"
+          foodAr: "الجزر، البطاطا، الحمضيات، الزيوت الصحية"
       },
       { 
           id: "skin_seborrhea", 
@@ -358,8 +350,7 @@ export const nfpeData: NFPESystem[] = [
           deficiency: "Iron (Severe)", 
           deficiencyAr: "الحديد (شديد)",
           food: "Red meat, liver, clams, fortified cereals",
-          foodAr: "اللحوم الحمراء، الكبد، المحار، الحبوب المدعمة",
-          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Spoon_Nails.JPG/320px-Spoon_Nails.JPG"
+          foodAr: "اللحوم الحمراء، الكبد، المحار، الحبوب المدعمة"
       },
       { 
           id: "nails_beau", 
@@ -368,8 +359,7 @@ export const nfpeData: NFPESystem[] = [
           deficiency: "Protein, Zinc (Acute stress)", 
           deficiencyAr: "البروتين، الزنك",
           food: "Adequate protein intake",
-          foodAr: "تناول بروتين كافٍ",
-          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Beaus_Lines.jpg/320px-Beaus_Lines.jpg"
+          foodAr: "تناول بروتين كافٍ"
       },
       { 
           id: "nails_splinter", 
