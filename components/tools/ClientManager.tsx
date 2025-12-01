@@ -250,7 +250,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
           if (category === "🌸 Female Only" && gender === "male") return;
           notes += `[${category}]\n-\n\n`;
       });
-      notes += `[Other Notes]\n-`;
+      notes += `[📝 Other Notes]\n-`;
       return notes;
   };
 
@@ -1012,7 +1012,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                         <div>
                              <div className="flex justify-between items-center mb-2">
                                  <div className="flex gap-2 items-center">
-                                    <label className="block text-xs font-bold text-gray-500">Medical Notes & History</label>
+                                    <label className="block text-xs font-bold text-gray-500">📝 Medical Notes & History</label>
                                     <button type="button" onClick={insertTemplate} className="text-xs bg-gray-100 px-2 py-0.5 rounded border hover:bg-gray-200 text-gray-600">
                                         Insert Template
                                     </button>

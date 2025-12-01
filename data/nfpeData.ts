@@ -7,6 +7,7 @@ export interface NFPEItem {
   deficiencyAr: string;
   food: string;
   foodAr: string;
+  image?: string;
 }
 
 export interface NFPESystem {
