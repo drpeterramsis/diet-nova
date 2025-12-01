@@ -20,161 +20,64 @@ export interface NFPESystem {
 
 export const nfpeData: NFPESystem[] = [
   {
-    id: "eyes",
-    name: "Eyes",
-    nameAr: "العيون",
-    icon: "👁️",
+    id: "general_cns",
+    name: "General & CNS",
+    nameAr: "العام والجهاز العصبي",
+    icon: "🧠",
     items: [
       { 
-          id: "eye_conjunctiva", 
-          sign: "Dry conjunctiva (Xerosis)", 
-          signAr: "جفاف الملتحمة", 
-          deficiency: "Vitamin A", 
-          deficiencyAr: "فيتامين أ",
-          food: "Liver, sweet potato, carrots, dark leafy greens",
-          foodAr: "الكبد، البطاطا الحلوة، الجزر، الخضروات الورقية الداكنة"
+          id: "gen_fatigue", 
+          sign: "Chronic Fatigue / Lethargy", 
+          signAr: "تعب مزمن / خمول", 
+          deficiency: "Iron, B12, Vit D, Protein", 
+          deficiencyAr: "الحديد، ب12، فيتامين د، البروتين",
+          food: "Red meat, eggs, fish, fortified foods",
+          foodAr: "اللحوم الحمراء، البيض، الأسماك، الأطعمة المدعمة"
       },
       { 
-          id: "eye_bitot", 
-          sign: "Bitot’s spots", 
-          signAr: "بقع بيتو", 
-          deficiency: "Vitamin A", 
-          deficiencyAr: "فيتامين أ",
-          food: "Liver, fish oil, dairy, eggs",
-          foodAr: "الكبد، زيت السمك، منتجات الألبان، البيض"
+          id: "neuro_conf", 
+          sign: "Mental Confusion / Dementia", 
+          signAr: "ارتباك عقلي / خرف", 
+          deficiency: "Niacin (B3), B12, Thiamin (B1)", 
+          deficiencyAr: "النياسين، ب12، الثيامين",
+          food: "Whole grains, meat, dairy, yeast",
+          foodAr: "الحبوب الكاملة، اللحوم، الألبان، الخميرة"
+      },
+      {
+          id: "neuro_psychomotor",
+          sign: "Psychomotor changes (Listless)",
+          signAr: "تغيرات نفسية حركية (فتور)",
+          deficiency: "Protein, Energy",
+          deficiencyAr: "البروتين، الطاقة",
+          food: "High calorie-protein diet",
+          foodAr: "نظام غذائي عالي السعرات والبروتين"
       },
       { 
-          id: "eye_night", 
-          sign: "Night blindness", 
-          signAr: "العشى الليلي", 
-          deficiency: "Vitamin A", 
-          deficiencyAr: "فيتامين أ",
-          food: "Carrots, spinach, kale, apricots",
-          foodAr: "الجزر، السبانخ، الكرنب، المشمش"
+          id: "neuro_tingling", 
+          sign: "Paresthesia (Tingling/Numbness)", 
+          signAr: "تنميل / وخز", 
+          deficiency: "B12, B6, Thiamin (B1), Calcium", 
+          deficiencyAr: "ب12، ب6، ب1، الكالسيوم",
+          food: "Meat, fish, poultry, fortified yeast, dairy",
+          foodAr: "اللحوم، الأسماك، الدواجن، الخميرة المدعمة، الألبان"
+      },
+      {
+          id: "neuro_tetany",
+          sign: "Tetany (Involuntary contraction)",
+          signAr: "تيتاني (تشنج لا إرادي)",
+          deficiency: "Calcium, Magnesium",
+          deficiencyAr: "الكالسيوم، المغنيسيوم",
+          food: "Dairy, nuts, seeds, leafy greens",
+          foodAr: "الألبان، المكسرات، البذور، الخضروات الورقية"
       },
       { 
-          id: "eye_redness", 
-          sign: "Redness & vascularization", 
-          signAr: "احمرار الأوعية الدموية", 
-          deficiency: "Riboflavin (B2)", 
-          deficiencyAr: "فيتامين ب2",
-          food: "Milk, yogurt, almonds, organ meats",
-          foodAr: "الحليب، الزبادي، اللوز، لحوم الأعضاء"
-      },
-      { 
-          id: "eye_pale", 
-          sign: "Pale conjunctiva", 
-          signAr: "شحوب الملتحمة", 
-          deficiency: "Iron, Folate, B12", 
-          deficiencyAr: "الحديد، الفولات، فيتامين ب12",
-          food: "Red meat, beans, lentils, spinach (Iron)",
-          foodAr: "اللحوم الحمراء، الفاصوليا، العدس، السبانخ (للحديد)"
-      }
-    ]
-  },
-  {
-    id: "mouth",
-    name: "Mouth",
-    nameAr: "الفم",
-    icon: "👄",
-    items: [
-      { 
-          id: "mouth_cheilitis", 
-          sign: "Angular cheilitis (cracked corners)", 
-          signAr: "تشقق زوايا الفم", 
-          deficiency: "B2, B3, B6, Iron", 
-          deficiencyAr: "ب2، ب3، ب6، الحديد",
-          food: "Eggs, meat, poultry, legumes",
-          foodAr: "البيض، اللحوم، الدواجن، البقوليات"
-      },
-      { 
-          id: "mouth_tongue_swollen", 
-          sign: "Swollen red tongue (Glossitis)", 
-          signAr: "تورم اللسان (التهاب اللسان)", 
-          deficiency: "B3, Folate, B12", 
-          deficiencyAr: "ب3، الفولات، ب12",
-          food: "Fish, poultry, peanuts, enriched grains",
-          foodAr: "السمك، الدواجن، الفول السوداني، الحبوب المدعمة"
-      },
-      { 
-          id: "mouth_tongue_smooth", 
-          sign: "Smooth, shiny tongue", 
-          signAr: "لسان أملس ولامع", 
-          deficiency: "Iron, Folate, B12", 
-          deficiencyAr: "الحديد، الفولات، ب12",
-          food: "Meat, eggs, leafy greens, fortified cereals",
-          foodAr: "اللحوم، البيض، الخضروات الورقية، الحبوب المدعمة"
-      },
-      { 
-          id: "mouth_gums", 
-          sign: "Bleeding/Spongy gums", 
-          signAr: "نزيف أو تورم اللثة", 
-          deficiency: "Vitamin C", 
-          deficiencyAr: "فيتامين سي",
-          food: "Citrus fruits, strawberries, peppers, broccoli",
-          foodAr: "الحمضيات، الفراولة، الفلفل، البروكلي"
-      },
-      { 
-          id: "mouth_taste", 
-          sign: "Loss of taste (Hypogeusia)", 
-          signAr: "فقدان حاسة التذوق", 
-          deficiency: "Zinc", 
-          deficiencyAr: "الزنك",
-          food: "Oysters, beef, pumpkin seeds, cashews",
-          foodAr: "المحار، اللحم البقري، بذور اليقطين، الكاجو"
-      }
-    ]
-  },
-  {
-    id: "skin",
-    name: "Skin",
-    nameAr: "الجلد",
-    icon: "✋",
-    items: [
-      { 
-          id: "skin_dry", 
-          sign: "Dry, rough texture", 
-          signAr: "جلد جاف وخشن", 
-          deficiency: "Vitamin A, EFA", 
-          deficiencyAr: "فيتامين أ، الأحماض الدهنية",
-          food: "Fish, nuts, seeds, avocado",
-          foodAr: "السمك، المكسرات، البذور، الأفوكادو"
-      },
-      { 
-          id: "skin_rash", 
-          sign: "Eczema-like rash", 
-          signAr: "طفح جلدي (يشبه الإكزيما)", 
-          deficiency: "Zinc, EFA", 
-          deficiencyAr: "الزنك، الأحماض الدهنية",
-          food: "Shellfish, meat, legumes, seeds",
-          foodAr: "المأكولات البحرية، اللحوم، البقوليات، البذور"
-      },
-      { 
-          id: "skin_pellagra", 
-          sign: "Hyperpigmentation (Pellagra)", 
-          signAr: "تصبغ الجلد (البلاجرا)", 
-          deficiency: "Niacin (B3)", 
-          deficiencyAr: "النياسين (ب3)",
-          food: "Chicken, tuna, turkey, peanuts",
-          foodAr: "الدجاج، التونة، الديك الرومي، الفول السوداني"
-      },
-      { 
-          id: "skin_petechiae", 
-          sign: "Easy bruising / Petechiae", 
-          signAr: "سهولة الكدمات / نمشات دموية", 
-          deficiency: "Vitamin C, Vitamin K", 
-          deficiencyAr: "فيتامين سي، فيتامين ك",
-          food: "Leafy greens (Vit K), Citrus (Vit C)",
-          foodAr: "الخضروات الورقية (فيتامين ك)، الحمضيات (فيتامين سي)"
-      },
-      { 
-          id: "skin_healing", 
-          sign: "Poor wound healing", 
-          signAr: "بطء التئام الجروح", 
-          deficiency: "Protein, Vitamin C, Zinc", 
-          deficiencyAr: "البروتين، فيتامين سي، الزنك",
-          food: "Meat, citrus, nuts, beans",
-          foodAr: "اللحوم، الحمضيات، المكسرات، الفاصوليا"
+          id: "gen_cold", 
+          sign: "Cold Intolerance", 
+          signAr: "عدم تحمل البرد", 
+          deficiency: "Iron, Iodine, Energy", 
+          deficiencyAr: "الحديد، اليود، الطاقة",
+          food: "Seafood, iodized salt, red meat",
+          foodAr: "المأكولات البحرية، الملح اليودي، اللحوم الحمراء"
       }
     ]
   },
@@ -185,40 +88,260 @@ export const nfpeData: NFPESystem[] = [
     icon: "💇",
     items: [
       { 
-          id: "hair_brittle", 
-          sign: "Dry, brittle hair", 
-          signAr: "شعر جاف ومتقصف", 
-          deficiency: "Protein, Zinc, Biotin", 
-          deficiencyAr: "البروتين، الزنك، البيوتين",
-          food: "Eggs, almonds, sweet potato, meat",
-          foodAr: "البيض، اللوز، البطاطا الحلوة، اللحوم"
+          id: "hair_lusterless", 
+          sign: "Dull / Lusterless / Easily Plucked", 
+          signAr: "باهت / فاقد للمعان / سهل الاقتلاع", 
+          deficiency: "Protein, Zinc", 
+          deficiencyAr: "البروتين، الزنك",
+          food: "Eggs, meat, legumes, nuts",
+          foodAr: "البيض، اللحوم، البقوليات، المكسرات"
+      },
+      {
+          id: "hair_thin_sparse",
+          sign: "Thin, Sparse, Silky",
+          signAr: "خفيف، متناثر، حريري جداً",
+          deficiency: "Protein, Biotin",
+          deficiencyAr: "البروتين، البيوتين",
+          food: "High biological value protein, eggs",
+          foodAr: "بروتين عالي القيمة البيولوجية، البيض"
       },
       { 
-          id: "hair_loss", 
-          sign: "Hair loss (Alopecia)", 
-          signAr: "تساقط الشعر", 
-          deficiency: "Zinc, Protein, Iron", 
-          deficiencyAr: "الزنك، البروتين، الحديد",
-          food: "Red meat, lentils, pumpkin seeds",
-          foodAr: "اللحوم الحمراء، العدس، بذور اليقطين"
-      },
-      { 
-          id: "hair_color", 
-          sign: "Depigmentation (Flag sign)", 
-          signAr: "تغير لون الشعر (علامة العلم)", 
+          id: "hair_flag_sign", 
+          sign: "Flag Sign (Light banding)", 
+          signAr: "علامة العلم (شرائط فاتحة)", 
           deficiency: "Protein, Copper", 
           deficiencyAr: "البروتين، النحاس",
-          food: "Liver, oysters, spirulina, dark chocolate",
-          foodAr: "الكبد، المحار، السبيرولينا، الشوكولاتة الداكنة"
+          food: "Liver, shellfish, nuts, seeds, meat",
+          foodAr: "الكبد، المحار، المكسرات، البذور، اللحوم",
+          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/Flag_sign_of_kwashiorkor.jpg/320px-Flag_sign_of_kwashiorkor.jpg"
       },
       { 
           id: "hair_corkscrew", 
-          sign: "Corkscrew hair", 
-          signAr: "شعر لولبي", 
+          sign: "Corkscrew Hair / Coiled", 
+          signAr: "شعر لولبي / ملفوف", 
           deficiency: "Vitamin C", 
           deficiencyAr: "فيتامين سي",
-          food: "Peppers, kiwi, strawberries, oranges",
-          foodAr: "الفلفل، الكيوي، الفراولة، البرتقال"
+          food: "Citrus fruits, peppers, kiwi, strawberries",
+          foodAr: "الحمضيات، الفلفل، الكيوي، الفراولة"
+      },
+      { 
+          id: "hair_loss_alopecia", 
+          sign: "Alopecia / Hair Loss", 
+          signAr: "ثعلبة / تساقط شعر", 
+          deficiency: "Zinc, EFA, Biotin, Protein", 
+          deficiencyAr: "الزنك، الأحماض الدهنية، البيوتين",
+          food: "Oysters, beef, flaxseeds, eggs",
+          foodAr: "المحار، اللحم البقري، بذور الكتان، البيض"
+      },
+      {
+          id: "hair_scaly",
+          sign: "Scaly / Flaky Scalp", 
+          signAr: "فروة رأس قشرية",
+          deficiency: "Essential Fatty Acids (EFA)",
+          deficiencyAr: "الأحماض الدهنية الأساسية",
+          food: "Fish oil, walnuts, flaxseeds",
+          foodAr: "زيت السمك، الجوز، بذور الكتان"
+      }
+    ]
+  },
+  {
+    id: "face_eyes",
+    name: "Face & Eyes",
+    nameAr: "الوجه والعيون",
+    icon: "👁️",
+    items: [
+       {
+          id: "face_moon",
+          sign: "Moon Face / Depigmentation",
+          signAr: "وجه قمري / نقص تصبغ",
+          deficiency: "Protein (Kwashiorkor)",
+          deficiencyAr: "البروتين",
+          food: "High protein diet",
+          foodAr: "نظام غذائي عالي البروتين"
+      },
+      {
+          id: "face_wasting",
+          sign: "Temporal Wasting",
+          signAr: "هزال الصدغين",
+          deficiency: "Protein-Calorie Malnutrition",
+          deficiencyAr: "سوء تغذية البروتين والسعرات",
+          food: "High calorie, high protein support",
+          foodAr: "دعم عالي السعرات والبروتين"
+      },
+      { 
+          id: "eye_pale", 
+          sign: "Pale Conjunctiva", 
+          signAr: "شحوب الملتحمة", 
+          deficiency: "Iron, Folate, B12", 
+          deficiencyAr: "الحديد، الفولات، ب12",
+          food: "Red meat, liver, spinach, beans",
+          foodAr: "اللحوم الحمراء، الكبد، السبانخ، الفاصوليا",
+          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Pallor_of_conjunctiva.jpg/320px-Pallor_of_conjunctiva.jpg"
+      },
+      { 
+          id: "eye_bitot", 
+          sign: "Bitot’s Spots", 
+          signAr: "بقع بيتو", 
+          deficiency: "Vitamin A", 
+          deficiencyAr: "فيتامين أ",
+          food: "Liver, sweet potato, carrots, dairy",
+          foodAr: "الكبد، البطاطا الحلوة، الجزر، الألبان",
+          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Bitot%27s_spot.jpg/320px-Bitot%27s_spot.jpg"
+      },
+      { 
+          id: "eye_night", 
+          sign: "Night Blindness", 
+          signAr: "العشى الليلي", 
+          deficiency: "Vitamin A", 
+          deficiencyAr: "فيتامين أ",
+          food: "Carrots, spinach, kale, apricots",
+          foodAr: "الجزر، السبانخ، الكرنب، المشمش"
+      },
+      { 
+          id: "eye_xanthelasma", 
+          sign: "Xanthelasma (Fat deposits)", 
+          signAr: "لويحات صفراء", 
+          deficiency: "Hyperlipidemia (Excess)", 
+          deficiencyAr: "فرط دهون الدم",
+          food: "Reduce saturated fats, increase fiber",
+          foodAr: "تقليل الدهون المشبعة، زيادة الألياف",
+          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Xanthelasma.jpg/320px-Xanthelasma.jpg"
+      },
+      { 
+          id: "eye_angular", 
+          sign: "Angular Blepharitis", 
+          signAr: "التهاب زوايا الجفن", 
+          deficiency: "Riboflavin (B2), B6", 
+          deficiencyAr: "ريبوفلافين، ب6",
+          food: "Milk, yogurt, organ meats",
+          foodAr: "الحليب، الزبادي، لحوم الأعضاء"
+      }
+    ]
+  },
+  {
+    id: "oral",
+    name: "Oral Cavity",
+    nameAr: "تجويف الفم",
+    icon: "👄",
+    items: [
+      { 
+          id: "mouth_cheilitis", 
+          sign: "Angular Cheilitis / Stomatitis", 
+          signAr: "تشقق زوايا الفم / التهاب الفم", 
+          deficiency: "B2, B3, B6, Iron", 
+          deficiencyAr: "ب2، ب3، ب6، الحديد",
+          food: "Dairy, eggs, meat, fortified cereals",
+          foodAr: "الألبان، البيض، اللحوم، الحبوب المدعمة",
+          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Angular_Cheilitis.JPG/320px-Angular_Cheilitis.JPG"
+      },
+      { 
+          id: "mouth_glossitis", 
+          sign: "Glossitis (Beefy Red Tongue)", 
+          signAr: "التهاب اللسان (لسان أحمر غامق)", 
+          deficiency: "Niacin (B3), Folate, B12, B2", 
+          deficiencyAr: "ب3، الفولات، ب12، ب2",
+          food: "Meat, fish, enriched grains, peanuts",
+          foodAr: "اللحوم، الأسماك، الحبوب المدعمة، الفول السوداني"
+      },
+      { 
+          id: "mouth_magenta", 
+          sign: "Magenta Tongue", 
+          signAr: "لسان أرجواني", 
+          deficiency: "Riboflavin (B2)", 
+          deficiencyAr: "ريبوفلافين (ب2)",
+          food: "Milk, yogurt, almonds, mushrooms",
+          foodAr: "الحليب، الزبادي، اللوز، المشروم"
+      },
+      { 
+          id: "mouth_atrophic", 
+          sign: "Atrophic Papillae (Smooth)", 
+          signAr: "ضمور الحليمات (لسان أملس)", 
+          deficiency: "Iron, Folate, B12, Niacin", 
+          deficiencyAr: "الحديد، الفولات، ب12، النياسين",
+          food: "Red meat, liver, leafy greens",
+          foodAr: "اللحوم الحمراء، الكبد، الخضروات الورقية"
+      },
+      { 
+          id: "mouth_gums", 
+          sign: "Spongy / Bleeding Gums", 
+          signAr: "لثة إسفنجية / نازفة", 
+          deficiency: "Vitamin C", 
+          deficiencyAr: "فيتامين سي",
+          food: "Citrus, peppers, broccoli, strawberries",
+          foodAr: "الحمضيات، الفلفل، البروكلي، الفراولة"
+      },
+      { 
+          id: "mouth_taste", 
+          sign: "Dysgeusia (Taste loss)", 
+          signAr: "خلل التذوق", 
+          deficiency: "Zinc", 
+          deficiencyAr: "الزنك",
+          food: "Shellfish, beef, pumpkin seeds",
+          foodAr: "المحار، اللحم البقري، بذور اليقطين"
+      }
+    ]
+  },
+  {
+    id: "skin",
+    name: "Skin",
+    nameAr: "الجلد",
+    icon: "✋",
+    items: [
+      { 
+          id: "skin_pellagra", 
+          sign: "Pellagra (Dermatitis on sun areas)", 
+          signAr: "بلاجرا (التهاب جلدي في المناطق المعرضة للشمس)", 
+          deficiency: "Niacin (B3)", 
+          deficiencyAr: "النياسين (ب3)",
+          food: "Poultry, tuna, peanuts, whole grains",
+          foodAr: "الدواجن، التونة، الفول السوداني، الحبوب الكاملة",
+          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Pellagra_USDA.jpg/254px-Pellagra_USDA.jpg"
+      },
+      { 
+          id: "skin_petechiae", 
+          sign: "Petechiae / Ecchymosis", 
+          signAr: "نمشات دموية / كدمات", 
+          deficiency: "Vitamin C, Vitamin K", 
+          deficiencyAr: "فيتامين سي، فيتامين ك",
+          food: "Leafy greens (K), Citrus (C)",
+          foodAr: "الخضروات الورقية (ك)، الحمضيات (سي)"
+      },
+      { 
+          id: "skin_follicular", 
+          sign: "Follicular Hyperkeratosis (Gooseflesh)", 
+          signAr: "فرط التقرن الجريبي (جلد الوزة)", 
+          deficiency: "Vitamin A, Vitamin C, EFA", 
+          deficiencyAr: "فيتامين أ، سي، الأحماض الدهنية",
+          food: "Carrots, sweet potato, citrus, healthy oils",
+          foodAr: "الجزر، البطاطا، الحمضيات، الزيوت الصحية",
+          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Keratosis_pilaris_arm.jpg/320px-Keratosis_pilaris_arm.jpg"
+      },
+      { 
+          id: "skin_seborrhea", 
+          sign: "Nasolabial Seborrhea", 
+          signAr: "دهنية حول الأنف", 
+          deficiency: "B2 (Riboflavin), B6, Zinc", 
+          deficiencyAr: "ب2، ب6، الزنك",
+          food: "Dairy, eggs, meat, whole grains",
+          foodAr: "الألبان، البيض، اللحوم، الحبوب الكاملة"
+      },
+      { 
+          id: "skin_healing", 
+          sign: "Delayed Wound Healing", 
+          signAr: "تأخر التئام الجروح", 
+          deficiency: "Protein, Zinc, Vitamin C", 
+          deficiencyAr: "البروتين، الزنك، فيتامين سي",
+          food: "High protein, citrus, shellfish",
+          foodAr: "بروتين عالي، حمضيات، مأكولات بحرية"
+      },
+       { 
+          id: "skin_pallor", 
+          sign: "Pallor / Paleness", 
+          signAr: "شحوب", 
+          deficiency: "Iron, B12, Folate", 
+          deficiencyAr: "الحديد، ب12، الفولات",
+          food: "Red meat, spinach, beans",
+          foodAr: "اللحوم الحمراء، السبانخ، الفاصوليا"
       }
     ]
   },
@@ -229,135 +352,86 @@ export const nfpeData: NFPESystem[] = [
     icon: "💅",
     items: [
       { 
+          id: "nails_koilonychia", 
+          sign: "Koilonychia (Spoon Nails)", 
+          signAr: "تأقر الأظافر (أظافر ملعقية)", 
+          deficiency: "Iron (Severe)", 
+          deficiencyAr: "الحديد (شديد)",
+          food: "Red meat, liver, clams, fortified cereals",
+          foodAr: "اللحوم الحمراء، الكبد، المحار، الحبوب المدعمة",
+          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/Spoon_Nails.JPG/320px-Spoon_Nails.JPG"
+      },
+      { 
           id: "nails_beau", 
-          sign: "Beau’s lines (ridges)", 
-          signAr: "خطوط بو (نتوءات أفقية)", 
-          deficiency: "Protein, Zinc", 
+          sign: "Beau’s Lines (Transverse Ridges)", 
+          signAr: "خطوط بو (نتوءات عرضية)", 
+          deficiency: "Protein, Zinc (Acute stress)", 
           deficiencyAr: "البروتين، الزنك",
-          food: "Meat, dairy, legumes, nuts",
-          foodAr: "اللحوم، الألبان، البقوليات، المكسرات"
+          food: "Adequate protein intake",
+          foodAr: "تناول بروتين كافٍ",
+          image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Beaus_Lines.jpg/320px-Beaus_Lines.jpg"
       },
       { 
-          id: "nails_spoon", 
-          sign: "Spoon-shaped (Koilonychia)", 
-          signAr: "أظافر ملعقية", 
-          deficiency: "Iron", 
-          deficiencyAr: "الحديد",
-          food: "Red meat, spinach, liver, fortified cereals",
-          foodAr: "اللحوم الحمراء، السبانخ، الكبد، الحبوب المدعمة"
+          id: "nails_splinter", 
+          sign: "Splinter Hemorrhages", 
+          signAr: "نزيف شظوي", 
+          deficiency: "Vitamin C", 
+          deficiencyAr: "فيتامين سي",
+          food: "Citrus, peppers, broccoli",
+          foodAr: "الحمضيات، الفلفل، البروكلي"
       },
       { 
-          id: "nails_white", 
-          sign: "White spots (Leukonychia)", 
+          id: "nails_leukonychia", 
+          sign: "Leukonychia (White spots)", 
           signAr: "بقع بيضاء", 
-          deficiency: "Zinc", 
-          deficiencyAr: "الزنك",
-          food: "Oysters, beef, pumpkin seeds",
-          foodAr: "المحار، اللحم البقري، بذور اليقطين"
+          deficiency: "Zinc, Selenium", 
+          deficiencyAr: "الزنك، السيلينيوم",
+          food: "Oysters, brazil nuts, meat",
+          foodAr: "المحار، المكسرات البرازيلية، اللحوم"
       }
     ]
   },
   {
-    id: "muscle",
-    name: "Muscles",
-    nameAr: "العضلات",
-    icon: "💪",
-    items: [
-      { 
-          id: "muscle_wasting", 
-          sign: "Muscle wasting", 
-          signAr: "هزال العضلات", 
-          deficiency: "Protein, Calories", 
-          deficiencyAr: "البروتين، السعرات الحرارية",
-          food: "High protein foods, balanced meals",
-          foodAr: "أطعمة عالية البروتين، وجبات متوازنة"
-      },
-      { 
-          id: "muscle_cramps", 
-          sign: "Muscle cramps/Tetany", 
-          signAr: "تشنجات عضلية", 
-          deficiency: "Magnesium, Calcium, Vit D", 
-          deficiencyAr: "المغنيسيوم، الكالسيوم، فيتامين د",
-          food: "Bananas, almonds, yogurt, leafy greens",
-          foodAr: "الموز، اللوز، الزبادي، الخضروات الورقية"
-      }
-    ]
-  },
-  {
-    id: "nervous",
-    name: "Nervous System",
-    nameAr: "الجهاز العصبي",
-    icon: "🧠",
-    items: [
-      { 
-          id: "neuro_tingling", 
-          sign: "Numbness/Tingling", 
-          signAr: "تنميل / وخز", 
-          deficiency: "B12, B6, B1", 
-          deficiencyAr: "ب12، ب6، ب1",
-          food: "Meat, fish, poultry, fortified yeast",
-          foodAr: "اللحوم، الأسماك، الدواجن، الخميرة المدعمة"
-      },
-      { 
-          id: "neuro_conf", 
-          sign: "Confusion/Memory loss", 
-          signAr: "الارتباك / فقدان الذاكرة", 
-          deficiency: "B1, B3, B12", 
-          deficiencyAr: "ب1، ب3، ب12",
-          food: "Whole grains, meat, dairy",
-          foodAr: "الحبوب الكاملة، اللحوم، الألبان"
-      }
-    ]
-  },
-  {
-    id: "bones",
-    name: "Bones",
-    nameAr: "العظام",
+    id: "musculoskeletal",
+    name: "Musculoskeletal",
+    nameAr: "الجهاز العضلي الهيكلي",
     icon: "🦴",
     items: [
       { 
-          id: "bone_soft", 
-          sign: "Rickets / Osteomalacia", 
-          signAr: "الكساح / لين العظام", 
+          id: "bone_rickets", 
+          sign: "Rickets (Bow legs / Beading ribs)", 
+          signAr: "الكساح (تقوس الساقين / سبحة ضلعية)", 
           deficiency: "Vitamin D, Calcium", 
           deficiencyAr: "فيتامين د، الكالسيوم",
-          food: "Fatty fish, dairy, sunlight, egg yolks",
-          foodAr: "الأسماك الدهنية، الألبان، أشعة الشمس، صفار البيض"
+          food: "Sunlight, fortified milk, fatty fish",
+          foodAr: "الشمس، الحليب المدعم، الأسماك الدهنية"
       },
       { 
-          id: "bone_joint", 
-          sign: "Joint pain", 
-          signAr: "آلام المفاصل", 
-          deficiency: "Vitamin C, Vitamin D", 
-          deficiencyAr: "فيتامين سي، فيتامين د",
-          food: "Citrus fruits, peppers, fortified milk",
-          foodAr: "الحمضيات، الفلفل، الحليب المدعم"
-      }
-    ]
-  },
-  {
-    id: "general",
-    name: "General",
-    nameAr: "عام",
-    icon: "🌡️",
-    items: [
-      { 
-          id: "gen_fatigue", 
-          sign: "Chronic Fatigue", 
-          signAr: "تعب مزمن", 
-          deficiency: "Iron, B12, Vit D", 
-          deficiencyAr: "الحديد، ب12، فيتامين د",
-          food: "Red meat, eggs, fish, fortified foods",
-          foodAr: "اللحوم الحمراء، البيض، الأسماك، الأطعمة المدعمة"
+          id: "muscle_wasting", 
+          sign: "Muscle Wasting (Sarcopenia)", 
+          signAr: "هزال العضلات", 
+          deficiency: "Protein, Energy", 
+          deficiencyAr: "البروتين، الطاقة",
+          food: "High protein, resistance exercise",
+          foodAr: "بروتين عالي، تمارين المقاومة"
       },
       { 
-          id: "gen_cold", 
-          sign: "Cold intolerance", 
-          signAr: "عدم تحمل البرد", 
-          deficiency: "Iron, Iodine", 
-          deficiencyAr: "الحديد، اليود",
-          food: "Seafood, iodized salt, red meat",
-          foodAr: "المأكولات البحرية، الملح اليودي، اللحوم الحمراء"
+          id: "muscle_calf_pain", 
+          sign: "Calf Tenderness / Pain", 
+          signAr: "ألم بطة الساق", 
+          deficiency: "Thiamin (B1), Selenium", 
+          deficiencyAr: "الثيامين، السيلينيوم",
+          food: "Whole grains, pork, brazil nuts",
+          foodAr: "الحبوب الكاملة، لحم الخنزير (بدائل)، المكسرات"
+      },
+      { 
+          id: "joint_pain", 
+          sign: "Joint Pain / Swelling", 
+          signAr: "ألم / تورم المفاصل", 
+          deficiency: "Vitamin C (Scurvy)", 
+          deficiencyAr: "فيتامين سي (الاسقربوط)",
+          food: "Citrus fruits, fresh vegetables",
+          foodAr: "الحمضيات، الخضروات الطازجة"
       }
     ]
   }

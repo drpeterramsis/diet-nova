@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+
+import React, { useState, useEffect, useMemo } from 'react';
 import { nfpeData, NFPESystem, NFPEItem } from '../../data/nfpeData';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Client } from '../../types';
@@ -16,6 +17,13 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
   const [saveStatus, setSaveStatus] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'assessment' | 'summary'>('assessment');
+
+  // Load existing state if available
+  useEffect(() => {
+    if (client && client.nfpe_data && client.nfpe_data.selectedItems) {
+        setSelectedItems(new Set(client.nfpe_data.selectedItems));
+    }
+  }, [client]);
 
   const toggleItem = (itemId: string) => {
     const newSet = new Set(selectedItems);
@@ -49,13 +57,43 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
     return report;
   };
 
-  const handleSaveToClient = async () => {
+  // Logic 1: Save State Only (Checklist State)
+  const handleSaveState = async () => {
+      if (!client) return;
+      setIsSaving(true);
+      setSaveStatus('');
+      
+      try {
+          // This requires the 'nfpe_data' column in Supabase 'clients' table.
+          // If the column doesn't exist, this will throw an error.
+          const { error } = await supabase
+            .from('clients')
+            .update({ 
+                nfpe_data: { 
+                    selectedItems: Array.from(selectedItems),
+                    updatedAt: new Date().toISOString()
+                } 
+            })
+            .eq('id', client.id);
+
+          if (error) throw error;
+          setSaveStatus('Checklist Saved Successfully!');
+          setTimeout(() => setSaveStatus(''), 2000);
+      } catch (err: any) {
+          console.error("Save State Error:", err);
+          setSaveStatus('Error: Database column nfpe_data missing?');
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
+  // Logic 2: Save to Notes (Legacy / Printable)
+  const handleSaveToNotes = async () => {
     if (!client) return;
     setIsSaving(true);
     setSaveStatus('');
 
     const newNotes = generateReportText();
-    
     const updatedNotes = client.notes 
       ? `${client.notes}\n\n${newNotes}` 
       : newNotes;
@@ -67,13 +105,8 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
         .eq('id', client.id);
 
       if (error) throw error;
-      setSaveStatus('Saved to Client Notes!');
-      
-      setTimeout(() => {
-          setSaveStatus('');
-          if(onBack) onBack(); 
-      }, 1500);
-
+      setSaveStatus('Report appended to Notes!');
+      setTimeout(() => setSaveStatus(''), 2000);
     } catch (err: any) {
       console.error(err);
       setSaveStatus('Error saving: ' + err.message);
@@ -89,10 +122,40 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
   };
 
   // Organize findings for the summary tab
-  const activeFindingsBySystem = nfpeData.map(system => ({
-      ...system,
-      items: system.items.filter(item => selectedItems.has(item.id))
-  })).filter(sys => sys.items.length > 0);
+  const activeFindingsBySystem = useMemo(() => {
+      return nfpeData.map(system => ({
+        ...system,
+        items: system.items.filter(item => selectedItems.has(item.id))
+      })).filter(sys => sys.items.length > 0);
+  }, [selectedItems]);
+
+  // Aggregated Summary Logic
+  const aggregatedSummary = useMemo(() => {
+      const defs = new Set<string>();
+      const foods = new Set<string>();
+
+      nfpeData.forEach(sys => {
+          sys.items.forEach(item => {
+              if (selectedItems.has(item.id)) {
+                  // Normalize and split deficiencies
+                  item.deficiency.split(/,|&|\//).forEach(d => {
+                      const trimD = d.trim();
+                      if (trimD && !trimD.toLowerCase().includes('deficiency')) defs.add(trimD);
+                  });
+                  
+                  // Normalize and split foods
+                  item.food.split(/,|&|\//).forEach(f => {
+                      foods.add(f.trim());
+                  });
+              }
+          });
+      });
+
+      return {
+          deficiencies: Array.from(defs).sort(),
+          foods: Array.from(foods).sort()
+      };
+  }, [selectedItems]);
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in pb-12">
@@ -136,84 +199,106 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
 
       {/* ASSESSMENT TAB */}
       {activeTab === 'assessment' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-            {nfpeData.map((system: NFPESystem) => {
-            const activeCount = system.items.filter(i => selectedItems.has(i.id)).length;
-            
-            return (
-                <div key={system.id} className={`card bg-white transition-all duration-300 ${activeCount > 0 ? 'ring-2 ring-[var(--color-primary)] shadow-lg' : 'shadow-sm hover:shadow-md'}`}>
-                    <div className="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
-                        <span className="text-2xl">{system.icon}</span>
-                        <div className="flex-grow">
-                            <h3 className="font-bold text-gray-800">{system.name}</h3>
-                            <p className="text-xs text-gray-500 font-arabic">{system.nameAr}</p>
+        <div className="space-y-6">
+            <div className="flex justify-end gap-2 no-print">
+                 {client && (
+                    <button 
+                        onClick={handleSaveState}
+                        disabled={isSaving}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition disabled:opacity-50 text-sm flex items-center gap-2"
+                    >
+                        💾 Save Checklist State
+                    </button>
+                 )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+                {nfpeData.map((system: NFPESystem) => {
+                const activeCount = system.items.filter(i => selectedItems.has(i.id)).length;
+                
+                return (
+                    <div key={system.id} className={`card bg-white transition-all duration-300 ${activeCount > 0 ? 'ring-2 ring-[var(--color-primary)] shadow-lg' : 'shadow-sm hover:shadow-md'}`}>
+                        <div className="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
+                            <span className="text-2xl">{system.icon}</span>
+                            <div className="flex-grow">
+                                <h3 className="font-bold text-gray-800">{system.name}</h3>
+                                <p className="text-xs text-gray-500 font-arabic">{system.nameAr}</p>
+                            </div>
+                            {activeCount > 0 && (
+                                <span className="bg-[var(--color-primary)] text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                                    {activeCount}
+                                </span>
+                            )}
                         </div>
-                        {activeCount > 0 && (
-                            <span className="bg-[var(--color-primary)] text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                                {activeCount}
-                            </span>
-                        )}
-                    </div>
-                    
-                    <div className="space-y-2">
-                        {system.items.map((item: NFPEItem) => {
-                            const isSelected = selectedItems.has(item.id);
-                            return (
-                                <div 
-                                    key={item.id}
-                                    onClick={() => toggleItem(item.id)}
-                                    className={`p-2 rounded-lg cursor-pointer border transition-all ${
-                                        isSelected 
-                                        ? 'bg-red-50 border-red-200' 
-                                        : 'bg-white border-transparent hover:bg-gray-50 hover:border-gray-200'
-                                    }`}
-                                >
-                                    <div className="flex items-start gap-2">
-                                        <div className={`w-5 h-5 mt-1 rounded border flex flex-shrink-0 items-center justify-center ${isSelected ? 'bg-red-500 border-red-500' : 'border-gray-300'}`}>
-                                            {isSelected && <span className="text-white text-xs">✓</span>}
-                                        </div>
-                                        <div className="flex-grow">
-                                            <div className={`text-sm font-medium ${isSelected ? 'text-red-700' : 'text-gray-700'}`}>
-                                                {item.sign}
+                        
+                        <div className="space-y-2">
+                            {system.items.map((item: NFPEItem) => {
+                                const isSelected = selectedItems.has(item.id);
+                                return (
+                                    <div 
+                                        key={item.id}
+                                        onClick={() => toggleItem(item.id)}
+                                        className={`p-2 rounded-lg cursor-pointer border transition-all ${
+                                            isSelected 
+                                            ? 'bg-red-50 border-red-200' 
+                                            : 'bg-white border-transparent hover:bg-gray-50 hover:border-gray-200'
+                                        }`}
+                                    >
+                                        <div className="flex items-start gap-2">
+                                            <div className={`w-5 h-5 mt-1 rounded border flex flex-shrink-0 items-center justify-center ${isSelected ? 'bg-red-500 border-red-500' : 'border-gray-300'}`}>
+                                                {isSelected && <span className="text-white text-xs">✓</span>}
                                             </div>
-                                            <div className={`text-xs font-arabic ${isSelected ? 'text-red-600' : 'text-gray-500'}`}>
-                                                {item.signAr}
-                                            </div>
-                                            {/* Minimal hint in checklist view, full details in summary */}
-                                            {isSelected && (
-                                                <div className="mt-1 text-[10px] text-red-500 font-medium">
-                                                    Possible Def: {item.deficiency}
+                                            <div className="flex-grow">
+                                                <div className={`text-sm font-medium ${isSelected ? 'text-red-700' : 'text-gray-700'}`}>
+                                                    {item.sign}
                                                 </div>
-                                            )}
+                                                <div className={`text-xs font-arabic ${isSelected ? 'text-red-600' : 'text-gray-500'}`}>
+                                                    {item.signAr}
+                                                </div>
+                                                {isSelected && (
+                                                    <div className="mt-1 text-[10px] text-red-500 font-medium">
+                                                        Deficiency: {item.deficiency}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
-            );
-            })}
+                );
+                })}
+            </div>
         </div>
       )}
 
       {/* SUMMARY TAB */}
       {activeTab === 'summary' && (
-          <div className="animate-fade-in space-y-6">
-              <div className="bg-purple-50 p-6 rounded-xl border border-purple-100 flex justify-between items-center">
+          <div className="animate-fade-in space-y-8">
+              <div className="bg-purple-50 p-6 rounded-xl border border-purple-100 flex flex-col sm:flex-row justify-between items-center gap-4 no-print">
                    <div>
-                       <h2 className="text-xl font-bold text-purple-900">Assessment Summary</h2>
-                       <p className="text-sm text-purple-700">Review selected signs and nutritional recommendations.</p>
+                       <h2 className="text-xl font-bold text-purple-900">Assessment Report</h2>
+                       <p className="text-sm text-purple-700">Review findings and aggregated recommendations.</p>
                    </div>
                    <div className="flex gap-2">
                         {client ? (
+                            <>
                             <button 
-                                onClick={handleSaveToClient}
+                                onClick={handleSaveToNotes}
                                 disabled={isSaving}
-                                className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-6 py-2 rounded-lg font-bold shadow-md transition disabled:opacity-50"
+                                className="bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 px-4 py-2 rounded-lg font-bold shadow-sm transition disabled:opacity-50 text-sm"
                             >
-                                {isSaving ? 'Saving...' : '💾 Save to Profile'}
+                                📝 Append to Notes
                             </button>
+                            <button 
+                                onClick={handleSaveState}
+                                disabled={isSaving}
+                                className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-6 py-2 rounded-lg font-bold shadow-md transition disabled:opacity-50 text-sm"
+                            >
+                                {isSaving ? 'Saving...' : '💾 Save Checklist Only'}
+                            </button>
+                            </>
                         ) : (
                             <button 
                                 onClick={handleCopy}
@@ -225,6 +310,7 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
                    </div>
               </div>
 
+              {/* Detailed Findings */}
               {activeFindingsBySystem.length === 0 ? (
                   <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">
                       <div className="text-4xl mb-3">🩺</div>
@@ -234,7 +320,7 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
               ) : (
                   <div className="space-y-6">
                       {activeFindingsBySystem.map(sys => (
-                          <div key={sys.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                          <div key={sys.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden break-inside-avoid">
                               <div className="bg-gray-50 p-4 border-b border-gray-200 flex items-center gap-3">
                                   <span className="text-2xl">{sys.icon}</span>
                                   <div>
@@ -255,7 +341,7 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
                                                       <div className="text-gray-600 font-arabic text-sm">{item.signAr}</div>
                                                   </div>
                                                   {item.image && (
-                                                      <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                                                      <div className="w-full h-40 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
                                                           <img src={item.image} alt={item.sign} className="w-full h-full object-cover" />
                                                       </div>
                                                   )}
@@ -280,6 +366,46 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
                               </div>
                           </div>
                       ))}
+                  </div>
+              )}
+
+              {/* Aggregated Summary Section */}
+              {activeFindingsBySystem.length > 0 && (
+                  <div className="mt-8 bg-gradient-to-br from-gray-800 to-gray-900 text-white rounded-xl shadow-lg p-8 break-inside-avoid">
+                      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 border-b border-gray-600 pb-4">
+                          <span>📊</span> Total Assessment Summary
+                      </h2>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          {/* Deficiencies */}
+                          <div>
+                              <h3 className="font-bold text-red-300 uppercase tracking-wider text-sm mb-4">
+                                  Potential Deficiencies Suspected
+                              </h3>
+                              <div className="flex flex-wrap gap-2">
+                                  {aggregatedSummary.deficiencies.map((def, idx) => (
+                                      <span key={idx} className="bg-red-900/40 border border-red-700/50 text-red-100 px-3 py-1.5 rounded-lg text-sm font-medium">
+                                          {def}
+                                      </span>
+                                  ))}
+                              </div>
+                          </div>
+
+                          {/* Food Recommendations */}
+                          <div>
+                              <h3 className="font-bold text-green-300 uppercase tracking-wider text-sm mb-4">
+                                  Aggregate Nutrition Recommendations
+                              </h3>
+                              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300">
+                                  {aggregatedSummary.foods.map((food, idx) => (
+                                      <li key={idx} className="flex items-center gap-2">
+                                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                          {food}
+                                      </li>
+                                  ))}
+                              </ul>
+                          </div>
+                      </div>
                   </div>
               )}
           </div>

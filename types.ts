@@ -28,6 +28,7 @@ export interface Client {
   clinic: string;
   phone?: string;
   notes?: string;
+  nfpe_data?: any; // New: JSON for NFPE checklist state
   age?: number;
   gender?: 'male' | 'female';
   marital_status?: string;
