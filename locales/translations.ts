@@ -89,6 +89,10 @@ export const en: Translation = {
     nfpe: {
       title: "NFPE Assessment",
       desc: "Nutrition-Focused Physical Examination to detect deficiencies.",
+    },
+    encyclopedia: {
+        title: "Encyclopedia",
+        desc: "Comprehensive library of Vitamins & Minerals.",
     }
   },
   clients: {
@@ -225,6 +229,15 @@ export const en: Translation = {
       fats: "🧈 Fats",
       sugar: "🧊 Sugar",
     }
+  },
+  encyclopedia: {
+      searchPlaceholder: "Search vitamins, minerals...",
+      filterAll: "All",
+      filterVitamins: "Vitamins",
+      filterMinerals: "Minerals",
+      function: "Function",
+      sources: "Food Sources",
+      deficiency: "Deficiency",
   }
 };
 
@@ -315,6 +328,10 @@ export const ar: Translation = {
     nfpe: {
       title: "الفحص البدني (NFPE)",
       desc: "فحص بدني يركز على التغذية للكشف عن النقص.",
+    },
+    encyclopedia: {
+        title: "الموسوعة الغذائية",
+        desc: "مكتبة شاملة للفيتامينات والمعادن.",
     }
   },
   clients: {
@@ -451,5 +468,14 @@ export const ar: Translation = {
       fats: "🧈 دهون",
       sugar: "🧊 سكر",
     }
+  },
+  encyclopedia: {
+      searchPlaceholder: "بحث عن الفيتامينات والمعادن...",
+      filterAll: "الكل",
+      filterVitamins: "فيتامينات",
+      filterMinerals: "معادن",
+      function: "الوظيفة",
+      sources: "المصادر الغذائية",
+      deficiency: "أعراض النقص",
   }
 };

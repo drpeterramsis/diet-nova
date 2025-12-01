@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -11,6 +12,7 @@ import { MealPlanner } from "./components/tools/MealPlanner";
 import ClientManager from "./components/tools/ClientManager";
 import BmrCalculator from "./components/tools/BmrCalculator";
 import NFPEChecklist from "./components/tools/NFPEChecklist";
+import Encyclopedia from "./components/tools/Encyclopedia";
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -334,6 +336,7 @@ const AppContent = () => {
                     onBack={currentClientForNFPE ? handleBackFromNFPE : undefined} 
                 />
             )}
+            {activeTool === 'encyclopedia' && <Encyclopedia />}
 
           </div>
         ) : (

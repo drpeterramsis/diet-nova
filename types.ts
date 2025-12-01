@@ -148,6 +148,10 @@ export interface Translation {
       title: string;
       desc: string;
     };
+    encyclopedia: {
+      title: string;
+      desc: string;
+    };
   };
   clients: {
     title: string;
@@ -283,5 +287,14 @@ export interface Translation {
       fats: string;
       sugar: string;
     }
+  };
+  encyclopedia: {
+      searchPlaceholder: string;
+      filterAll: string;
+      filterVitamins: string;
+      filterMinerals: string;
+      function: string;
+      sources: string;
+      deficiency: string;
   };
 }

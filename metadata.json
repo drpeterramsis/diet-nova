@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova advance v2.0.74",
-  "description": "Updates: Comprehensive NFPE Database expansion with images, separate state saving for NFPE checklist, and aggregated nutrient summaries.",
+  "name": "Diet-Nova advance v2.0.75",
+  "description": "Updates: Added Nutrient Encyclopedia (Vitamins & Minerals Chart) with search and filtering.",
   "requestFramePermissions": []
 }
