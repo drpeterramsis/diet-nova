@@ -1,12 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { encyclopediaData, EncyclopediaItem } from '../../data/encyclopediaData';
+import { encyclopediaData } from '../../data/encyclopediaData';
+
+type Sector = 'menu' | 'nutrients';
 
 const Encyclopedia: React.FC = () => {
   const { t, isRTL } = useLanguage();
+  
+  // Navigation State
+  const [currentSector, setCurrentSector] = useState<Sector>('menu');
+
+  // Logic for Vitamins & Minerals Sector
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'All' | 'Vitamin' | 'Mineral'>('All');
-  const [viewMode, setViewMode] = useState<'cards' | 'chart'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'chart'>('chart'); // Default to chart as requested "1st card in encyclopedia"
 
   const filteredItems = useMemo(() => {
     let items = encyclopediaData;
@@ -30,55 +37,127 @@ const Encyclopedia: React.FC = () => {
     return items;
   }, [searchQuery, activeFilter]);
 
+  // --- SECTOR MENU VIEW ---
+  if (currentSector === 'menu') {
+      return (
+        <div className="max-w-7xl mx-auto animate-fade-in space-y-8 pb-12">
+            <div className="text-center space-y-4 mb-8">
+                <h1 className="text-3xl font-bold text-[var(--color-heading)]">{t.tools.encyclopedia.title}</h1>
+                <p className="text-gray-600 max-w-2xl mx-auto">
+                    Select a knowledge sector to explore detailed nutritional information and charts.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* 1. Vitamins & Minerals Chart Card */}
+                <div 
+                    onClick={() => setCurrentSector('nutrients')}
+                    className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-blue-500"
+                >
+                    <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:bg-blue-100 transition">
+                        💊
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Vitamins & Minerals</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                        Comprehensive chart of micronutrients, their functions, deficiency symptoms, and food sources.
+                    </p>
+                    <button className="mt-auto text-blue-600 font-bold text-sm bg-blue-50 px-4 py-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition w-full">
+                        View Chart & Cards
+                    </button>
+                </div>
+
+                {/* Placeholder: Herbs (Future) */}
+                <div className="card bg-gray-50 border-dashed border-2 border-gray-200 p-6 flex flex-col items-center text-center opacity-70">
+                    <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center text-3xl mb-4 text-gray-400">
+                        🌿
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-400 mb-2">Herbs & Botanicals</h3>
+                    <p className="text-sm text-gray-400 mb-4">
+                        Scientific guide to herbal supplements and therapeutic uses.
+                    </p>
+                    <span className="mt-auto text-xs font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+                        Coming Soon
+                    </span>
+                </div>
+
+                {/* Placeholder: Drug Interactions (Future) */}
+                <div className="card bg-gray-50 border-dashed border-2 border-gray-200 p-6 flex flex-col items-center text-center opacity-70">
+                    <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center text-3xl mb-4 text-gray-400">
+                        ⚡
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-400 mb-2">Drug Interactions</h3>
+                    <p className="text-sm text-gray-400 mb-4">
+                        Check interactions between food, supplements, and medication.
+                    </p>
+                    <span className="mt-auto text-xs font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
+                        Coming Soon
+                    </span>
+                </div>
+            </div>
+        </div>
+      );
+  }
+
+  // --- VITAMINS & MINERALS SECTOR VIEW ---
   return (
-    <div className="max-w-7xl mx-auto animate-fade-in space-y-8">
-      {/* Header & Controls */}
-      <div className="text-center space-y-6">
-        <div>
-            <h1 className="text-3xl font-bold text-[var(--color-heading)] mb-2">{t.tools.encyclopedia.title}</h1>
-            <p className="text-gray-600 max-w-2xl mx-auto">{t.tools.encyclopedia.desc}</p>
-        </div>
+    <div className="max-w-7xl mx-auto animate-fade-in space-y-8 pb-12">
+      {/* Sector Header & Back Button */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+           <button 
+              onClick={() => setCurrentSector('menu')}
+              className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2 text-sm font-medium self-start md:self-auto"
+           >
+               <span>←</span> Back to Sectors
+           </button>
+           <h2 className="text-2xl font-bold text-gray-800">Vitamins & Minerals Guide</h2>
+      </div>
 
-        <div className="flex justify-center mb-6">
-             <div className="bg-gray-100 p-1 rounded-lg inline-flex">
-                 <button 
-                    onClick={() => setViewMode('cards')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'cards' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
-                 >
-                     Grid View
-                 </button>
-                 <button 
-                    onClick={() => setViewMode('chart')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'chart' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
-                 >
-                     Reference Chart
-                 </button>
-             </div>
-        </div>
-
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-center max-w-3xl mx-auto">
-            <div className="relative flex-grow w-full md:w-auto">
+      {/* Controls */}
+      <div className="text-center space-y-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            {/* Search */}
+            <div className="relative flex-grow w-full md:w-auto max-w-lg">
                 <input
                     type="text"
-                    className="w-full px-6 py-3 rounded-full border border-gray-300 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent outline-none shadow-sm text-lg"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent outline-none text-sm"
                     placeholder={t.encyclopedia.searchPlaceholder}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     dir={isRTL ? 'rtl' : 'ltr'}
                 />
-                <span className={`absolute top-1/2 -translate-y-1/2 text-gray-400 text-lg ${isRTL ? 'left-4' : 'right-4'}`}>🔍</span>
+                <span className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${isRTL ? 'left-3' : 'right-3'}`}>🔍</span>
             </div>
             
-            <div className="flex bg-gray-100 p-1 rounded-full flex-shrink-0">
-                {(['All', 'Vitamin', 'Mineral'] as const).map(filter => (
-                    <button
-                        key={filter}
-                        onClick={() => setActiveFilter(filter)}
-                        className={`px-5 py-2 rounded-full text-sm font-bold transition ${activeFilter === filter ? 'bg-[var(--color-primary)] text-white shadow-md' : 'text-gray-600 hover:text-gray-900'}`}
+            {/* View Toggles */}
+            <div className="flex gap-4 items-center flex-wrap justify-center">
+                {/* Type Filter */}
+                <div className="flex bg-gray-100 p-1 rounded-lg">
+                    {(['All', 'Vitamin', 'Mineral'] as const).map(filter => (
+                        <button
+                            key={filter}
+                            onClick={() => setActiveFilter(filter)}
+                            className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${activeFilter === filter ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                        >
+                            {filter === 'All' ? t.encyclopedia.filterAll : filter === 'Vitamin' ? t.encyclopedia.filterVitamins : t.encyclopedia.filterMinerals}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Display Mode */}
+                <div className="flex bg-gray-100 p-1 rounded-lg">
+                    <button 
+                        onClick={() => setViewMode('chart')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${viewMode === 'chart' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
                     >
-                        {filter === 'All' ? t.encyclopedia.filterAll : filter === 'Vitamin' ? t.encyclopedia.filterVitamins : t.encyclopedia.filterMinerals}
+                        📊 Chart View
                     </button>
-                ))}
+                    <button 
+                        onClick={() => setViewMode('cards')}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${viewMode === 'cards' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                        🃏 Card View
+                    </button>
+                </div>
             </div>
         </div>
       </div>
@@ -90,24 +169,24 @@ const Encyclopedia: React.FC = () => {
                   <table className="w-full text-left border-collapse">
                       <thead className="bg-gray-50 text-gray-700 uppercase text-xs">
                           <tr>
-                              <th className="p-4 border-b w-1/5">Nutrient</th>
+                              <th className="p-4 border-b w-1/5 bg-gray-50 sticky left-0 z-10">Nutrient</th>
                               <th className="p-4 border-b w-1/4">Function</th>
                               <th className="p-4 border-b w-1/4">Food Sources</th>
                               <th className="p-4 border-b w-1/4">Deficiency</th>
                           </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-gray-100 text-sm">
                           {filteredItems.map((item) => (
                               <tr key={item.id} className="hover:bg-blue-50/30 transition">
-                                  <td className="p-4 align-top">
-                                      <div className="font-bold text-[var(--color-primary-dark)] text-base">{item.name}</div>
+                                  <td className="p-4 align-top font-medium bg-white sticky left-0 border-r border-gray-50 group-hover:bg-blue-50/10">
+                                      <div className="text-[var(--color-primary-dark)] text-base">{item.name}</div>
                                       <span className={`text-[10px] px-2 py-0.5 rounded-full mt-1 inline-block ${item.category === 'Vitamin' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
                                           {item.category}
                                       </span>
                                   </td>
-                                  <td className="p-4 text-sm text-gray-700 align-top">{item.function}</td>
-                                  <td className="p-4 text-sm text-gray-700 align-top">{item.sources}</td>
-                                  <td className="p-4 text-sm text-red-600 align-top">{item.deficiency}</td>
+                                  <td className="p-4 text-gray-700 align-top leading-relaxed">{item.function}</td>
+                                  <td className="p-4 text-gray-700 align-top leading-relaxed">{item.sources}</td>
+                                  <td className="p-4 text-red-600 align-top leading-relaxed">{item.deficiency}</td>
                               </tr>
                           ))}
                       </tbody>
@@ -119,16 +198,6 @@ const Encyclopedia: React.FC = () => {
       {/* CARD GRID VIEW */}
       {viewMode === 'cards' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-            {/* Quick Access Card for Chart */}
-            <div 
-                onClick={() => setViewMode('chart')}
-                className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 cursor-pointer p-6 flex flex-col justify-center items-center text-white text-center border border-blue-900"
-            >
-                <div className="text-5xl mb-4 bg-white/20 p-3 rounded-full">📊</div>
-                <h3 className="font-bold text-xl mb-2">Reference Chart</h3>
-                <p className="text-sm opacity-90">View full table of vitamins & minerals</p>
-            </div>
-
             {filteredItems.map(item => (
                 <div key={item.id} className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-xl transition duration-300 flex flex-col">
                     {/* Card Header */}
@@ -170,7 +239,7 @@ const Encyclopedia: React.FC = () => {
       )}
 
       {filteredItems.length === 0 && (
-          <div className="text-center py-20 text-gray-400">
+          <div className="text-center py-20 text-gray-400 bg-white rounded-xl border border-dashed border-gray-200">
               <span className="text-4xl block mb-2">📚</span>
               No items found matching your search.
           </div>
