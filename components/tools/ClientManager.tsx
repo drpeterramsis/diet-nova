@@ -11,6 +11,7 @@ interface ClientManagerProps {
   initialClientId?: string | null;
   onAnalyzeInKcal?: (client: Client, visit: ClientVisit) => void;
   onPlanMeals?: (client: Client, visit: ClientVisit) => void;
+  onRunNFPE?: (client: Client) => void;
   autoOpenNew?: boolean;
 }
 
@@ -69,7 +70,7 @@ const TAG_CATEGORIES: Record<string, string[]> = {
     "Female Only": ["PCOS 🌸", "Pregnancy 🤰", "Lactation 🤱", "Menopause 🥀", "Contraceptives 💊", "Irregular Cycle 🗓️"]
 };
 
-const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal, onPlanMeals, autoOpenNew }) => {
+const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal, onPlanMeals, onRunNFPE, autoOpenNew }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   
@@ -188,7 +189,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
               }
           }
       }
-  }, [initialClientId, clients]); // Added dependencies
+  }, [initialClientId, clients]); 
 
   // DOB / Age Calculation
   useEffect(() => {
@@ -629,6 +630,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       onPlanMeals(editingClient, visit);
   };
 
+  const handleRunNFPE = () => {
+      if (!editingClient || !onRunNFPE) return;
+      onRunNFPE(editingClient);
+  };
+
   const handlePrintReport = () => {
       window.print();
   };
@@ -1013,6 +1019,14 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                     <label className="block text-xs font-bold text-gray-500">Medical Notes & History</label>
                                     <button type="button" onClick={insertTemplate} className="text-xs bg-gray-100 px-2 py-0.5 rounded border hover:bg-gray-200 text-gray-600">
                                         Insert Template
+                                    </button>
+                                    {/* Run NFPE Button */}
+                                    <button 
+                                        type="button"
+                                        onClick={handleRunNFPE}
+                                        className="text-xs bg-red-100 px-2 py-0.5 rounded border border-red-200 hover:bg-red-200 text-red-700 font-bold flex items-center gap-1"
+                                    >
+                                        🩺 Run NFPE Assessment
                                     </button>
                                  </div>
                                  <button 

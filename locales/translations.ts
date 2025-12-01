@@ -86,6 +86,10 @@ export const en: Translation = {
       title: "My Clients",
       desc: "Manage your clients, track visits, and store clinical notes.",
     },
+    nfpe: {
+      title: "NFPE Assessment",
+      desc: "Nutrition-Focused Physical Examination to detect deficiencies.",
+    }
   },
   clients: {
     title: "Client Management",
@@ -308,6 +312,10 @@ export const ar: Translation = {
       title: "عملائي",
       desc: "إدارة ملفات العملاء، متابعة الزيارات، وتخزين الملاحظات.",
     },
+    nfpe: {
+      title: "الفحص البدني (NFPE)",
+      desc: "فحص بدني يركز على التغذية للكشف عن النقص.",
+    }
   },
   clients: {
     title: "إدارة العملاء",

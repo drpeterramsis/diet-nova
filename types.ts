@@ -143,6 +143,10 @@ export interface Translation {
       title: string;
       desc: string;
     };
+    nfpe: {
+      title: string;
+      desc: string;
+    };
   };
   clients: {
     title: string;

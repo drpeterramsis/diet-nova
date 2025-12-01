@@ -61,6 +61,13 @@ const ToolsGrid: React.FC<ToolsGridProps> = ({ onToolClick, setBmiOpen, isAuthen
         icon={<span className="text-2xl">📊</span>}
       />
 
+      <ToolCard
+        title={t.tools.nfpe.title}
+        desc={t.tools.nfpe.desc}
+        onClick={() => onToolClick('nfpe')}
+        icon={<span className="text-2xl">🩺</span>}
+      />
+
        {isDoctor && (
           <ToolCard
             title={t.tools.clients.title}

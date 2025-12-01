@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -9,6 +10,7 @@ import FoodExchange from "./components/tools/FoodExchange";
 import { MealPlanner } from "./components/tools/MealPlanner";
 import ClientManager from "./components/tools/ClientManager";
 import BmrCalculator from "./components/tools/BmrCalculator";
+import NFPEChecklist from "./components/tools/NFPEChecklist";
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -93,6 +95,8 @@ const AppContent = () => {
   const [toolData, setToolData] = useState<any>(null);
   // Specific to Kcal Calculator linked to a visit
   const [currentVisit, setCurrentVisit] = useState<{client: Client, visit: ClientVisit} | null>(null);
+  // Specific to NFPE
+  const [currentClientForNFPE, setCurrentClientForNFPE] = useState<Client | undefined>(undefined);
   
   const { t, isRTL } = useLanguage();
   const { session, profile, loading } = useAuth();
@@ -121,6 +125,7 @@ const AppContent = () => {
     setSelectedLoadId(null);
     setToolData(null);
     setCurrentVisit(null);
+    setCurrentClientForNFPE(undefined);
     setAutoOpenLoad(false);
     setAutoOpenNew(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -174,6 +179,7 @@ const AppContent = () => {
 
       setToolData(null); // Reset tool data on clean navigation
       setCurrentVisit(null); // Reset visit linkage
+      setCurrentClientForNFPE(undefined); // Reset NFPE linkage
       setActiveTool(toolId);
   };
 
@@ -204,6 +210,11 @@ const AppContent = () => {
       setActiveTool('meal-planner');
   };
 
+  const handleRunNFPEForClient = (client: Client) => {
+      setCurrentClientForNFPE(client);
+      setActiveTool('nfpe');
+  };
+
   const handleBackToCalculator = () => {
     if (previousTool) {
       setActiveTool(previousTool);
@@ -218,6 +229,16 @@ const AppContent = () => {
          setSelectedLoadId(currentVisit.client.id); 
          setCurrentVisit(null); // Clear visit context as we are exiting the tool
      }
+  };
+
+  const handleBackFromNFPE = () => {
+      if (currentClientForNFPE) {
+          setActiveTool('client-manager');
+          setSelectedLoadId(currentClientForNFPE.id);
+          setCurrentClientForNFPE(undefined);
+      } else {
+          handleNavHome();
+      }
   };
 
   const showKcal = activeTool === 'kcal';
@@ -301,11 +322,18 @@ const AppContent = () => {
                     initialClientId={selectedLoadId} 
                     onAnalyzeInKcal={handleAnalyzeClient}
                     onPlanMeals={handlePlanMealsForClient}
+                    onRunNFPE={handleRunNFPEForClient}
                     autoOpenNew={autoOpenNew}
                 />
             )}
             {activeTool === 'bmr' && <BmrCalculator />}
             {activeTool === 'profile' && <Profile />}
+            {activeTool === 'nfpe' && (
+                <NFPEChecklist 
+                    client={currentClientForNFPE} 
+                    onBack={currentClientForNFPE ? handleBackFromNFPE : undefined} 
+                />
+            )}
 
           </div>
         ) : (
