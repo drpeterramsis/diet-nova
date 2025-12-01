@@ -7,9 +7,10 @@ interface HeaderProps {
   onNavigateTools?: () => void;
   onNavigateProfile?: () => void;
   onLoginClick?: () => void;
+  onMenuClick?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavigateProfile, onLoginClick }) => {
+const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavigateProfile, onLoginClick, onMenuClick }) => {
   const { t, lang, toggleLanguage } = useLanguage();
   const { session, profile, signOut } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -34,13 +35,26 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavi
   return (
     <header className="bg-[var(--color-primary)] text-white shadow-md sticky top-0 z-50 no-print">
       <div className="container mx-auto flex justify-between items-center p-4">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={onNavigateHome}>
-          <h1 className="text-2xl font-bold tracking-wide flex items-center">
-            Diet<span className="text-[var(--color-primary-light)]">Nova</span>
-            <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full hidden sm:inline-block">
-              v2.0.80
-            </span>
-          </h1>
+        <div className="flex items-center gap-3">
+          {/* Hamburger Menu */}
+          <button 
+            onClick={onMenuClick}
+            className="p-1 hover:bg-white/10 rounded-lg transition focus:outline-none"
+            aria-label="Open Menu"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+
+          <div className="flex items-center gap-2 cursor-pointer" onClick={onNavigateHome}>
+            <h1 className="text-2xl font-bold tracking-wide flex items-center">
+              Diet<span className="text-[var(--color-primary-light)]">Nova</span>
+              <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full hidden sm:inline-block">
+                v2.0.82
+              </span>
+            </h1>
+          </div>
         </div>
 
         <nav>

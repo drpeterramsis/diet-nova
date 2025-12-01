@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import SideMenu from "./components/SideMenu"; // Import SideMenu
 import ToolCard from "./components/ToolCard";
 import BmiModal from "./components/BmiModal";
 import KcalCalculator from "./components/calculations/KcalCalculator";
@@ -38,13 +39,7 @@ const Dashboard = ({
   return (
     <>
       {/* Hero Section */}
-      <section className="relative text-center py-20 md:py-32 overflow-hidden bg-[var(--color-bg-soft)] rounded-b-[3rem] shadow-sm">
-        {/* Decorative Background */}
-        <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
-            <div className="absolute top-10 left-10 w-32 h-32 bg-green-500 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-10 right-10 w-48 h-48 bg-blue-400 rounded-full blur-3xl"></div>
-        </div>
-
+      <section className="relative text-center py-20 md:py-28 overflow-hidden bg-gradient-to-b from-[var(--color-bg-soft)] to-white">
         <div className="relative z-10 container mx-auto px-4 animate-fade-in">
           {session && (
               <div className="mb-4 inline-block px-4 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">
@@ -58,84 +53,104 @@ const Dashboard = ({
           <p className="text-lg md:text-xl text-[var(--color-text-light)] mb-10 max-w-2xl mx-auto leading-relaxed">
             {t.home.subtitle}
           </p>
-          <div className="flex gap-4 justify-center">
-              <button 
-                onClick={() => document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' })}
-                className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-8 py-4 rounded-2xl text-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 font-semibold"
-              >
-                {t.common.explore}
-              </button>
-              <button 
-                onClick={() => onToolClick('encyclopedia')}
-                className="bg-white hover:bg-gray-50 text-[var(--color-primary)] border border-[var(--color-primary)] px-8 py-4 rounded-2xl text-lg shadow-md hover:shadow-lg transition transform hover:-translate-y-1 font-semibold flex items-center gap-2"
-              >
-                <span>📚</span> Encyclopedia
-              </button>
-          </div>
         </div>
       </section>
 
-      {/* Encyclopedia Teaser Section */}
-      <section className="container mx-auto px-4 py-12">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-lg flex flex-col md:flex-row items-center justify-between gap-6 cursor-pointer transform hover:scale-[1.01] transition duration-300" onClick={() => onToolClick('encyclopedia')}>
-              <div className="flex items-center gap-6">
-                  <div className="text-6xl bg-white/20 p-4 rounded-full">📚</div>
-                  <div>
-                      <h3 className="text-2xl font-bold mb-2">Nutrient Encyclopedia</h3>
-                      <p className="opacity-90 max-w-lg">Access our comprehensive library of Vitamins & Minerals. View food sources, functions, deficiencies, and reference charts.</p>
+      {/* Professional Sector Grid */}
+      <section id="sectors" className="container mx-auto px-4 -mt-16 relative z-20 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Clinical Suite */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 border-t-4 border-green-500 hover:transform hover:-translate-y-1 transition duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                      <span className="text-3xl bg-green-50 p-2 rounded-lg">🩺</span>
+                      <h3 className="text-xl font-bold text-gray-800">Clinical Suite</h3>
+                  </div>
+                  <p className="text-gray-500 text-sm mb-6 min-h-[40px]">Patient management, physical assessment, and anthropometry.</p>
+                  <div className="space-y-2">
+                      <button onClick={() => onToolClick('client-manager')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
+                          <span>Patient Manager</span> <span>→</span>
+                      </button>
+                      <button onClick={() => onToolClick('nfpe')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
+                          <span>NFPE Assessment</span> <span>→</span>
+                      </button>
+                      <button onClick={() => setBmiOpen(true)} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
+                          <span>BMI Calculator</span> <span>→</span>
+                      </button>
                   </div>
               </div>
-              <button className="bg-white text-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-100 transition whitespace-nowrap shadow-md">
-                  Browse Encyclopedia
-              </button>
+
+              {/* Dietetics Studio */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 border-t-4 border-blue-500 hover:transform hover:-translate-y-1 transition duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                      <span className="text-3xl bg-blue-50 p-2 rounded-lg">🥗</span>
+                      <h3 className="text-xl font-bold text-gray-800">Dietetics Studio</h3>
+                  </div>
+                  <p className="text-gray-500 text-sm mb-6 min-h-[40px]">Advanced calorie calculation, meal creation, and planning.</p>
+                  <div className="space-y-2">
+                      <button onClick={() => onToolClick('kcal')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-medium text-sm flex items-center justify-between">
+                          <span>Kcal Calculator</span> <span>→</span>
+                      </button>
+                      <button onClick={() => onToolClick('meal-planner')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-medium text-sm flex items-center justify-between">
+                          <span>Meal Planner</span> <span>→</span>
+                      </button>
+                      <button onClick={() => onToolClick('exchange-pro')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-medium text-sm flex items-center justify-between">
+                          <span>Food Exchanges</span> <span>→</span>
+                      </button>
+                  </div>
+              </div>
+
+              {/* Knowledge Base */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 border-t-4 border-purple-500 hover:transform hover:-translate-y-1 transition duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                      <span className="text-3xl bg-purple-50 p-2 rounded-lg">📚</span>
+                      <h3 className="text-xl font-bold text-gray-800">Knowledge Base</h3>
+                  </div>
+                  <p className="text-gray-500 text-sm mb-6 min-h-[40px]">Reference data, encyclopedia, and metabolic rates.</p>
+                  <div className="space-y-2">
+                      <button onClick={() => onToolClick('encyclopedia')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-medium text-sm flex items-center justify-between">
+                          <span>Encyclopedia</span> <span>→</span>
+                      </button>
+                      <button onClick={() => onToolClick('bmr')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-medium text-sm flex items-center justify-between">
+                          <span>BMR Calculator</span> <span>→</span>
+                      </button>
+                  </div>
+              </div>
+
           </div>
       </section>
 
-      {/* Tools Section */}
-      <section id="tools" className="container mx-auto px-4 py-10 mb-10">
-        <h3 className="text-3xl font-bold text-[var(--color-heading)] mb-8 text-center border-b pb-4 border-gray-200">
-            Professional Tools
-        </h3>
-        <ToolsGrid 
-            onToolClick={onToolClick} 
-            setBmiOpen={setBmiOpen} 
-            isAuthenticated={!!session} 
-        />
-      </section>
+      {/* Tools Section (Hidden ID for scrolling logic) */}
+      <div id="tools"></div>
     </>
   );
 };
 
 const AppContent = () => {
   const [bmiOpen, setBmiOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false); // State for Side Menu
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [previousTool, setPreviousTool] = useState<string | null>(null);
   const [plannedKcal, setPlannedKcal] = useState<number>(0);
   const [showLogin, setShowLogin] = useState(false);
   const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
   
-  // Extra Nav Flags
   const [autoOpenLoad, setAutoOpenLoad] = useState(false);
   const [autoOpenNew, setAutoOpenNew] = useState(false);
 
-  // Data passing between tools
   const [toolData, setToolData] = useState<any>(null);
-  // Specific to Kcal Calculator linked to a visit
   const [currentVisit, setCurrentVisit] = useState<{client: Client, visit: ClientVisit} | null>(null);
-  // Specific to NFPE
   const [currentClientForNFPE, setCurrentClientForNFPE] = useState<Client | undefined>(undefined);
   
   const { t, isRTL } = useLanguage();
   const { session, profile, loading } = useAuth();
 
-  // Auto scroll to top when activeTool changes
   useEffect(() => {
     if (activeTool) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }, [activeTool]);
 
-  // Close login modal automatically on successful login
   useEffect(() => {
     if (session) {
         setShowLogin(false);
@@ -162,16 +177,8 @@ const AppContent = () => {
     if (activeTool) {
       handleNavHome();
     }
-    
     setTimeout(() => {
-      const toolsLanding = document.getElementById('tools'); 
-      const toolsDashboard = document.getElementById('dashboard-tools'); 
-      
-      if (toolsLanding) {
-        toolsLanding.scrollIntoView({ behavior: 'smooth' });
-      } else if (toolsDashboard) {
-        toolsDashboard.scrollIntoView({ behavior: 'smooth' });
-      }
+      document.getElementById('sectors')?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
   };
 
@@ -180,6 +187,15 @@ const AppContent = () => {
   };
 
   const handleToolClick = (toolId: string, loadId?: string, action?: 'load' | 'new') => {
+      if (toolId === 'home') {
+          handleNavHome();
+          return;
+      }
+      if (toolId === 'profile') {
+          handleNavProfile();
+          return;
+      }
+      
       if (toolId === 'meal-creator' && !session) {
           setShowLogin(true);
           return;
@@ -200,13 +216,12 @@ const AppContent = () => {
           setSelectedLoadId(null);
       }
       
-      // Set flags for auto actions
       setAutoOpenLoad(action === 'load');
       setAutoOpenNew(action === 'new');
 
-      setToolData(null); // Reset tool data on clean navigation
-      setCurrentVisit(null); // Reset visit linkage
-      setCurrentClientForNFPE(undefined); // Reset NFPE linkage
+      setToolData(null); 
+      setCurrentVisit(null); 
+      setCurrentClientForNFPE(undefined); 
       setActiveTool(toolId);
   };
 
@@ -217,16 +232,13 @@ const AppContent = () => {
   };
 
   const handleAnalyzeClient = (client: Client, visit: ClientVisit) => {
-      // Map Client Visit data to KcalInitialData
       const initData: KcalInitialData = {
           gender: client.gender,
           age: client.age,
           dob: client.dob,
-          // Use visit data preferably, fallback to client profile
           weight: visit.weight || client.weight,
           height: visit.height || client.height
       };
-      
       setToolData(initData);
       setCurrentVisit({ client, visit });
       setActiveTool('kcal');
@@ -252,9 +264,8 @@ const AppContent = () => {
   const handleBackToClientProfile = () => {
      if (currentVisit) {
          setActiveTool('client-manager');
-         // Pass the client ID to auto-open the profile view in ClientManager
          setSelectedLoadId(currentVisit.client.id); 
-         setCurrentVisit(null); // Clear visit context as we are exiting the tool
+         setCurrentVisit(null); 
      }
   };
 
@@ -279,6 +290,14 @@ const AppContent = () => {
         onNavigateTools={handleNavTools}
         onNavigateProfile={handleNavProfile}
         onLoginClick={() => setShowLogin(true)}
+        onMenuClick={() => setMenuOpen(true)}
+      />
+
+      <SideMenu 
+        isOpen={menuOpen} 
+        onClose={() => setMenuOpen(false)} 
+        onNavigate={handleToolClick} 
+        onLoginClick={() => setShowLogin(true)}
       />
 
       <main className="flex-grow">
@@ -295,7 +314,6 @@ const AppContent = () => {
                   {t.common.backHome}
                 </button>
                 
-                {/* Back to Client Profile Button */}
                 {currentVisit && isComplexFlow && (
                     <div className="flex items-center gap-3">
                          <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-xs font-bold shadow-sm hidden sm:flex items-center gap-2">
@@ -311,14 +329,13 @@ const AppContent = () => {
                 )}
             </div>
             
-            {/* Complex State Persistence Logic */}
             {isComplexFlow && (
               <>
                 <div className={showKcal ? 'block' : 'hidden'}>
                   <KcalCalculator 
                     onPlanMeals={handlePlanMeals} 
                     initialData={toolData} 
-                    activeVisit={currentVisit} // Pass visit context
+                    activeVisit={currentVisit} 
                   />
                 </div>
                 <div className={showPlanner ? 'block' : 'hidden'}>
@@ -328,13 +345,12 @@ const AppContent = () => {
                     initialLoadId={activeTool === 'meal-planner' ? selectedLoadId : null}
                     autoOpenLoad={autoOpenLoad}
                     autoOpenNew={autoOpenNew}
-                    activeVisit={currentVisit} // Pass visit context
+                    activeVisit={currentVisit} 
                   />
                 </div>
               </>
             )}
 
-            {/* Standard Tools (Unmount when inactive) */}
             {activeTool === 'meal-creator' && (
                 <MealCreator 
                     initialLoadId={selectedLoadId} 
@@ -373,12 +389,13 @@ const AppContent = () => {
         )}
       </main>
 
-      {/* ScrollToTopButton */}
       <div className="no-print">
         <ScrollToTopButton />
       </div>
 
-      {/* Modals */}
+      {/* Hidden button for SideMenu to trigger BMI */}
+      <button id="bmi-btn" className="hidden" onClick={() => setBmiOpen(true)}></button>
+
       <BmiModal open={bmiOpen} onClose={() => setBmiOpen(false)} />
       
       {showLogin && (
