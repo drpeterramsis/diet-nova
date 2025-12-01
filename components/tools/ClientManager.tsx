@@ -60,14 +60,14 @@ const formatDateUK = (dateString: string | undefined) => {
     });
 };
 
-// Updated Categorized Tags with Emojis
+// Updated Categorized Tags with Emojis in Keys
 const TAG_CATEGORIES: Record<string, string[]> = {
-    "Anthropometry": ["Weight Gain 📈", "Weight Loss 📉", "Stunted Growth 📏"],
-    "Special Conditions": ["Post-Op 🏥", "Bedridden 🛏️", "Wheelchair ♿", "Sedentary 🛋️", "Active 🏃", "Athlete 🏋️"],
-    "Daily Habits": ["Smoker 🚬", "High Caffeine ☕", "Low Water Intake 💧", "High Sugar 🍬", "Soda Drinker 🥤", "Fast Food 🍔", "Sleep Apnea 😴", "Insomnia 🌑"],
-    "Medical History": ["Diabetes 🩸", "Hypertension 💓", "CVS Disease ❤️", "GIT Issues 🤢", "Pulmonary 🫁", "Renal 🦠", "Endocrine 🦋", "Food Allergies 🥜"],
-    "Family History": ["Family Obesity 👨‍👩‍👧", "Family Diabetes 🩸", "Family CVS ❤️"],
-    "Female Only": ["PCOS 🌸", "Pregnancy 🤰", "Lactation 🤱", "Menopause 🥀", "Contraceptives 💊", "Irregular Cycle 🗓️"]
+    "📏 Anthropometry": ["Weight Gain 📈", "Weight Loss 📉", "Stunted Growth 📏"],
+    "🏥 Special Conditions": ["Post-Op 🏥", "Bedridden 🛏️", "Wheelchair ♿", "Sedentary 🛋️", "Active 🏃", "Athlete 🏋️"],
+    "📅 Daily Habits": ["Smoker 🚬", "High Caffeine ☕", "Low Water Intake 💧", "High Sugar 🍬", "Soda Drinker 🥤", "Fast Food 🍔", "Sleep Apnea 😴", "Insomnia 🌑"],
+    "🩺 Medical History": ["Diabetes 🩸", "Hypertension 💓", "CVS Disease ❤️", "GIT Issues 🤢", "Pulmonary 🫁", "Renal 🦠", "Endocrine 🦋", "Food Allergies 🥜"],
+    "👪 Family History": ["Family Obesity 👨‍👩‍👧", "Family Diabetes 🩸", "Family CVS ❤️"],
+    "🌸 Female Only": ["PCOS 🌸", "Pregnancy 🤰", "Lactation 🤱", "Menopause 🥀", "Contraceptives 💊", "Irregular Cycle 🗓️"]
 };
 
 const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal, onPlanMeals, onRunNFPE, autoOpenNew }) => {
@@ -247,7 +247,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const getDefaultNotes = (gender: 'male' | 'female') => {
       let notes = "";
       Object.keys(TAG_CATEGORIES).forEach(category => {
-          if (category === "Female Only" && gender === "male") return;
+          if (category === "🌸 Female Only" && gender === "male") return;
           notes += `[${category}]\n-\n\n`;
       });
       notes += `[Other Notes]\n-`;
@@ -354,8 +354,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const chartData = useMemo(() => {
       if (!editingClient || visits.length === 0) return null;
       
-      // Combine profile initial data (if present) with visits for complete timeline
-      // We iterate from oldest to newest
       const sortedVisits = [...visits].sort((a, b) => new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime());
       
       const mapData = (key: keyof ClientVisit) => {
@@ -373,7 +371,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
           waist: mapData('waist'),
           hip: mapData('hip'),
           miac: mapData('miac'),
-          height: mapData('height') // Useful for pediatrics
+          height: mapData('height') 
       };
 
   }, [visits, editingClient]);
@@ -420,7 +418,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         dob: '',
         clinic: '',
         phone: '',
-        notes: getDefaultNotes('male'), // Auto-add template for new clients
+        notes: getDefaultNotes('male'), 
         age: '',
         gender: 'male',
         marital_status: 'single',
@@ -433,7 +431,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         miac: ''
       });
     }
-    // Switch view to 'details'
     setViewMode('details');
   };
 
@@ -526,7 +523,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
           setClients(prev => [response.data, ...prev]);
           setEditingClient(response.data);
           fetchVisits(response.data.id); 
-          setActiveTab('visits'); // Auto switch to visits tab for new client
+          setActiveTab('visits'); 
           setSaveSuccess("Client Created!");
           setTimeout(() => setSaveSuccess(''), 3000);
         }
@@ -804,8 +801,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   // --- RENDER: PROFILE (DETAILS) VIEW ---
   return (
     <div className="max-w-5xl mx-auto animate-fade-in pb-12">
-         
-         {/* Profile Header & Back Button (Hidden on Print) */}
+         {/* Profile Header & Back Button */}
          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 no-print">
            <div className="flex items-center gap-4">
                <button 
@@ -1041,7 +1037,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                              <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 mb-4">
                                 {Object.entries(TAG_CATEGORIES).map(([category, tags]) => {
                                     // Skip Female Only if gender is Male
-                                    if (category === "Female Only" && formData.gender === "male") return null;
+                                    if (category === "🌸 Female Only" && formData.gender === "male") return null;
                                     
                                     const isExpanded = allTagsExpanded || expandedCategory === category;
 
@@ -1099,14 +1095,14 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                  </div>
             )}
 
-            {/* TAB: VISITS HISTORY */}
+            {/* Visits History Tab Content */}
             {activeTab === 'visits' && editingClient && (
                 <div className="p-6 space-y-8 animate-fade-in">
+                    {/* ... (Existing visits content remains unchanged but included for context if needed, abbreviated here) */}
                     
-                    {/* Add New Visit Form */}
                     <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm">
                         <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase">Record New Follow-up</h4>
-                        <div className="text-xs text-blue-600 mb-3 opacity-80">
+                         <div className="text-xs text-blue-600 mb-3 opacity-80">
                             * Data auto-filled from previous visit ({visits.length > 0 ? formatDateUK(visits[0].visit_date) : 'Profile'}). Adjust as needed.
                         </div>
                         <form onSubmit={handleAddVisit} className="space-y-4">
@@ -1168,124 +1164,113 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                         )}
 
                         {visits.map((visit) => {
-                            const planStats = visit.meal_plan_data?.servings ? calculatePlanStats(visit.meal_plan_data.servings) : null;
-                            const planTotalKcal = planStats ? planStats.kcal : 0;
-                            const planPcts = planTotalKcal > 0 && planStats ? {
-                                cho: (planStats.cho * 4 / planTotalKcal * 100).toFixed(0),
-                                pro: (planStats.pro * 4 / planTotalKcal * 100).toFixed(0),
-                                fat: (planStats.fat * 9 / planTotalKcal * 100).toFixed(0)
-                            } : { cho: 0, pro: 0, fat: 0 };
+                             const planStats = visit.meal_plan_data?.servings ? calculatePlanStats(visit.meal_plan_data.servings) : null;
+                             const planTotalKcal = planStats ? planStats.kcal : 0;
+                             const planPcts = planTotalKcal > 0 && planStats ? {
+                                 cho: (planStats.cho * 4 / planTotalKcal * 100).toFixed(0),
+                                 pro: (planStats.pro * 4 / planTotalKcal * 100).toFixed(0),
+                                 fat: (planStats.fat * 9 / planTotalKcal * 100).toFixed(0)
+                             } : { cho: 0, pro: 0, fat: 0 };
 
-                            return (
+                             return (
                                 <div key={visit.id} className="relative pl-8">
-                                    {/* Timeline Dot */}
                                     <div className="absolute -left-[9px] top-0 w-4 h-4 bg-white border-2 border-[var(--color-primary)] rounded-full z-10"></div>
-                                    
                                     <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition group">
-                                            <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-3">
-                                                <div className="flex items-center gap-4">
-                                                    <span className="font-bold text-gray-800 text-lg">
-                                                    {formatDateUK(visit.visit_date)}
-                                                    </span>
-                                                    {/* Badges */}
-                                                    <div className="flex gap-2 text-xs font-mono">
-                                                        {visit.weight && <span className="bg-blue-50 border border-blue-100 px-2 py-0.5 rounded text-blue-700 font-bold">Wt: {visit.weight}</span>}
-                                                        {visit.bmi && <span className="bg-orange-50 border border-orange-100 px-2 py-0.5 rounded text-orange-700 font-bold">BMI: {visit.bmi}</span>}
-                                                    </div>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <button onClick={() => handleDeleteVisit(visit.id)} className="text-red-400 hover:text-red-600 px-2 font-bold text-lg">×</button>
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Measurements Stats Grid */}
-                                            <div className="grid grid-cols-4 gap-2 text-xs text-gray-600 mb-4 bg-gray-50 p-3 rounded border border-gray-100">
-                                                <div><span className="font-bold text-gray-400 uppercase block">Ht</span> {visit.height || '-'} cm</div>
-                                                <div><span className="font-bold text-gray-400 uppercase block">Waist</span> {visit.waist || '-'} cm</div>
-                                                <div><span className="font-bold text-gray-400 uppercase block">Hip</span> {visit.hip || '-'} cm</div>
-                                                <div><span className="font-bold text-gray-400 uppercase block">MIAC</span> {visit.miac || '-'} cm</div>
-                                            </div>
+                                         <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-3">
+                                             <div className="flex items-center gap-4">
+                                                 <span className="font-bold text-gray-800 text-lg">
+                                                 {formatDateUK(visit.visit_date)}
+                                                 </span>
+                                                 <div className="flex gap-2 text-xs font-mono">
+                                                     {visit.weight && <span className="bg-blue-50 border border-blue-100 px-2 py-0.5 rounded text-blue-700 font-bold">Wt: {visit.weight}</span>}
+                                                     {visit.bmi && <span className="bg-orange-50 border border-orange-100 px-2 py-0.5 rounded text-orange-700 font-bold">BMI: {visit.bmi}</span>}
+                                                 </div>
+                                             </div>
+                                             <div className="flex gap-2">
+                                                 <button onClick={() => handleDeleteVisit(visit.id)} className="text-red-400 hover:text-red-600 px-2 font-bold text-lg">×</button>
+                                             </div>
+                                         </div>
+                                         
+                                         <div className="grid grid-cols-4 gap-2 text-xs text-gray-600 mb-4 bg-gray-50 p-3 rounded border border-gray-100">
+                                             <div><span className="font-bold text-gray-400 uppercase block">Ht</span> {visit.height || '-'} cm</div>
+                                             <div><span className="font-bold text-gray-400 uppercase block">Waist</span> {visit.waist || '-'} cm</div>
+                                             <div><span className="font-bold text-gray-400 uppercase block">Hip</span> {visit.hip || '-'} cm</div>
+                                             <div><span className="font-bold text-gray-400 uppercase block">MIAC</span> {visit.miac || '-'} cm</div>
+                                         </div>
 
-                                            {/* Saved Data Summary */}
-                                            {(visit.kcal_data || visit.meal_plan_data) && (
-                                                <div className="mb-4 flex flex-col sm:flex-row gap-6 items-start">
-                                                    {/* Kcal Data Section */}
-                                                    {visit.kcal_data?.inputs?.reqKcal && (
-                                                        <div className="flex flex-col gap-2">
-                                                             <button 
-                                                                onClick={() => openKcalForVisit(visit)}
-                                                                className="text-xs font-bold text-green-700 hover:text-green-800 flex items-center gap-1 transition self-start"
-                                                             >
-                                                                <span>🔥</span> Open Calculator
-                                                             </button>
-                                                            <div className="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-1.5 rounded-lg text-green-800 text-xs h-fit">
-                                                                <span className="text-lg">⚡</span>
-                                                                <div>
-                                                                    <div className="font-bold">Required Kcal</div>
-                                                                    <div className="font-mono">{visit.kcal_data.inputs.reqKcal} kcal</div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                    
-                                                    {/* Meal Plan Data Section */}
-                                                    {visit.meal_plan_data && (
-                                                        <div className="flex-grow flex flex-col gap-2">
-                                                             <button 
-                                                                onClick={() => openMealPlanForVisit(visit)}
-                                                                className="text-xs font-bold text-purple-700 hover:text-purple-800 flex items-center gap-1 transition self-start"
-                                                             >
-                                                                <span>📅</span> Open Planner
-                                                             </button>
-                                                            <div className="flex flex-col gap-2 bg-purple-50 border border-purple-100 px-3 py-2 rounded-lg text-purple-800 text-xs">
-                                                                <div className="flex items-center gap-2 mb-1">
-                                                                    <span className="text-lg">🍽️</span>
-                                                                    <div className="font-bold">Meal Plan Summary</div>
-                                                                </div>
-                                                                
-                                                                {/* Target vs Actual */}
-                                                                <div className="flex justify-between items-center border-b border-purple-200 pb-1">
-                                                                    <span>Target: <b>{visit.meal_plan_data.targetKcal || '-'}</b></span>
-                                                                    <span>Calc: <b>{planTotalKcal.toFixed(0)}</b> kcal</span>
-                                                                </div>
+                                         {(visit.kcal_data || visit.meal_plan_data) && (
+                                             <div className="mb-4 flex flex-col sm:flex-row gap-6 items-start">
+                                                 {visit.kcal_data?.inputs?.reqKcal && (
+                                                     <div className="flex flex-col gap-2">
+                                                          <button 
+                                                             onClick={() => openKcalForVisit(visit)}
+                                                             className="text-xs font-bold text-green-700 hover:text-green-800 flex items-center gap-1 transition self-start"
+                                                          >
+                                                             <span>🔥</span> Open Calculator
+                                                          </button>
+                                                         <div className="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-1.5 rounded-lg text-green-800 text-xs h-fit">
+                                                             <span className="text-lg">⚡</span>
+                                                             <div>
+                                                                 <div className="font-bold">Required Kcal</div>
+                                                                 <div className="font-mono">{visit.kcal_data.inputs.reqKcal} kcal</div>
+                                                             </div>
+                                                         </div>
+                                                     </div>
+                                                 )}
+                                                 
+                                                 {visit.meal_plan_data && (
+                                                     <div className="flex-grow flex flex-col gap-2">
+                                                          <button 
+                                                             onClick={() => openMealPlanForVisit(visit)}
+                                                             className="text-xs font-bold text-purple-700 hover:text-purple-800 flex items-center gap-1 transition self-start"
+                                                          >
+                                                             <span>📅</span> Open Planner
+                                                          </button>
+                                                         <div className="flex flex-col gap-2 bg-purple-50 border border-purple-100 px-3 py-2 rounded-lg text-purple-800 text-xs">
+                                                             <div className="flex items-center gap-2 mb-1">
+                                                                 <span className="text-lg">🍽️</span>
+                                                                 <div className="font-bold">Meal Plan Summary</div>
+                                                             </div>
+                                                             <div className="flex justify-between items-center border-b border-purple-200 pb-1">
+                                                                 <span>Target: <b>{visit.meal_plan_data.targetKcal || '-'}</b></span>
+                                                                 <span>Calc: <b>{planTotalKcal.toFixed(0)}</b> kcal</span>
+                                                             </div>
+                                                             {planStats && (
+                                                                 <div className="grid grid-cols-3 gap-2 text-center mt-1">
+                                                                     <div>
+                                                                         <div className="font-bold text-blue-600">{planStats.cho.toFixed(0)}g</div>
+                                                                         <div className="text-[10px] text-blue-500">CHO ({planPcts.cho}%)</div>
+                                                                     </div>
+                                                                     <div>
+                                                                         <div className="font-bold text-red-600">{planStats.pro.toFixed(0)}g</div>
+                                                                         <div className="text-[10px] text-red-500">PRO ({planPcts.pro}%)</div>
+                                                                     </div>
+                                                                     <div>
+                                                                         <div className="font-bold text-yellow-600">{planStats.fat.toFixed(0)}g</div>
+                                                                         <div className="text-[10px] text-yellow-600">FAT ({planPcts.fat}%)</div>
+                                                                     </div>
+                                                                 </div>
+                                                             )}
+                                                         </div>
+                                                     </div>
+                                                 )}
+                                             </div>
+                                         )}
 
-                                                                {/* Macros */}
-                                                                {planStats && (
-                                                                    <div className="grid grid-cols-3 gap-2 text-center mt-1">
-                                                                        <div>
-                                                                            <div className="font-bold text-blue-600">{planStats.cho.toFixed(0)}g</div>
-                                                                            <div className="text-[10px] text-blue-500">CHO ({planPcts.cho}%)</div>
-                                                                        </div>
-                                                                        <div>
-                                                                            <div className="font-bold text-red-600">{planStats.pro.toFixed(0)}g</div>
-                                                                            <div className="text-[10px] text-red-500">PRO ({planPcts.pro}%)</div>
-                                                                        </div>
-                                                                        <div>
-                                                                            <div className="font-bold text-yellow-600">{planStats.fat.toFixed(0)}g</div>
-                                                                            <div className="text-[10px] text-yellow-600">FAT ({planPcts.fat}%)</div>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {visit.notes && (
-                                                <p className="text-sm text-gray-700 whitespace-pre-wrap border-l-2 border-gray-200 pl-3 py-1">{visit.notes}</p>
-                                            )}
+                                         {visit.notes && (
+                                             <p className="text-sm text-gray-700 whitespace-pre-wrap border-l-2 border-gray-200 pl-3 py-1">{visit.notes}</p>
+                                         )}
                                     </div>
                                 </div>
-                            );
+                             );
                         })}
                     </div>
                 </div>
             )}
-
-            {/* TAB: REPORT & CHARTS */}
+            
+            {/* Report Tab */}
             {activeTab === 'report' && editingClient && chartData && (
-                <div className="p-8 animate-fade-in">
+                 <div className="p-8 animate-fade-in">
                      <div className="flex justify-end mb-6 no-print">
                         <button 
                             onClick={handlePrintReport}
@@ -1295,9 +1280,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                         </button>
                      </div>
 
-                     {/* Printable Area */}
                      <div className="space-y-8">
-                         {/* Header */}
                          <div className="border-b-2 border-gray-200 pb-4 mb-6">
                              <div className="flex justify-between items-end">
                                  <div>
@@ -1311,7 +1294,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                              </div>
                          </div>
 
-                         {/* Current Stats Summary */}
                          <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                              <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Latest Measurements</h3>
                              <div className="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
@@ -1342,55 +1324,14 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                              </div>
                          </div>
 
-                         {/* Charts Grid */}
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 break-inside-avoid">
-                             {/* Weight Chart */}
-                             <SimpleLineChart 
-                                data={chartData.weight} 
-                                title="Body Weight" 
-                                unit="kg"
-                                color="#3b82f6"
-                             />
-                             
-                             {/* BMI Chart */}
-                             <SimpleLineChart 
-                                data={chartData.bmi} 
-                                title="BMI Score" 
-                                unit=""
-                                color="#f97316"
-                             />
-
-                             {/* Waist & Hip (Grouped or Separate) */}
-                             <SimpleLineChart 
-                                data={chartData.waist} 
-                                title="Waist Circumference" 
-                                unit="cm"
-                                color="#16a34a"
-                             />
-
-                             <SimpleLineChart 
-                                data={chartData.hip} 
-                                title="Hip Circumference" 
-                                unit="cm"
-                                color="#a855f7"
-                             />
-                            
-                            {/* MIAC (Often used for muscle mass indication) */}
-                             <SimpleLineChart 
-                                data={chartData.miac} 
-                                title="MIAC (Arm)" 
-                                unit="cm"
-                                color="#ec4899"
-                             />
-
-                            {/* Height (Only relevant for Pedia, but shown if changes exist) */}
+                             <SimpleLineChart data={chartData.weight} title="Body Weight" unit="kg" color="#3b82f6" />
+                             <SimpleLineChart data={chartData.bmi} title="BMI Score" unit="" color="#f97316" />
+                             <SimpleLineChart data={chartData.waist} title="Waist Circumference" unit="cm" color="#16a34a" />
+                             <SimpleLineChart data={chartData.hip} title="Hip Circumference" unit="cm" color="#a855f7" />
+                             <SimpleLineChart data={chartData.miac} title="MIAC (Arm)" unit="cm" color="#ec4899" />
                             {chartData.height && chartData.height.length > 1 && (
-                                <SimpleLineChart 
-                                    data={chartData.height} 
-                                    title="Height Growth" 
-                                    unit="cm"
-                                    color="#6366f1"
-                                />
+                                <SimpleLineChart data={chartData.height} title="Height Growth" unit="cm" color="#6366f1" />
                             )}
                          </div>
                          
@@ -1398,7 +1339,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                              Diet-Nova System • Dr. Peter Ramsis
                          </div>
                      </div>
-                </div>
+                 </div>
             )}
          </div>
     </div>
