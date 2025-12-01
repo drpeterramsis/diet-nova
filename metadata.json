@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova - Pro Dashboard v2.0.82",
-  "description": "Updates: Added Side Menu, Sector-based Dashboard, AI Encyclopedia Translation, formatted content.",
+  "name": "Diet-Nova - Pro Dashboard v2.0.83",
+  "description": "Updates: Removed AI Encyclopedia Translation to fix build issues.",
   "requestFramePermissions": []
 }

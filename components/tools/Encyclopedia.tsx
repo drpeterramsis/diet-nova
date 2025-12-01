@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { encyclopediaData, EncyclopediaItem } from '../../data/encyclopediaData';
-import { GoogleGenAI } from "@google/genai";
 
 type Sector = 'menu' | 'nutrients';
 
@@ -16,10 +15,6 @@ const Encyclopedia: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'All' | 'Vitamin' | 'Mineral'>('All');
   const [viewMode, setViewMode] = useState<'cards' | 'chart'>('chart');
   
-  // AI Translation State
-  const [translatedData, setTranslatedData] = useState<Record<string, EncyclopediaItem>>({});
-  const [isTranslating, setIsTranslating] = useState(false);
-
   const filteredItems = useMemo(() => {
     let items = encyclopediaData;
     
@@ -39,68 +34,8 @@ const Encyclopedia: React.FC = () => {
       );
     }
 
-    // Apply translations if available
-    if (lang === 'ar' && Object.keys(translatedData).length > 0) {
-        return items.map(item => translatedData[item.id] || item);
-    }
-
     return items;
-  }, [searchQuery, activeFilter, translatedData, lang]);
-
-  const handleAiTranslate = async () => {
-      // 1. Get visible items that haven't been translated yet
-      const itemsToTranslate = filteredItems.filter(item => !translatedData[item.id]);
-      
-      if (itemsToTranslate.length === 0) {
-          alert("All visible items are already translated!");
-          return;
-      }
-
-      // Limit batch size to prevent token limits (e.g., 5 at a time)
-      const batch = itemsToTranslate.slice(0, 5); 
-      
-      setIsTranslating(true);
-      try {
-          const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-          const prompt = `
-            Translate the following JSON array of nutritional data into Arabic suitable for a medical encyclopedia.
-            
-            Rules:
-            1. Keep the 'id' and 'category' strictly unchanged.
-            2. Translate 'name', 'function', 'sources', and 'deficiency' into professional Arabic.
-            3. CRITICAL: Maintain ALL emojis and bullet points (newlines) from the source text.
-            4. If the source uses emojis like 🦴, use them in the Arabic text too.
-            5. Return ONLY valid JSON array.
-
-            Input Data:
-            ${JSON.stringify(batch)}
-          `;
-
-          const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json"
-            }
-          });
-
-          const translatedBatch: EncyclopediaItem[] = JSON.parse(response.text || '[]');
-          
-          setTranslatedData(prev => {
-              const newData = { ...prev };
-              translatedBatch.forEach(item => {
-                  newData[item.id] = item;
-              });
-              return newData;
-          });
-
-      } catch (error) {
-          console.error("AI Translation Failed:", error);
-          alert("Translation failed. Please try again.");
-      } finally {
-          setIsTranslating(false);
-      }
-  };
+  }, [searchQuery, activeFilter, lang]);
 
   // --- SECTOR MENU VIEW ---
   if (currentSector === 'menu') {
@@ -176,21 +111,6 @@ const Encyclopedia: React.FC = () => {
            </button>
            <h2 className="text-2xl font-bold text-gray-800">Vitamins & Minerals Guide</h2>
       </div>
-
-      {lang === 'ar' && (
-          <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div className="text-sm text-purple-800">
-                  <span className="font-bold">AI Translation:</span> Convert visible English content to Arabic automatically. (Batches of 5)
-              </div>
-              <button 
-                onClick={handleAiTranslate}
-                disabled={isTranslating}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition disabled:opacity-50 flex items-center gap-2 whitespace-nowrap text-sm"
-              >
-                  {isTranslating ? 'Translating...' : '✨ Translate Visible (AI)'}
-              </button>
-          </div>
-      )}
 
       {/* Controls */}
       <div className="text-center space-y-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
