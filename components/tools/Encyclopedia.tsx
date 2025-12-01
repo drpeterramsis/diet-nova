@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { encyclopediaData } from '../../data/encyclopediaData';
+import { encyclopediaData, EncyclopediaItem } from '../../data/encyclopediaData';
+import { GoogleGenAI } from "@google/genai";
 
 type Sector = 'menu' | 'nutrients';
 
 const Encyclopedia: React.FC = () => {
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, lang } = useLanguage();
   
   // Navigation State
   const [currentSector, setCurrentSector] = useState<Sector>('menu');
@@ -13,10 +14,87 @@ const Encyclopedia: React.FC = () => {
   // Logic for Vitamins & Minerals Sector
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'All' | 'Vitamin' | 'Mineral'>('All');
-  const [viewMode, setViewMode] = useState<'cards' | 'chart'>('chart'); // Default to chart as requested "1st card in encyclopedia"
+  const [viewMode, setViewMode] = useState<'cards' | 'chart'>('chart');
+
+  // AI Translation State
+  const [arabicData, setArabicData] = useState<EncyclopediaItem[]>([]);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState(false);
+
+  // Auto Translate Effect
+  useEffect(() => {
+    const translateEncyclopedia = async () => {
+      // Only proceed if lang is Arabic and we don't have data yet
+      if (lang === 'ar' && arabicData.length === 0 && !isTranslating && !translationError) {
+        
+        // 1. Check Local Storage First
+        const cached = localStorage.getItem('encyclopedia_ar');
+        if (cached) {
+            try {
+                setArabicData(JSON.parse(cached));
+                return;
+            } catch (e) {
+                console.warn("Invalid cached translation, refetching...");
+            }
+        }
+
+        // 2. Translate with Gemini
+        setIsTranslating(true);
+        try {
+            if (!process.env.API_KEY) throw new Error("API Key missing");
+
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            
+            const prompt = `
+                You are a professional medical translator. 
+                Translate the following JSON array of nutrient information into Arabic.
+                
+                Rules:
+                1. Preserve the JSON structure exactly (array of objects).
+                2. Do NOT translate the keys: "id", "name", "category", "function", "sources", "deficiency".
+                3. Keep "id" and "category" VALUES in English (e.g., "Vitamin", "Mineral").
+                4. Translate the VALUES of "name", "function", "sources", "deficiency" to Arabic.
+                5. Return ONLY the raw JSON string. Do not use Markdown code blocks.
+
+                Data to translate:
+                ${JSON.stringify(encyclopediaData)}
+            `;
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+            });
+
+            const text = response.text;
+            if (text) {
+                // Clean markdown if present
+                const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                const translated = JSON.parse(cleanJson);
+                
+                if (Array.isArray(translated) && translated.length > 0) {
+                    setArabicData(translated);
+                    localStorage.setItem('encyclopedia_ar', JSON.stringify(translated));
+                } else {
+                    throw new Error("Invalid translation format");
+                }
+            }
+        } catch (err) {
+            console.error("AI Translation Error:", err);
+            setTranslationError(true);
+        } finally {
+            setIsTranslating(false);
+        }
+      }
+    };
+
+    translateEncyclopedia();
+  }, [lang, arabicData, isTranslating, translationError]);
+
+  // Use localized data if available and active
+  const currentData = (lang === 'ar' && arabicData.length > 0) ? arabicData : encyclopediaData;
 
   const filteredItems = useMemo(() => {
-    let items = encyclopediaData;
+    let items = currentData;
     
     // Filter by Category
     if (activeFilter !== 'All') {
@@ -35,7 +113,7 @@ const Encyclopedia: React.FC = () => {
     }
 
     return items;
-  }, [searchQuery, activeFilter]);
+  }, [searchQuery, activeFilter, currentData]);
 
   // --- SECTOR MENU VIEW ---
   if (currentSector === 'menu') {
@@ -112,6 +190,21 @@ const Encyclopedia: React.FC = () => {
            <h2 className="text-2xl font-bold text-gray-800">Vitamins & Minerals Guide</h2>
       </div>
 
+      {/* Loading State for Translation */}
+      {isTranslating && (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-100 p-6 rounded-xl text-center mb-6 animate-pulse">
+              <span className="text-3xl block mb-2">✨</span>
+              <h3 className="font-bold text-blue-800 mb-1">Translating with Gemini AI...</h3>
+              <p className="text-sm text-blue-600">Please wait while we convert the medical encyclopedia to Arabic.</p>
+          </div>
+      )}
+
+      {translationError && lang === 'ar' && (
+          <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl text-center mb-6 text-sm text-orange-800">
+              ⚠️ AI Translation failed. Showing English content as fallback.
+          </div>
+      )}
+
       {/* Controls */}
       <div className="text-center space-y-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -169,10 +262,10 @@ const Encyclopedia: React.FC = () => {
                   <table className="w-full text-left border-collapse">
                       <thead className="bg-gray-50 text-gray-700 uppercase text-xs">
                           <tr>
-                              <th className="p-4 border-b w-1/5 bg-gray-50 sticky left-0 z-10">Nutrient</th>
-                              <th className="p-4 border-b w-1/4">Function</th>
-                              <th className="p-4 border-b w-1/4">Food Sources</th>
-                              <th className="p-4 border-b w-1/4">Deficiency</th>
+                              <th className="p-4 border-b w-1/5 bg-gray-50 sticky left-0 z-10">{lang === 'ar' ? 'المغذيات' : 'Nutrient'}</th>
+                              <th className="p-4 border-b w-1/4">{t.encyclopedia.function}</th>
+                              <th className="p-4 border-b w-1/4">{t.encyclopedia.sources}</th>
+                              <th className="p-4 border-b w-1/4">{t.encyclopedia.deficiency}</th>
                           </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 text-sm">
@@ -238,7 +331,7 @@ const Encyclopedia: React.FC = () => {
         </div>
       )}
 
-      {filteredItems.length === 0 && (
+      {filteredItems.length === 0 && !isTranslating && (
           <div className="text-center py-20 text-gray-400 bg-white rounded-xl border border-dashed border-gray-200">
               <span className="text-4xl block mb-2">📚</span>
               No items found matching your search.
