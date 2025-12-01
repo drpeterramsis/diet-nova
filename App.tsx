@@ -1,163 +1,347 @@
+import React, { useState, useEffect } from "react";
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import ToolCard from "./components/ToolCard";
+import BmiModal from "./components/BmiModal";
+import KcalCalculator from "./components/calculations/KcalCalculator";
+import MealCreator from "./components/tools/MealCreator";
+import FoodExchange from "./components/tools/FoodExchange";
+import { MealPlanner } from "./components/tools/MealPlanner";
+import ClientManager from "./components/tools/ClientManager";
+import BmrCalculator from "./components/tools/BmrCalculator";
+import Profile from "./components/Profile";
+import UserDashboard from "./components/UserDashboard";
+import ScrollToTopButton from "./components/ScrollToTopButton";
+import Login from "./components/Login";
+import Loading from "./components/Loading";
+import ToolsGrid from "./components/ToolsGrid";
+import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { Session } from "@supabase/supabase-js";
+import { KcalInitialData } from "./components/calculations/hooks/useKcalCalculations";
+import { Client, ClientVisit } from "./types";
 
-
-import React, { useEffect, useState } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Sidebar from './components/Sidebar';
-import Dashboard from './pages/Dashboard';
-import NewOrder from './pages/NewOrder';
-import InvoiceList from './pages/InvoiceList';
-import Collections from './pages/Collections';
-import Inventory from './pages/Inventory';
-import Customers from './pages/Customers';
-import BillGenerator from './pages/BillGenerator';
-import Analysis from './pages/Analysis';
-import Login from './pages/Login';
-import Returns from './pages/Returns';
-import Reports from './pages/Reports';
-import { initStorage } from './utils/storage';
-import { UserProfile } from './types';
-import { Menu, Pill } from 'lucide-react';
-import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
-
-const AppContent = () => {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+const Dashboard = ({ 
+  setBmiOpen, 
+  onToolClick,
+  session
+}: { 
+  setBmiOpen: (v: boolean) => void, 
+  onToolClick: (toolId: string) => void,
+  session: Session | null
+}) => {
+  const { t, isRTL } = useLanguage();
+  const { profile } = useAuth();
   
-  const { dir } = useLanguage();
-
-  useEffect(() => {
-    initStorage();
-    const savedUser = localStorage.getItem('emad_user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        localStorage.removeItem('emad_user');
-      }
-    }
-    setIsAuthLoading(false);
-
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) {
-        setIsSidebarCollapsed(true);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize();
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const handleLogin = (newUser: UserProfile) => {
-    setUser(newUser);
-    localStorage.setItem('emad_user', JSON.stringify(newUser));
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('emad_user');
-  };
-
-  const toggleSidebar = () => {
-    setIsSidebarCollapsed(!isSidebarCollapsed);
-  };
-
-  if (isAuthLoading) {
-    return <div className="min-h-screen bg-slate-900" />;
-  }
-
-  if (!user) {
-    return <Login onLogin={handleLogin} />;
-  }
-
-  const marginSide = dir === 'rtl' ? 'mr' : 'ml';
-  const contentMargin = isMobile ? '0' : (isSidebarCollapsed ? `${marginSide}-16` : `${marginSide}-60`);
-
   return (
-    <Router>
-      <div className="flex bg-slate-50 min-h-screen font-sans print:bg-white print:block" dir={dir}>
-        
-        {/* Mobile Header */}
-        {isMobile && (
-          <div className="fixed top-0 left-0 right-0 h-14 bg-slate-900 z-30 flex items-center px-4 justify-between print:hidden">
-            <div className="flex items-center gap-3">
-              <button onClick={toggleSidebar} className="text-white p-1">
-                <Menu size={24} />
-              </button>
-              <div className="flex items-center gap-2">
-                 <Pill className="text-teal-400" size={18} />
-                 <span className="text-white font-bold text-sm">Emad Co.</span>
+    <>
+      {/* Hero Section */}
+      <section className="relative text-center py-20 md:py-32 overflow-hidden bg-[var(--color-bg-soft)] rounded-b-[3rem] shadow-sm">
+        {/* Decorative Background */}
+        <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
+            <div className="absolute top-10 left-10 w-32 h-32 bg-green-500 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-10 right-10 w-48 h-48 bg-blue-400 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="relative z-10 container mx-auto px-4 animate-fade-in">
+          {session && (
+              <div className="mb-4 inline-block px-4 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">
+                {profile?.role === 'doctor' ? `👨‍⚕️ ${t.auth.doctor}` : `👤 ${t.auth.patient}`} : {profile?.full_name}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Sidebar */}
-        <Sidebar 
-          user={user} 
-          onLogout={handleLogout} 
-          isCollapsed={isSidebarCollapsed} 
-          toggleSidebar={toggleSidebar} 
-          isMobile={isMobile}
-        />
-
-        {/* Mobile Overlay */}
-        {isMobile && !isSidebarCollapsed && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-30 backdrop-blur-sm transition-opacity"
-            onClick={() => setIsSidebarCollapsed(true)}
-          />
-        )}
-
-        <main 
-          className={`flex-1 relative min-h-screen flex flex-col transition-all duration-300 
-            ${isMobile ? 'mt-14' : ''} ${contentMargin}
-            print:!ml-0 print:!mr-0 print:!w-full print:!m-0 print:!mt-0`}
-        >
-          {/* Main Content Area */}
-          <div className="flex-1 pb-8 print:pb-0">
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/new-order" element={<NewOrder />} />
-              <Route path="/returns" element={<Returns />} />
-              <Route path="/invoices" element={<InvoiceList />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/collections" element={<Collections />} />
-              <Route path="/inventory" element={<Inventory />} />
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/bill-generator" element={<BillGenerator />} />
-              <Route path="/analysis" element={<Analysis />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </div>
-
-          {/* Fixed Footer */}
-          <footer 
-            className={`fixed bottom-0 ${dir === 'rtl' ? 'left-0' : 'right-0'} bg-slate-50/90 backdrop-blur-sm border-t border-slate-200 py-1.5 px-6 flex justify-between items-center text-[10px] text-slate-400 z-20 print:hidden transition-all duration-300 
-              ${isMobile ? 'w-full' : (isSidebarCollapsed ? `w-[calc(100%-4rem)]` : `w-[calc(100%-15rem)]`)}`}
+          )}
+          
+          <h2 className="text-4xl md:text-6xl font-extrabold text-[var(--color-heading)] mb-6 leading-tight">
+            {t.home.welcome}
+          </h2>
+          <p className="text-lg md:text-xl text-[var(--color-text-light)] mb-10 max-w-2xl mx-auto leading-relaxed">
+            {t.home.subtitle}
+          </p>
+          <button 
+             onClick={() => document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' })}
+             className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-8 py-4 rounded-2xl text-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 font-semibold"
           >
-            <div className="flex gap-4 items-center">
-              <span>&copy; {new Date().getFullYear()} Emad Co. Pharmaceutical</span>
-              <span className="text-slate-500 hidden sm:inline">|</span>
-              <span className="text-[10px] text-slate-500 opacity-75 hover:opacity-100 transition-opacity cursor-default" title="Developer">Dev by Dr. Peter Ramsis</span>
-            </div>
-            <span className="font-mono font-medium">v2.0.062</span>
-          </footer>
-        </main>
-      </div>
-    </Router>
+            {t.common.explore}
+          </button>
+        </div>
+      </section>
+
+      {/* Tools Section */}
+      <section id="tools" className="container mx-auto px-4 py-20 mb-10">
+        <ToolsGrid 
+            onToolClick={onToolClick} 
+            setBmiOpen={setBmiOpen} 
+            isAuthenticated={!!session} 
+        />
+      </section>
+    </>
   );
 };
 
-const App = () => (
-  <LanguageProvider>
-    <AppContent />
-  </LanguageProvider>
-);
+const AppContent = () => {
+  const [bmiOpen, setBmiOpen] = useState(false);
+  const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [previousTool, setPreviousTool] = useState<string | null>(null);
+  const [plannedKcal, setPlannedKcal] = useState<number>(0);
+  const [showLogin, setShowLogin] = useState(false);
+  const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
+  
+  // Extra Nav Flags
+  const [autoOpenLoad, setAutoOpenLoad] = useState(false);
+  const [autoOpenNew, setAutoOpenNew] = useState(false);
+
+  // Data passing between tools
+  const [toolData, setToolData] = useState<any>(null);
+  // Specific to Kcal Calculator linked to a visit
+  const [currentVisit, setCurrentVisit] = useState<{client: Client, visit: ClientVisit} | null>(null);
+  
+  const { t, isRTL } = useLanguage();
+  const { session, profile, loading } = useAuth();
+
+  // Auto scroll to top when activeTool changes
+  useEffect(() => {
+    if (activeTool) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [activeTool]);
+
+  // Close login modal automatically on successful login
+  useEffect(() => {
+    if (session) {
+        setShowLogin(false);
+    }
+  }, [session]);
+
+  if (loading) {
+    return <Loading fullScreen text="Initializing Diet-Nova..." />;
+  }
+
+  const handleNavHome = () => {
+    setActiveTool(null);
+    setPreviousTool(null);
+    setSelectedLoadId(null);
+    setToolData(null);
+    setCurrentVisit(null);
+    setAutoOpenLoad(false);
+    setAutoOpenNew(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleNavTools = () => {
+    if (activeTool) {
+      handleNavHome();
+    }
+    
+    setTimeout(() => {
+      const toolsLanding = document.getElementById('tools'); 
+      const toolsDashboard = document.getElementById('dashboard-tools'); 
+      
+      if (toolsLanding) {
+        toolsLanding.scrollIntoView({ behavior: 'smooth' });
+      } else if (toolsDashboard) {
+        toolsDashboard.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
+  const handleNavProfile = () => {
+      setActiveTool('profile');
+  };
+
+  const handleToolClick = (toolId: string, loadId?: string, action?: 'load' | 'new') => {
+      if (toolId === 'meal-creator' && !session) {
+          setShowLogin(true);
+          return;
+      }
+      if (toolId === 'client-manager') {
+        if (!session) {
+            setShowLogin(true);
+            return;
+        }
+        if (profile?.role !== 'doctor') {
+            alert("Access Restricted: This tool is for nutritionists only.");
+            return;
+        }
+      }
+      if (loadId) {
+          setSelectedLoadId(loadId);
+      } else {
+          setSelectedLoadId(null);
+      }
+      
+      // Set flags for auto actions
+      setAutoOpenLoad(action === 'load');
+      setAutoOpenNew(action === 'new');
+
+      setToolData(null); // Reset tool data on clean navigation
+      setCurrentVisit(null); // Reset visit linkage
+      setActiveTool(toolId);
+  };
+
+  const handlePlanMeals = (kcal: number) => {
+    setPlannedKcal(kcal);
+    setPreviousTool(activeTool);
+    setActiveTool('meal-planner');
+  };
+
+  const handleAnalyzeClient = (client: Client, visit: ClientVisit) => {
+      // Map Client Visit data to KcalInitialData
+      const initData: KcalInitialData = {
+          gender: client.gender,
+          age: client.age,
+          dob: client.dob,
+          // Use visit data preferably, fallback to client profile
+          weight: visit.weight || client.weight,
+          height: visit.height || client.height
+      };
+      
+      setToolData(initData);
+      setCurrentVisit({ client, visit });
+      setActiveTool('kcal');
+  };
+
+  const handlePlanMealsForClient = (client: Client, visit: ClientVisit) => {
+      setCurrentVisit({ client, visit });
+      setActiveTool('meal-planner');
+  };
+
+  const handleBackToCalculator = () => {
+    if (previousTool) {
+      setActiveTool(previousTool);
+      setPreviousTool(null);
+    }
+  };
+
+  const handleBackToClientProfile = () => {
+     if (currentVisit) {
+         setActiveTool('client-manager');
+         // Pass the client ID to auto-open the profile view in ClientManager
+         setSelectedLoadId(currentVisit.client.id); 
+         setCurrentVisit(null); // Clear visit context as we are exiting the tool
+     }
+  };
+
+  const showKcal = activeTool === 'kcal';
+  const showPlanner = activeTool === 'meal-planner';
+  const isComplexFlow = showKcal || showPlanner;
+
+  return (
+    <div className="min-h-screen flex flex-col font-sans bg-[var(--color-bg)]">
+      <Header 
+        onNavigateHome={handleNavHome} 
+        onNavigateTools={handleNavTools}
+        onNavigateProfile={handleNavProfile}
+        onLoginClick={() => setShowLogin(true)}
+      />
+
+      <main className="flex-grow">
+        {activeTool ? (
+          <div className="container mx-auto px-4 py-8 pb-24 animate-fade-in">
+            <div className="flex items-center justify-between mb-6 no-print">
+                <button 
+                  onClick={handleNavHome}
+                  className="flex items-center gap-2 text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] font-medium transition group"
+                >
+                  <span className={`text-xl transform transition-transform ${isRTL ? 'rotate-180 group-hover:translate-x-1' : 'group-hover:-translate-x-1'}`}>
+                    ←
+                  </span>
+                  {t.common.backHome}
+                </button>
+                
+                {/* Back to Client Profile Button */}
+                {currentVisit && isComplexFlow && (
+                    <div className="flex items-center gap-3">
+                         <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-xs font-bold shadow-sm hidden sm:flex items-center gap-2">
+                             <span>👥 Client Mode: {currentVisit.client.full_name}</span>
+                         </div>
+                         <button 
+                             onClick={handleBackToClientProfile}
+                             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm flex items-center gap-2"
+                         >
+                             <span>👤</span> Back to Profile
+                         </button>
+                    </div>
+                )}
+            </div>
+            
+            {/* Complex State Persistence Logic */}
+            {isComplexFlow && (
+              <>
+                <div className={showKcal ? 'block' : 'hidden'}>
+                  <KcalCalculator 
+                    onPlanMeals={handlePlanMeals} 
+                    initialData={toolData} 
+                    activeVisit={currentVisit} // Pass visit context
+                  />
+                </div>
+                <div className={showPlanner ? 'block' : 'hidden'}>
+                  <MealPlanner 
+                    initialTargetKcal={plannedKcal} 
+                    onBack={previousTool === 'kcal' ? handleBackToCalculator : undefined}
+                    initialLoadId={activeTool === 'meal-planner' ? selectedLoadId : null}
+                    autoOpenLoad={autoOpenLoad}
+                    autoOpenNew={autoOpenNew}
+                    activeVisit={currentVisit} // Pass visit context
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Standard Tools (Unmount when inactive) */}
+            {activeTool === 'meal-creator' && (
+                <MealCreator 
+                    initialLoadId={selectedLoadId} 
+                    autoOpenLoad={autoOpenLoad}
+                    autoOpenNew={autoOpenNew}
+                />
+            )}
+            {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
+            {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
+            {activeTool === 'client-manager' && (
+                <ClientManager 
+                    initialClientId={selectedLoadId} 
+                    onAnalyzeInKcal={handleAnalyzeClient}
+                    onPlanMeals={handlePlanMealsForClient}
+                    autoOpenNew={autoOpenNew}
+                />
+            )}
+            {activeTool === 'bmr' && <BmrCalculator />}
+            {activeTool === 'profile' && <Profile />}
+
+          </div>
+        ) : (
+           session ? (
+             <UserDashboard onNavigateTool={handleToolClick} setBmiOpen={setBmiOpen} />
+           ) : (
+             <Dashboard setBmiOpen={setBmiOpen} onToolClick={handleToolClick} session={session} />
+           )
+        )}
+      </main>
+
+      {/* ScrollToTopButton */}
+      <div className="no-print">
+        <ScrollToTopButton />
+      </div>
+
+      {/* Modals */}
+      <BmiModal open={bmiOpen} onClose={() => setBmiOpen(false)} />
+      
+      {showLogin && (
+        <Login onClose={() => setShowLogin(false)} />
+      )}
+      
+      <Footer />
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <LanguageProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </LanguageProvider>
+  );
+}
 
 export default App;
