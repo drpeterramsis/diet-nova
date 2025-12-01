@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import ToolCard from './ToolCard';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -67,13 +65,6 @@ const ToolsGrid: React.FC<ToolsGridProps> = ({ onToolClick, setBmiOpen, isAuthen
         desc={t.tools.nfpe.desc}
         onClick={() => onToolClick('nfpe')}
         icon={<span className="text-2xl">🩺</span>}
-      />
-
-      <ToolCard
-        title={t.tools.encyclopedia.title}
-        desc={t.tools.encyclopedia.desc}
-        onClick={() => onToolClick('encyclopedia')}
-        icon={<span className="text-2xl">📚</span>}
       />
 
        {isDoctor && (

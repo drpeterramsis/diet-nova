@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { nfpeData, NFPESystem, NFPEItem } from '../../data/nfpeData';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -12,11 +10,12 @@ interface NFPEChecklistProps {
 }
 
 const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [saveStatus, setSaveStatus] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'assessment' | 'summary'>('assessment');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Load existing state if available
   useEffect(() => {
@@ -65,7 +64,6 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
       
       try {
           // This requires the 'nfpe_data' column in Supabase 'clients' table.
-          // If the column doesn't exist, this will throw an error.
           const { error } = await supabase
             .from('clients')
             .update({ 
@@ -81,7 +79,7 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
           setTimeout(() => setSaveStatus(''), 2000);
       } catch (err: any) {
           console.error("Save State Error:", err);
-          setSaveStatus('Error: Database column nfpe_data missing?');
+          setSaveStatus('Error saving: ' + (err.message || 'Check database schema'));
       } finally {
           setIsSaving(false);
       }
@@ -121,6 +119,21 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
       setTimeout(() => setSaveStatus(''), 2000);
   };
 
+  // Filter systems and items based on search query
+  const filteredSystems = useMemo(() => {
+      if (!searchQuery) return nfpeData;
+      const q = searchQuery.toLowerCase();
+      
+      return nfpeData.map(system => ({
+          ...system,
+          items: system.items.filter(item => 
+              item.sign.toLowerCase().includes(q) || 
+              item.signAr.includes(q) || 
+              item.deficiency.toLowerCase().includes(q)
+          )
+      })).filter(system => system.items.length > 0);
+  }, [searchQuery]);
+
   // Organize findings for the summary tab
   const activeFindingsBySystem = useMemo(() => {
       return nfpeData.map(system => ({
@@ -129,23 +142,34 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
       })).filter(sys => sys.items.length > 0);
   }, [selectedItems]);
 
-  // Aggregated Summary Logic
+  // Aggregated Summary Logic (Bilingual)
   const aggregatedSummary = useMemo(() => {
       const defs = new Set<string>();
+      const defsAr = new Set<string>();
       const foods = new Set<string>();
+      const foodsAr = new Set<string>();
 
       nfpeData.forEach(sys => {
           sys.items.forEach(item => {
               if (selectedItems.has(item.id)) {
-                  // Normalize and split deficiencies
+                  // English Deficiencies
                   item.deficiency.split(/,|&|\//).forEach(d => {
                       const trimD = d.trim();
                       if (trimD && !trimD.toLowerCase().includes('deficiency')) defs.add(trimD);
                   });
+                  // Arabic Deficiencies
+                  item.deficiencyAr.split(/,|،|\//).forEach(d => {
+                      const trimD = d.trim();
+                      if (trimD) defsAr.add(trimD);
+                  });
                   
-                  // Normalize and split foods
+                  // English Foods
                   item.food.split(/,|&|\//).forEach(f => {
                       foods.add(f.trim());
+                  });
+                  // Arabic Foods
+                  item.foodAr.split(/,|،|\//).forEach(f => {
+                      foodsAr.add(f.trim());
                   });
               }
           });
@@ -153,7 +177,9 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
 
       return {
           deficiencies: Array.from(defs).sort(),
-          foods: Array.from(foods).sort()
+          deficienciesAr: Array.from(defsAr).sort(),
+          foods: Array.from(foods).sort(),
+          foodsAr: Array.from(foodsAr).sort()
       };
   }, [selectedItems]);
 
@@ -200,12 +226,24 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
       {/* ASSESSMENT TAB */}
       {activeTab === 'assessment' && (
         <div className="space-y-6">
-            <div className="flex justify-end gap-2 no-print">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                 <div className="relative w-full md:w-96">
+                    <input 
+                        type="text" 
+                        placeholder="Search signs, deficiencies..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full p-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                        dir={isRTL ? 'rtl' : 'ltr'}
+                    />
+                    <span className={`absolute top-1/2 -translate-y-1/2 text-gray-400 left-3`}>🔍</span>
+                 </div>
+
                  {client && (
                     <button 
                         onClick={handleSaveState}
                         disabled={isSaving}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition disabled:opacity-50 text-sm flex items-center gap-2"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition disabled:opacity-50 text-sm flex items-center gap-2 no-print"
                     >
                         💾 Save Checklist State
                     </button>
@@ -213,7 +251,7 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-                {nfpeData.map((system: NFPESystem) => {
+                {filteredSystems.map((system: NFPESystem) => {
                 const activeCount = system.items.filter(i => selectedItems.has(i.id)).length;
                 
                 return (
@@ -269,6 +307,11 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
                     </div>
                 );
                 })}
+                {filteredSystems.length === 0 && (
+                    <div className="col-span-full text-center py-10 text-gray-400">
+                        No signs found matching "{searchQuery}"
+                    </div>
+                )}
             </div>
         </div>
       )}
@@ -333,18 +376,13 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
                                       <div key={item.id} className="p-4 hover:bg-gray-50 transition">
                                           <div className="flex flex-col md:flex-row gap-6">
                                               
-                                              {/* 1. Symptom & Image */}
+                                              {/* 1. Symptom */}
                                               <div className="md:w-1/3 space-y-3">
                                                   <div>
                                                       <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Symptom / العلامة</span>
                                                       <div className="font-bold text-gray-800 text-lg leading-tight">{item.sign}</div>
                                                       <div className="text-gray-600 font-arabic text-sm">{item.signAr}</div>
                                                   </div>
-                                                  {item.image && (
-                                                      <div className="w-full h-40 bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                                                          <img src={item.image} alt={item.sign} className="w-full h-full object-cover" />
-                                                      </div>
-                                                  )}
                                               </div>
 
                                               {/* 2. Deficiency Info */}
@@ -376,15 +414,22 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
                           <span>📊</span> Total Assessment Summary
                       </h2>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                           {/* Deficiencies */}
                           <div>
                               <h3 className="font-bold text-red-300 uppercase tracking-wider text-sm mb-4">
                                   Potential Deficiencies Suspected
                               </h3>
-                              <div className="flex flex-wrap gap-2">
+                              <div className="flex flex-wrap gap-2 mb-4">
                                   {aggregatedSummary.deficiencies.map((def, idx) => (
                                       <span key={idx} className="bg-red-900/40 border border-red-700/50 text-red-100 px-3 py-1.5 rounded-lg text-sm font-medium">
+                                          {def}
+                                      </span>
+                                  ))}
+                              </div>
+                              <div className="flex flex-wrap gap-2 rtl" dir="rtl">
+                                  {aggregatedSummary.deficienciesAr.map((def, idx) => (
+                                      <span key={idx} className="bg-red-900/40 border border-red-700/50 text-red-100 px-3 py-1.5 rounded-lg text-sm font-medium font-arabic">
                                           {def}
                                       </span>
                                   ))}
@@ -396,14 +441,29 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
                               <h3 className="font-bold text-green-300 uppercase tracking-wider text-sm mb-4">
                                   Aggregate Nutrition Recommendations
                               </h3>
-                              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300">
-                                  {aggregatedSummary.foods.map((food, idx) => (
-                                      <li key={idx} className="flex items-center gap-2">
-                                          <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                                          {food}
-                                      </li>
-                                  ))}
-                              </ul>
+                              <div className="mb-4">
+                                <h4 className="text-xs text-gray-400 mb-2">English</h4>
+                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300">
+                                    {aggregatedSummary.foods.map((food, idx) => (
+                                        <li key={idx} className="flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                                            {food}
+                                        </li>
+                                    ))}
+                                </ul>
+                              </div>
+                              
+                              <div dir="rtl">
+                                <h4 className="text-xs text-gray-400 mb-2 font-arabic">عربي</h4>
+                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300 font-arabic">
+                                    {aggregatedSummary.foodsAr.map((food, idx) => (
+                                        <li key={idx} className="flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full ml-2"></span>
+                                            {food}
+                                        </li>
+                                    ))}
+                                </ul>
+                              </div>
                           </div>
                       </div>
                   </div>

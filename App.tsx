@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -60,17 +58,44 @@ const Dashboard = ({
           <p className="text-lg md:text-xl text-[var(--color-text-light)] mb-10 max-w-2xl mx-auto leading-relaxed">
             {t.home.subtitle}
           </p>
-          <button 
-             onClick={() => document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' })}
-             className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-8 py-4 rounded-2xl text-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 font-semibold"
-          >
-            {t.common.explore}
-          </button>
+          <div className="flex gap-4 justify-center">
+              <button 
+                onClick={() => document.getElementById('tools')?.scrollIntoView({ behavior: 'smooth' })}
+                className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-8 py-4 rounded-2xl text-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 font-semibold"
+              >
+                {t.common.explore}
+              </button>
+              <button 
+                onClick={() => onToolClick('encyclopedia')}
+                className="bg-white hover:bg-gray-50 text-[var(--color-primary)] border border-[var(--color-primary)] px-8 py-4 rounded-2xl text-lg shadow-md hover:shadow-lg transition transform hover:-translate-y-1 font-semibold flex items-center gap-2"
+              >
+                <span>📚</span> Encyclopedia
+              </button>
+          </div>
         </div>
       </section>
 
+      {/* Encyclopedia Teaser Section */}
+      <section className="container mx-auto px-4 py-12">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white shadow-lg flex flex-col md:flex-row items-center justify-between gap-6 cursor-pointer transform hover:scale-[1.01] transition duration-300" onClick={() => onToolClick('encyclopedia')}>
+              <div className="flex items-center gap-6">
+                  <div className="text-6xl bg-white/20 p-4 rounded-full">📚</div>
+                  <div>
+                      <h3 className="text-2xl font-bold mb-2">Nutrient Encyclopedia</h3>
+                      <p className="opacity-90 max-w-lg">Access our comprehensive library of Vitamins & Minerals. View food sources, functions, deficiencies, and reference charts.</p>
+                  </div>
+              </div>
+              <button className="bg-white text-blue-600 px-6 py-3 rounded-xl font-bold hover:bg-gray-100 transition whitespace-nowrap shadow-md">
+                  Browse Encyclopedia
+              </button>
+          </div>
+      </section>
+
       {/* Tools Section */}
-      <section id="tools" className="container mx-auto px-4 py-20 mb-10">
+      <section id="tools" className="container mx-auto px-4 py-10 mb-10">
+        <h3 className="text-3xl font-bold text-[var(--color-heading)] mb-8 text-center border-b pb-4 border-gray-200">
+            Professional Tools
+        </h3>
         <ToolsGrid 
             onToolClick={onToolClick} 
             setBmiOpen={setBmiOpen} 
