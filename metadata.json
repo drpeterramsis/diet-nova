@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova - stable v2.0.88",
-  "description": "Updates: Added auto-scroll and sticky headers for dietary tools.",
+  "name": "Diet-Nova - stable v2.0.90",
+  "description": "Updates: Fixed sticky headers in Food Questionnaire and Dietary Recall tables.",
   "requestFramePermissions": []
 }

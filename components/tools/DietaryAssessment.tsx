@@ -97,7 +97,7 @@ export const DietaryAssessment: React.FC<DietaryAssessmentProps> = ({ initialDat
     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 flex flex-col h-full animate-fade-in overflow-hidden">
       
       {/* Header */}
-      <div className="p-6 bg-yellow-50 border-b border-yellow-200 flex justify-between items-center">
+      <div className="p-6 bg-yellow-50 border-b border-yellow-200 flex justify-between items-center flex-shrink-0">
         <div>
           <h2 className="text-2xl font-bold text-yellow-800 flex items-center gap-2">
             <span>📅</span> {t.dietary.title}
@@ -110,7 +110,7 @@ export const DietaryAssessment: React.FC<DietaryAssessmentProps> = ({ initialDat
       </div>
 
       {/* Controls */}
-      <div className="p-4 bg-white border-b border-gray-100 flex items-center gap-4">
+      <div className="p-4 bg-white border-b border-gray-100 flex items-center gap-4 flex-shrink-0">
         <label className="font-bold text-gray-700 text-sm">{t.dietary.days}:</label>
         <select 
           value={daysCount}
@@ -123,54 +123,56 @@ export const DietaryAssessment: React.FC<DietaryAssessmentProps> = ({ initialDat
         </select>
       </div>
 
-      {/* Grid Container */}
-      <div className="flex-grow overflow-auto p-4 bg-gray-50">
-        <table className="w-full border-collapse bg-white rounded-lg shadow-sm overflow-hidden">
-          <thead>
-            <tr>
-              <th className="p-3 bg-yellow-100 text-yellow-900 border border-yellow-200 sticky left-0 top-0 z-30 w-48 text-left min-w-[150px] shadow-sm">
-                Meal / Day
-              </th>
-              {Array.from({ length: daysCount }).map((_, i) => (
-                <th key={i} className="p-2 bg-yellow-50 border border-yellow-200 min-w-[200px] sticky top-0 z-20 shadow-sm">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-yellow-800 font-bold">Day {i + 1}</span>
-                    <input 
-                      type="date" 
-                      value={dates[i] || ''} 
-                      onChange={(e) => handleDateChange(i, e.target.value)}
-                      className="text-xs p-1 border rounded text-center bg-white/50 focus:bg-white"
-                    />
-                  </div>
+      {/* Grid Container - Scrollable */}
+      <div className="flex-grow flex flex-col overflow-hidden p-4 bg-gray-50">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 flex-grow overflow-auto">
+            <table className="w-full border-collapse">
+            <thead>
+                <tr>
+                <th className="p-3 bg-yellow-100 text-yellow-900 border border-yellow-200 sticky left-0 top-0 z-50 w-48 text-left min-w-[150px] shadow-sm">
+                    Meal / Day
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {ROW_KEYS.map((rowKey) => (
-              <tr key={rowKey}>
-                <td className="p-3 bg-gray-50 font-bold text-gray-700 border border-gray-200 sticky left-0 z-10 shadow-sm">
-                  {getRowLabel(rowKey)}
-                </td>
                 {Array.from({ length: daysCount }).map((_, i) => (
-                  <td key={i} className="p-0 border border-gray-200">
-                    <textarea
-                      className="w-full h-full min-h-[80px] p-2 resize-none focus:bg-yellow-50 outline-none text-sm"
-                      placeholder="..."
-                      value={gridData[rowKey]?.[`day${i+1}`] || ''}
-                      onChange={(e) => handleGridChange(rowKey, i, e.target.value)}
-                      dir="auto"
-                    />
-                  </td>
+                    <th key={i} className="p-2 bg-yellow-50 border border-yellow-200 min-w-[200px] sticky top-0 z-40 shadow-sm">
+                    <div className="flex flex-col gap-1">
+                        <span className="text-yellow-800 font-bold">Day {i + 1}</span>
+                        <input 
+                        type="date" 
+                        value={dates[i] || ''} 
+                        onChange={(e) => handleDateChange(i, e.target.value)}
+                        className="text-xs p-1 border rounded text-center bg-white/50 focus:bg-white"
+                        />
+                    </div>
+                    </th>
                 ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </tr>
+            </thead>
+            <tbody>
+                {ROW_KEYS.map((rowKey) => (
+                <tr key={rowKey}>
+                    <td className="p-3 bg-gray-50 font-bold text-gray-700 border border-gray-200 sticky left-0 z-30 shadow-sm">
+                    {getRowLabel(rowKey)}
+                    </td>
+                    {Array.from({ length: daysCount }).map((_, i) => (
+                    <td key={i} className="p-0 border border-gray-200">
+                        <textarea
+                        className="w-full h-full min-h-[80px] p-2 resize-none focus:bg-yellow-50 outline-none text-sm block border-0 bg-transparent"
+                        placeholder="..."
+                        value={gridData[rowKey]?.[`day${i+1}`] || ''}
+                        onChange={(e) => handleGridChange(rowKey, i, e.target.value)}
+                        dir="auto"
+                        />
+                    </td>
+                    ))}
+                </tr>
+                ))}
+            </tbody>
+            </table>
+        </div>
       </div>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-200 bg-white flex justify-end gap-3">
+      <div className="p-4 border-t border-gray-200 bg-white flex justify-end gap-3 flex-shrink-0">
         <button 
           onClick={onClose}
           className="px-6 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition"

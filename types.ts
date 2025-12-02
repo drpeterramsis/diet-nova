@@ -32,6 +32,9 @@ export interface FoodQuestionnaireData {
   answers: {
     [key: string]: string; // key is question ID (e.g., 'red_meat'), value is frequency code (e.g., 'daily')
   };
+  notes?: {
+    [key: string]: string; // key is question ID, value is user note
+  };
   updatedAt: string;
 }
 
