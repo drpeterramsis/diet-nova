@@ -51,7 +51,7 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, onLogi
               <div className="font-bold text-gray-800">{profile?.full_name}</div>
               <div className="text-xs text-gray-500">{session.user.email}</div>
               <span className="inline-block mt-2 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full capitalize">
-                {profile?.role}
+                {profile?.role === 'doctor' ? t.auth.doctor : t.auth.patient}
               </span>
             </div>
           ) : (
@@ -85,9 +85,6 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, onLogi
                 <button onClick={() => handleNav('nfpe')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-green-50 hover:text-green-700 flex items-center gap-3 text-gray-600 text-sm">
                 <span>🩺</span> {t.tools.nfpe.title}
                 </button>
-                <button onClick={() => { onClose(); const btn = document.getElementById('bmi-btn'); if(btn) btn.click(); }} className="w-full text-left px-4 py-2 rounded-lg hover:bg-green-50 hover:text-green-700 flex items-center gap-3 text-gray-600 text-sm">
-                <span>⚖️</span> {t.tools.bmi.title}
-                </button>
             </div>
 
             <div className="pt-2 pb-2">
@@ -101,15 +98,18 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, onLogi
                 <button onClick={() => handleNav('meal-planner')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 text-gray-600 text-sm">
                 <span>📅</span> {t.tools.mealPlanner.title}
                 </button>
+                <button onClick={() => { onClose(); const btn = document.getElementById('bmi-btn'); if(btn) btn.click(); }} className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 text-gray-600 text-sm">
+                <span>⚖️</span> {t.tools.bmi.title}
+                </button>
+                <button onClick={() => handleNav('bmr')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 text-gray-600 text-sm">
+                <span>⚡</span> {t.tools.bmr.title}
+                </button>
             </div>
 
             <div className="pt-2 pb-2">
                 <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Knowledge Base</p>
                 <button onClick={() => handleNav('encyclopedia')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-purple-50 hover:text-purple-700 flex items-center gap-3 text-gray-600 text-sm">
                 <span>📚</span> {t.tools.encyclopedia.title}
-                </button>
-                <button onClick={() => handleNav('bmr')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-purple-50 hover:text-purple-700 flex items-center gap-3 text-gray-600 text-sm">
-                <span>⚡</span> {t.tools.bmr.title}
                 </button>
             </div>
           </nav>

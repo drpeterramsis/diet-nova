@@ -74,9 +74,6 @@ const Dashboard = ({
                       <button onClick={() => onToolClick('nfpe')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
                           <span>NFPE Assessment</span> <span>→</span>
                       </button>
-                      <button onClick={() => setBmiOpen(true)} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
-                          <span>BMI Calculator</span> <span>→</span>
-                      </button>
                   </div>
               </div>
 
@@ -97,6 +94,12 @@ const Dashboard = ({
                       <button onClick={() => onToolClick('exchange-pro')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-medium text-sm flex items-center justify-between">
                           <span>Food Exchanges</span> <span>→</span>
                       </button>
+                      <button onClick={() => setBmiOpen(true)} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-medium text-sm flex items-center justify-between">
+                          <span>BMI Calculator</span> <span>→</span>
+                      </button>
+                      <button onClick={() => onToolClick('bmr')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-medium text-sm flex items-center justify-between">
+                          <span>BMR Calculator</span> <span>→</span>
+                      </button>
                   </div>
               </div>
 
@@ -110,9 +113,6 @@ const Dashboard = ({
                   <div className="space-y-2">
                       <button onClick={() => onToolClick('encyclopedia')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-medium text-sm flex items-center justify-between">
                           <span>Encyclopedia</span> <span>→</span>
-                      </button>
-                      <button onClick={() => onToolClick('bmr')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-medium text-sm flex items-center justify-between">
-                          <span>BMR Calculator</span> <span>→</span>
                       </button>
                   </div>
               </div>
