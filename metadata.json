@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova - stable v2.0.87",
-  "description": "Updates: Added Dietary Assessment (24hr - 7 Days Recall) tool to Client Manager.",
+  "name": "Diet-Nova - stable v2.0.88",
+  "description": "Updates: Added auto-scroll and sticky headers for dietary tools.",
   "requestFramePermissions": []
 }

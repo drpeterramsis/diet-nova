@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { DietaryAssessmentData } from '../../types';
@@ -129,11 +128,11 @@ export const DietaryAssessment: React.FC<DietaryAssessmentProps> = ({ initialDat
         <table className="w-full border-collapse bg-white rounded-lg shadow-sm overflow-hidden">
           <thead>
             <tr>
-              <th className="p-3 bg-yellow-100 text-yellow-900 border border-yellow-200 sticky left-0 z-10 w-48 text-left min-w-[150px]">
+              <th className="p-3 bg-yellow-100 text-yellow-900 border border-yellow-200 sticky left-0 top-0 z-30 w-48 text-left min-w-[150px] shadow-sm">
                 Meal / Day
               </th>
               {Array.from({ length: daysCount }).map((_, i) => (
-                <th key={i} className="p-2 bg-yellow-50 border border-yellow-200 min-w-[200px]">
+                <th key={i} className="p-2 bg-yellow-50 border border-yellow-200 min-w-[200px] sticky top-0 z-20 shadow-sm">
                   <div className="flex flex-col gap-1">
                     <span className="text-yellow-800 font-bold">Day {i + 1}</span>
                     <input 
@@ -150,7 +149,7 @@ export const DietaryAssessment: React.FC<DietaryAssessmentProps> = ({ initialDat
           <tbody>
             {ROW_KEYS.map((rowKey) => (
               <tr key={rowKey}>
-                <td className="p-3 bg-gray-50 font-bold text-gray-700 border border-gray-200 sticky left-0 z-10">
+                <td className="p-3 bg-gray-50 font-bold text-gray-700 border border-gray-200 sticky left-0 z-10 shadow-sm">
                   {getRowLabel(rowKey)}
                 </td>
                 {Array.from({ length: daysCount }).map((_, i) => (

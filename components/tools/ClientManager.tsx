@@ -1,8 +1,4 @@
 
-
-
-
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -632,6 +628,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
   // --- Tool Handlers ---
   const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire', type: 'client' | 'visit', id: string, initialData?: any) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' }); // Auto-scroll to top
     setToolTarget({ type, id, initialData });
     setViewMode(view);
   };

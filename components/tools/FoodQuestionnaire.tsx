@@ -67,9 +67,11 @@ export const FoodQuestionnaire: React.FC<FoodQuestionnaireProps> = ({ initialDat
                     <table className="w-full border-collapse">
                         <thead className="bg-green-600 text-white text-sm">
                             <tr>
-                                <th className="p-3 text-right w-1/4 min-w-[200px] border-r border-green-500">{t.mealCreator.foodName}</th>
+                                <th className="p-3 text-right w-1/4 min-w-[200px] border-r border-green-500 sticky left-0 top-0 z-30 bg-green-600 shadow-md">
+                                    {t.mealCreator.foodName}
+                                </th>
                                 {FREQUENCY_KEYS.map(fk => (
-                                    <th key={fk} className="p-3 text-center min-w-[80px] border-r border-green-500 last:border-0 font-medium">
+                                    <th key={fk} className="p-3 text-center min-w-[80px] border-r border-green-500 last:border-0 font-medium sticky top-0 z-20 bg-green-600 shadow-sm">
                                         {t.foodFreq[fk as keyof typeof t.foodFreq]}
                                     </th>
                                 ))}
@@ -78,7 +80,7 @@ export const FoodQuestionnaire: React.FC<FoodQuestionnaireProps> = ({ initialDat
                         <tbody className="text-sm divide-y divide-gray-100">
                             {ITEMS_KEYS.map((itemKey) => (
                                 <tr key={itemKey} className="hover:bg-green-50 transition-colors">
-                                    <td className="p-3 font-bold text-gray-700 bg-gray-50 border-r border-gray-200 sticky left-0 md:static">
+                                    <td className="p-3 font-bold text-gray-700 bg-gray-50 border-r border-gray-200 sticky left-0 z-10 shadow-sm">
                                         {t.foodFreq.items[itemKey as keyof typeof t.foodFreq.items]}
                                     </td>
                                     {FREQUENCY_KEYS.map(fk => {
