@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova - stable v2.0.84",
-  "description": "Updates: Moved BMI and BMR to Tools/Dietetics Studio. Updated role labels to Nutritionist.",
+  "name": "Diet-Nova - stable v2.0.85",
+  "description": "Updates: Added 'Drugs Affecting Weight' sector to Encyclopedia.",
   "requestFramePermissions": []
 }

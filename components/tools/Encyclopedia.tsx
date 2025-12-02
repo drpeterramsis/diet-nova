@@ -1,8 +1,10 @@
+
 import React, { useState, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { encyclopediaData, EncyclopediaItem } from '../../data/encyclopediaData';
+import { drugsData, DrugItem } from '../../data/drugsData';
 
-type Sector = 'menu' | 'nutrients';
+type Sector = 'menu' | 'nutrients' | 'drugs';
 
 const Encyclopedia: React.FC = () => {
   const { t, isRTL, lang } = useLanguage();
@@ -15,6 +17,9 @@ const Encyclopedia: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'All' | 'Vitamin' | 'Mineral'>('All');
   const [viewMode, setViewMode] = useState<'cards' | 'chart'>('chart');
   
+  // Logic for Drugs Sector
+  const [drugSearchQuery, setDrugSearchQuery] = useState('');
+
   const filteredItems = useMemo(() => {
     let items = encyclopediaData;
     
@@ -36,6 +41,16 @@ const Encyclopedia: React.FC = () => {
 
     return items;
   }, [searchQuery, activeFilter, lang]);
+
+  const filteredDrugs = useMemo(() => {
+      if (!drugSearchQuery) return drugsData;
+      const q = drugSearchQuery.toLowerCase();
+      return drugsData.filter(d => 
+          d.category.toLowerCase().includes(q) ||
+          d.mechanism.toLowerCase().includes(q) ||
+          d.examples.toLowerCase().includes(q)
+      );
+  }, [drugSearchQuery]);
 
   // --- SECTOR MENU VIEW ---
   if (currentSector === 'menu') {
@@ -66,6 +81,23 @@ const Encyclopedia: React.FC = () => {
                     </button>
                 </div>
 
+                {/* 2. Drugs & Weight Card */}
+                <div 
+                    onClick={() => setCurrentSector('drugs')}
+                    className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-red-500"
+                >
+                    <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:bg-red-100 transition">
+                        💊
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Drugs & Weight</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                        Reference guide for medications that affect body weight, including mechanisms and examples.
+                    </p>
+                    <button className="mt-auto text-red-600 font-bold text-sm bg-red-50 px-4 py-2 rounded-lg group-hover:bg-red-600 group-hover:text-white transition w-full">
+                        View Table
+                    </button>
+                </div>
+
                 {/* Placeholder: Herbs (Future) */}
                 <div className="card bg-gray-50 border-dashed border-2 border-gray-200 p-6 flex flex-col items-center text-center opacity-70">
                     <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center text-3xl mb-4 text-gray-400">
@@ -79,21 +111,99 @@ const Encyclopedia: React.FC = () => {
                         Coming Soon
                     </span>
                 </div>
+            </div>
+        </div>
+      );
+  }
 
-                {/* Placeholder: Drug Interactions (Future) */}
-                <div className="card bg-gray-50 border-dashed border-2 border-gray-200 p-6 flex flex-col items-center text-center opacity-70">
-                    <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center text-3xl mb-4 text-gray-400">
-                        ⚡
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-400 mb-2">Drug Interactions</h3>
-                    <p className="text-sm text-gray-400 mb-4">
-                        Check interactions between food, supplements, and medication.
-                    </p>
-                    <span className="mt-auto text-xs font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
-                        Coming Soon
-                    </span>
+  // --- DRUGS SECTOR VIEW ---
+  if (currentSector === 'drugs') {
+      return (
+        <div className="max-w-7xl mx-auto animate-fade-in space-y-8 pb-12">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                <button 
+                    onClick={() => setCurrentSector('menu')}
+                    className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2 text-sm font-medium self-start md:self-auto"
+                >
+                    <span>←</span> Back to Sectors
+                </button>
+                <div className="text-center md:text-right">
+                    <h2 className="text-2xl font-bold text-gray-800">Drugs Can Affect Weight</h2>
+                    <p className="text-sm text-gray-500">Mechanisms and Examples</p>
                 </div>
             </div>
+
+            {/* Search */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <div className="relative w-full max-w-lg mx-auto">
+                    <input
+                        type="text"
+                        className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-sm"
+                        placeholder="Search drugs, mechanisms..."
+                        value={drugSearchQuery}
+                        onChange={(e) => setDrugSearchQuery(e.target.value)}
+                        dir={isRTL ? 'rtl' : 'ltr'}
+                    />
+                    <span className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${isRTL ? 'left-3' : 'right-3'}`}>🔍</span>
+                </div>
+            </div>
+
+            {/* Table View */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden animate-fade-in">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead className="bg-red-50 text-gray-700 uppercase text-xs">
+                            <tr>
+                                <th className="p-4 border-b w-16 text-center">Group</th>
+                                <th className="p-4 border-b w-1/5">Drug Category</th>
+                                <th className="p-4 border-b w-1/3">Mechanism of Action</th>
+                                <th className="p-4 border-b w-1/6">Notes</th>
+                                <th className="p-4 border-b w-1/4">Examples</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 text-sm">
+                            {filteredDrugs.map((item) => (
+                                <tr key={item.id} className="hover:bg-red-50/30 transition">
+                                    <td className="p-4 text-center font-bold text-gray-400 align-top">
+                                        <span className={`inline-block w-8 h-8 rounded-full flex items-center justify-center text-white text-xs ${
+                                            item.group === 'A' ? 'bg-blue-400' :
+                                            item.group === 'B' ? 'bg-green-400' :
+                                            item.group === 'C' ? 'bg-red-400' :
+                                            'bg-purple-400'
+                                        }`}>
+                                            {item.group}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 align-top font-bold text-gray-800">
+                                        {item.category}
+                                    </td>
+                                    <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">
+                                        {item.mechanism}
+                                    </td>
+                                    <td className="p-4 text-gray-600 align-top text-xs leading-relaxed">
+                                        {item.notes ? (
+                                            <div className="bg-yellow-50 border border-yellow-100 p-2 rounded text-yellow-800">
+                                                {item.notes}
+                                            </div>
+                                        ) : '-'}
+                                    </td>
+                                    <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line font-mono text-xs">
+                                        {item.examples}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            {filteredDrugs.length === 0 && (
+                <div className="text-center py-20 text-gray-400 bg-white rounded-xl border border-dashed border-gray-200">
+                    <span className="text-4xl block mb-2">💊</span>
+                    No drugs found matching your search.
+                </div>
+            )}
         </div>
       );
   }
