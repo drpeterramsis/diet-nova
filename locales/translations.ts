@@ -108,6 +108,7 @@ export const en: Translation = {
     age: "Age",
     gender: "Gender",
     noClients: "No clients found. Add your first client!",
+    dietaryAssessment: "Dietary Assessment"
   },
   kcal: {
     title: "Advanced Calorie Calculator",
@@ -238,6 +239,19 @@ export const en: Translation = {
       function: "Function",
       sources: "Food Sources",
       deficiency: "Deficiency",
+  },
+  dietary: {
+      title: "Dietary Assessment (Recall)",
+      days: "Number of Days",
+      date: "Date",
+      meals: {
+          breakfast: "Breakfast",
+          snack: "Snack",
+          lunch: "Lunch",
+          dinner: "Dinner",
+          water: "Water (Cups)",
+          sports: "Sports"
+      }
   }
 };
 
@@ -347,6 +361,7 @@ export const ar: Translation = {
     age: "العمر",
     gender: "النوع",
     noClients: "لا يوجد عملاء. أضف عميلك الأول!",
+    dietaryAssessment: "التقييم الغذائي"
   },
   kcal: {
     title: "حاسبة السعرات المتقدمة",
@@ -477,5 +492,18 @@ export const ar: Translation = {
       function: "الوظيفة",
       sources: "المصادر الغذائية",
       deficiency: "أعراض النقص",
+  },
+  dietary: {
+      title: "التقييم الغذائي (استرجاع)",
+      days: "عدد الأيام",
+      date: "التاريخ",
+      meals: {
+          breakfast: "الفطار",
+          snack: "سناك",
+          lunch: "الغذاء",
+          dinner: "عشاء",
+          water: "عدد اكواب الماء",
+          sports: "الرياضة"
+      }
   }
 };

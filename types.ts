@@ -18,6 +18,16 @@ export interface SavedMeal {
   user_id: string;
 }
 
+export interface DietaryAssessmentData {
+  days: number;
+  dates: string[]; // Array of date strings corresponding to days
+  recall: {
+    [key: string]: { // key is row id (e.g., 'breakfast')
+      [day: string]: string; // day is 'day1', 'day2' -> value is text
+    }
+  };
+}
+
 export interface Client {
   id: string;
   doctor_id: string;
@@ -28,7 +38,8 @@ export interface Client {
   clinic: string;
   phone?: string;
   notes?: string;
-  nfpe_data?: any; // New: JSON for NFPE checklist state
+  nfpe_data?: any;
+  dietary_assessment?: DietaryAssessmentData; // New: JSON for Baseline Assessment
   age?: number;
   gender?: 'male' | 'female';
   marital_status?: string;
@@ -38,9 +49,9 @@ export interface Client {
   weight?: number;
   height?: number;
   waist?: number;
-  hip?: number; // New
-  miac?: number; // New
-  bmi?: number; // New
+  hip?: number;
+  miac?: number;
+  bmi?: number;
   created_at: string;
 }
 
@@ -49,14 +60,15 @@ export interface ClientVisit {
   client_id: string;
   visit_date: string;
   weight?: number;
-  height?: number; // New
-  waist?: number; // New
-  hip?: number; // New
-  miac?: number; // New
-  bmi?: number; // New
+  height?: number;
+  waist?: number;
+  hip?: number;
+  miac?: number;
+  bmi?: number;
   notes?: string;
-  kcal_data?: any; // JSON for saved calculator state
-  meal_plan_data?: any; // JSON for saved meal plan state
+  kcal_data?: any;
+  meal_plan_data?: any;
+  dietary_assessment?: DietaryAssessmentData; // New: JSON for Visit Assessment
   created_at: string;
 }
 
@@ -166,6 +178,7 @@ export interface Translation {
     age: string;
     gender: string;
     noClients: string;
+    dietaryAssessment: string;
   };
   kcal: {
     title: string;
@@ -297,4 +310,17 @@ export interface Translation {
       sources: string;
       deficiency: string;
   };
+  dietary: {
+      title: string;
+      days: string;
+      date: string;
+      meals: {
+          breakfast: string;
+          snack: string;
+          lunch: string;
+          dinner: string;
+          water: string;
+          sports: string;
+      }
+  }
 }

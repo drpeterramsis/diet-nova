@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova - stable v2.0.86",
-  "description": "Updates: Enhanced 'Drugs Affecting Weight' visuals with emojis, colored arrows, and grid layout.",
+  "name": "Diet-Nova - stable v2.0.87",
+  "description": "Updates: Added Dietary Assessment (24hr - 7 Days Recall) tool to Client Manager.",
   "requestFramePermissions": []
 }
