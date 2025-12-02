@@ -172,7 +172,12 @@ export const en: Translation = {
     reportDate: "Report Date",
     calcAge: "Calculated Age",
     pediatricStatus: "Pediatric (<20y)",
-    adultStatus: "Adult (20y+)"
+    adultStatus: "Adult (20y+)",
+    protocolCheck: "Obesity Protocol Check (30% Rule)",
+    threshold: "Threshold (>30% IBW)",
+    recommendation: "Recommendation",
+    useAdjusted: "Use Adjusted Weight",
+    useIdeal: "Use Ideal Weight"
   },
   mealCreator: {
     searchPlaceholder: "Search food...",
@@ -457,7 +462,12 @@ export const ar: Translation = {
     reportDate: "تاريخ التقرير",
     calcAge: "العمر المحسوب",
     pediatricStatus: "أطفال (<20 سنة)",
-    adultStatus: "بالغ (20+ سنة)"
+    adultStatus: "بالغ (20+ سنة)",
+    protocolCheck: "بروتوكول السمنة (قاعدة 30%)",
+    threshold: "الحد الأقصى (>30% من المثالي)",
+    recommendation: "التوصية",
+    useAdjusted: "استخدم الوزن المعدل",
+    useIdeal: "استخدم الوزن المثالي"
   },
   mealCreator: {
     searchPlaceholder: "ابحث عن الطعام...",

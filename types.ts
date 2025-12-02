@@ -255,6 +255,11 @@ export interface Translation {
     calcAge: string;
     pediatricStatus: string;
     adultStatus: string;
+    protocolCheck: string;
+    threshold: string;
+    recommendation: string;
+    useAdjusted: string;
+    useIdeal: string;
   };
   mealCreator: {
     searchPlaceholder: string;

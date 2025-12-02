@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova - stable v2.0.90",
+  "name": "Diet-Nova - pre calculations edition v2.0.90",
   "description": "Updates: Fixed sticky headers in Food Questionnaire and Dietary Recall tables.",
   "requestFramePermissions": []
 }

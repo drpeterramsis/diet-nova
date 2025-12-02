@@ -1,3 +1,5 @@
+
+
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
@@ -18,6 +20,13 @@ export interface KcalResults {
   ABW_2: string;
   IBW_diff_val: number;
   IBW_sel_diff_val: number;
+  protocol?: {
+      ibw30: number;
+      threshold: number;
+      isHighObesity: boolean;
+      recommendedWeight: number;
+      recommendationLabel: string;
+  };
   m1?: {
     under: number[];
     norm: number[];
@@ -217,7 +226,15 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const bmiData = calculateBMI(temp_weight, height_m);
     const bmiSelData = calculateBMI(selectedWeight, height_m);
 
-    // 5. BMR & TEE
+    // 5. Protocol Check (30% Rule)
+    // Formula: If Actual > IBW + 30% IBW (i.e. IBW * 1.3), Use Adjusted Weight.
+    const ibw30 = IBW_2 * 0.30;
+    const threshold = IBW_2 + ibw30;
+    const isHighObesity = weight > threshold;
+    const recommendedWeight = isHighObesity ? ABW_2 : IBW_2;
+    const recommendationLabel = isHighObesity ? 'useAdjusted' : 'useIdeal'; // Keys for translation
+
+    // 6. BMR & TEE
     let AW_BMR_harris = 0, SW_BMR_harris = 0;
     let AW_BMR_mifflin = 0, SW_BMR_mifflin = 0;
 
@@ -244,6 +261,14 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         IBW_diff_val: IBW_diff,
         IBW_sel_diff_val: IBW_sel_diff,
         
+        protocol: {
+            ibw30,
+            threshold,
+            isHighObesity,
+            recommendedWeight,
+            recommendationLabel
+        },
+
         // Methods
         m1: {
             under: [selectedWeight * 35, selectedWeight * 40, selectedWeight * 45],
