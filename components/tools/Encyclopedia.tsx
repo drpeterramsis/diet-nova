@@ -52,6 +52,37 @@ const Encyclopedia: React.FC = () => {
       );
   }, [drugSearchQuery]);
 
+  // Group Drugs for Visual Grid
+  const groupedDrugs = useMemo(() => {
+      const groups: Record<string, DrugItem[]> = {
+          A: [], B: [], C: [], D: []
+      };
+      filteredDrugs.forEach(d => {
+          if (groups[d.group]) groups[d.group].push(d);
+      });
+      return groups;
+  }, [filteredDrugs]);
+
+  // Helper to format mechanism text with colors
+  const formatMechanism = (text: string) => {
+      // Split by newlines first to handle list items
+      const lines = text.split('\n');
+      return lines.map((line, idx) => {
+          // Process arrows within the line
+          const parts = line.split(/([↑↓→])/g);
+          return (
+              <div key={idx} className="mb-1 last:mb-0">
+                  {parts.map((part, pIdx) => {
+                      if (part === '↑') return <span key={pIdx} className="text-green-600 font-extrabold text-lg mx-0.5">↑</span>;
+                      if (part === '↓') return <span key={pIdx} className="text-red-600 font-extrabold text-lg mx-0.5">↓</span>;
+                      if (part === '→') return <span key={pIdx} className="text-gray-400 font-bold mx-1">→</span>;
+                      return <span key={pIdx}>{part}</span>;
+                  })}
+              </div>
+          );
+      });
+  };
+
   // --- SECTOR MENU VIEW ---
   if (currentSector === 'menu') {
       return (
@@ -87,14 +118,14 @@ const Encyclopedia: React.FC = () => {
                     className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-red-500"
                 >
                     <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:bg-red-100 transition">
-                        💊
+                        🧪
                     </div>
                     <h3 className="text-xl font-bold text-gray-800 mb-2">Drugs & Weight</h3>
                     <p className="text-sm text-gray-500 mb-4">
-                        Reference guide for medications that affect body weight, including mechanisms and examples.
+                        Visual guide for medications that affect body weight, with mechanisms and examples.
                     </p>
                     <button className="mt-auto text-red-600 font-bold text-sm bg-red-50 px-4 py-2 rounded-lg group-hover:bg-red-600 group-hover:text-white transition w-full">
-                        View Table
+                        View Interactive Map
                     </button>
                 </div>
 
@@ -116,8 +147,15 @@ const Encyclopedia: React.FC = () => {
       );
   }
 
-  // --- DRUGS SECTOR VIEW ---
+  // --- DRUGS SECTOR VIEW (VISUAL GRID) ---
   if (currentSector === 'drugs') {
+      const groupInfo = {
+          A: { title: 'Psychotropic & Neuro', color: 'indigo', desc: 'Antidepressants, Antipsychotics, etc.' },
+          B: { title: 'Blockers & Others', color: 'teal', desc: 'Beta-blockers, Cancer meds' },
+          C: { title: 'Hormonal Agents', color: 'rose', desc: 'Corticosteroids, Contraceptives' },
+          D: { title: 'Diabetic Agents', color: 'amber', desc: 'Insulin, Oral Hypoglycemics' },
+      };
+
       return (
         <div className="max-w-7xl mx-auto animate-fade-in space-y-8 pb-12">
             {/* Header */}
@@ -129,8 +167,8 @@ const Encyclopedia: React.FC = () => {
                     <span>←</span> Back to Sectors
                 </button>
                 <div className="text-center md:text-right">
-                    <h2 className="text-2xl font-bold text-gray-800">Drugs Can Affect Weight</h2>
-                    <p className="text-sm text-gray-500">Mechanisms and Examples</p>
+                    <h2 className="text-2xl font-bold text-gray-800">Drugs Affecting Weight</h2>
+                    <p className="text-sm text-gray-500">Visual Mechanism Map</p>
                 </div>
             </div>
 
@@ -149,53 +187,64 @@ const Encyclopedia: React.FC = () => {
                 </div>
             </div>
 
-            {/* Table View */}
-            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden animate-fade-in">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead className="bg-red-50 text-gray-700 uppercase text-xs">
-                            <tr>
-                                <th className="p-4 border-b w-16 text-center">Group</th>
-                                <th className="p-4 border-b w-1/5">Drug Category</th>
-                                <th className="p-4 border-b w-1/3">Mechanism of Action</th>
-                                <th className="p-4 border-b w-1/6">Notes</th>
-                                <th className="p-4 border-b w-1/4">Examples</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 text-sm">
-                            {filteredDrugs.map((item) => (
-                                <tr key={item.id} className="hover:bg-red-50/30 transition">
-                                    <td className="p-4 text-center font-bold text-gray-400 align-top">
-                                        <span className={`inline-block w-8 h-8 rounded-full flex items-center justify-center text-white text-xs ${
-                                            item.group === 'A' ? 'bg-blue-400' :
-                                            item.group === 'B' ? 'bg-green-400' :
-                                            item.group === 'C' ? 'bg-red-400' :
-                                            'bg-purple-400'
-                                        }`}>
-                                            {item.group}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 align-top font-bold text-gray-800">
-                                        {item.category}
-                                    </td>
-                                    <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">
-                                        {item.mechanism}
-                                    </td>
-                                    <td className="p-4 text-gray-600 align-top text-xs leading-relaxed">
-                                        {item.notes ? (
-                                            <div className="bg-yellow-50 border border-yellow-100 p-2 rounded text-yellow-800">
-                                                {item.notes}
+            {/* Visual Grid Layout (Mind Map Style) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {['A', 'B', 'C', 'D'].map((groupKey) => {
+                    const info = groupInfo[groupKey as keyof typeof groupInfo];
+                    const items = groupedDrugs[groupKey];
+                    
+                    if (items.length === 0) return null;
+
+                    // Dynamic styles based on group color
+                    const borderColor = `border-${info.color}-200`;
+                    const bgColor = `bg-${info.color}-50`;
+                    const textColor = `text-${info.color}-800`;
+                    const ringColor = `focus-within:ring-${info.color}-400`;
+
+                    return (
+                        <div key={groupKey} className={`rounded-2xl border-2 ${borderColor} ${bgColor} p-4 md:p-6 shadow-sm flex flex-col gap-4`}>
+                            <div className="flex items-center gap-3 border-b border-black/10 pb-3 mb-1">
+                                <span className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xl bg-white shadow-sm ${textColor}`}>
+                                    {groupKey}
+                                </span>
+                                <div>
+                                    <h3 className={`font-bold text-lg ${textColor}`}>{info.title}</h3>
+                                    <p className="text-xs opacity-70 font-medium">{info.desc}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                {items.map(item => (
+                                    <div key={item.id} className="bg-white rounded-xl p-4 shadow-sm border border-transparent hover:border-gray-200 transition-all">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-2xl">{item.icon}</span>
+                                                <h4 className="font-bold text-gray-800">{item.category}</h4>
                                             </div>
-                                        ) : '-'}
-                                    </td>
-                                    <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line font-mono text-xs">
-                                        {item.examples}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                        </div>
+                                        
+                                        <div className="text-sm text-gray-600 mb-3 pl-1 border-l-2 border-gray-100 leading-relaxed">
+                                            {formatMechanism(item.mechanism)}
+                                        </div>
+
+                                        {item.notes && (
+                                            <div className="text-xs bg-yellow-50 text-yellow-800 p-2 rounded mb-3 border border-yellow-100">
+                                                <strong>Note:</strong> {item.notes}
+                                            </div>
+                                        )}
+
+                                        {item.examples && (
+                                            <div className="bg-gray-50 rounded-lg p-2.5 text-xs text-gray-500 font-mono">
+                                                <div className="uppercase text-[10px] font-bold text-gray-400 mb-1">Examples</div>
+                                                {item.examples.split('\n').map((ex, i) => <div key={i}>{ex}</div>)}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
             
             {filteredDrugs.length === 0 && (
