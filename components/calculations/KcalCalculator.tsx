@@ -161,7 +161,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
 
         {/* Right Column: Results */}
         <div className="lg:col-span-1 space-y-6">
-            <div className="sticky top-24 space-y-6">
+            <div className="sticky top-24 space-y-4">
                 <ResultsSummaryCard 
                     results={results} 
                     onPlanMeals={onPlanMeals} 
