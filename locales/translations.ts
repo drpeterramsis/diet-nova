@@ -26,7 +26,8 @@ export const en: Translation = {
     locked: "Locked",
     search: "Search...",
     cancel: "Cancel",
-    actions: "Actions"
+    actions: "Actions",
+    back: "Back"
   },
   auth: {
     loginTitle: "Login to Diet-Nova",
@@ -108,7 +109,8 @@ export const en: Translation = {
     age: "Age",
     gender: "Gender",
     noClients: "No clients found. Add your first client!",
-    dietaryAssessment: "Dietary Assessment"
+    dietaryAssessment: "Dietary Assessment",
+    foodQuestionnaire: "Food Questionnaire"
   },
   kcal: {
     title: "Advanced Calorie Calculator",
@@ -252,6 +254,36 @@ export const en: Translation = {
           water: "Water (Cups)",
           sports: "Sports"
       }
+  },
+  foodFreq: {
+      title: "Food Questionnaire",
+      daily: "Daily",
+      weekly3_4: "3-4 Weekly",
+      weekly1_2: "1-2 Weekly",
+      monthly1_2: "1-2 Monthly",
+      monthlyLess: "< Once a Month",
+      items: {
+          home: "Eating at home",
+          withOthers: "Eating with others",
+          out: "Eating out",
+          sweets: "Sweets & Chocolate",
+          sugar: "Adding sugar to drinks",
+          sweetener: "Using artificial sweetener",
+          teaCoffee: "Tea and Coffee",
+          redMeat: "Red Meat",
+          eggs: "Eggs",
+          fish: "Fish",
+          dairy: "Dairy (Milk, Yogurt)",
+          cheese: "Cheese (all types)",
+          legumes: "Legumes",
+          leafyVeg: "Leafy Vegetables",
+          coloredVeg: "Colored Vegetables",
+          starchyVeg: "Starchy Vegetables",
+          starch: "Starches (Rice, Pasta, Bread)",
+          fruits: "Fruits",
+          nuts: "Nuts",
+          water: "Drinking enough water",
+      }
   }
 };
 
@@ -279,7 +311,8 @@ export const ar: Translation = {
     locked: "مغلق",
     search: "بحث...",
     cancel: "إلغاء",
-    actions: "إجراءات"
+    actions: "إجراءات",
+    back: "عودة"
   },
   auth: {
     loginTitle: "تسجيل الدخول",
@@ -361,7 +394,8 @@ export const ar: Translation = {
     age: "العمر",
     gender: "النوع",
     noClients: "لا يوجد عملاء. أضف عميلك الأول!",
-    dietaryAssessment: "التقييم الغذائي"
+    dietaryAssessment: "التقييم الغذائي",
+    foodQuestionnaire: "استبيان العادات الغذائية"
   },
   kcal: {
     title: "حاسبة السعرات المتقدمة",
@@ -504,6 +538,36 @@ export const ar: Translation = {
           dinner: "عشاء",
           water: "عدد اكواب الماء",
           sports: "الرياضة"
+      }
+  },
+  foodFreq: {
+      title: "استبيان العادات الغذائية",
+      daily: "يومياً",
+      weekly3_4: "3-4 أسبوعياً",
+      weekly1_2: "1-2 أسبوعياً",
+      monthly1_2: "1-2 شهرياً",
+      monthlyLess: "أقل من مرة شهرياً",
+      items: {
+          home: "تناول الطعام بالمنزل",
+          withOthers: "تناول الطعام مع الآخرين",
+          out: "تناول الطعام خارج المنزل",
+          sweets: "الحلويات والشكولاتة",
+          sugar: "إضافة السكر للمشروبات",
+          sweetener: "استخدام بديل السكر المحلي",
+          teaCoffee: "الشاي والقهوة",
+          redMeat: "اللحوم الحمراء",
+          eggs: "البيض",
+          fish: "السمك",
+          dairy: "الألبان وأنواعها",
+          cheese: "الجبن وأنواعها",
+          legumes: "البقوليات",
+          leafyVeg: "الخضروات الورقية",
+          coloredVeg: "الخضروات الملونة",
+          starchyVeg: "الخضروات النشوية",
+          starch: "النشويات (أرز - مكرونة - عيش)",
+          fruits: "الفواكه",
+          nuts: "المكسرات",
+          water: "شرب ماء بكمية كافية",
       }
   }
 };

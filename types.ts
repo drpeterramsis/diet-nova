@@ -28,6 +28,13 @@ export interface DietaryAssessmentData {
   };
 }
 
+export interface FoodQuestionnaireData {
+  answers: {
+    [key: string]: string; // key is question ID (e.g., 'red_meat'), value is frequency code (e.g., 'daily')
+  };
+  updatedAt: string;
+}
+
 export interface Client {
   id: string;
   doctor_id: string;
@@ -39,7 +46,8 @@ export interface Client {
   phone?: string;
   notes?: string;
   nfpe_data?: any;
-  dietary_assessment?: DietaryAssessmentData; // New: JSON for Baseline Assessment
+  dietary_assessment?: DietaryAssessmentData; 
+  food_questionnaire?: FoodQuestionnaireData; // New: JSON for Baseline FFQ
   age?: number;
   gender?: 'male' | 'female';
   marital_status?: string;
@@ -68,7 +76,8 @@ export interface ClientVisit {
   notes?: string;
   kcal_data?: any;
   meal_plan_data?: any;
-  dietary_assessment?: DietaryAssessmentData; // New: JSON for Visit Assessment
+  dietary_assessment?: DietaryAssessmentData;
+  food_questionnaire?: FoodQuestionnaireData; // New: JSON for Visit FFQ
   created_at: string;
 }
 
@@ -97,6 +106,7 @@ export interface Translation {
     search: string;
     cancel: string;
     actions: string;
+    back: string;
   };
   auth: {
     loginTitle: string;
@@ -179,6 +189,7 @@ export interface Translation {
     gender: string;
     noClients: string;
     dietaryAssessment: string;
+    foodQuestionnaire: string;
   };
   kcal: {
     title: string;
@@ -321,6 +332,36 @@ export interface Translation {
           dinner: string;
           water: string;
           sports: string;
+      }
+  };
+  foodFreq: {
+      title: string;
+      daily: string;
+      weekly3_4: string;
+      weekly1_2: string;
+      monthly1_2: string;
+      monthlyLess: string;
+      items: {
+          home: string;
+          withOthers: string;
+          out: string;
+          sweets: string;
+          sugar: string;
+          sweetener: string;
+          teaCoffee: string;
+          redMeat: string;
+          eggs: string;
+          fish: string;
+          dairy: string;
+          cheese: string;
+          legumes: string;
+          leafyVeg: string;
+          coloredVeg: string;
+          starchyVeg: string;
+          starch: string;
+          fruits: string;
+          nuts: string;
+          water: string;
       }
   }
 }

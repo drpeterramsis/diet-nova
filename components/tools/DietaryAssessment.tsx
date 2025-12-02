@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { DietaryAssessmentData } from '../../types';
@@ -94,100 +95,98 @@ export const DietaryAssessment: React.FC<DietaryAssessmentProps> = ({ initialDat
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden animate-fade-in">
-        
-        {/* Header */}
-        <div className="p-6 bg-yellow-50 border-b border-yellow-200 flex justify-between items-center">
-          <div>
-            <h2 className="text-2xl font-bold text-yellow-800 flex items-center gap-2">
-              <span>📅</span> {t.dietary.title}
-            </h2>
-            <p className="text-yellow-700 text-sm opacity-80">24hr - 7 Days Recall</p>
-          </div>
-          <button onClick={onClose} className="text-yellow-800 hover:bg-yellow-200 rounded-full p-2 transition">
-            ✕
-          </button>
+    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 flex flex-col h-full animate-fade-in overflow-hidden">
+      
+      {/* Header */}
+      <div className="p-6 bg-yellow-50 border-b border-yellow-200 flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-yellow-800 flex items-center gap-2">
+            <span>📅</span> {t.dietary.title}
+          </h2>
+          <p className="text-yellow-700 text-sm opacity-80">24hr - 7 Days Recall</p>
         </div>
+        <button onClick={onClose} className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition shadow-sm font-medium text-sm">
+            {t.common.back}
+        </button>
+      </div>
 
-        {/* Controls */}
-        <div className="p-4 bg-white border-b border-gray-100 flex items-center gap-4">
-          <label className="font-bold text-gray-700 text-sm">{t.dietary.days}:</label>
-          <select 
-            value={daysCount}
-            onChange={(e) => setDaysCount(Number(e.target.value))}
-            className="p-2 border rounded-lg bg-gray-50 font-bold focus:ring-2 focus:ring-yellow-400 outline-none"
-          >
-            {[1,2,3,4,5,6,7].map(d => (
-              <option key={d} value={d}>{d} Day{d > 1 ? 's' : ''}</option>
-            ))}
-          </select>
-        </div>
+      {/* Controls */}
+      <div className="p-4 bg-white border-b border-gray-100 flex items-center gap-4">
+        <label className="font-bold text-gray-700 text-sm">{t.dietary.days}:</label>
+        <select 
+          value={daysCount}
+          onChange={(e) => setDaysCount(Number(e.target.value))}
+          className="p-2 border rounded-lg bg-gray-50 font-bold focus:ring-2 focus:ring-yellow-400 outline-none"
+        >
+          {[1,2,3,4,5,6,7].map(d => (
+            <option key={d} value={d}>{d} Day{d > 1 ? 's' : ''}</option>
+          ))}
+        </select>
+      </div>
 
-        {/* Grid Container */}
-        <div className="flex-grow overflow-auto p-4 bg-gray-50">
-          <table className="w-full border-collapse bg-white rounded-lg shadow-sm overflow-hidden">
-            <thead>
-              <tr>
-                <th className="p-3 bg-yellow-100 text-yellow-900 border border-yellow-200 sticky left-0 z-10 w-48 text-left min-w-[150px]">
-                  Meal / Day
+      {/* Grid Container */}
+      <div className="flex-grow overflow-auto p-4 bg-gray-50">
+        <table className="w-full border-collapse bg-white rounded-lg shadow-sm overflow-hidden">
+          <thead>
+            <tr>
+              <th className="p-3 bg-yellow-100 text-yellow-900 border border-yellow-200 sticky left-0 z-10 w-48 text-left min-w-[150px]">
+                Meal / Day
+              </th>
+              {Array.from({ length: daysCount }).map((_, i) => (
+                <th key={i} className="p-2 bg-yellow-50 border border-yellow-200 min-w-[200px]">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-yellow-800 font-bold">Day {i + 1}</span>
+                    <input 
+                      type="date" 
+                      value={dates[i] || ''} 
+                      onChange={(e) => handleDateChange(i, e.target.value)}
+                      className="text-xs p-1 border rounded text-center bg-white/50 focus:bg-white"
+                    />
+                  </div>
                 </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {ROW_KEYS.map((rowKey) => (
+              <tr key={rowKey}>
+                <td className="p-3 bg-gray-50 font-bold text-gray-700 border border-gray-200 sticky left-0 z-10">
+                  {getRowLabel(rowKey)}
+                </td>
                 {Array.from({ length: daysCount }).map((_, i) => (
-                  <th key={i} className="p-2 bg-yellow-50 border border-yellow-200 min-w-[200px]">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-yellow-800 font-bold">Day {i + 1}</span>
-                      <input 
-                        type="date" 
-                        value={dates[i] || ''} 
-                        onChange={(e) => handleDateChange(i, e.target.value)}
-                        className="text-xs p-1 border rounded text-center bg-white/50 focus:bg-white"
-                      />
-                    </div>
-                  </th>
+                  <td key={i} className="p-0 border border-gray-200">
+                    <textarea
+                      className="w-full h-full min-h-[80px] p-2 resize-none focus:bg-yellow-50 outline-none text-sm"
+                      placeholder="..."
+                      value={gridData[rowKey]?.[`day${i+1}`] || ''}
+                      onChange={(e) => handleGridChange(rowKey, i, e.target.value)}
+                      dir="auto"
+                    />
+                  </td>
                 ))}
               </tr>
-            </thead>
-            <tbody>
-              {ROW_KEYS.map((rowKey) => (
-                <tr key={rowKey}>
-                  <td className="p-3 bg-gray-50 font-bold text-gray-700 border border-gray-200 sticky left-0 z-10">
-                    {getRowLabel(rowKey)}
-                  </td>
-                  {Array.from({ length: daysCount }).map((_, i) => (
-                    <td key={i} className="p-0 border border-gray-200">
-                      <textarea
-                        className="w-full h-full min-h-[80px] p-2 resize-none focus:bg-yellow-50 outline-none text-sm"
-                        placeholder="..."
-                        value={gridData[rowKey]?.[`day${i+1}`] || ''}
-                        onChange={(e) => handleGridChange(rowKey, i, e.target.value)}
-                        dir="auto"
-                      />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-white flex justify-end gap-3">
-          <button 
-            onClick={onClose}
-            className="px-6 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition"
-          >
-            {t.common.cancel}
-          </button>
-          <button 
-            onClick={handleSaveClick}
-            disabled={isSaving}
-            className="px-8 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white font-bold shadow-md transition disabled:opacity-50 flex items-center gap-2"
-          >
-            {isSaving ? 'Saving...' : t.common.save}
-          </button>
-        </div>
-
+            ))}
+          </tbody>
+        </table>
       </div>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-200 bg-white flex justify-end gap-3">
+        <button 
+          onClick={onClose}
+          className="px-6 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition"
+        >
+          {t.common.cancel}
+        </button>
+        <button 
+          onClick={handleSaveClick}
+          disabled={isSaving}
+          className="px-8 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white font-bold shadow-md transition disabled:opacity-50 flex items-center gap-2"
+        >
+          {isSaving ? 'Saving...' : t.common.save}
+        </button>
+      </div>
+
     </div>
   );
 };

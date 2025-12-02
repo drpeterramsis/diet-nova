@@ -1,14 +1,17 @@
 
 
 
+
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Client, ClientVisit, DietaryAssessmentData } from '../../types';
+import { Client, ClientVisit, DietaryAssessmentData, FoodQuestionnaireData } from '../../types';
 import Loading from '../Loading';
 import { SimpleLineChart } from '../Visuals';
 import { DietaryAssessment } from './DietaryAssessment';
+import { FoodQuestionnaire } from './FoodQuestionnaire';
 
 interface ClientManagerProps {
   initialClientId?: string | null;
@@ -78,7 +81,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const { session } = useAuth();
   
   // View State
-  const [viewMode, setViewMode] = useState<'list' | 'details'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'details' | 'dietary-recall' | 'food-questionnaire'>('list');
 
   // Data State
   const [clients, setClients] = useState<Client[]>([]);
@@ -99,10 +102,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [allTagsExpanded, setAllTagsExpanded] = useState(false);
 
-  // Dietary Assessment Modal State
-  const [showDietaryModal, setShowDietaryModal] = useState(false);
-  const [dietaryTarget, setDietaryTarget] = useState<{type: 'client' | 'visit', id: string, initialData?: DietaryAssessmentData} | null>(null);
-  const [isSavingDietary, setIsSavingDietary] = useState(false);
+  // Tool Targets (For Dietary/Food Q)
+  const [toolTarget, setToolTarget] = useState<{type: 'client' | 'visit', id: string, initialData?: any} | null>(null);
+  const [isSavingTool, setIsSavingTool] = useState(false);
 
   // Form State (Client Profile)
   const [formData, setFormData] = useState<{
@@ -628,38 +630,93 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       window.print();
   };
 
-  // --- Dietary Assessment Handlers ---
-  const handleOpenDietary = (type: 'client' | 'visit', id: string, initialData?: DietaryAssessmentData) => {
-    setDietaryTarget({ type, id, initialData });
-    setShowDietaryModal(true);
+  // --- Tool Handlers ---
+  const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire', type: 'client' | 'visit', id: string, initialData?: any) => {
+    setToolTarget({ type, id, initialData });
+    setViewMode(view);
   };
 
   const handleSaveDietary = async (data: DietaryAssessmentData) => {
-    if (!dietaryTarget) return;
-    setIsSavingDietary(true);
+    if (!toolTarget) return;
+    setIsSavingTool(true);
     try {
-      const table = dietaryTarget.type === 'client' ? 'clients' : 'client_visits';
-      const { error } = await supabase.from(table).update({ dietary_assessment: data }).eq('id', dietaryTarget.id);
+      const table = toolTarget.type === 'client' ? 'clients' : 'client_visits';
+      const { error } = await supabase.from(table).update({ dietary_assessment: data }).eq('id', toolTarget.id);
       
       if (error) throw error;
 
-      if (dietaryTarget.type === 'client' && editingClient) {
+      if (toolTarget.type === 'client' && editingClient) {
         const updated = { ...editingClient, dietary_assessment: data };
         setEditingClient(updated);
         setClients(prev => prev.map(c => c.id === updated.id ? updated : c));
       } else {
-        setVisits(prev => prev.map(v => v.id === dietaryTarget.id ? { ...v, dietary_assessment: data } : v));
+        setVisits(prev => prev.map(v => v.id === toolTarget.id ? { ...v, dietary_assessment: data } : v));
       }
       
-      setShowDietaryModal(false);
+      setViewMode('details');
       setSaveSuccess("Dietary Assessment Saved!");
       setTimeout(() => setSaveSuccess(''), 3000);
     } catch (err: any) {
       alert("Failed to save dietary assessment: " + err.message);
     } finally {
-      setIsSavingDietary(false);
+      setIsSavingTool(false);
     }
   };
+
+  const handleSaveFoodQ = async (data: FoodQuestionnaireData) => {
+    if (!toolTarget) return;
+    setIsSavingTool(true);
+    try {
+      const table = toolTarget.type === 'client' ? 'clients' : 'client_visits';
+      const { error } = await supabase.from(table).update({ food_questionnaire: data }).eq('id', toolTarget.id);
+      
+      if (error) throw error;
+
+      if (toolTarget.type === 'client' && editingClient) {
+        const updated = { ...editingClient, food_questionnaire: data };
+        setEditingClient(updated);
+        setClients(prev => prev.map(c => c.id === updated.id ? updated : c));
+      } else {
+        setVisits(prev => prev.map(v => v.id === toolTarget.id ? { ...v, food_questionnaire: data } : v));
+      }
+      
+      setViewMode('details');
+      setSaveSuccess("Food Questionnaire Saved!");
+      setTimeout(() => setSaveSuccess(''), 3000);
+    } catch (err: any) {
+      alert("Failed to save food questionnaire: " + err.message);
+    } finally {
+      setIsSavingTool(false);
+    }
+  };
+
+  // --- RENDER: DIETARY RECALL VIEW ---
+  if (viewMode === 'dietary-recall' && toolTarget) {
+      return (
+          <div className="h-[calc(100vh-100px)] animate-fade-in">
+              <DietaryAssessment 
+                  initialData={toolTarget.initialData}
+                  onSave={handleSaveDietary}
+                  onClose={() => setViewMode('details')}
+                  isSaving={isSavingTool}
+              />
+          </div>
+      );
+  }
+
+  // --- RENDER: FOOD QUESTIONNAIRE VIEW ---
+  if (viewMode === 'food-questionnaire' && toolTarget) {
+      return (
+          <div className="h-[calc(100vh-100px)] animate-fade-in">
+              <FoodQuestionnaire
+                  initialData={toolTarget.initialData}
+                  onSave={handleSaveFoodQ}
+                  onClose={() => setViewMode('details')}
+                  isSaving={isSavingTool}
+              />
+          </div>
+      );
+  }
 
   // --- RENDER: LIST VIEW ---
   if (viewMode === 'list') {
@@ -1022,7 +1079,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                         {/* Categorized Tags (Unchanged) */}
                         <div>
                              <div className="flex justify-between items-center mb-2">
-                                 <div className="flex gap-2 items-center">
+                                 <div className="flex gap-2 items-center flex-wrap">
                                     <label className="block text-xs font-bold text-gray-500">📝 Medical Notes & History</label>
                                     <button type="button" onClick={insertTemplate} className="text-xs bg-gray-100 px-2 py-0.5 rounded border hover:bg-gray-200 text-gray-600">
                                         Insert Template
@@ -1032,17 +1089,25 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                         onClick={handleRunNFPE}
                                         className="text-xs bg-red-100 px-2 py-0.5 rounded border border-red-200 hover:bg-red-200 text-red-700 font-bold flex items-center gap-1"
                                     >
-                                        🩺 Run NFPE Assessment
+                                        🩺 NFPE
                                     </button>
-                                    {/* New Dietary Tool Button for Baseline */}
                                     {editingClient && (
+                                        <>
                                         <button 
                                             type="button"
-                                            onClick={() => handleOpenDietary('client', editingClient.id, editingClient.dietary_assessment)}
+                                            onClick={() => handleOpenTool('dietary-recall', 'client', editingClient.id, editingClient.dietary_assessment)}
                                             className="text-xs bg-yellow-100 px-2 py-0.5 rounded border border-yellow-200 hover:bg-yellow-200 text-yellow-800 font-bold flex items-center gap-1"
                                         >
-                                            📅 Baseline Dietary Recall
+                                            📅 Dietary Recall
                                         </button>
+                                        <button 
+                                            type="button"
+                                            onClick={() => handleOpenTool('food-questionnaire', 'client', editingClient.id, editingClient.food_questionnaire)}
+                                            className="text-xs bg-green-100 px-2 py-0.5 rounded border border-green-200 hover:bg-green-200 text-green-800 font-bold flex items-center gap-1"
+                                        >
+                                            🥗 Food Q.
+                                        </button>
+                                        </>
                                     )}
                                  </div>
                                  <button 
@@ -1050,7 +1115,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                     onClick={toggleAllTags}
                                     className="text-xs text-white bg-[var(--color-primary)] px-3 py-1 rounded font-medium hover:bg-[var(--color-primary-hover)] shadow-sm"
                                  >
-                                     {allTagsExpanded ? 'Collapse Tags' : 'Expand All Tags'}
+                                     {allTagsExpanded ? 'Collapse' : 'Expand All'}
                                  </button>
                              </div>
                              
@@ -1227,12 +1292,18 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                  >
                                                      <span>📅</span> Plan: {visit.meal_plan_data ? `${planTotalKcal.toFixed(0)} kcal` : '-'}
                                                  </button>
-                                                 {/* New Dietary Tool Button for Visit */}
+                                                 {/* New Dietary Tool Buttons for Visit */}
                                                  <button 
-                                                     onClick={() => handleOpenDietary('visit', visit.id, visit.dietary_assessment)}
+                                                     onClick={() => handleOpenTool('dietary-recall', 'visit', visit.id, visit.dietary_assessment)}
                                                      className="text-xs font-bold text-yellow-700 hover:text-yellow-800 flex items-center gap-1 transition self-start bg-yellow-50 px-2 py-1 rounded border border-yellow-100 w-full"
                                                  >
-                                                     <span>📅</span> Dietary Recall {visit.dietary_assessment ? '✓' : ''}
+                                                     <span>📅</span> Recall {visit.dietary_assessment ? '✓' : ''}
+                                                 </button>
+                                                 <button 
+                                                     onClick={() => handleOpenTool('food-questionnaire', 'visit', visit.id, visit.food_questionnaire)}
+                                                     className="text-xs font-bold text-green-700 hover:text-green-800 flex items-center gap-1 transition self-start bg-green-50 px-2 py-1 rounded border border-green-100 w-full"
+                                                 >
+                                                     <span>🥗</span> Food Q. {visit.food_questionnaire ? '✓' : ''}
                                                  </button>
                                              </div>
                                              
@@ -1344,16 +1415,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                  </div>
             )}
          </div>
-
-         {/* Dietary Assessment Modal */}
-         {showDietaryModal && dietaryTarget && (
-             <DietaryAssessment 
-                initialData={dietaryTarget.initialData}
-                onSave={handleSaveDietary}
-                onClose={() => setShowDietaryModal(false)}
-                isSaving={isSavingDietary}
-             />
-         )}
     </div>
   );
 };
