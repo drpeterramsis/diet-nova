@@ -141,7 +141,12 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
                     </button>
                 )}
             </div>
-            <InputGroup label={t.kcal.waist} value={waist} onChange={setWaist} error={waist === 0} />
+            <div>
+                <InputGroup label={t.kcal.waist} value={waist} onChange={setWaist} error={waist === 0} />
+                <p className="text-[10px] text-gray-400 mt-1 italic leading-tight">
+                    ℹ️ Measure at midpoint between iliac crest & rib margin
+                </p>
+            </div>
         </div>
         
         <div className="col-span-2">

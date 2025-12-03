@@ -1,8 +1,3 @@
-
-
-
-
-
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
@@ -30,6 +25,15 @@ export interface KcalResults {
       isHighObesity: boolean;
       recommendedWeight: number;
       recommendationLabel: string;
+  };
+  waistRisk?: {
+      status: string;
+      color: string;
+      value: number;
+  };
+  elderlyInfo?: {
+      isElderly: boolean;
+      note: string;
   };
   m1?: {
     under: number[];
@@ -193,6 +197,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const age_years = age;
     const physicalActivity_val = physicalActivity;
     const height_m = height_cm / 100;
+    const waist_cm = waist;
     
     // 1. Dry Weight
     let weight = temp_weight - ascites - edema;
@@ -264,7 +269,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         }
     }
 
-    // 5. BMI
+    // 5. BMI & Elderly Logic
     const calculateBMI = (w: number, h: number) => {
         if (w <= 0 || h <= 0) return { val: 0, ref: '', col: '' };
         const val = w / (h * h);
@@ -279,15 +284,49 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const bmiData = calculateBMI(temp_weight, height_m);
     const bmiSelData = calculateBMI(selectedWeight, height_m);
 
-    // 6. Protocol Check (30% Rule)
-    // Formula: If Actual > IBW + 30% IBW (i.e. IBW * 1.3), Use Adjusted Weight.
+    // Elderly logic (> 59y)
+    let elderlyInfo = undefined;
+    if (age > 59) {
+        elderlyInfo = {
+            isElderly: true,
+            note: "Elderly (>59y): Normal Range 22 - 27. Optimal is 27."
+        };
+    }
+
+    // 6. Waist Circumference Risk
+    let waistRisk = undefined;
+    if (waist_cm > 0) {
+        let status = 'Low Risk (Normal)';
+        let color = 'text-green-600';
+        
+        if (gender === 'male') {
+            if (waist_cm >= 102) {
+                status = 'High Risk (Obese)';
+                color = 'text-red-600';
+            } else if (waist_cm >= 94) {
+                status = 'Increased Risk (Overweight)';
+                color = 'text-orange-500';
+            }
+        } else { // female
+            if (waist_cm >= 88) {
+                status = 'High Risk (Obese)';
+                color = 'text-red-600';
+            } else if (waist_cm >= 80) {
+                status = 'Increased Risk (Overweight)';
+                color = 'text-orange-500';
+            }
+        }
+        waistRisk = { status, color, value: waist_cm };
+    }
+
+    // 7. Protocol Check (30% Rule)
     const ibw30 = IBW_2 * 0.30;
     const threshold = IBW_2 + ibw30;
     const isHighObesity = weight > threshold;
     const recommendedWeight = isHighObesity ? ABW_2 : IBW_2;
     const recommendationLabel = isHighObesity ? 'useAdjusted' : 'useIdeal'; // Keys for translation
 
-    // 7. BMR & TEE
+    // 8. BMR & TEE
     let AW_BMR_harris = 0, SW_BMR_harris = 0;
     let AW_BMR_mifflin = 0, SW_BMR_mifflin = 0;
 
@@ -322,6 +361,9 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
             recommendedWeight,
             recommendationLabel
         },
+        
+        waistRisk,
+        elderlyInfo,
 
         // Methods
         m1: {

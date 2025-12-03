@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova - calculations Phase 2 _ v2.0.104",
-  "description": "Updates: Added Amputation Adjustment (Osterkamp) to Kcal Calculator. Added Height Estimator Tool.",
+  "name": "Diet-Nova - calculations Phase 2 _ v2.0.105",
+  "description": "Updates: Added Waist Circumference Risk Assessment & Elderly BMI Guidelines. Added Measurement instructions.",
   "requestFramePermissions": []
 }

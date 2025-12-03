@@ -25,6 +25,32 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
       </div>
 
       <div className="p-4 space-y-4">
+          {/* Elderly Note */}
+          {r.elderlyInfo && (
+              <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r text-xs text-yellow-800">
+                  <strong className="block mb-1">👴 Elderly Patient Note:</strong>
+                  {r.elderlyInfo.note}
+              </div>
+          )}
+
+          {/* Waist Risk Analysis */}
+          {r.waistRisk && (
+              <div className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+                  <div>
+                      <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Waist Circumference</div>
+                      <div className={`text-sm font-bold ${r.waistRisk.color}`}>
+                          {r.waistRisk.status}
+                      </div>
+                  </div>
+                  <div className="text-right">
+                      <div className="text-xl font-mono font-bold text-gray-700 leading-none">
+                          {r.waistRisk.value}
+                      </div>
+                      <div className="text-[10px] text-gray-400">cm</div>
+                  </div>
+              </div>
+          )}
+
           {/* Protocol Recommendation Box */}
           {r.protocol && (
               <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-white border-l-4 border-blue-500 rounded-r-lg shadow-sm">
@@ -83,6 +109,10 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
                       <div className="font-mono font-bold text-gray-600">{r.protocol?.threshold.toFixed(1) || '-'} <span className="text-xs font-normal text-gray-400">kg</span></div>
                   </div>
               )}
+          </div>
+
+          <div className="text-[10px] text-gray-400 italic bg-gray-50 p-2 rounded">
+              💡 Tip: If unable to measure Height/Weight, BMI can be estimated using MUAC (Mid-Upper Arm Circumference).
           </div>
       </div>
     </div>
