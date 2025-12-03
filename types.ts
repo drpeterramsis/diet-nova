@@ -3,6 +3,8 @@
 
 
 
+
+
 export type Language = 'en' | 'ar';
 
 export interface UserProfile {
@@ -254,6 +256,9 @@ export interface Translation {
       normal: string;
       overweight: string;
       obese: string;
+      healthy: string;
+      slim: string;
+      veryObese: string;
     };
     ageMode: string;
     manual: string;

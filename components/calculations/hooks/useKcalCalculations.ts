@@ -31,6 +31,16 @@ export interface KcalResults {
       color: string;
       value: number;
   };
+  whr?: {
+      ratio: string;
+      status: string;
+      color: string;
+  };
+  whtr?: {
+      ratio: string;
+      status: string;
+      color: string;
+  };
   elderlyInfo?: {
       isElderly: boolean;
       note: string;
@@ -85,6 +95,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
 
   const [height, setHeight] = useState<number>(0);
   const [waist, setWaist] = useState<number>(0);
+  const [hip, setHip] = useState<number>(0); // New: Hip State
   const [physicalActivity, setPhysicalActivity] = useState<number>(0);
   
   const [currentWeight, setCurrentWeight] = useState<number>(0);
@@ -167,6 +178,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       setPediatricAge(null);
       setHeight(0);
       setWaist(0);
+      setHip(0);
       setPhysicalActivity(0);
       setCurrentWeight(0);
       setSelectedWeight(0);
@@ -198,6 +210,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const physicalActivity_val = physicalActivity;
     const height_m = height_cm / 100;
     const waist_cm = waist;
+    const hip_cm = hip;
     
     // 1. Dry Weight
     let weight = temp_weight - ascites - edema;
@@ -319,14 +332,55 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         waistRisk = { status, color, value: waist_cm };
     }
 
-    // 7. Protocol Check (30% Rule)
+    // 7. Waist Hip Ratio (WHR) - WHO
+    let whrData = undefined;
+    if (waist_cm > 0 && hip_cm > 0) {
+        const ratio = waist_cm / hip_cm;
+        let status = '';
+        let color = '';
+        if (gender === 'male') {
+            if (ratio <= 0.9) { status = 'Low Risk'; color = 'text-green-600'; }
+            else { status = 'High Risk'; color = 'text-red-600'; }
+        } else { // female
+            if (ratio <= 0.85) { status = 'Low Risk'; color = 'text-green-600'; }
+            else { status = 'High Risk'; color = 'text-red-600'; }
+        }
+        whrData = { ratio: ratio.toFixed(2), status, color };
+    }
+
+    // 8. Waist to Height Ratio (WHtR)
+    let whtrData = undefined;
+    if (waist_cm > 0 && height_cm > 0) {
+        const ratio = waist_cm / height_cm;
+        let status = '';
+        let color = '';
+        
+        if (gender === 'male') {
+            if (ratio < 0.35) { status = t.kcal.status.underweight; color = 'text-blue-500'; }
+            else if (ratio <= 0.43) { status = t.kcal.status.slim; color = 'text-green-400'; }
+            else if (ratio <= 0.53) { status = t.kcal.status.healthy; color = 'text-green-600'; }
+            else if (ratio <= 0.58) { status = t.kcal.status.overweight; color = 'text-orange-500'; }
+            else if (ratio <= 0.63) { status = t.kcal.status.obese; color = 'text-red-500'; }
+            else { status = t.kcal.status.veryObese; color = 'text-red-800'; }
+        } else { // female
+            if (ratio < 0.35) { status = t.kcal.status.underweight; color = 'text-blue-500'; }
+            else if (ratio <= 0.42) { status = t.kcal.status.slim; color = 'text-green-400'; }
+            else if (ratio <= 0.49) { status = t.kcal.status.healthy; color = 'text-green-600'; }
+            else if (ratio <= 0.54) { status = t.kcal.status.overweight; color = 'text-orange-500'; }
+            else if (ratio <= 0.58) { status = t.kcal.status.obese; color = 'text-red-500'; }
+            else { status = t.kcal.status.veryObese; color = 'text-red-800'; }
+        }
+        whtrData = { ratio: ratio.toFixed(2), status, color };
+    }
+
+    // 9. Protocol Check (30% Rule)
     const ibw30 = IBW_2 * 0.30;
     const threshold = IBW_2 + ibw30;
     const isHighObesity = weight > threshold;
     const recommendedWeight = isHighObesity ? ABW_2 : IBW_2;
-    const recommendationLabel = isHighObesity ? 'useAdjusted' : 'useIdeal'; // Keys for translation
+    const recommendationLabel = isHighObesity ? 'useAdjusted' : 'useIdeal';
 
-    // 8. BMR & TEE
+    // 10. BMR & TEE
     let AW_BMR_harris = 0, SW_BMR_harris = 0;
     let AW_BMR_mifflin = 0, SW_BMR_mifflin = 0;
 
@@ -363,6 +417,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         },
         
         waistRisk,
+        whr: whrData,
+        whtr: whtrData,
         elderlyInfo,
 
         // Methods
@@ -387,7 +443,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         }
     });
 
-  }, [gender, age, height, waist, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, amputationPercent, deficit, t]);
+  }, [gender, age, height, waist, hip, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, amputationPercent, deficit, t]);
 
   return {
     inputs: {
@@ -399,6 +455,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       pediatricAge,
       height, setHeight,
       waist, setWaist,
+      hip, setHip,
       physicalActivity, setPhysicalActivity,
       currentWeight, setCurrentWeight,
       selectedWeight, setSelectedWeight,

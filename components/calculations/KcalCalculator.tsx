@@ -1,8 +1,3 @@
-
-
-
-
-
 import React, { useEffect, useState } from 'react';
 import { useKcalCalculations, KcalInitialData } from './hooks/useKcalCalculations';
 import PersonalInfoCard from './parts/PersonalInfoCard';
@@ -37,6 +32,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               if (data.inputs.age) inputs.setAge(data.inputs.age);
               if (data.inputs.height) inputs.setHeight(data.inputs.height);
               if (data.inputs.waist) inputs.setWaist(data.inputs.waist);
+              if (data.inputs.hip) inputs.setHip(data.inputs.hip); // Load Hip
               
               if (data.inputs.physicalActivity) inputs.setPhysicalActivity(data.inputs.physicalActivity);
               if (data.inputs.currentWeight) inputs.setCurrentWeight(data.inputs.currentWeight);
@@ -52,6 +48,9 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               // Hydrate reqKcal
               if (data.inputs.reqKcal) inputs.setReqKcal(data.inputs.reqKcal);
           }
+      } else if (activeVisit) {
+          // If no specific kcal_data saved, try to use visit vitals directly
+          if (activeVisit.visit.hip && inputs.setHip) inputs.setHip(activeVisit.visit.hip);
       }
   }, [activeVisit]); // Run once when visit changes
 
@@ -65,6 +64,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               age: inputs.age,
               height: inputs.height,
               waist: inputs.waist,
+              hip: inputs.hip, // Save Hip
               currentWeight: inputs.currentWeight,
               selectedWeight: inputs.selectedWeight,
               usualWeight: inputs.usualWeight,
@@ -166,6 +166,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
 
               height={inputs.height} setHeight={inputs.setHeight}
               waist={inputs.waist} setWaist={inputs.setWaist}
+              hip={inputs.hip} setHip={inputs.setHip} // Pass Hip Props
               physicalActivity={inputs.physicalActivity} setPhysicalActivity={inputs.setPhysicalActivity}
               
               onOpenHeightEstimator={() => setShowHeightEstimator(true)}

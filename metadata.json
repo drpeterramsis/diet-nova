@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova - calculations Phase 2 _ v2.0.105",
-  "description": "Updates: Added Waist Circumference Risk Assessment & Elderly BMI Guidelines. Added Measurement instructions.",
+  "name": "Diet-Nova - calculations Phase 2 _ v2.0.106",
+  "description": "Updates: Added Waist Hip Ratio (WHR) & Waist to Height Ratio (WHtR) calculations based on WHO and Krause guidelines.",
   "requestFramePermissions": []
 }

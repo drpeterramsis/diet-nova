@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { InputGroup, SelectGroup } from '../InputComponents';
@@ -22,6 +21,8 @@ interface PersonalInfoProps {
   setHeight: (v: number) => void;
   waist: number;
   setWaist: (v: number) => void;
+  hip?: number;
+  setHip?: (v: number) => void;
   physicalActivity: number;
   setPhysicalActivity: (v: number) => void;
   
@@ -31,7 +32,7 @@ interface PersonalInfoProps {
 const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
   gender, setGender, 
   age, setAge, ageMode, setAgeMode, dob, setDob, reportDate, setReportDate, pediatricAge,
-  height, setHeight, waist, setWaist, physicalActivity, setPhysicalActivity,
+  height, setHeight, waist, setWaist, hip, setHip, physicalActivity, setPhysicalActivity,
   onOpenHeightEstimator
 }) => {
   const { t } = useLanguage();
@@ -141,12 +142,15 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
                     </button>
                 )}
             </div>
-            <div>
+            <div className="grid grid-cols-2 gap-3">
                 <InputGroup label={t.kcal.waist} value={waist} onChange={setWaist} error={waist === 0} />
-                <p className="text-[10px] text-gray-400 mt-1 italic leading-tight">
-                    ℹ️ Measure at midpoint between iliac crest & rib margin
-                </p>
+                {hip !== undefined && setHip && (
+                    <InputGroup label={t.kcal.hip} value={hip} onChange={setHip} />
+                )}
             </div>
+            <p className="text-[10px] text-gray-400 -mt-2 italic leading-tight">
+                ℹ️ Waist: Midpoint between iliac & rib. Hip: Widest part of buttocks.
+            </p>
         </div>
         
         <div className="col-span-2">

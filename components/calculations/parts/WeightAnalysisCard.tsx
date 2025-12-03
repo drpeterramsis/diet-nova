@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { KcalResults } from '../hooks/useKcalCalculations';
@@ -48,6 +47,26 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
                       </div>
                       <div className="text-[10px] text-gray-400">cm</div>
                   </div>
+              </div>
+          )}
+
+          {/* Body Composition Indicators (WHR & WHtR) */}
+          {(r.whr || r.whtr) && (
+              <div className="grid grid-cols-2 gap-3">
+                  {r.whr && (
+                      <div className="p-3 bg-white border border-gray-100 rounded-lg shadow-sm text-center">
+                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">{t.kcal.whr}</div>
+                          <div className="text-lg font-mono font-bold text-gray-800 leading-none mb-1">{r.whr.ratio}</div>
+                          <div className={`text-[10px] font-bold ${r.whr.color}`}>{r.whr.status}</div>
+                      </div>
+                  )}
+                  {r.whtr && (
+                      <div className="p-3 bg-white border border-gray-100 rounded-lg shadow-sm text-center">
+                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">{t.kcal.whtr}</div>
+                          <div className="text-lg font-mono font-bold text-gray-800 leading-none mb-1">{r.whtr.ratio}</div>
+                          <div className={`text-[10px] font-bold ${r.whtr.color}`}>{r.whtr.status}</div>
+                      </div>
+                  )}
               </div>
           )}
 

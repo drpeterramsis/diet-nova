@@ -1,8 +1,3 @@
-
-
-
-
-
 import { Translation } from "../types";
 
 export const en: Translation = {
@@ -135,6 +130,9 @@ export const en: Translation = {
     age: "Age (years)",
     height: "Height (cm)",
     waist: "Waist (cm)",
+    hip: "Hip (cm)",
+    whr: "WHR (Waist/Hip)",
+    whtr: "WHtR (Waist/Ht)",
     activity: "Physical Activity",
     selectActivity: "Select Activity Level",
     currentWeight: "Current Weight (kg)",
@@ -172,6 +170,9 @@ export const en: Translation = {
       normal: "Normal",
       overweight: "Overweight",
       obese: "Obese",
+      healthy: "Healthy",
+      slim: "Slim",
+      veryObese: "Very Obese"
     },
     ageMode: "Age Input Mode",
     manual: "Manual",
@@ -453,6 +454,9 @@ export const ar: Translation = {
     age: "العمر (سنة)",
     height: "الطول (سم)",
     waist: "محيط الخصر (سم)",
+    hip: "محيط الأرداف (سم)",
+    whr: "نسبة الخصر/الورك",
+    whtr: "نسبة الخصر/الطول",
     activity: "النشاط البدني",
     selectActivity: "اختر مستوى النشاط",
     currentWeight: "الوزن الحالي (كجم)",
@@ -490,6 +494,9 @@ export const ar: Translation = {
       normal: "وزن طبيعي",
       overweight: "وزن زائد",
       obese: "سمنة",
+      healthy: "صحي",
+      slim: "نحيل",
+      veryObese: "سمنة مفرطة"
     },
     ageMode: "طريقة إدخال العمر",
     manual: "يدوي",
