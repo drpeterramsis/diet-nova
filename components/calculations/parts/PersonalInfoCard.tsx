@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { InputGroup, SelectGroup } from '../InputComponents';
@@ -25,12 +24,15 @@ interface PersonalInfoProps {
   setWaist: (v: number) => void;
   physicalActivity: number;
   setPhysicalActivity: (v: number) => void;
+  
+  onOpenHeightEstimator?: () => void;
 }
 
 const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
   gender, setGender, 
   age, setAge, ageMode, setAgeMode, dob, setDob, reportDate, setReportDate, pediatricAge,
-  height, setHeight, waist, setWaist, physicalActivity, setPhysicalActivity
+  height, setHeight, waist, setWaist, physicalActivity, setPhysicalActivity,
+  onOpenHeightEstimator
 }) => {
   const { t } = useLanguage();
 
@@ -128,7 +130,17 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
         </div>
 
         <div className="col-span-2 md:col-span-1 space-y-5">
-            <InputGroup label={t.kcal.height} value={height} onChange={setHeight} error={height === 0} />
+            <div className="relative">
+                <InputGroup label={t.kcal.height} value={height} onChange={setHeight} error={height === 0} />
+                {onOpenHeightEstimator && (
+                    <button 
+                        onClick={onOpenHeightEstimator}
+                        className="absolute top-0 right-0 text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 hover:bg-blue-100"
+                    >
+                        Estimate?
+                    </button>
+                )}
+            </div>
             <InputGroup label={t.kcal.waist} value={waist} onChange={setWaist} error={waist === 0} />
         </div>
         

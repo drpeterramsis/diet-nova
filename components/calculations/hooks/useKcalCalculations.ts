@@ -1,6 +1,8 @@
 
 
 
+
+
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
@@ -151,6 +153,26 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
               setPediatricAge(null);
           }
       }
+  };
+
+  const resetInputs = () => {
+      setGender('male');
+      setAge(0);
+      setAgeMode('manual');
+      setDob('');
+      setPediatricAge(null);
+      setHeight(0);
+      setWaist(0);
+      setPhysicalActivity(0);
+      setCurrentWeight(0);
+      setSelectedWeight(0);
+      setUsualWeight(0);
+      setChangeDuration(0);
+      setAscites(0);
+      setEdema(0);
+      setAmputationPercent(0);
+      setDeficit(0);
+      setReqKcal('');
   };
 
   // Recalculate whenever inputs change
@@ -346,6 +368,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       deficit, setDeficit,
       reqKcal, setReqKcal
     },
-    results
+    results,
+    resetInputs
   };
 };

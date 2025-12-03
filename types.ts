@@ -1,6 +1,8 @@
 
 
 
+
+
 export type Language = 'en' | 'ar';
 
 export interface UserProfile {
@@ -111,6 +113,7 @@ export interface Translation {
     cancel: string;
     actions: string;
     back: string;
+    apply: string;
   };
   auth: {
     loginTitle: string;
@@ -177,6 +180,10 @@ export interface Translation {
     encyclopedia: {
       title: string;
       desc: string;
+    };
+    heightEstimator: {
+        title: string;
+        desc: string;
     };
   };
   clients: {
@@ -383,5 +390,17 @@ export interface Translation {
           nuts: string;
           water: string;
       }
-  }
+  };
+  heightEst: {
+      title: string;
+      ulna: string;
+      knee: string;
+      ulnaLength: string;
+      kneeHeight: string;
+      estimatedHeight: string;
+      ageGroup: string;
+      equation: string;
+      chumlea: string;
+      bapen: string;
+  };
 }

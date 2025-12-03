@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useEffect, useState } from 'react';
 import { useKcalCalculations, KcalInitialData } from './hooks/useKcalCalculations';
 import PersonalInfoCard from './parts/PersonalInfoCard';
@@ -8,8 +10,10 @@ import WeightInfoCard from './parts/WeightInfoCard';
 import MethodsCard from './parts/MethodsCard';
 import ResultsSummaryCard from './parts/ResultsSummaryCard';
 import WeightAnalysisCard from './parts/WeightAnalysisCard';
+import HeightEstimator from '../tools/HeightEstimator';
 import { Client, ClientVisit } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface KcalCalculatorProps {
   onPlanMeals?: (kcal: number) => void;
@@ -18,8 +22,10 @@ interface KcalCalculatorProps {
 }
 
 const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialData, activeVisit }) => {
-  const { inputs, results } = useKcalCalculations(initialData);
+  const { t } = useLanguage();
+  const { inputs, results, resetInputs } = useKcalCalculations(initialData);
   const [saveStatus, setSaveStatus] = useState('');
+  const [showHeightEstimator, setShowHeightEstimator] = useState(false);
 
   // Hydrate state from activeVisit.kcal_data if available
   useEffect(() => {
@@ -88,12 +94,27 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
       }
   };
 
+  const applyEstimatedHeight = (h: number) => {
+      inputs.setHeight(h);
+      setShowHeightEstimator(false);
+  };
+
   return (
-    <div className="max-w-7xl mx-auto animate-fade-in">
+    <div className="max-w-[1920px] mx-auto animate-fade-in relative">
       
+      {/* Top Bar with Reset */}
+      <div className="flex justify-end mb-4 no-print">
+          <button 
+            onClick={resetInputs}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium transition text-sm flex items-center gap-2"
+          >
+              <span>↺</span> {t.common.reset}
+          </button>
+      </div>
+
       {/* Active Visit Toolbar */}
       {activeVisit && (
-          <div className="bg-green-50 border border-green-200 p-4 rounded-xl mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm">
+          <div className="bg-green-50 border border-green-200 p-4 rounded-xl mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm no-print">
               <div>
                   <h3 className="font-bold text-green-800 text-lg">
                      Client: {activeVisit.client.full_name}
@@ -129,7 +150,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
           </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Grid: Inputs vs Results */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
         {/* Left Column: Inputs & Methods */}
         <div className="lg:col-span-2 space-y-6">
@@ -145,6 +167,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               height={inputs.height} setHeight={inputs.setHeight}
               waist={inputs.waist} setWaist={inputs.setWaist}
               physicalActivity={inputs.physicalActivity} setPhysicalActivity={inputs.setPhysicalActivity}
+              
+              onOpenHeightEstimator={() => setShowHeightEstimator(true)}
             />
 
             <WeightInfoCard 
@@ -178,6 +202,20 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
         </div>
 
       </div>
+
+      {/* Height Estimator Modal */}
+      {showHeightEstimator && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+              <HeightEstimator 
+                  onClose={() => setShowHeightEstimator(false)}
+                  onApplyHeight={applyEstimatedHeight}
+                  initialData={{
+                      gender: inputs.gender,
+                      age: inputs.age
+                  }}
+              />
+          </div>
+      )}
     </div>
   );
 };

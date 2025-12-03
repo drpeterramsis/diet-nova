@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -12,6 +13,7 @@ import ClientManager from "./components/tools/ClientManager";
 import BmrCalculator from "./components/tools/BmrCalculator";
 import NFPEChecklist from "./components/tools/NFPEChecklist";
 import Encyclopedia from "./components/tools/Encyclopedia";
+import HeightEstimator from "./components/tools/HeightEstimator";
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -73,6 +75,9 @@ const Dashboard = ({
                       </button>
                       <button onClick={() => onToolClick('nfpe')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
                           <span>NFPE Assessment</span> <span>→</span>
+                      </button>
+                      <button onClick={() => onToolClick('height-estimator')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
+                          <span>Height Estimator</span> <span>→</span>
                       </button>
                   </div>
               </div>
@@ -378,6 +383,11 @@ const AppContent = () => {
                 />
             )}
             {activeTool === 'encyclopedia' && <Encyclopedia />}
+            {activeTool === 'height-estimator' && (
+                <HeightEstimator 
+                    onClose={handleNavHome} 
+                />
+            )}
 
           </div>
         ) : (

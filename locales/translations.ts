@@ -1,6 +1,8 @@
 
 
 
+
+
 import { Translation } from "../types";
 
 export const en: Translation = {
@@ -28,7 +30,8 @@ export const en: Translation = {
     search: "Search...",
     cancel: "Cancel",
     actions: "Actions",
-    back: "Back"
+    back: "Back",
+    apply: "Apply"
   },
   auth: {
     loginTitle: "Login to Diet-Nova",
@@ -95,6 +98,10 @@ export const en: Translation = {
     encyclopedia: {
         title: "Encyclopedia",
         desc: "Comprehensive library of Vitamins & Minerals.",
+    },
+    heightEstimator: {
+        title: "Height Estimator",
+        desc: "Estimate height using Ulna Length or Knee Height.",
     }
   },
   clients: {
@@ -301,6 +308,18 @@ export const en: Translation = {
           nuts: "Nuts",
           water: "Drinking enough water",
       }
+  },
+  heightEst: {
+      title: "Height Estimator",
+      ulna: "Ulna Length",
+      knee: "Knee Height",
+      ulnaLength: "Ulna Length (cm)",
+      kneeHeight: "Knee Height (cm)",
+      estimatedHeight: "Estimated Height",
+      ageGroup: "Age Group",
+      equation: "Equation",
+      chumlea: "Chumlea et al.",
+      bapen: "BAPEN / MUST Chart"
   }
 };
 
@@ -329,7 +348,8 @@ export const ar: Translation = {
     search: "بحث...",
     cancel: "إلغاء",
     actions: "إجراءات",
-    back: "عودة"
+    back: "عودة",
+    apply: "تطبيق"
   },
   auth: {
     loginTitle: "تسجيل الدخول",
@@ -396,6 +416,10 @@ export const ar: Translation = {
     encyclopedia: {
         title: "الموسوعة الغذائية",
         desc: "مكتبة شاملة للفيتامينات والمعادن.",
+    },
+    heightEstimator: {
+        title: "مقدر الطول",
+        desc: "تقدير الطول باستخدام طول الزند أو ارتفاع الركبة.",
     }
   },
   clients: {
@@ -602,5 +626,17 @@ export const ar: Translation = {
           nuts: "المكسرات",
           water: "شرب ماء بكمية كافية",
       }
+  },
+  heightEst: {
+      title: "مقدر الطول",
+      ulna: "طول الزند",
+      knee: "ارتفاع الركبة",
+      ulnaLength: "طول الزند (سم)",
+      kneeHeight: "ارتفاع الركبة (سم)",
+      estimatedHeight: "الطول المقدر",
+      ageGroup: "الفئة العمرية",
+      equation: "المعادلة",
+      chumlea: "تشومليا وآخرون",
+      bapen: "مخطط BAPEN / MUST"
   }
 };

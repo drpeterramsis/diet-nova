@@ -1,3 +1,4 @@
+
 import React from 'react';
 import ToolCard from './ToolCard';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -82,6 +83,13 @@ const ToolsGrid: React.FC<ToolsGridProps> = ({ onToolClick, setBmiOpen, isAuthen
         desc={t.tools.bmr.desc}
         onClick={() => onToolClick('bmr')}
         icon={<span className="text-2xl">⚡</span>}
+      />
+
+      <ToolCard
+        title={t.tools.heightEstimator.title}
+        desc={t.tools.heightEstimator.desc}
+        onClick={() => onToolClick('height-estimator')}
+        icon={<span className="text-2xl">📏</span>}
       />
     </div>
   );
