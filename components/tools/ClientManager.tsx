@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -21,7 +21,7 @@ interface ClientManagerProps {
 type SortOption = 'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'clinic';
 type GroupOption = 'none' | 'clinic' | 'month';
 
-// Food Groups Factors for Calculation (unchanged)
+// Food Groups Factors for Calculation
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
   starch: { cho: 15, pro: 3, fat: 0, kcal: 80 },
   veg: { cho: 5, pro: 2, fat: 0, kcal: 25 },
@@ -104,7 +104,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const { session } = useAuth();
   
   // View State
-  const [viewMode, setViewMode] = useState<'list' | 'details' | 'dietary-recall' | 'food-questionnaire'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'details' | 'dietary-recall' | 'food-questionnaire' | 'lab-checklist'>('list');
 
   // Data State
   const [clients, setClients] = useState<Client[]>([]);
@@ -129,10 +129,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const [toolTarget, setToolTarget] = useState<{type: 'client' | 'visit', id: string, initialData?: any} | null>(null);
   const [isSavingTool, setIsSavingTool] = useState(false);
 
-  // Lab Suggestions Modal State
-  const [showLabModal, setShowLabModal] = useState(false);
-  const [selectedPanelId, setSelectedPanelId] = useState<string | null>(null);
-  const [labResults, setLabResults] = useState<Record<string, string>>({}); // Store transient results input
+  // Lab Checklist State (Page View)
+  const [labChecklistSelection, setLabChecklistSelection] = useState<Set<string>>(new Set());
 
   // Form State (Client Profile)
   const [formData, setFormData] = useState<{
@@ -204,6 +202,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const [submitting, setSubmitting] = useState(false);
   const [summaryText, setSummaryText] = useState('');
 
+  // Refs for tracking initial load
+  const processedInitialIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     fetchClients();
   }, [session]);
@@ -214,16 +215,22 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       }
   }, [autoOpenNew]);
 
+  // Handle Initial Client ID Load (Fixed: Only runs if ID changes or on first load)
   useEffect(() => {
       if (initialClientId && clients.length > 0) {
-          const targetClient = clients.find(c => c.id === initialClientId);
-          if (targetClient) {
-              if (viewMode !== 'details' || editingClient?.id !== targetClient.id) {
-                  handleOpenProfile(targetClient);
+          // Check if this ID has already been processed to avoid re-opening on list updates
+          if (processedInitialIdRef.current !== initialClientId) {
+              const target = clients.find(c => c.id === initialClientId);
+              if (target) {
+                  // Only force open if we are not already editing it
+                  if (!editingClient || editingClient.id !== target.id) {
+                      handleOpenProfile(target);
+                  }
+                  processedInitialIdRef.current = initialClientId;
               }
           }
       }
-  }, [initialClientId, clients]); 
+  }, [initialClientId, clients]);
 
   useEffect(() => {
       if (formData.dob) {
@@ -661,38 +668,44 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   };
 
   // --- Lab Suggestions Handlers ---
-  const handleLabResultChange = (test: string, val: string) => {
-      setLabResults(prev => ({ ...prev, [test]: val }));
+  const toggleLabTest = (test: string) => {
+      const newSet = new Set(labChecklistSelection);
+      if (newSet.has(test)) newSet.delete(test);
+      else newSet.add(test);
+      setLabChecklistSelection(newSet);
   };
 
-  const saveLabRequests = () => {
-      if (!editingClient || !selectedPanelId) return;
+  const togglePanel = (tests: string[]) => {
+      // If all selected, deselect all. Else select all.
+      const allSelected = tests.every(t => labChecklistSelection.has(t));
+      const newSet = new Set(labChecklistSelection);
       
-      const panel = labPanels.find(p => p.id === selectedPanelId);
-      if (!panel) return;
+      if (allSelected) {
+          tests.forEach(t => newSet.delete(t));
+      } else {
+          tests.forEach(t => newSet.add(t));
+      }
+      setLabChecklistSelection(newSet);
+  };
 
-      const dateStr = new Date().toLocaleDateString('en-GB');
-      let labText = `\n\n[🧪 Labs: ${panel.title} - ${dateStr}]\n`;
+  const saveLabChecklistToNotes = () => {
+      if (!editingClient || labChecklistSelection.size === 0) return;
       
-      panel.tests.forEach(test => {
-          const result = labResults[test];
-          if (result && result.trim() !== '') {
-              // Write down result
-              labText += `  - ${test}: ${result}\n`;
-          } else {
-              // Just request
-              labText += `  - Request: ${test}\n`;
-          }
+      const dateStr = new Date().toLocaleDateString('en-GB');
+      let labText = `\n\n[🧪 Requested Labs - ${dateStr}]\n`;
+      
+      Array.from(labChecklistSelection).forEach(test => {
+          labText += `  - [ ] ${test}\n`;
       });
 
       setFormData(prev => ({
           ...prev,
           notes: prev.notes + labText
       }));
-      setShowLabModal(false);
-      setSelectedPanelId(null);
-      setLabResults({});
-      setSaveSuccess("Lab info added to notes! Don't forget to save.");
+      
+      setLabChecklistSelection(new Set()); // Clear selection
+      setViewMode('details'); // Return to details
+      setSaveSuccess("Labs added to notes! Don't forget to save profile.");
       setTimeout(() => setSaveSuccess(''), 3000);
   };
 
@@ -737,10 +750,16 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   };
 
   // --- Tool Handlers ---
-  const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire', type: 'client' | 'visit', id: string, initialData?: any) => {
+  const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire' | 'lab-checklist', type: 'client' | 'visit', id: string, initialData?: any) => {
     window.scrollTo({ top: 0, behavior: 'smooth' }); // Auto-scroll to top
-    setToolTarget({ type, id, initialData });
-    setViewMode(view);
+    if (view === 'lab-checklist') {
+        // Lab Checklist is a special view acting on the profile notes
+        setViewMode('lab-checklist');
+        setLabChecklistSelection(new Set()); // Reset selection
+    } else {
+        setToolTarget({ type, id, initialData });
+        setViewMode(view);
+    }
   };
 
   const handleSaveDietary = async (data: DietaryAssessmentData) => {
@@ -821,6 +840,85 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                   onClose={() => setViewMode('details')}
                   isSaving={isSavingTool}
               />
+          </div>
+      );
+  }
+
+  // --- RENDER: LAB CHECKLIST VIEW ---
+  if (viewMode === 'lab-checklist') {
+      return (
+          <div className="max-w-5xl mx-auto animate-fade-in pb-12">
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 flex justify-between items-center">
+                  <div>
+                      <h2 className="text-2xl font-bold text-blue-800 flex items-center gap-2">
+                          <span>🧪</span> Lab Request Checklist
+                      </h2>
+                      <p className="text-blue-600 text-sm">Select tests to add to client notes.</p>
+                  </div>
+                  <button onClick={() => setViewMode('details')} className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition shadow-sm font-medium text-sm">
+                      {t.common.back}
+                  </button>
+              </div>
+
+              <div className="space-y-6">
+                  {labPanels.map(panel => (
+                      <div key={panel.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                          <div className="bg-blue-50 p-4 border-b border-blue-100 flex justify-between items-center">
+                              <div>
+                                  <h3 className="font-bold text-blue-900">{panel.title}</h3>
+                                  <p className="text-xs text-blue-700 font-arabic">{panel.titleAr}</p>
+                              </div>
+                              <button 
+                                  onClick={() => togglePanel(panel.tests)}
+                                  className="text-xs bg-white text-blue-600 px-3 py-1 rounded border border-blue-200 hover:bg-blue-50"
+                              >
+                                  Toggle All
+                              </button>
+                          </div>
+                          <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                              {panel.tests.map(test => {
+                                  const isSelected = labChecklistSelection.has(test);
+                                  return (
+                                      <div 
+                                          key={test} 
+                                          onClick={() => toggleLabTest(test)}
+                                          className={`p-3 rounded-lg border cursor-pointer flex items-center gap-3 transition ${isSelected ? 'bg-blue-100 border-blue-300' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
+                                      >
+                                          <div className={`w-5 h-5 rounded border flex items-center justify-center bg-white ${isSelected ? 'border-blue-500' : 'border-gray-300'}`}>
+                                              {isSelected && <span className="text-blue-600 text-sm font-bold">✓</span>}
+                                          </div>
+                                          <span className={`text-sm ${isSelected ? 'text-blue-900 font-medium' : 'text-gray-700'}`}>{test}</span>
+                                      </div>
+                                  );
+                              })}
+                          </div>
+                      </div>
+                  ))}
+              </div>
+
+              <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 z-50 flex justify-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+                  <div className="w-full max-w-5xl flex justify-between items-center px-4">
+                      <div className="text-sm text-gray-500">
+                          {labChecklistSelection.size} tests selected
+                      </div>
+                      <div className="flex gap-4">
+                          <button 
+                              onClick={() => setViewMode('details')}
+                              className="px-6 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition"
+                          >
+                              {t.common.cancel}
+                          </button>
+                          <button 
+                              onClick={saveLabChecklistToNotes}
+                              disabled={labChecklistSelection.size === 0}
+                              className="px-8 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                              Add to Notes
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <div className="h-20"></div> {/* Spacer for fixed footer */}
           </div>
       );
   }
@@ -1202,7 +1300,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                         <>
                                         <button 
                                             type="button"
-                                            onClick={() => setShowLabModal(true)}
+                                            onClick={() => handleOpenTool('lab-checklist', 'client', editingClient.id)}
                                             className="text-xs bg-blue-100 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-200 text-blue-800 font-bold flex items-center gap-1"
                                         >
                                             🧪 {t.clients.labSuggestions}
@@ -1551,82 +1649,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                  </div>
             )}
          </div>
-
-         {/* LAB SUGGESTIONS MODAL */}
-         {showLabModal && (
-             <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-                 <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh]">
-                     <div className="flex justify-between items-center mb-4 border-b pb-2">
-                         <div>
-                             <h3 className="text-xl font-bold text-gray-800">Suggest Lab Tests</h3>
-                             <p className="text-xs text-gray-500">Select a category to view and request tests.</p>
-                         </div>
-                         <button onClick={() => {setShowLabModal(false); setSelectedPanelId(null); setLabResults({});}} className="text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
-                     </div>
-                     
-                     <div className="overflow-y-auto flex-grow pr-1">
-                         {/* Step 1: Select Panel */}
-                         {!selectedPanelId ? (
-                             <div className="space-y-3">
-                                {labPanels.map(panel => (
-                                    <div 
-                                        key={panel.id}
-                                        onClick={() => setSelectedPanelId(panel.id)}
-                                        className="p-4 rounded-lg border bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition flex justify-between items-center"
-                                    >
-                                        <div>
-                                            <div className="font-bold text-gray-800">{panel.title}</div>
-                                            <div className="text-sm text-gray-500 font-arabic">{panel.titleAr}</div>
-                                        </div>
-                                        <span className="text-gray-400">→</span>
-                                    </div>
-                                ))}
-                             </div>
-                         ) : (
-                             // Step 2: View Tests & Enter Results
-                             <div className="space-y-4 animate-fade-in">
-                                 <button 
-                                    onClick={() => setSelectedPanelId(null)}
-                                    className="text-sm text-gray-500 hover:text-blue-600 flex items-center gap-1 mb-2"
-                                 >
-                                     ← Back to Categories
-                                 </button>
-                                 
-                                 <h4 className="font-bold text-blue-800 border-b border-blue-100 pb-2">
-                                     {labPanels.find(p => p.id === selectedPanelId)?.title}
-                                 </h4>
-
-                                 <div className="space-y-3">
-                                     {labPanels.find(p => p.id === selectedPanelId)?.tests.map(test => (
-                                         <div key={test} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                             <div className="font-medium text-gray-800 text-sm mb-1">{test}</div>
-                                             <input 
-                                                type="text" 
-                                                placeholder="Result value (optional)" 
-                                                value={labResults[test] || ''}
-                                                onChange={(e) => handleLabResultChange(test, e.target.value)}
-                                                className="w-full text-xs p-1.5 border rounded focus:ring-1 focus:ring-blue-400 outline-none"
-                                             />
-                                         </div>
-                                     ))}
-                                 </div>
-                             </div>
-                         )}
-                     </div>
-
-                     {selectedPanelId && (
-                        <div className="pt-4 mt-4 border-t flex justify-end">
-                            <button 
-                                onClick={saveLabRequests}
-                                className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition shadow-md"
-                            >
-                                Add Tests to Notes
-                            </button>
-                        </div>
-                     )}
-                 </div>
-             </div>
-         )}
     </div>
   );
 };

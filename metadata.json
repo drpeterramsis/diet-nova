@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova - Lab Reference Phase 5 _ v2.0.110",
-  "description": "Updates: Enhanced Biochemical Labs reference with encyclopedia table, improved client lab request flow with result input, and added note styling.",
+  "name": "Diet-Nova - Lab Reference Phase 5 _ v2.0.111",
+  "description": "Updates: Fixed client save navigation bug, enhanced Lab Suggestions as a full checklist page.",
   "requestFramePermissions": []
 }
