@@ -1,6 +1,7 @@
 
 
 
+
 import { Translation } from "../types";
 
 export const en: Translation = {
@@ -98,8 +99,8 @@ export const en: Translation = {
         desc: "Comprehensive library of Vitamins & Minerals.",
     },
     heightEstimator: {
-        title: "Height Estimator",
-        desc: "Estimate height using Ulna Length or Knee Height.",
+        title: "Anthropometry Est.",
+        desc: "Estimate height and weight using body measurements.",
     },
     labs: {
         title: "Biochemical Labs",
@@ -214,7 +215,6 @@ export const en: Translation = {
     fatMass: "Fat Mass (FM)",
     targetWeightBF: "Target Wt (Based on Desired Fat %)",
     desiredBodyFat: "Desired BF %",
-    // New Translations
     mac: "Mid-Arm Circ. (MAC)",
     tsf: "Triceps Skinfold (TSF)",
     mamc: "Mid-Arm Muscle Circ. (MAMC)",
@@ -333,16 +333,22 @@ export const en: Translation = {
       }
   },
   heightEst: {
-      title: "Height Estimator",
+      title: "Anthropometry Estimator",
       ulna: "Ulna Length",
       knee: "Knee Height",
+      weight: "Wt (Chumlea)",
       ulnaLength: "Ulna Length (cm)",
       kneeHeight: "Knee Height (cm)",
       estimatedHeight: "Estimated Height",
+      estimatedWeight: "Estimated Weight",
       ageGroup: "Age Group",
       equation: "Equation",
       chumlea: "Chumlea et al.",
-      bapen: "BAPEN / MUST Chart"
+      bapen: "BAPEN / MUST Chart",
+      mac: "MAC (cm)",
+      cc: "Calf Circ (cm)",
+      ssf: "Subscapular (mm)",
+      sisf: "Suprailiac (mm)"
   }
 };
 
@@ -441,8 +447,8 @@ export const ar: Translation = {
         desc: "مكتبة شاملة للفيتامينات والمعادن.",
     },
     heightEstimator: {
-        title: "مقدر الطول",
-        desc: "تقدير الطول باستخدام طول الزند أو ارتفاع الركبة.",
+        title: "تقدير القياسات",
+        desc: "تقدير الطول والوزن باستخدام قياسات الجسم.",
     },
     labs: {
         title: "التحاليل المعملية",
@@ -557,7 +563,6 @@ export const ar: Translation = {
     fatMass: "كتلة الدهون (FM)",
     targetWeightBF: "الوزن المستهدف (بناءً على الدهون)",
     desiredBodyFat: "نسبة الدهون المستهدفة %",
-    // New Translations
     mac: "محيط منتصف الذراع (MAC)",
     tsf: "سمك ثنية الجلد (TSF)",
     mamc: "محيط عضلات الذراع (MAMC)",
@@ -676,15 +681,21 @@ export const ar: Translation = {
       }
   },
   heightEst: {
-      title: "مقدر الطول",
+      title: "تقدير القياسات",
       ulna: "طول الزند",
       knee: "ارتفاع الركبة",
+      weight: "الوزن (Chumlea)",
       ulnaLength: "طول الزند (سم)",
       kneeHeight: "ارتفاع الركبة (سم)",
       estimatedHeight: "الطول المقدر",
+      estimatedWeight: "الوزن المقدر",
       ageGroup: "الفئة العمرية",
       equation: "المعادلة",
       chumlea: "تشومليا وآخرون",
-      bapen: "مخطط BAPEN / MUST"
+      bapen: "مخطط BAPEN / MUST",
+      mac: "محيط منتصف الذراع (سم)",
+      cc: "محيط السمانة (سم)",
+      ssf: "ثنية أسفل اللوح (مم)",
+      sisf: "ثنية فوق الحرقفة (مم)"
   }
 };

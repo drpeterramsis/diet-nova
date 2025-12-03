@@ -1,9 +1,12 @@
 
+
+
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 interface HeightEstimatorProps {
     onApplyHeight?: (height: number) => void;
+    onApplyWeight?: (weight: number) => void;
     initialData?: {
         gender: 'male' | 'female';
         age: number;
@@ -11,123 +14,121 @@ interface HeightEstimatorProps {
     onClose?: () => void;
 }
 
-const HeightEstimator: React.FC<HeightEstimatorProps> = ({ onApplyHeight, initialData, onClose }) => {
+const HeightEstimator: React.FC<HeightEstimatorProps> = ({ onApplyHeight, onApplyWeight, initialData, onClose }) => {
     const { t } = useLanguage();
-    const [tab, setTab] = useState<'ulna' | 'knee'>('ulna');
+    const [tab, setTab] = useState<'ulna' | 'knee' | 'weight'>('ulna');
     
-    // Inputs
+    // Global Inputs
     const [gender, setGender] = useState<'male' | 'female'>(initialData?.gender || 'male');
     const [age, setAge] = useState<number>(initialData?.age || 30);
+    
+    // Height Inputs
     const [ulnaLength, setUlnaLength] = useState<number | ''>('');
     const [kneeHeight, setKneeHeight] = useState<number | ''>('');
     
-    // Result
+    // Weight Inputs (Chumlea)
+    const [mac, setMac] = useState<number | ''>(''); // Mid Arm Circumference
+    const [calf, setCalf] = useState<number | ''>(''); // Calf Circumference
+    const [subscapular, setSubscapular] = useState<number | ''>(''); // Skinfold
+    const [suprailiac, setSuprailiac] = useState<number | ''>(''); // Skinfold
+
+    // Results
     const [estimatedHeight, setEstimatedHeight] = useState<number | null>(null);
+    const [estimatedWeight, setEstimatedWeight] = useState<number | null>(null);
     const [formulaUsed, setFormulaUsed] = useState<string>('');
 
     useEffect(() => {
         setEstimatedHeight(null);
-    }, [tab, gender, age, ulnaLength, kneeHeight]);
+        setEstimatedWeight(null);
+        setFormulaUsed('');
+    }, [tab, gender, age, ulnaLength, kneeHeight, mac, calf, subscapular, suprailiac]);
 
     const calculate = () => {
-        let h = 0;
-        
+        // --- HEIGHT CALCULATION ---
         if (tab === 'ulna' && ulnaLength) {
-            // MUST / BAPEN Formulas (Approximation from standard charts)
             const u = Number(ulnaLength);
-            
+            let h = 0;
             if (age < 65) {
                 if (gender === 'male') {
-                    // Linear approx from chart: 32cm->1.94, 25.5cm->1.71
-                    // Slope ~0.0354, Intercept ~0.81
-                    // Better formula found in literature for BAPEN MUST:
-                    // Men <65: H = 0.79 * Ulna + 0.60 ?? No, chart values are different.
-                    // Let's rely on linear regression of the specific chart points provided in image.
+                    // Approx linear regression from BAPEN
                     h = (0.0354 * u) + 0.81;
                 } else {
-                    // Women <65: 32cm->1.84, 18.5cm->1.40
-                    // Delta H = 0.44, Delta U = 13.5. Slope = 0.0326.
-                    // Intercept: 1.84 - (0.0326 * 32) = 0.796
                     h = (0.0326 * u) + 0.80;
                 }
             } else {
-                // Age >= 65
                 if (gender === 'male') {
-                    // Men >65: 32cm->1.87, 25.5cm->1.65
-                    // Delta H = 0.22, Delta U = 6.5. Slope = 0.0338
-                    // Intercept: 1.87 - (0.0338 * 32) = 0.788
                     h = (0.0338 * u) + 0.79;
                 } else {
-                    // Women >65: 32cm->1.84, 18.5cm->1.40 (Same as <65 in chart?)
-                    // Let's check image... Women >65 row: 1.84 at 32, 1.61 at 25...
-                    // Wait, chart 1 image: Women >65: 32cm->1.84, 18.5cm->1.40.
-                    // It seems identical to <65 row in the first image for women?
-                    // Ah, row 2 says <65 yrs, row 4 says >65 yrs.
-                    // Women <65 (Row 2): 32->1.84, 25.5->1.66
-                    // Women >65 (Row 4): 32->1.84, 25.5->1.61
-                    
-                    // Let's re-calc slope for Women > 65
-                    // 32 -> 1.84, 25.5 -> 1.61
-                    // Delta H = 0.23, Delta U = 6.5. Slope = 0.0353
-                    // Intercept: 1.84 - (0.0353 * 32) = 0.71
                     h = (0.0353 * u) + 0.71;
                 }
             }
-            setFormulaUsed(t.tools.heightEstimator.desc + ' (BAPEN/MUST Chart Approximation)');
+            // Convert meters to cm
+            setEstimatedHeight(Number((h * 100).toFixed(1)));
+            setFormulaUsed(t.tools.heightEstimator.desc + ' (BAPEN/MUST Approx)');
         } 
         else if (tab === 'knee' && kneeHeight) {
             const k = Number(kneeHeight);
-            
-            // Chumlea et al (Chart 1 in image)
-            // Men: H = (2.02 x KH) - (0.04 x Age) + 64.19
-            // Women: H = (1.83 x KH) - (0.24 x Age) + 84.88
-            
+            let h = 0;
+            // Chumlea et al (Knee Height)
             if (gender === 'male') {
-                h = (2.02 * k) - (0.04 * age) + 64.19;
+                h = 64.19 - (0.04 * age) + (2.02 * k);
             } else {
-                h = (1.83 * k) - (0.24 * age) + 84.88;
+                h = 84.88 - (0.24 * age) + (1.83 * k);
             }
-            // Chumlea result is in cm. Convert to meters for consistency if needed, but app uses cm.
-            // Wait, previous calc was in meters.
-            // Let's output cm.
-            // Ulna calc above gave meters (e.g. 1.94). So multiply by 100.
-            
-            // Override h for knee to be cm directly.
-            setFormulaUsed('Chumlea et al.');
             setEstimatedHeight(Number(h.toFixed(1)));
-            return; 
+            setFormulaUsed('Chumlea et al. (Knee Height)');
         }
+        
+        // --- WEIGHT CALCULATION (Chumlea) ---
+        else if (tab === 'weight' && mac && calf && subscapular && suprailiac) {
+            const m = Number(mac);
+            const c = Number(calf);
+            const ss = Number(subscapular);
+            const si = Number(suprailiac);
+            let w = 0;
 
-        // If Ulna (meters), convert to cm
-        if (tab === 'ulna' && h > 0) {
-            setEstimatedHeight(Number((h * 100).toFixed(1)));
-        } else if (tab === 'knee' && h > 0) {
-             setEstimatedHeight(Number(h.toFixed(1)));
+            if (gender === 'male') {
+                // Chumlea Equation for Men
+                // Weight = (1.10 x MAC) + (0.31 x Calf) + (0.64 x Subscapular) + (0.946 x Suprailiac) - 18.2
+                w = (1.10 * m) + (0.31 * c) + (0.64 * ss) + (0.946 * si) - 18.2;
+            } else {
+                // Chumlea Equation for Women
+                // Weight = (0.87 x MAC) + (0.98 x Calf) + (0.40 x Subscapular) + (0.45 x Suprailiac) - 6.4
+                w = (0.87 * m) + (0.98 * c) + (0.40 * ss) + (0.45 * si) - 6.4;
+            }
+            setEstimatedWeight(Number(w.toFixed(1)));
+            setFormulaUsed('Chumlea et al. (Anthropometric Weight)');
         }
     };
 
     return (
         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 max-w-lg mx-auto">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-gray-800">{t.tools.heightEstimator.title}</h3>
+                <h3 className="text-xl font-bold text-gray-800">{t.heightEst.title}</h3>
                 {onClose && (
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
                 )}
             </div>
 
             {/* Tabs */}
-            <div className="flex bg-gray-100 p-1 rounded-lg mb-6">
+            <div className="flex bg-gray-100 p-1 rounded-lg mb-6 overflow-x-auto">
                 <button 
                     onClick={() => setTab('ulna')}
-                    className={`flex-1 py-2 rounded-md text-sm font-bold transition ${tab === 'ulna' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
+                    className={`flex-1 py-2 px-2 rounded-md text-xs sm:text-sm font-bold transition whitespace-nowrap ${tab === 'ulna' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
                 >
                     {t.heightEst.ulna}
                 </button>
                 <button 
                     onClick={() => setTab('knee')}
-                    className={`flex-1 py-2 rounded-md text-sm font-bold transition ${tab === 'knee' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
+                    className={`flex-1 py-2 px-2 rounded-md text-xs sm:text-sm font-bold transition whitespace-nowrap ${tab === 'knee' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500'}`}
                 >
                     {t.heightEst.knee}
+                </button>
+                <button 
+                    onClick={() => setTab('weight')}
+                    className={`flex-1 py-2 px-2 rounded-md text-xs sm:text-sm font-bold transition whitespace-nowrap ${tab === 'weight' ? 'bg-white shadow-sm text-green-600' : 'text-gray-500'}`}
+                >
+                    {t.heightEst.weight}
                 </button>
             </div>
 
@@ -155,28 +156,84 @@ const HeightEstimator: React.FC<HeightEstimatorProps> = ({ onApplyHeight, initia
                     </div>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-2">
-                        {tab === 'ulna' ? t.heightEst.ulnaLength : t.heightEst.kneeHeight}
-                    </label>
-                    <input 
-                        type="number" 
-                        value={tab === 'ulna' ? ulnaLength : kneeHeight}
-                        onChange={(e) => tab === 'ulna' ? setUlnaLength(Number(e.target.value)) : setKneeHeight(Number(e.target.value))}
-                        className="w-full p-3 border-2 border-blue-100 rounded-lg focus:border-blue-500 outline-none text-lg font-mono"
-                        placeholder="cm"
-                    />
-                </div>
+                {/* Dynamic Inputs based on Tab */}
+                {tab === 'ulna' && (
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                            {t.heightEst.ulnaLength}
+                        </label>
+                        <input 
+                            type="number" 
+                            value={ulnaLength}
+                            onChange={(e) => setUlnaLength(Number(e.target.value))}
+                            className="w-full p-3 border-2 border-blue-100 rounded-lg focus:border-blue-500 outline-none text-lg font-mono"
+                            placeholder="cm"
+                        />
+                    </div>
+                )}
+
+                {tab === 'knee' && (
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">
+                            {t.heightEst.kneeHeight}
+                        </label>
+                        <input 
+                            type="number" 
+                            value={kneeHeight}
+                            onChange={(e) => setKneeHeight(Number(e.target.value))}
+                            className="w-full p-3 border-2 border-blue-100 rounded-lg focus:border-blue-500 outline-none text-lg font-mono"
+                            placeholder="cm"
+                        />
+                    </div>
+                )}
+
+                {tab === 'weight' && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">{t.heightEst.mac}</label>
+                            <input 
+                                type="number" value={mac} onChange={(e) => setMac(Number(e.target.value))}
+                                className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-green-500" placeholder="cm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">{t.heightEst.cc}</label>
+                            <input 
+                                type="number" value={calf} onChange={(e) => setCalf(Number(e.target.value))}
+                                className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-green-500" placeholder="cm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">{t.heightEst.ssf}</label>
+                            <input 
+                                type="number" value={subscapular} onChange={(e) => setSubscapular(Number(e.target.value))}
+                                className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-green-500" placeholder="mm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">{t.heightEst.sisf}</label>
+                            <input 
+                                type="number" value={suprailiac} onChange={(e) => setSuprailiac(Number(e.target.value))}
+                                className="w-full p-2 border border-gray-300 rounded focus:ring-1 focus:ring-green-500" placeholder="mm"
+                            />
+                        </div>
+                    </div>
+                )}
 
                 <button 
                     onClick={calculate}
-                    disabled={!age || (tab === 'ulna' && !ulnaLength) || (tab === 'knee' && !kneeHeight)}
-                    className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!age || 
+                        (tab === 'ulna' && !ulnaLength) || 
+                        (tab === 'knee' && !kneeHeight) || 
+                        (tab === 'weight' && (!mac || !calf || !subscapular || !suprailiac))
+                    }
+                    className={`w-full py-3 text-white rounded-lg font-bold transition disabled:opacity-50 disabled:cursor-not-allowed ${tab === 'weight' ? 'bg-green-600 hover:bg-green-700' : 'bg-blue-600 hover:bg-blue-700'}`}
                 >
                     {t.common.calculate}
                 </button>
 
-                {estimatedHeight && (
+                {/* Results Display */}
+                {tab !== 'weight' && estimatedHeight && (
                     <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200 text-center animate-fade-in">
                         <span className="text-xs text-blue-600 font-bold uppercase tracking-wider">{t.heightEst.estimatedHeight}</span>
                         <div className="text-3xl font-extrabold text-blue-800 my-2">
@@ -188,6 +245,25 @@ const HeightEstimator: React.FC<HeightEstimatorProps> = ({ onApplyHeight, initia
                             <button 
                                 onClick={() => onApplyHeight(estimatedHeight)}
                                 className="mt-4 w-full py-2 bg-white border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-100 transition font-bold shadow-sm"
+                            >
+                                {t.common.apply}
+                            </button>
+                        )}
+                    </div>
+                )}
+
+                {tab === 'weight' && estimatedWeight && (
+                    <div className="mt-6 p-4 bg-green-50 rounded-xl border border-green-200 text-center animate-fade-in">
+                        <span className="text-xs text-green-600 font-bold uppercase tracking-wider">{t.heightEst.estimatedWeight}</span>
+                        <div className="text-3xl font-extrabold text-green-800 my-2">
+                            {estimatedWeight} <span className="text-lg font-medium text-green-600">kg</span>
+                        </div>
+                        <div className="text-xs text-green-400">{formulaUsed}</div>
+                        
+                        {onApplyWeight && (
+                            <button 
+                                onClick={() => onApplyWeight(estimatedWeight)}
+                                className="mt-4 w-full py-2 bg-white border border-green-200 text-green-700 rounded-lg hover:bg-green-100 transition font-bold shadow-sm"
                             >
                                 {t.common.apply}
                             </button>

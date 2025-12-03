@@ -1,4 +1,6 @@
 
+
+
 export interface NFPEItem {
   id: string;
   sign: string;
@@ -20,7 +22,7 @@ export interface NFPESystem {
 export const nfpeData: NFPESystem[] = [
   {
     id: "general",
-    name: "General Survey & Hydration",
+    name: "General & Hydration",
     nameAr: "المسح العام والتروية",
     icon: "⚖️",
     items: [
@@ -223,33 +225,15 @@ export const nfpeData: NFPESystem[] = [
     ]
   },
   {
-    id: "head_neck",
-    name: "Head & Neck (Face/Eyes/Mouth)",
-    nameAr: "الرأس والرقبة (الوجه/العين/الفم)",
+    id: "eyes",
+    name: "Eyes",
+    nameAr: "العيون",
     icon: "👁️",
     items: [
       {
-        id: "face_moon",
-        sign: "Face: Diffuse Depigmentation / Moon Face",
-        signAr: "الوجه: نقص تصبغ منتشر / وجه قمري",
-        deficiency: "Protein (Calcium noted in PDF)",
-        deficiencyAr: "البروتين (ذكر الكالسيوم بالملف)",
-        food: "Protein rich diet",
-        foodAr: "نظام غذائي غني بالبروتين"
-      },
-      {
-        id: "face_paresthesia",
-        sign: "Face: Facial Paresthesias",
-        signAr: "الوجه: تنميل الوجه",
-        deficiency: "Calcium",
-        deficiencyAr: "الكالسيوم",
-        food: "Dairy, calcium sources",
-        foodAr: "الألبان، مصادر الكالسيوم"
-      },
-      {
         id: "eyes_pale",
-        sign: "Eyes: Pale Conjunctivae",
-        signAr: "العين: شحوب الملتحمة",
+        sign: "Pale Conjunctivae",
+        signAr: "شحوب الملتحمة",
         deficiency: "Iron, Folate, B12",
         deficiencyAr: "الحديد، الفولات، ب12",
         food: "Iron/B12 rich foods",
@@ -257,8 +241,8 @@ export const nfpeData: NFPESystem[] = [
       },
       {
         id: "eyes_bitot",
-        sign: "Eyes: Bitot's Spots / Xerosis",
-        signAr: "العين: بقع بيتو / جفاف القرنية",
+        sign: "Bitot's Spots / Xerosis",
+        signAr: "بقع بيتو / جفاف القرنية",
         deficiency: "Vitamin A",
         deficiencyAr: "فيتامين أ",
         food: "Liver, carrots, leafy greens",
@@ -266,8 +250,8 @@ export const nfpeData: NFPESystem[] = [
       },
       {
         id: "eyes_angular",
-        sign: "Eyes: Angular Palpebritis",
-        signAr: "العين: التهاب زوايا الجفن",
+        sign: "Angular Palpebritis",
+        signAr: "التهاب زوايا الجفن",
         deficiency: "B6, Niacin, Riboflavin",
         deficiencyAr: "ب6، النياسين، الريبوفلافين",
         food: "B-complex sources",
@@ -275,22 +259,21 @@ export const nfpeData: NFPESystem[] = [
       },
       {
         id: "eyes_lipid",
-        sign: "Eyes: Corneal Arcus / Xanthelasma",
-        signAr: "العين: قوس القرنية / لويحات صفراء",
+        sign: "Corneal Arcus / Xanthelasma",
+        signAr: "قوس القرنية / لويحات صفراء",
         deficiency: "Hyperlipidemia",
         deficiencyAr: "فرط دهون الدم",
         food: "Low fat diet",
         foodAr: "نظام قليل الدهون"
-      },
-      {
-        id: "nose_seborrhea",
-        sign: "Nose: Seborrhea (Nasolabial)",
-        signAr: "الأنف: دهنية (حول الأنف)",
-        deficiency: "Riboflavin (B2), Pyridoxine (B6)",
-        deficiencyAr: "ريبوفلافين (ب2)، بيريدوكسين (ب6)",
-        food: "Dairy, eggs, organ meats",
-        foodAr: "الألبان، البيض، لحوم الأعضاء"
-      },
+      }
+    ]
+  },
+  {
+    id: "mouth",
+    name: "Mouth & Oral Cavity",
+    nameAr: "الفم والتجويف الفموي",
+    icon: "👄",
+    items: [
       {
         id: "lips_cheilosis",
         sign: "Lips: Cheilosis / Angular Stomatitis",
@@ -326,6 +309,41 @@ export const nfpeData: NFPESystem[] = [
         deficiencyAr: "زيادة السكر (تسوس)، مشاكل الفلورايد",
         food: "Limit sugar / Check water",
         foodAr: "تقليل السكر / فحص الماء"
+      }
+    ]
+  },
+  {
+    id: "face_neck",
+    name: "Face & Neck",
+    nameAr: "الوجه والرقبة",
+    icon: "👤",
+    items: [
+      {
+        id: "face_moon",
+        sign: "Face: Diffuse Depigmentation / Moon Face",
+        signAr: "الوجه: نقص تصبغ منتشر / وجه قمري",
+        deficiency: "Protein (Calcium noted in PDF)",
+        deficiencyAr: "البروتين (ذكر الكالسيوم بالملف)",
+        food: "Protein rich diet",
+        foodAr: "نظام غذائي غني بالبروتين"
+      },
+      {
+        id: "face_paresthesia",
+        sign: "Face: Facial Paresthesias",
+        signAr: "الوجه: تنميل الوجه",
+        deficiency: "Calcium",
+        deficiencyAr: "الكالسيوم",
+        food: "Dairy, calcium sources",
+        foodAr: "الألبان، مصادر الكالسيوم"
+      },
+      {
+        id: "nose_seborrhea",
+        sign: "Nose: Seborrhea (Nasolabial)",
+        signAr: "الأنف: دهنية (حول الأنف)",
+        deficiency: "Riboflavin (B2), Pyridoxine (B6)",
+        deficiencyAr: "ريبوفلافين (ب2)، بيريدوكسين (ب6)",
+        food: "Dairy, eggs, organ meats",
+        foodAr: "الألبان، البيض، لحوم الأعضاء"
       },
       {
         id: "neck_thyroid",
@@ -348,9 +366,9 @@ export const nfpeData: NFPESystem[] = [
     ]
   },
   {
-    id: "msk_neuro",
-    name: "Musculoskeletal & Nervous",
-    nameAr: "العضلي الهيكلي والعصبي",
+    id: "msk",
+    name: "Musculoskeletal",
+    nameAr: "الجهاز العضلي الهيكلي",
     icon: "🦴",
     items: [
       {
@@ -388,7 +406,15 @@ export const nfpeData: NFPESystem[] = [
         deficiencyAr: "فيتامين سي، الثيامين",
         food: "Vitamin C rich foods",
         foodAr: "أطعمة غنية بفيتامين سي"
-      },
+      }
+    ]
+  },
+  {
+    id: "neuro",
+    name: "Neurological",
+    nameAr: "الجهاز العصبي",
+    icon: "🧠",
+    items: [
       {
         id: "neuro_conf",
         sign: "Neuro: Confusion / Dementia",
@@ -415,7 +441,15 @@ export const nfpeData: NFPESystem[] = [
         deficiencyAr: "الكالسيوم، المغنيسيوم",
         food: "Dairy, nuts, magnesium sources",
         foodAr: "الألبان، المكسرات، مصادر المغنيسيوم"
-      },
+      }
+    ]
+  },
+  {
+    id: "cardio",
+    name: "Cardiovascular",
+    nameAr: "القلب والأوعية",
+    icon: "❤️",
+    items: [
       {
         id: "cardio_heart",
         sign: "Cardiac: Heart Failure (Wet Beriberi)",

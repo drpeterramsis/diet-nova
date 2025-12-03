@@ -1,4 +1,6 @@
 
+
+
 import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { InputGroup, SelectGroup } from '../InputComponents';
@@ -146,7 +148,7 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
                         onClick={onOpenHeightEstimator}
                         className="absolute top-0 right-0 text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 hover:bg-blue-100"
                     >
-                        Estimate?
+                        Estimate Ht/Wt?
                     </button>
                 )}
             </div>

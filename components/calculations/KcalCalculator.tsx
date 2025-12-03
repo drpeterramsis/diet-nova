@@ -1,4 +1,6 @@
 
+
+
 import React, { useEffect, useState } from 'react';
 import { useKcalCalculations, KcalInitialData } from './hooks/useKcalCalculations';
 import PersonalInfoCard from './parts/PersonalInfoCard';
@@ -111,6 +113,12 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
 
   const applyEstimatedHeight = (h: number) => {
       inputs.setHeight(h);
+      setShowHeightEstimator(false);
+  };
+
+  const applyEstimatedWeight = (w: number) => {
+      inputs.setCurrentWeight(w);
+      inputs.setSelectedWeight(w);
       setShowHeightEstimator(false);
   };
 
@@ -243,12 +251,13 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
 
       </div>
 
-      {/* Height Estimator Modal */}
+      {/* Height/Weight Estimator Modal */}
       {showHeightEstimator && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
               <HeightEstimator 
                   onClose={() => setShowHeightEstimator(false)}
                   onApplyHeight={applyEstimatedHeight}
+                  onApplyWeight={applyEstimatedWeight}
                   initialData={{
                       gender: inputs.gender,
                       age: inputs.age

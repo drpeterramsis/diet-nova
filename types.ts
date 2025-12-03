@@ -11,6 +11,8 @@
 
 
 
+
+
 export type Language = 'en' | 'ar';
 
 export interface UserProfile {
@@ -427,12 +429,18 @@ export interface Translation {
       title: string;
       ulna: string;
       knee: string;
+      weight: string;
       ulnaLength: string;
       kneeHeight: string;
       estimatedHeight: string;
+      estimatedWeight: string;
       ageGroup: string;
       equation: string;
       chumlea: string;
       bapen: string;
+      mac: string;
+      cc: string;
+      ssf: string;
+      sisf: string;
   };
 }
