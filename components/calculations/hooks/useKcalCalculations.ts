@@ -59,9 +59,9 @@ export interface KcalResults {
       note: string;
   };
   m1?: {
-    under: number[];
-    norm: number[];
-    over: number[];
+    bmiValue: number;
+    result: number;
+    factor: number;
   };
   m2?: {
     actual: number[];
@@ -81,6 +81,17 @@ export interface KcalResults {
         tee: number;
     };
   };
+  m4?: {
+      sedentary: number;
+      moderate: number;
+      heavy: number;
+      status: 'Overweight' | 'Normal' | 'Underweight';
+  };
+  m5?: {
+      result: number;
+      category: string;
+      notes: string[];
+  }
 }
 
 export interface PediatricAge {
@@ -434,7 +445,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const recommendedWeight = isHighObesity ? ABW_2 : IBW_2;
     const recommendationLabel = isHighObesity ? 'useAdjusted' : 'useIdeal';
 
-    // 11. BMR & TEE (Mifflin/Harris)
+    // 11. BMR & TEE (Mifflin/Harris) - METHOD 3
     let AW_BMR_harris = 0, SW_BMR_harris = 0;
     let AW_BMR_mifflin = 0, SW_BMR_mifflin = 0;
 
@@ -476,7 +487,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         
         // Katch-McArdle BMR = 370 + (21.6 * LBM)
         const bmrKatch = 370 + (21.6 * leanBodyMass);
-        const teeKatch = bmrKatch * (physicalActivity_val || 1.2); // Default to sedentary if 0
+        const teeKatch = (bmrKatch * (physicalActivity_val || 1.2)); // Default to sedentary if 0
 
         // Target Weight Calc (if desired body fat is set)
         let targetWeight = undefined;
@@ -503,6 +514,80 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
             bmr: bmrKatch,
             tee: teeKatch
         };
+    }
+
+    // --- METHOD 1 (BMI Based) ---
+    // If BMI > 40: Weight * 15
+    // If BMI <= 40: Weight * 20
+    const m1Factor = bmiData.val > 40 ? 15 : 20;
+    const m1Result = weight * m1Factor;
+
+    // --- METHOD 4 (Ratio Equation) ---
+    // Determine status
+    let m4Status: 'Overweight' | 'Normal' | 'Underweight' = 'Normal';
+    if (bmiData.val < 18.5) m4Status = 'Underweight';
+    else if (bmiData.val >= 25) m4Status = 'Overweight';
+    else m4Status = 'Normal';
+
+    let m4Factors = { sedentary: 30, moderate: 35, heavy: 40 }; // Default Normal
+    
+    if (m4Status === 'Overweight') {
+        m4Factors = { sedentary: 22.5, moderate: 30, heavy: 35 }; // 20-25 averaged to 22.5
+    } else if (m4Status === 'Underweight') {
+        m4Factors = { sedentary: 35, moderate: 40, heavy: 47.5 }; // 45-50 averaged to 47.5
+    }
+
+    const m4Result = {
+        sedentary: weight * m4Factors.sedentary,
+        moderate: weight * m4Factors.moderate,
+        heavy: weight * m4Factors.heavy,
+        status: m4Status
+    };
+
+    // --- METHOD 5 (Category Calorie Requirement) ---
+    let m5Result = 0;
+    let m5Category = '';
+    const m5Notes: string[] = [];
+
+    if (age < 12) {
+        // Child Logic
+        if (age <= 1) {
+            m5Result = 1000;
+            m5Category = 'Child (First Year)';
+        } else {
+            // > 1 year
+            const base = 1000;
+            if (gender === 'female') {
+                m5Result = base + (100 * age);
+                m5Category = 'Girl (1-12y)';
+            } else {
+                m5Result = base + (125 * age);
+                m5Category = 'Boy (1-12y)';
+            }
+        }
+    } else {
+        // Adult Logic
+        // Base category
+        let baseFactor = 30; // Ideal
+        if (bmiData.val >= 25) { baseFactor = 20; m5Category = 'Adult (Overweight)'; }
+        else if (bmiData.val < 18.5) { baseFactor = 40; m5Category = 'Adult (Underweight)'; }
+        else { m5Category = 'Adult (Ideal Weight)'; }
+
+        // Calc base
+        m5Result = weight * baseFactor;
+
+        // Elderly Adjustment (> 50y)
+        if (age > 50) {
+            // Deduct 10% per decade AFTER 50 (e.g. 60y = -10%, 70y = -20%)
+            // Assuming decade starts at 60 for the first 10% drop based on "additional decade"
+            const decadesOver50 = Math.floor((age - 50) / 10);
+            if (decadesOver50 > 0) {
+                const reductionPct = decadesOver50 * 10;
+                const reductionVal = m5Result * (reductionPct / 100);
+                m5Result -= reductionVal;
+                m5Notes.push(`Elderly Adjustment: -${reductionPct}%`);
+            }
+        }
     }
 
     setResults({
@@ -536,9 +621,9 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
 
         // Methods
         m1: {
-            under: [selectedWeight * 35, selectedWeight * 40, selectedWeight * 45],
-            norm: [selectedWeight * 30, selectedWeight * 35, selectedWeight * 40],
-            over: [selectedWeight * 20, selectedWeight * 30, selectedWeight * 35]
+            bmiValue: bmiData.val,
+            factor: m1Factor,
+            result: m1Result
         },
         m2: {
             actual: [weight * 25, weight * 30, weight * 35, weight * 40],
@@ -547,13 +632,22 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         m3: {
             harris: {
                 bmr: [AW_BMR_harris, SW_BMR_harris],
-                tee: [AW_BMR_harris * physicalActivity_val, SW_BMR_harris * physicalActivity_val]
+                tee: [AW_BMR_harris * physicalActivity_val * 1.1, SW_BMR_harris * physicalActivity_val * 1.1] // Added 10% TEF (x1.1)
             },
             mifflin: {
                 bmr: [AW_BMR_mifflin, SW_BMR_mifflin],
-                tee: [AW_BMR_mifflin * physicalActivity_val, SW_BMR_mifflin * physicalActivity_val]
+                tee: [AW_BMR_mifflin * physicalActivity_val * 1.1, SW_BMR_mifflin * physicalActivity_val * 1.1] // Added 10% TEF (x1.1)
             },
-            katch: katchData
+            katch: katchData ? {
+                bmr: katchData.bmr,
+                tee: katchData.tee * 1.1 // Added 10% TEF
+            } : undefined
+        },
+        m4: m4Result,
+        m5: {
+            result: m5Result,
+            category: m5Category,
+            notes: m5Notes
         }
     });
 

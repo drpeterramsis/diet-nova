@@ -15,8 +15,8 @@ const Encyclopedia: React.FC = () => {
 
   // Logic for Vitamins & Minerals Sector
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'All' | 'Vitamin' | 'Mineral'>('All');
-  const [viewMode, setViewMode] = useState<'cards' | 'chart'>('chart');
+  const [activeFilter, setActiveFilter] = useState<'All' | 'Vitamin' | 'Mineral' | 'Definition'>('All');
+  const [viewMode, setViewMode] = useState<'cards' | 'chart'>('cards'); // Default to cards
   
   // Logic for Drugs Sector
   const [drugSearchQuery, setDrugSearchQuery] = useState('');
@@ -104,9 +104,9 @@ const Encyclopedia: React.FC = () => {
                     <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:bg-blue-100 transition">
                         💊
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Vitamins & Minerals</h3>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Nutrients & Definitions</h3>
                     <p className="text-sm text-gray-500 mb-4">
-                        Comprehensive chart of micronutrients, their functions, deficiency symptoms, and food sources.
+                        Comprehensive chart of vitamins, minerals, and key nutritional definitions.
                     </p>
                     <button className="mt-auto text-blue-600 font-bold text-sm bg-blue-50 px-4 py-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition w-full">
                         View Chart & Cards
@@ -289,7 +289,7 @@ const Encyclopedia: React.FC = () => {
            >
                <span>←</span> Back to Sectors
            </button>
-           <h2 className="text-2xl font-bold text-gray-800">Vitamins & Minerals Guide</h2>
+           <h2 className="text-2xl font-bold text-gray-800">Nutrients & Definitions Guide</h2>
       </div>
 
       {/* Controls */}
@@ -311,14 +311,17 @@ const Encyclopedia: React.FC = () => {
             {/* View Toggles */}
             <div className="flex gap-4 items-center flex-wrap justify-center">
                 {/* Type Filter */}
-                <div className="flex bg-gray-100 p-1 rounded-lg">
-                    {(['All', 'Vitamin', 'Mineral'] as const).map(filter => (
+                <div className="flex bg-gray-100 p-1 rounded-lg flex-wrap justify-center gap-1">
+                    {(['All', 'Definition', 'Vitamin', 'Mineral'] as const).map(filter => (
                         <button
                             key={filter}
                             onClick={() => setActiveFilter(filter)}
                             className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${activeFilter === filter ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
-                            {filter === 'All' ? t.encyclopedia.filterAll : filter === 'Vitamin' ? t.encyclopedia.filterVitamins : t.encyclopedia.filterMinerals}
+                            {filter === 'All' ? t.encyclopedia.filterAll : 
+                             filter === 'Vitamin' ? t.encyclopedia.filterVitamins : 
+                             filter === 'Mineral' ? t.encyclopedia.filterMinerals : 
+                             'Definitions'}
                         </button>
                     ))}
                 </div>
@@ -349,7 +352,7 @@ const Encyclopedia: React.FC = () => {
                   <table className="w-full text-left border-collapse">
                       <thead className="bg-gray-50 text-gray-700 uppercase text-xs">
                           <tr>
-                              <th className="p-4 border-b w-1/5 bg-gray-50 sticky left-0 z-10">{lang === 'ar' ? 'المغذيات' : 'Nutrient'}</th>
+                              <th className="p-4 border-b w-1/5 bg-gray-50 sticky left-0 z-10">{lang === 'ar' ? 'المغذيات' : 'Item Name'}</th>
                               <th className="p-4 border-b w-1/4">{t.encyclopedia.function}</th>
                               <th className="p-4 border-b w-1/4">{t.encyclopedia.sources}</th>
                               <th className="p-4 border-b w-1/4">{t.encyclopedia.deficiency}</th>
@@ -360,7 +363,11 @@ const Encyclopedia: React.FC = () => {
                               <tr key={item.id} className="hover:bg-blue-50/30 transition">
                                   <td className="p-4 align-top font-medium bg-white sticky left-0 border-r border-gray-50 group-hover:bg-blue-50/10">
                                       <div className="text-[var(--color-primary-dark)] text-base">{item.name}</div>
-                                      <span className={`text-[10px] px-2 py-0.5 rounded-full mt-1 inline-block ${item.category === 'Vitamin' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'}`}>
+                                      <span className={`text-[10px] px-2 py-0.5 rounded-full mt-1 inline-block ${
+                                          item.category === 'Vitamin' ? 'bg-orange-100 text-orange-800' : 
+                                          item.category === 'Definition' ? 'bg-purple-100 text-purple-800' :
+                                          'bg-blue-100 text-blue-800'
+                                      }`}>
                                           {item.category}
                                       </span>
                                   </td>
@@ -381,11 +388,23 @@ const Encyclopedia: React.FC = () => {
             {filteredItems.map(item => (
                 <div key={item.id} className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-xl transition duration-300 flex flex-col">
                     {/* Card Header */}
-                    <div className={`p-4 border-b border-gray-100 flex justify-between items-start ${item.category === 'Vitamin' ? 'bg-orange-50' : 'bg-blue-50'}`}>
-                        <h3 className={`font-bold text-xl ${item.category === 'Vitamin' ? 'text-orange-700' : 'text-blue-700'}`}>
+                    <div className={`p-4 border-b border-gray-100 flex justify-between items-start ${
+                        item.category === 'Vitamin' ? 'bg-orange-50' : 
+                        item.category === 'Definition' ? 'bg-purple-50' : 
+                        'bg-blue-50'
+                    }`}>
+                        <h3 className={`font-bold text-xl ${
+                            item.category === 'Vitamin' ? 'text-orange-700' : 
+                            item.category === 'Definition' ? 'text-purple-700' : 
+                            'text-blue-700'
+                        }`}>
                             {item.name}
                         </h3>
-                        <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase tracking-wider ${item.category === 'Vitamin' ? 'bg-orange-200 text-orange-800' : 'bg-blue-200 text-blue-800'}`}>
+                        <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase tracking-wider ${
+                            item.category === 'Vitamin' ? 'bg-orange-200 text-orange-800' : 
+                            item.category === 'Definition' ? 'bg-purple-200 text-purple-800' : 
+                            'bg-blue-200 text-blue-800'
+                        }`}>
                             {item.category}
                         </span>
                     </div>

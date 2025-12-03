@@ -2,13 +2,38 @@
 export interface EncyclopediaItem {
   id: string;
   name: string;
-  category: 'Vitamin' | 'Mineral';
+  category: 'Vitamin' | 'Mineral' | 'Definition';
   function: string;
   sources: string;
   deficiency: string;
 }
 
 export const encyclopediaData: EncyclopediaItem[] = [
+  // DEFINITIONS
+  {
+    id: 'def_bm',
+    name: 'Basal Metabolism',
+    category: 'Definition',
+    function: 'The amount of energy required by an individual in the resting state, for such functions as breathing and circulation of the blood.',
+    sources: '-',
+    deficiency: '-'
+  },
+  {
+    id: 'def_bmr',
+    name: 'Basal Metabolic Rate (BMR)',
+    category: 'Definition',
+    function: 'The minimum caloric requirement needed to sustain life in a resting individual. It can be looked at as being the amount of energy (measured in calories) expended by the body to remain in bed asleep all day.',
+    sources: '60–80% of Total Energy Expenditure (TEE)',
+    deficiency: '-'
+  },
+  {
+    id: 'def_tee',
+    name: 'Total Energy Expenditure (TEE)',
+    category: 'Definition',
+    function: 'The amount of calories burned by the human body in one day adjusted to the amount of activity.\n\nTEE = BMR (60-80%) + Diet-induced thermogenesis (~10%) + Activity energy expenditure (~15-30%)',
+    sources: '-',
+    deficiency: '-'
+  },
   // VITAMINS
   {
     id: 'vit_a',
