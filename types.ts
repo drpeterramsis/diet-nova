@@ -5,6 +5,8 @@
 
 
 
+
+
 export type Language = 'en' | 'ar';
 
 export interface UserProfile {
@@ -219,6 +221,9 @@ export interface Translation {
     age: string;
     height: string;
     waist: string;
+    hip: string;
+    whr: string;
+    whtr: string;
     activity: string;
     selectActivity: string;
     currentWeight: string;
@@ -283,7 +288,14 @@ export interface Translation {
         foot: string;
         lowerLeg: string;
         leg: string;
-    }
+    };
+    bodyFat: string;
+    bodyFatManual: string;
+    bodyFatCalc: string;
+    leanBodyMass: string;
+    fatMass: string;
+    targetWeightBF: string;
+    desiredBodyFat: string;
   };
   mealCreator: {
     searchPlaceholder: string;

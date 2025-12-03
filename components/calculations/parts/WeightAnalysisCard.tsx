@@ -50,6 +50,48 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
               </div>
           )}
 
+          {/* Body Composition Indicators (InBody / Estimates) */}
+          {r.bodyComposition && (
+              <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+                  <div className="flex justify-between items-center mb-3">
+                      <h4 className="text-xs font-bold text-purple-800 uppercase flex items-center gap-1">
+                          💪 Body Composition 
+                          <span className="text-[9px] font-normal opacity-70 bg-white px-1 rounded">
+                              {r.bodyComposition.bodyFatSource}
+                          </span>
+                      </h4>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center mb-2">
+                      <div className="bg-white p-2 rounded shadow-sm">
+                          <div className="text-[10px] text-gray-500 uppercase">{t.kcal.bodyFat}</div>
+                          <div className="font-bold text-purple-700">{r.bodyComposition.bodyFatPercent}%</div>
+                      </div>
+                      <div className="bg-white p-2 rounded shadow-sm">
+                          <div className="text-[10px] text-gray-500 uppercase">{t.kcal.fatMass}</div>
+                          <div className="font-bold text-gray-700">{r.bodyComposition.fatMass} <span className="text-xs font-normal">kg</span></div>
+                      </div>
+                      <div className="bg-white p-2 rounded shadow-sm">
+                          <div className="text-[10px] text-gray-500 uppercase">{t.kcal.leanBodyMass}</div>
+                          <div className="font-bold text-gray-700">{r.bodyComposition.leanBodyMass} <span className="text-xs font-normal">kg</span></div>
+                      </div>
+                  </div>
+                  
+                  {r.bodyComposition.targetWeight && (
+                      <div className="mt-2 pt-2 border-t border-purple-200 text-center">
+                          <div className="text-[10px] text-purple-600 font-bold uppercase mb-1">{t.kcal.targetWeightBF}</div>
+                          <div className="text-lg font-mono font-bold text-purple-800">
+                              {r.bodyComposition.targetWeight} <span className="text-xs">kg</span>
+                          </div>
+                          {r.bodyComposition.targetWeightDiff && (
+                              <div className="text-xs text-gray-500">
+                                  To lose: {r.bodyComposition.targetWeightDiff} kg
+                              </div>
+                          )}
+                      </div>
+                  )}
+              </div>
+          )}
+
           {/* Body Composition Indicators (WHR & WHtR) */}
           {(r.whr || r.whtr) && (
               <div className="grid grid-cols-2 gap-3">
@@ -131,7 +173,7 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
           </div>
 
           <div className="text-[10px] text-gray-400 italic bg-gray-50 p-2 rounded">
-              💡 Tip: If unable to measure Height/Weight, BMI can be estimated using MUAC (Mid-Upper Arm Circumference).
+              💡 Tip: If unable to measure Height/Weight, BMI can be estimated using MUAC.
           </div>
       </div>
     </div>

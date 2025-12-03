@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova - calculations Phase 2 _ v2.0.106",
-  "description": "Updates: Added Waist Hip Ratio (WHR) & Waist to Height Ratio (WHtR) calculations based on WHO and Krause guidelines.",
+  "name": "Diet-Nova - calculations Phase 2 _ v2.0.107",
+  "description": "Updates: Added InBody Calculations (Katch-McArdle BMR, Body Composition Estimates, Target Weight via Body Fat).",
   "requestFramePermissions": []
 }

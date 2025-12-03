@@ -117,23 +117,9 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results, deficit, setDeficit 
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-white/50">
-                   {/* Harris */}
+                   {/* Mifflin */}
                    <tr>
-                     <td className="py-1 text-xs uppercase tracking-wider opacity-70" colSpan={3}>Harris Benedict</td>
-                   </tr>
-                   <tr>
-                      <td className="py-1 pl-2">BMR</td>
-                      <td className="text-right font-mono">{r.m3.harris.bmr[0].toFixed(0)}</td>
-                      <td className="text-right font-mono text-green-700 font-bold">{r.m3.harris.bmr[1].toFixed(0)}</td>
-                   </tr>
-                   <tr>
-                      <td className="py-1 pl-2">TEE (Est)</td>
-                      <td className="text-right font-mono">{(r.m3.harris.tee[0] - deficit).toFixed(0)}</td>
-                      <td className="text-right font-mono text-green-700 font-bold">{(r.m3.harris.tee[1] - deficit).toFixed(0)}</td>
-                   </tr>
-                    {/* Mifflin */}
-                    <tr>
-                     <td className="py-1 text-xs uppercase tracking-wider opacity-70 pt-3" colSpan={3}>Mifflin-St Jeor</td>
+                     <td className="py-1 text-xs uppercase tracking-wider opacity-70 font-bold bg-green-50/50" colSpan={3}>Mifflin-St Jeor (Modern)</td>
                    </tr>
                    <tr>
                       <td className="py-1 pl-2">BMR</td>
@@ -144,6 +130,38 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results, deficit, setDeficit 
                       <td className="py-1 pl-2">TEE (Est)</td>
                       <td className="text-right font-mono">{(r.m3.mifflin.tee[0] - deficit).toFixed(0)}</td>
                       <td className="text-right font-mono text-green-700 font-bold">{(r.m3.mifflin.tee[1] - deficit).toFixed(0)}</td>
+                   </tr>
+
+                   {/* Katch-McArdle (If available) */}
+                   {r.m3.katch && (
+                       <>
+                       <tr>
+                         <td className="py-1 text-xs uppercase tracking-wider opacity-70 font-bold bg-purple-50/50 pt-3" colSpan={3}>Katch-McArdle (InBody/LBM)</td>
+                       </tr>
+                       <tr>
+                          <td className="py-1 pl-2">BMR (Based on LBM)</td>
+                          <td className="text-right font-mono text-purple-700 font-bold" colSpan={2}>{r.m3.katch.bmr.toFixed(0)}</td>
+                       </tr>
+                       <tr>
+                          <td className="py-1 pl-2">TEE (Est)</td>
+                          <td className="text-right font-mono text-purple-700 font-bold" colSpan={2}>{(r.m3.katch.tee - deficit).toFixed(0)}</td>
+                       </tr>
+                       </>
+                   )}
+
+                   {/* Harris */}
+                   <tr>
+                     <td className="py-1 text-xs uppercase tracking-wider opacity-70 pt-3" colSpan={3}>Harris Benedict (Old)</td>
+                   </tr>
+                   <tr>
+                      <td className="py-1 pl-2">BMR</td>
+                      <td className="text-right font-mono">{r.m3.harris.bmr[0].toFixed(0)}</td>
+                      <td className="text-right font-mono text-green-700 font-bold">{r.m3.harris.bmr[1].toFixed(0)}</td>
+                   </tr>
+                   <tr>
+                      <td className="py-1 pl-2">TEE (Est)</td>
+                      <td className="text-right font-mono">{(r.m3.harris.tee[0] - deficit).toFixed(0)}</td>
+                      <td className="text-right font-mono text-green-700 font-bold">{(r.m3.harris.tee[1] - deficit).toFixed(0)}</td>
                    </tr>
                  </tbody>
                </table>

@@ -149,7 +149,7 @@ export const en: Translation = {
     method2: "Method 2",
     method2Desc: "Activity-based Kcal",
     method3: "Method 3",
-    method3Desc: "BMR & TEE",
+    method3Desc: "BMR & TEE (Mifflin/Katch)",
     weightLoss: "Weight Loss",
     dryWeight: "Dry Weight",
     idealWeightSimple: "Ideal Body Weight (Simple)",
@@ -197,7 +197,14 @@ export const en: Translation = {
         foot: "Foot (1.5%)",
         lowerLeg: "Lower Leg (4.4%)",
         leg: "Entire Leg (16.0%)"
-    }
+    },
+    bodyFat: "Body Fat %",
+    bodyFatManual: "Body Fat % (Manual/InBody)",
+    bodyFatCalc: "Body Fat % (Deurenberg Eq)",
+    leanBodyMass: "Lean Body Mass (LBM)",
+    fatMass: "Fat Mass (FM)",
+    targetWeightBF: "Target Wt (Based on Desired Fat %)",
+    desiredBodyFat: "Desired BF %"
   },
   mealCreator: {
     searchPlaceholder: "Search food...",
@@ -473,7 +480,7 @@ export const ar: Translation = {
     method2: "الطريقة 2",
     method2Desc: "بناءً على النشاط",
     method3: "الطريقة 3",
-    method3Desc: "معدل الأيض وصرف الطاقة",
+    method3Desc: "معدل الأيض (InBody/Mifflin)",
     weightLoss: "فقدان الوزن",
     dryWeight: "الوزن الجاف",
     idealWeightSimple: "الوزن المثالي (بسيط)",
@@ -521,7 +528,14 @@ export const ar: Translation = {
         foot: "قدم (1.5%)",
         lowerLeg: "ساق سفلية (4.4%)",
         leg: "ساق كاملة (16.0%)"
-    }
+    },
+    bodyFat: "نسبة الدهون %",
+    bodyFatManual: "نسبة الدهون (يدوي / InBody)",
+    bodyFatCalc: "نسبة الدهون (معادلة Deurenberg)",
+    leanBodyMass: "الكتلة العضلية الصافية (LBM)",
+    fatMass: "كتلة الدهون (FM)",
+    targetWeightBF: "الوزن المستهدف (بناءً على الدهون)",
+    desiredBodyFat: "نسبة الدهون المستهدفة %"
   },
   mealCreator: {
     searchPlaceholder: "ابحث عن الطعام...",

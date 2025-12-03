@@ -41,6 +41,14 @@ export interface KcalResults {
       status: string;
       color: string;
   };
+  bodyComposition?: {
+      bodyFatPercent: number;
+      bodyFatSource: 'Manual' | 'Estimated';
+      fatMass: number;
+      leanBodyMass: number;
+      targetWeight?: number;
+      targetWeightDiff?: number;
+  };
   elderlyInfo?: {
       isElderly: boolean;
       note: string;
@@ -62,6 +70,10 @@ export interface KcalResults {
     mifflin: {
       bmr: number[];
       tee: number[];
+    };
+    katch?: {
+        bmr: number;
+        tee: number;
     };
   };
 }
@@ -106,6 +118,11 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
   const [ascites, setAscites] = useState<number>(0);
   const [edema, setEdema] = useState<number>(0);
   const [amputationPercent, setAmputationPercent] = useState<number>(0);
+  
+  // New InBody/Body Comp Inputs
+  const [bodyFatPercent, setBodyFatPercent] = useState<number | ''>('');
+  const [desiredBodyFat, setDesiredBodyFat] = useState<number | ''>('');
+
   const [deficit, setDeficit] = useState<number>(0);
   
   // Results
@@ -187,6 +204,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       setAscites(0);
       setEdema(0);
       setAmputationPercent(0);
+      setBodyFatPercent('');
+      setDesiredBodyFat('');
       setDeficit(0);
       setReqKcal('');
   };
@@ -380,7 +399,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const recommendedWeight = isHighObesity ? ABW_2 : IBW_2;
     const recommendationLabel = isHighObesity ? 'useAdjusted' : 'useIdeal';
 
-    // 10. BMR & TEE
+    // 10. BMR & TEE (Mifflin/Harris)
     let AW_BMR_harris = 0, SW_BMR_harris = 0;
     let AW_BMR_mifflin = 0, SW_BMR_mifflin = 0;
 
@@ -394,6 +413,61 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       SW_BMR_harris = 655.1 + (9.563 * selectedWeight) + (1.850 * height_cm) - (4.676 * age_years);
       AW_BMR_mifflin = (10 * weight) + (6.25 * height_cm) - (5 * age_years) - 161;
       SW_BMR_mifflin = (10 * selectedWeight) + (6.25 * height_cm) - (5 * age_years) - 161;
+    }
+
+    // 11. Body Composition & Katch-McArdle
+    let bodyCompData = undefined;
+    let katchData = undefined;
+    
+    // Determine Body Fat %: Manual OR Estimated (Deurenberg)
+    let finalBodyFat = 0;
+    let bodyFatSource: 'Manual' | 'Estimated' = 'Estimated';
+
+    if (bodyFatPercent && Number(bodyFatPercent) > 0) {
+        finalBodyFat = Number(bodyFatPercent);
+        bodyFatSource = 'Manual';
+    } else if (bmiData.val > 0 && age_years > 0) {
+        // Deurenberg Equation: (1.20 * BMI) + (0.23 * Age) - (10.8 * sex) - 5.4
+        // sex: men=1, women=0
+        const sexFactor = gender === 'male' ? 1 : 0;
+        finalBodyFat = (1.20 * bmiData.val) + (0.23 * age_years) - (10.8 * sexFactor) - 5.4;
+        if (finalBodyFat < 0) finalBodyFat = 0;
+    }
+
+    if (finalBodyFat > 0 && weight > 0) {
+        // Calculate Fat Mass and Lean Body Mass
+        const fatMass = weight * (finalBodyFat / 100);
+        const leanBodyMass = weight - fatMass;
+        
+        // Katch-McArdle BMR = 370 + (21.6 * LBM)
+        const bmrKatch = 370 + (21.6 * leanBodyMass);
+        const teeKatch = bmrKatch * (physicalActivity_val || 1.2); // Default to sedentary if 0
+
+        // Target Weight Calc (if desired body fat is set)
+        let targetWeight = undefined;
+        let targetWeightDiff = undefined;
+        if (desiredBodyFat && Number(desiredBodyFat) > 0) {
+            // Target Weight = LBM / (1 - DesiredBF%)
+            const desiredDecimal = Number(desiredBodyFat) / 100;
+            if (desiredDecimal < 1) {
+                targetWeight = leanBodyMass / (1 - desiredDecimal);
+                targetWeightDiff = weight - targetWeight;
+            }
+        }
+
+        bodyCompData = {
+            bodyFatPercent: Number(finalBodyFat.toFixed(1)),
+            bodyFatSource,
+            fatMass: Number(fatMass.toFixed(1)),
+            leanBodyMass: Number(leanBodyMass.toFixed(1)),
+            targetWeight: targetWeight ? Number(targetWeight.toFixed(1)) : undefined,
+            targetWeightDiff: targetWeightDiff ? Number(targetWeightDiff.toFixed(1)) : undefined
+        };
+
+        katchData = {
+            bmr: bmrKatch,
+            tee: teeKatch
+        };
     }
 
     setResults({
@@ -419,6 +493,9 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         waistRisk,
         whr: whrData,
         whtr: whtrData,
+        
+        bodyComposition: bodyCompData,
+        
         elderlyInfo,
 
         // Methods
@@ -439,11 +516,12 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
             mifflin: {
                 bmr: [AW_BMR_mifflin, SW_BMR_mifflin],
                 tee: [AW_BMR_mifflin * physicalActivity_val, SW_BMR_mifflin * physicalActivity_val]
-            }
+            },
+            katch: katchData
         }
     });
 
-  }, [gender, age, height, waist, hip, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, amputationPercent, deficit, t]);
+  }, [gender, age, height, waist, hip, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, amputationPercent, bodyFatPercent, desiredBodyFat, deficit, t]);
 
   return {
     inputs: {
@@ -464,6 +542,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       ascites, setAscites,
       edema, setEdema,
       amputationPercent, setAmputationPercent,
+      bodyFatPercent, setBodyFatPercent,
+      desiredBodyFat, setDesiredBodyFat,
       deficit, setDeficit,
       reqKcal, setReqKcal
     },

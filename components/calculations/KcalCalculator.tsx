@@ -32,7 +32,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               if (data.inputs.age) inputs.setAge(data.inputs.age);
               if (data.inputs.height) inputs.setHeight(data.inputs.height);
               if (data.inputs.waist) inputs.setWaist(data.inputs.waist);
-              if (data.inputs.hip) inputs.setHip(data.inputs.hip); // Load Hip
+              if (data.inputs.hip) inputs.setHip(data.inputs.hip);
               
               if (data.inputs.physicalActivity) inputs.setPhysicalActivity(data.inputs.physicalActivity);
               if (data.inputs.currentWeight) inputs.setCurrentWeight(data.inputs.currentWeight);
@@ -45,6 +45,10 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               if (data.inputs.changeDuration) inputs.setChangeDuration(data.inputs.changeDuration);
               if (data.inputs.amputationPercent && inputs.setAmputationPercent) inputs.setAmputationPercent(data.inputs.amputationPercent);
               
+              // New InBody/Body Fat fields
+              if (data.inputs.bodyFatPercent && inputs.setBodyFatPercent) inputs.setBodyFatPercent(data.inputs.bodyFatPercent);
+              if (data.inputs.desiredBodyFat && inputs.setDesiredBodyFat) inputs.setDesiredBodyFat(data.inputs.desiredBodyFat);
+
               // Hydrate reqKcal
               if (data.inputs.reqKcal) inputs.setReqKcal(data.inputs.reqKcal);
           }
@@ -64,7 +68,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               age: inputs.age,
               height: inputs.height,
               waist: inputs.waist,
-              hip: inputs.hip, // Save Hip
+              hip: inputs.hip,
               currentWeight: inputs.currentWeight,
               selectedWeight: inputs.selectedWeight,
               usualWeight: inputs.usualWeight,
@@ -74,7 +78,11 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               edema: inputs.edema,
               changeDuration: inputs.changeDuration,
               amputationPercent: inputs.amputationPercent,
-              reqKcal: inputs.reqKcal // Save the required kcal manually input by user
+              
+              bodyFatPercent: inputs.bodyFatPercent,
+              desiredBodyFat: inputs.desiredBodyFat,
+
+              reqKcal: inputs.reqKcal
           },
           results: results // Save calculated results for reference
       };
@@ -166,7 +174,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
 
               height={inputs.height} setHeight={inputs.setHeight}
               waist={inputs.waist} setWaist={inputs.setWaist}
-              hip={inputs.hip} setHip={inputs.setHip} // Pass Hip Props
+              hip={inputs.hip} setHip={inputs.setHip}
               physicalActivity={inputs.physicalActivity} setPhysicalActivity={inputs.setPhysicalActivity}
               
               onOpenHeightEstimator={() => setShowHeightEstimator(true)}
@@ -180,6 +188,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               ascites={inputs.ascites} setAscites={inputs.setAscites}
               edema={inputs.edema} setEdema={inputs.setEdema}
               amputationPercent={inputs.amputationPercent} setAmputationPercent={inputs.setAmputationPercent}
+              
+              bodyFatPercent={inputs.bodyFatPercent} setBodyFatPercent={inputs.setBodyFatPercent}
             />
 
             <MethodsCard 
@@ -198,6 +208,25 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                     reqKcal={inputs.reqKcal}
                     setReqKcal={inputs.setReqKcal}
                 />
+                
+                {inputs.setDesiredBodyFat && (
+                    <div className="card bg-white p-4">
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                            {t.kcal.desiredBodyFat}
+                        </label>
+                        <input 
+                            type="number" 
+                            className="w-full p-2 border rounded"
+                            placeholder="e.g. 15"
+                            value={inputs.desiredBodyFat || ''}
+                            onChange={(e) => inputs.setDesiredBodyFat(e.target.value === '' ? '' : Number(e.target.value))}
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1">
+                            Enter target % to calc required weight loss.
+                        </p>
+                    </div>
+                )}
+
                 <WeightAnalysisCard results={results} />
             </div>
         </div>
