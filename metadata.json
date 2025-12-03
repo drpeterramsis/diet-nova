@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova - calculations Phase 2 _ v2.0.102",
-  "description": "Updates: Verified Mendenhall's Figure implementation for Dry Weight. Added 1 Year Malnutrition check.",
+  "name": "Diet-Nova - calculations Phase 2 _ v2.0.103",
+  "description": "Updates: Added Amputation Adjustment (Osterkamp) to Kcal Calculator.",
   "requestFramePermissions": []
 }

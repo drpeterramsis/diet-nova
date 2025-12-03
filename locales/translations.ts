@@ -1,5 +1,6 @@
 
 
+
 import { Translation } from "../types";
 
 export const en: Translation = {
@@ -177,7 +178,18 @@ export const en: Translation = {
     threshold: "Threshold (>30% IBW)",
     recommendation: "Recommendation",
     useAdjusted: "Use Adjusted Weight",
-    useIdeal: "Use Ideal Weight"
+    useIdeal: "Use Ideal Weight",
+    amputations: "Amputations (Osterkamp)",
+    amputationPercent: "Amputation %",
+    adjustedWeightAmp: "Adj. Wt. (Amputation)",
+    ampItems: {
+        hand: "Hand (0.7%)",
+        forearm: "Forearm (1.6%)",
+        arm: "Entire Arm (5.0%)",
+        foot: "Foot (1.5%)",
+        lowerLeg: "Lower Leg (4.4%)",
+        leg: "Entire Leg (16.0%)"
+    }
   },
   mealCreator: {
     searchPlaceholder: "Search food...",
@@ -467,7 +479,18 @@ export const ar: Translation = {
     threshold: "الحد الأقصى (>30% من المثالي)",
     recommendation: "التوصية",
     useAdjusted: "استخدم الوزن المعدل",
-    useIdeal: "استخدم الوزن المثالي"
+    useIdeal: "استخدم الوزن المثالي",
+    amputations: "البتر (أوستر كامب)",
+    amputationPercent: "نسبة البتر %",
+    adjustedWeightAmp: "الوزن المعدل (بتر)",
+    ampItems: {
+        hand: "يد (0.7%)",
+        forearm: "ساعد (1.6%)",
+        arm: "ذراع كامل (5.0%)",
+        foot: "قدم (1.5%)",
+        lowerLeg: "ساق سفلية (4.4%)",
+        leg: "ساق كاملة (16.0%)"
+    }
   },
   mealCreator: {
     searchPlaceholder: "ابحث عن الطعام...",

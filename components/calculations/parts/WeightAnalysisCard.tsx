@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { KcalResults } from '../hooks/useKcalCalculations';
@@ -67,12 +68,21 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
                   <div className="font-mono font-bold text-gray-700">{r.ABW || '-'} <span className="text-xs font-normal text-gray-400">kg</span></div>
               </div>
 
-              <div className="p-2.5 bg-gray-50 rounded border border-gray-100">
-                  <div className="mb-1">
-                      <span className="text-[10px] text-gray-500 font-bold uppercase">{t.kcal.threshold}</span>
+              {r.adjustedWeightAmputation ? (
+                  <div className="p-2.5 bg-red-50 rounded border border-red-100">
+                      <div className="mb-1">
+                          <span className="text-[10px] text-red-600 font-bold uppercase">{t.kcal.adjustedWeightAmp}</span>
+                      </div>
+                      <div className="font-mono font-bold text-red-800">{r.adjustedWeightAmputation} <span className="text-xs font-normal text-red-400">kg</span></div>
                   </div>
-                  <div className="font-mono font-bold text-gray-600">{r.protocol?.threshold.toFixed(1) || '-'} <span className="text-xs font-normal text-gray-400">kg</span></div>
-              </div>
+              ) : (
+                  <div className="p-2.5 bg-gray-50 rounded border border-gray-100">
+                      <div className="mb-1">
+                          <span className="text-[10px] text-gray-500 font-bold uppercase">{t.kcal.threshold}</span>
+                      </div>
+                      <div className="font-mono font-bold text-gray-600">{r.protocol?.threshold.toFixed(1) || '-'} <span className="text-xs font-normal text-gray-400">kg</span></div>
+                  </div>
+              )}
           </div>
       </div>
     </div>

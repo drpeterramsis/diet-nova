@@ -1,5 +1,6 @@
 
 
+
 export type Language = 'en' | 'ar';
 
 export interface UserProfile {
@@ -260,6 +261,17 @@ export interface Translation {
     recommendation: string;
     useAdjusted: string;
     useIdeal: string;
+    amputations: string;
+    amputationPercent: string;
+    adjustedWeightAmp: string;
+    ampItems: {
+        hand: string;
+        forearm: string;
+        arm: string;
+        foot: string;
+        lowerLeg: string;
+        leg: string;
+    }
   };
   mealCreator: {
     searchPlaceholder: string;

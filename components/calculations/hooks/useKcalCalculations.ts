@@ -1,4 +1,6 @@
 
+
+
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
@@ -19,6 +21,7 @@ export interface KcalResults {
   ABW_2: string;
   IBW_diff_val: number;
   IBW_sel_diff_val: number;
+  adjustedWeightAmputation?: string;
   protocol?: {
       ibw30: number;
       threshold: number;
@@ -85,6 +88,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
   const [changeDuration, setChangeDuration] = useState<number>(0);
   const [ascites, setAscites] = useState<number>(0);
   const [edema, setEdema] = useState<number>(0);
+  const [amputationPercent, setAmputationPercent] = useState<number>(0);
   const [deficit, setDeficit] = useState<number>(0);
   
   // Results
@@ -227,7 +231,18 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
 
     let IBW_sel_diff = weight > 0 ? ((weight - IBW_2) / weight) * 100 : 0;
 
-    // 4. BMI
+    // 4. Amputation Adjustment (Osterkamp)
+    let adjustedWeightAmputationStr = '';
+    if (amputationPercent > 0 && weight > 0) {
+        // Formula: Adjusted BW = Actual BW / (100 - % Amputation) * 100
+        const denom = 100 - amputationPercent;
+        if (denom > 0) {
+            const adj = (weight / denom) * 100;
+            adjustedWeightAmputationStr = adj.toFixed(1);
+        }
+    }
+
+    // 5. BMI
     const calculateBMI = (w: number, h: number) => {
         if (w <= 0 || h <= 0) return { val: 0, ref: '', col: '' };
         const val = w / (h * h);
@@ -242,7 +257,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const bmiData = calculateBMI(temp_weight, height_m);
     const bmiSelData = calculateBMI(selectedWeight, height_m);
 
-    // 5. Protocol Check (30% Rule)
+    // 6. Protocol Check (30% Rule)
     // Formula: If Actual > IBW + 30% IBW (i.e. IBW * 1.3), Use Adjusted Weight.
     const ibw30 = IBW_2 * 0.30;
     const threshold = IBW_2 + ibw30;
@@ -250,7 +265,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const recommendedWeight = isHighObesity ? ABW_2 : IBW_2;
     const recommendationLabel = isHighObesity ? 'useAdjusted' : 'useIdeal'; // Keys for translation
 
-    // 6. BMR & TEE
+    // 7. BMR & TEE
     let AW_BMR_harris = 0, SW_BMR_harris = 0;
     let AW_BMR_mifflin = 0, SW_BMR_mifflin = 0;
 
@@ -276,6 +291,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         IBW_2: IBW_2.toFixed(1), ABW_2: ABW_2.toFixed(1),
         IBW_diff_val: IBW_diff,
         IBW_sel_diff_val: IBW_sel_diff,
+        adjustedWeightAmputation: adjustedWeightAmputationStr,
         
         protocol: {
             ibw30,
@@ -307,7 +323,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         }
     });
 
-  }, [gender, age, height, waist, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, deficit, t]);
+  }, [gender, age, height, waist, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, amputationPercent, deficit, t]);
 
   return {
     inputs: {
@@ -326,6 +342,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       changeDuration, setChangeDuration,
       ascites, setAscites,
       edema, setEdema,
+      amputationPercent, setAmputationPercent,
       deficit, setDeficit,
       reqKcal, setReqKcal
     },

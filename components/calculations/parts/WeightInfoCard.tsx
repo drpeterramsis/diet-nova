@@ -1,5 +1,7 @@
 
-import React, { useState } from 'react';
+
+
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { InputGroup, SelectGroup } from '../InputComponents';
 
@@ -16,15 +18,90 @@ interface WeightInfoProps {
   setAscites: (v: number) => void;
   edema: number;
   setEdema: (v: number) => void;
+  amputationPercent?: number;
+  setAmputationPercent?: (v: number) => void;
 }
 
 const WeightInfoCard: React.FC<WeightInfoProps> = ({
   currentWeight, setCurrentWeight, selectedWeight, setSelectedWeight,
   usualWeight, setUsualWeight, changeDuration, setChangeDuration,
-  ascites, setAscites, edema, setEdema
+  ascites, setAscites, edema, setEdema,
+  amputationPercent, setAmputationPercent
 }) => {
   const { t } = useLanguage();
   const [showSpecialCondition, setShowSpecialCondition] = useState(false);
+  
+  // Local state for amputations
+  const [ampSelection, setAmpSelection] = useState<Record<string, number>>({
+      hand: 0,
+      forearm: 0,
+      arm: 0,
+      foot: 0,
+      lowerLeg: 0,
+      leg: 0
+  });
+
+  // Amputation Factors (Osterkamp)
+  const AMP_FACTORS = {
+      hand: 0.7,
+      forearm: 1.6, // Forearm only (below elbow)
+      arm: 5.0, // Entire arm
+      foot: 1.5,
+      lowerLeg: 4.4, // Lower leg only (below knee)
+      leg: 16.0 // Entire leg
+  };
+
+  // Recalculate percent when selection changes
+  useEffect(() => {
+      if (setAmputationPercent) {
+          let total = 0;
+          total += ampSelection.hand * AMP_FACTORS.hand;
+          // For forearm, usually means hand is also gone or it's the segment.
+          // The image labels segments. 
+          // Let's assume the user selects "Forearm" meaning Below Elbow amputation (Hand + Forearm).
+          // Wait, if image says Forearm = 1.6, that's just the segment.
+          // Below Elbow = Hand (0.7) + Forearm (1.6) = 2.3%
+          // Entire Arm = Hand + Forearm + Upper Arm (2.7) = 5.0%
+          
+          // To simplify UX, let's treat the inputs as "Total Amputation Site"
+          // Hand = 0.7
+          // Forearm (Below Elbow) = 2.3
+          // Entire Arm = 5.0
+          // Foot = 1.5
+          // Lower Leg (Below Knee) = 5.9 (1.5 + 4.4)
+          // Entire Leg = 16.0
+          
+          // BUT the user might select multiple.
+          // Let's stick to the segment values from image but label them carefully? 
+          // No, usually clinicians select "Below Knee Amputation".
+          // Let's use the standard "Osterkamp" segments but assume they are additive.
+          // Actually, let's use the keys for *segments* but the dropdowns should be intuitive.
+          
+          // Re-reading common practice: 
+          // Hand: 0.7%
+          // Forearm: 2.3% (Hand + Forearm)
+          // Entire Arm: 5.0%
+          // Foot: 1.5%
+          // Below Knee: 5.9% (Foot + Calf)
+          // Entire Leg: 16.0%
+          
+          // Let's implement these composite values for the dropdowns.
+          
+          total += ampSelection.hand * 0.7;
+          total += ampSelection.forearm * 2.3;
+          total += ampSelection.arm * 5.0;
+          
+          total += ampSelection.foot * 1.5;
+          total += ampSelection.lowerLeg * 5.9;
+          total += ampSelection.leg * 16.0;
+          
+          setAmputationPercent(Number(total.toFixed(2)));
+      }
+  }, [ampSelection]);
+
+  const updateAmp = (key: string, val: number) => {
+      setAmpSelection(prev => ({ ...prev, [key]: val }));
+  };
 
   return (
     <div className="card bg-white">
@@ -98,6 +175,73 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
                       />
                   </div>
               </div>
+
+              {setAmputationPercent && (
+                  <div className="md:col-span-2 pt-2 border-t border-gray-100 mt-2">
+                      <div className="flex justify-between items-center mb-3">
+                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                              {t.kcal.amputations}
+                          </p>
+                          <span className="text-xs font-mono bg-red-50 text-red-600 px-2 py-1 rounded border border-red-100">
+                              Total: {amputationPercent?.toFixed(1)}%
+                          </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                          {/* Hands */}
+                          <div className="p-2 bg-gray-50 rounded border border-gray-100">
+                              <label className="block text-gray-600 mb-1 font-bold">{t.kcal.ampItems.hand}</label>
+                              <select value={ampSelection.hand} onChange={(e) => updateAmp('hand', Number(e.target.value))} className="w-full p-1 border rounded">
+                                  <option value={0}>0</option>
+                                  <option value={1}>1</option>
+                                  <option value={2}>2</option>
+                              </select>
+                          </div>
+                          <div className="p-2 bg-gray-50 rounded border border-gray-100">
+                              <label className="block text-gray-600 mb-1 font-bold">{t.kcal.ampItems.forearm}</label>
+                              <select value={ampSelection.forearm} onChange={(e) => updateAmp('forearm', Number(e.target.value))} className="w-full p-1 border rounded">
+                                  <option value={0}>0</option>
+                                  <option value={1}>1</option>
+                                  <option value={2}>2</option>
+                              </select>
+                          </div>
+                          <div className="p-2 bg-gray-50 rounded border border-gray-100">
+                              <label className="block text-gray-600 mb-1 font-bold">{t.kcal.ampItems.arm}</label>
+                              <select value={ampSelection.arm} onChange={(e) => updateAmp('arm', Number(e.target.value))} className="w-full p-1 border rounded">
+                                  <option value={0}>0</option>
+                                  <option value={1}>1</option>
+                                  <option value={2}>2</option>
+                              </select>
+                          </div>
+                          
+                          {/* Legs */}
+                          <div className="p-2 bg-gray-50 rounded border border-gray-100">
+                              <label className="block text-gray-600 mb-1 font-bold">{t.kcal.ampItems.foot}</label>
+                              <select value={ampSelection.foot} onChange={(e) => updateAmp('foot', Number(e.target.value))} className="w-full p-1 border rounded">
+                                  <option value={0}>0</option>
+                                  <option value={1}>1</option>
+                                  <option value={2}>2</option>
+                              </select>
+                          </div>
+                          <div className="p-2 bg-gray-50 rounded border border-gray-100">
+                              <label className="block text-gray-600 mb-1 font-bold">{t.kcal.ampItems.lowerLeg}</label>
+                              <select value={ampSelection.lowerLeg} onChange={(e) => updateAmp('lowerLeg', Number(e.target.value))} className="w-full p-1 border rounded">
+                                  <option value={0}>0</option>
+                                  <option value={1}>1</option>
+                                  <option value={2}>2</option>
+                              </select>
+                          </div>
+                          <div className="p-2 bg-gray-50 rounded border border-gray-100">
+                              <label className="block text-gray-600 mb-1 font-bold">{t.kcal.ampItems.leg}</label>
+                              <select value={ampSelection.leg} onChange={(e) => updateAmp('leg', Number(e.target.value))} className="w-full p-1 border rounded">
+                                  <option value={0}>0</option>
+                                  <option value={1}>1</option>
+                                  <option value={2}>2</option>
+                              </select>
+                          </div>
+                      </div>
+                  </div>
+              )}
            </div>
         )}
       </div>

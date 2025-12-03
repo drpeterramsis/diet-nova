@@ -1,4 +1,6 @@
 
+
+
 import React, { useEffect, useState } from 'react';
 import { useKcalCalculations, KcalInitialData } from './hooks/useKcalCalculations';
 import PersonalInfoCard from './parts/PersonalInfoCard';
@@ -39,6 +41,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               if (data.inputs.ascites) inputs.setAscites(data.inputs.ascites);
               if (data.inputs.edema) inputs.setEdema(data.inputs.edema);
               if (data.inputs.changeDuration) inputs.setChangeDuration(data.inputs.changeDuration);
+              if (data.inputs.amputationPercent && inputs.setAmputationPercent) inputs.setAmputationPercent(data.inputs.amputationPercent);
               
               // Hydrate reqKcal
               if (data.inputs.reqKcal) inputs.setReqKcal(data.inputs.reqKcal);
@@ -64,6 +67,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               ascites: inputs.ascites,
               edema: inputs.edema,
               changeDuration: inputs.changeDuration,
+              amputationPercent: inputs.amputationPercent,
               reqKcal: inputs.reqKcal // Save the required kcal manually input by user
           },
           results: results // Save calculated results for reference
@@ -150,6 +154,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               changeDuration={inputs.changeDuration} setChangeDuration={inputs.setChangeDuration}
               ascites={inputs.ascites} setAscites={inputs.setAscites}
               edema={inputs.edema} setEdema={inputs.setEdema}
+              amputationPercent={inputs.amputationPercent} setAmputationPercent={inputs.setAmputationPercent}
             />
 
             <MethodsCard 
