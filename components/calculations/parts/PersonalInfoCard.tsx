@@ -1,10 +1,8 @@
 
-
-
 import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { InputGroup, SelectGroup } from '../InputComponents';
-import { PediatricAge } from '../hooks/useKcalCalculations';
+import { PediatricAge, PregnancyState } from '../hooks/useKcalCalculations';
 
 interface PersonalInfoProps {
   gender: 'male' | 'female';
@@ -35,6 +33,9 @@ interface PersonalInfoProps {
   physicalActivity: number;
   setPhysicalActivity: (v: number) => void;
   
+  pregnancyState?: PregnancyState;
+  setPregnancyState?: (v: PregnancyState) => void;
+
   onOpenHeightEstimator?: () => void;
 }
 
@@ -43,6 +44,7 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
   age, setAge, ageMode, setAgeMode, dob, setDob, reportDate, setReportDate, pediatricAge,
   height, setHeight, waist, setWaist, hip, setHip, mac, setMac, tsf, setTsf,
   physicalActivity, setPhysicalActivity,
+  pregnancyState, setPregnancyState,
   onOpenHeightEstimator
 }) => {
   const { t } = useLanguage();
@@ -73,6 +75,25 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Pregnancy/Lactation (Only for Female) */}
+        {gender === 'female' && age > 10 && setPregnancyState && (
+            <div className="col-span-2 bg-pink-50 p-3 rounded-lg border border-pink-100">
+                <label className="block text-xs font-bold text-pink-700 uppercase mb-2">Pregnancy / Lactation</label>
+                <select 
+                    value={pregnancyState || 'none'} 
+                    onChange={(e) => setPregnancyState(e.target.value as PregnancyState)}
+                    className="w-full p-2 border border-pink-200 rounded text-sm focus:ring-pink-400 focus:border-pink-400"
+                >
+                    <option value="none">None</option>
+                    <option value="preg_1">Pregnancy (1st Trimester)</option>
+                    <option value="preg_2">Pregnancy (2nd Trimester)</option>
+                    <option value="preg_3">Pregnancy (3rd Trimester)</option>
+                    <option value="lact_0_6">Lactation (0-6 Months)</option>
+                    <option value="lact_7_12">Lactation (7-12 Months)</option>
+                </select>
+            </div>
+        )}
 
         {/* Age Section with Auto/Manual Toggle */}
         <div className="col-span-2 md:col-span-1">

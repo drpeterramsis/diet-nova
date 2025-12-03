@@ -11,14 +11,14 @@ interface MethodsCardProps {
 
 const MethodsCard: React.FC<MethodsCardProps> = ({ results, deficit, setDeficit }) => {
   const { t } = useLanguage();
-  const [activeMethod, setActiveMethod] = useState<'method1' | 'method2' | 'method3' | 'method4' | 'method5' | 'none'>('method3');
+  const [activeMethod, setActiveMethod] = useState<'method1' | 'method2' | 'method3' | 'method4' | 'method5' | 'method6' | 'none'>('method3');
 
   const r = results;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 mb-4">
-         {['method1', 'method2', 'method3', 'method4', 'method5'].map((m, idx) => (
+         {['method1', 'method2', 'method3', 'method4', 'method5', 'method6'].map((m, idx) => (
            <button
             key={m}
             onClick={() => setActiveMethod(m as any)}
@@ -213,6 +213,27 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results, deficit, setDeficit 
                               <div className="text-xs text-blue-500 uppercase font-bold">Selected Weight</div>
                               <div className="text-lg font-mono font-bold text-blue-700">{r.m5.resultSel.toFixed(0)}</div>
                           </div>
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {/* METHOD 6 (EER) */}
+          {activeMethod === 'method6' && r.m6 && (
+              <div className="p-2 animate-fade-in">
+                  <h3 className="font-bold text-purple-800 mb-2 text-sm">M6: EER (IOM 2002)</h3>
+                  <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 text-center shadow-sm">
+                      <div className="text-xs text-purple-600 font-bold uppercase mb-1">{r.m6.label}</div>
+                      <div className="text-3xl font-extrabold text-purple-900 mb-2">
+                          {r.m6.result.toFixed(0)} <span className="text-sm font-medium">kcal</span>
+                      </div>
+                      {r.m6.note && (
+                          <div className="text-xs bg-white text-purple-700 px-3 py-1 rounded-full border border-purple-200 inline-block font-medium">
+                              {r.m6.note}
+                          </div>
+                      )}
+                      <div className="mt-3 text-[10px] text-gray-500 italic">
+                          Estimated Energy Requirement using IOM Equations based on Age, PA, Weight & Height.
                       </div>
                   </div>
               </div>

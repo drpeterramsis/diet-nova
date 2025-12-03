@@ -83,30 +83,38 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
 
           {/* Protocol Recommendation Box */}
           {r.protocol && (
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="p-2 bg-white border border-gray-200 rounded">
-                      <div className="text-gray-500 font-bold">IBW (Simple)</div>
-                      <div className="font-mono text-gray-800 font-bold">{r.IBW} kg</div>
-                  </div>
-                  <div className="p-2 bg-white border border-gray-200 rounded">
-                      <div className="text-gray-500 font-bold">IBW (Hamwi)</div>
-                      <div className="font-mono text-gray-800 font-bold">{r.IBW_2} kg</div>
-                  </div>
-                  <div className="p-2 bg-white border border-gray-200 rounded">
-                      <div className="text-gray-500 font-bold">Adj. BW</div>
-                      <div className="font-mono text-gray-800 font-bold">{r.ABW_2} kg</div>
-                  </div>
-                  {r.adjustedWeightAmputation ? (
-                      <div className="p-2 bg-red-50 border border-red-200 rounded">
-                          <div className="text-red-500 font-bold">Amp. Adj.</div>
-                          <div className="font-mono text-red-800 font-bold">{r.adjustedWeightAmputation} kg</div>
+              <div>
+                  <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded text-center">
+                      <div className="text-xs font-bold text-green-700 uppercase">✅ Recommendation</div>
+                      <div className="font-mono text-xl font-extrabold text-green-800">
+                          {r.protocol.recommendedWeight.toFixed(1)} <span className="text-sm">kg</span>
                       </div>
-                  ) : (
-                      <div className="p-2 bg-gray-50 border border-gray-200 rounded">
-                          <div className="text-gray-400 font-bold">Threshold</div>
-                          <div className="font-mono text-gray-500">{r.protocol.threshold.toFixed(1)} kg</div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="p-2 bg-white border border-gray-200 rounded">
+                          <div className="text-gray-500 font-bold">IBW (Simple)</div>
+                          <div className="font-mono text-gray-800 font-bold">{r.IBW} kg</div>
                       </div>
-                  )}
+                      <div className="p-2 bg-white border border-gray-200 rounded">
+                          <div className="text-gray-500 font-bold">IBW (Hamwi)</div>
+                          <div className="font-mono text-gray-800 font-bold">{r.IBW_2} kg</div>
+                      </div>
+                      <div className="p-2 bg-white border border-gray-200 rounded">
+                          <div className="text-gray-500 font-bold">Adj. BW</div>
+                          <div className="font-mono text-gray-800 font-bold">{r.ABW_2} kg</div>
+                      </div>
+                      {r.adjustedWeightAmputation ? (
+                          <div className="p-2 bg-red-50 border border-red-200 rounded">
+                              <div className="text-red-500 font-bold">Amp. Adj.</div>
+                              <div className="font-mono text-red-800 font-bold">{r.adjustedWeightAmputation} kg</div>
+                          </div>
+                      ) : (
+                          <div className="p-2 bg-gray-50 border border-gray-200 rounded">
+                              <div className="text-gray-400 font-bold">Threshold</div>
+                              <div className="font-mono text-gray-500">{r.protocol.threshold.toFixed(1)} kg</div>
+                          </div>
+                      )}
+                  </div>
               </div>
           )}
       </div>

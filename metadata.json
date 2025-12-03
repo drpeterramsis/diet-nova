@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova -Kcal Modifiy _ v2.0.116",
-  "description": "Updates: Dual weight analysis (Dry vs Selected), fixed weight loss calc, enhanced collapsible UI.",
+  "name": "Diet-Nova -Kcal phase 6 _ v2.0.117",
+  "description": "Updates: Added EER (IOM) equations, Pregnancy/Lactation support, and explicit Recommended Weight display.",
   "requestFramePermissions": []
 }

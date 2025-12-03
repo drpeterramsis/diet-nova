@@ -109,6 +109,11 @@ export interface KcalResults {
       resultSel: number;
       category: string;
       notes: string[];
+  };
+  m6?: {
+      result: number;
+      label: string;
+      note: string;
   }
 }
 
@@ -125,6 +130,8 @@ export interface KcalInitialData {
     height?: number;
     weight?: number;
 }
+
+export type PregnancyState = 'none' | 'preg_1' | 'preg_2' | 'preg_3' | 'lact_0_6' | 'lact_7_12';
 
 export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
   const { t } = useLanguage();
@@ -160,6 +167,9 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
   // New InBody/Body Comp Inputs
   const [bodyFatPercent, setBodyFatPercent] = useState<number | ''>('');
   const [desiredBodyFat, setDesiredBodyFat] = useState<number | ''>('');
+
+  // Pregnancy / Lactation State (for EER)
+  const [pregnancyState, setPregnancyState] = useState<PregnancyState>('none');
 
   const [deficit, setDeficit] = useState<number>(0);
   
@@ -246,6 +256,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       setAmputationPercent(0);
       setBodyFatPercent('');
       setDesiredBodyFat('');
+      setPregnancyState('none');
       setDeficit(0);
       setReqKcal('');
   };
@@ -675,6 +686,72 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         }
     }
 
+    // --- METHOD 6 (EER - IOM 2002) ---
+    let m6Result = 0;
+    let m6Label = '';
+    let m6Note = '';
+
+    // EER PA Coefficient Mapping
+    // Mapped from user's selection (1.2 ~ 1.9) to standard DRI PA (1.0 ~ 1.48)
+    let paEER = 1.0; 
+    if (physicalActivity_val < 1.3) paEER = 1.00; // Sedentary
+    else if (physicalActivity_val < 1.5) paEER = gender === 'male' ? 1.11 : 1.12; // Low Active
+    else if (physicalActivity_val < 1.7) paEER = gender === 'male' ? 1.25 : 1.27; // Active
+    else paEER = gender === 'male' ? 1.48 : 1.45; // Very Active
+
+    // 1. Infants (0-35 months)
+    const totalMonths = (pediatricAge?.years || 0) * 12 + (pediatricAge?.months || 0);
+    // Use Dry Weight for calculation
+    const W = dryWeightVal; 
+    const H_m = height_m;
+
+    if (age < 3 && totalMonths <= 35) {
+        if (totalMonths <= 3) m6Result = (89 * W - 100) + 175;
+        else if (totalMonths <= 6) m6Result = (89 * W - 100) + 56;
+        else if (totalMonths <= 12) m6Result = (89 * W - 100) + 22;
+        else m6Result = (89 * W - 100) + 20;
+        m6Label = `Infant (${totalMonths}mo)`;
+    } 
+    // 2. Children (3-18 years)
+    else if (age >= 3 && age <= 18) {
+        if (gender === 'male') {
+            if (age <= 8) m6Result = 88.5 - (61.9 * age) + paEER * (26.7 * W + 903 * H_m) + 20;
+            else m6Result = 88.5 - (61.9 * age) + paEER * (26.7 * W + 903 * H_m) + 25;
+        } else {
+            if (age <= 8) m6Result = 135.3 - (30.8 * age) + paEER * (10.0 * W + 934 * H_m) + 20;
+            else m6Result = 135.3 - (30.8 * age) + paEER * (10.0 * W + 934 * H_m) + 25;
+        }
+        m6Label = `Child/Adolescent (${age}y)`;
+    }
+    // 3. Adults (19+)
+    else {
+        if (gender === 'male') {
+            m6Result = 662 - (9.53 * age) + paEER * (15.91 * W + 539.6 * H_m);
+        } else {
+            m6Result = 354 - (6.91 * age) + paEER * (9.36 * W + 726 * H_m);
+        }
+        m6Label = `Adult (${age}y)`;
+        
+        // Pregnancy / Lactation Add-ons
+        if (gender === 'female' && pregnancyState !== 'none') {
+            if (pregnancyState === 'preg_1') { 
+                m6Result += 0; m6Note = 'Pregnancy (1st Tri): +0'; 
+            }
+            else if (pregnancyState === 'preg_2') { 
+                m6Result += 340; m6Note = 'Pregnancy (2nd Tri): +340'; 
+            }
+            else if (pregnancyState === 'preg_3') { 
+                m6Result += 452; m6Note = 'Pregnancy (3rd Tri): +452'; 
+            }
+            else if (pregnancyState === 'lact_0_6') { 
+                m6Result += 330; m6Note = 'Lactation (0-6m): +330 (500-170)'; 
+            }
+            else if (pregnancyState === 'lact_7_12') { 
+                m6Result += 400; m6Note = 'Lactation (7-12m): +400'; 
+            }
+        }
+    }
+
     setResults({
         weightLoss: usual_weight > 0 ? weightLoss.toFixed(1) : '0',
         weightLossRef, weightLossColor,
@@ -751,10 +828,15 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
             resultSel: m5ResultSel,
             category: m5Category,
             notes: m5Notes
+        },
+        m6: {
+            result: m6Result,
+            label: m6Label,
+            note: m6Note
         }
     });
 
-  }, [gender, age, height, waist, hip, mac, tsf, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, amputationPercent, bodyFatPercent, desiredBodyFat, deficit, t]);
+  }, [gender, age, height, waist, hip, mac, tsf, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, amputationPercent, bodyFatPercent, desiredBodyFat, pregnancyState, pediatricAge, deficit, t]);
 
   return {
     inputs: {
@@ -779,6 +861,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       amputationPercent, setAmputationPercent,
       bodyFatPercent, setBodyFatPercent,
       desiredBodyFat, setDesiredBodyFat,
+      pregnancyState, setPregnancyState,
       deficit, setDeficit,
       reqKcal, setReqKcal
     },
