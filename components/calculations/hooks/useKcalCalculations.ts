@@ -1,5 +1,4 @@
 
-
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
@@ -155,9 +154,6 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       if (ageMode === 'auto' && dob && reportDate) {
           calculateAgeFromDob(dob, reportDate);
       } else if (ageMode === 'manual') {
-          // In manual mode, simple age is set by input. 
-          // If user manually types an age < 20, we don't strictly calculate Y/M/D unless they provided a DOB.
-          // For simplicity, we just clear pediatric details in manual mode or calculate only if valid.
           if (age >= 20) {
               setPediatricAge(null);
           }
@@ -184,12 +180,32 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     let weightLossColor = '';
     
     if (changeDuration > 0) {
+        let isSevere = false;
+        let isModerate = false;
+
         if (changeDuration === 2) { // 1 Week
-             if (weightLoss >= 1 && weightLoss <= 2) { weightLossRef = 'Moderate Malnutrition'; weightLossColor = 'text-orange-500'; } 
-             else if (weightLoss > 2) { weightLossRef = 'Severe Malnutrition'; weightLossColor = 'text-red-500'; }
-        } else {
-             if (weightLoss === changeDuration) { weightLossRef = 'Moderate Malnutrition'; weightLossColor = 'text-orange-500'; }
-             else if (weightLoss > changeDuration) { weightLossRef = 'Severe Malnutrition'; weightLossColor = 'text-red-500'; }
+             if (weightLoss > 2) isSevere = true;
+             else if (weightLoss >= 1) isModerate = true;
+        } else if (changeDuration === 5) { // 1 Month
+             if (weightLoss > 5) isSevere = true;
+             else if (weightLoss >= 5) isModerate = true;
+        } else if (changeDuration === 7.5) { // 3 Months
+             if (weightLoss > 7.5) isSevere = true;
+             else if (weightLoss >= 7.5) isModerate = true;
+        } else if (changeDuration === 10) { // 6 Months
+             if (weightLoss > 10) isSevere = true;
+             else if (weightLoss >= 10) isModerate = true;
+        } else if (changeDuration === 20) { // 1 Year
+             if (weightLoss > 20) isSevere = true;
+             else if (weightLoss >= 20) isModerate = true;
+        }
+
+        if (isSevere) {
+            weightLossRef = 'Severe Malnutrition';
+            weightLossColor = 'text-red-500';
+        } else if (isModerate) {
+            weightLossRef = 'Moderate Malnutrition';
+            weightLossColor = 'text-orange-500';
         }
     }
 

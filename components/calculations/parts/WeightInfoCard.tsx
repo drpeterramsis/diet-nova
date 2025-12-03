@@ -65,6 +65,7 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
                   { value: 5, label: '1 Month' },
                   { value: 7.5, label: '3 Months' },
                   { value: 10, label: '6 Months' },
+                  { value: 20, label: '1 Year' },
                 ]}
               />
               
