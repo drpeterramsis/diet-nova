@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -84,6 +85,9 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, onLogi
                 )}
                 <button onClick={() => handleNav('nfpe')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-green-50 hover:text-green-700 flex items-center gap-3 text-gray-600 text-sm">
                 <span>🩺</span> {t.tools.nfpe.title}
+                </button>
+                <button onClick={() => handleNav('lab-reference')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-green-50 hover:text-green-700 flex items-center gap-3 text-gray-600 text-sm">
+                <span>🧬</span> {t.tools.labs.title}
                 </button>
             </div>
 

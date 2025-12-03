@@ -9,6 +9,8 @@
 
 
 
+
+
 export type Language = 'en' | 'ar';
 
 export interface UserProfile {
@@ -191,6 +193,10 @@ export interface Translation {
         title: string;
         desc: string;
     };
+    labs: {
+        title: string;
+        desc: string;
+    };
   };
   clients: {
     title: string;
@@ -207,6 +213,8 @@ export interface Translation {
     noClients: string;
     dietaryAssessment: string;
     foodQuestionnaire: string;
+    labSuggestions: string;
+    generateSummary: string;
   };
   kcal: {
     title: string;

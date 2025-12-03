@@ -8,6 +8,7 @@ import Loading from '../Loading';
 import { SimpleLineChart } from '../Visuals';
 import { DietaryAssessment } from './DietaryAssessment';
 import { FoodQuestionnaire } from './FoodQuestionnaire';
+import { labPanels } from '../../data/labData';
 
 interface ClientManagerProps {
   initialClientId?: string | null;
@@ -102,6 +103,10 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const [toolTarget, setToolTarget] = useState<{type: 'client' | 'visit', id: string, initialData?: any} | null>(null);
   const [isSavingTool, setIsSavingTool] = useState(false);
 
+  // Lab Suggestions Modal State
+  const [showLabModal, setShowLabModal] = useState(false);
+  const [selectedLabs, setSelectedLabs] = useState<Set<string>>(new Set());
+
   // Form State (Client Profile)
   const [formData, setFormData] = useState<{
     client_code: string;
@@ -170,6 +175,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const [formError, setFormError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [summaryText, setSummaryText] = useState('');
 
   useEffect(() => {
     fetchClients();
@@ -379,6 +385,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     setActiveTab('profile');
     setExpandedCategory(null);
     setAllTagsExpanded(false);
+    setSummaryText('');
     
     if (client) {
       setEditingClient(client);
@@ -624,6 +631,77 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
   const handlePrintReport = () => {
       window.print();
+  };
+
+  // --- Lab Suggestions Handlers ---
+  const handleToggleLab = (labId: string) => {
+      const newSet = new Set(selectedLabs);
+      if (newSet.has(labId)) newSet.delete(labId);
+      else newSet.add(labId);
+      setSelectedLabs(newSet);
+  };
+
+  const saveLabRequests = () => {
+      if (!editingClient) return;
+      
+      const requestedPanels = labPanels.filter(p => selectedLabs.has(p.id));
+      if (requestedPanels.length === 0) return;
+
+      const dateStr = new Date().toLocaleDateString('en-GB');
+      let labText = `\n\n[🧪 Lab Requests - ${dateStr}]\n`;
+      requestedPanels.forEach(panel => {
+          labText += `\n* ${panel.title} / ${panel.titleAr}:\n`;
+          panel.tests.forEach(test => labText += `  - ${test}\n`);
+      });
+
+      setFormData(prev => ({
+          ...prev,
+          notes: prev.notes + labText
+      }));
+      setShowLabModal(false);
+      setSelectedLabs(new Set());
+      setSaveSuccess("Lab requests added to notes! Don't forget to save.");
+      setTimeout(() => setSaveSuccess(''), 3000);
+  };
+
+  // --- Summary Generator ---
+  const generateSummary = () => {
+      if (!editingClient) return;
+      const sortedVisits = [...visits].sort((a, b) => new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime());
+      
+      let summary = `Client Summary Report - ${new Date().toLocaleDateString()}\n`;
+      summary += `Name: ${editingClient.full_name} | Age: ${editingClient.age} | Gender: ${editingClient.gender}\n`;
+      summary += `Clinic: ${editingClient.clinic || 'N/A'}\n`;
+      summary += `--------------------------------------------------\n`;
+      
+      // Anthropometry
+      summary += `Current Status:\n`;
+      summary += `Weight: ${editingClient.weight || '-'} kg | Height: ${editingClient.height || '-'} cm | BMI: ${editingClient.bmi || '-'}\n`;
+      
+      // Weight History (Last 3)
+      if (sortedVisits.length > 0) {
+          summary += `\nRecent History:\n`;
+          sortedVisits.slice(0, 3).forEach(v => {
+              summary += `- ${new Date(v.visit_date).toLocaleDateString()}: ${v.weight || '-'} kg (BMI: ${v.bmi || '-'})\n`;
+          });
+      }
+
+      // Notes Extract (Tags)
+      const tags: string[] = [];
+      if (editingClient.notes) {
+          const lines = editingClient.notes.split('\n');
+          lines.forEach(l => {
+              if (l.trim().startsWith('•')) {
+                  tags.push(l.trim().substring(1).trim());
+              }
+          });
+      }
+      if (tags.length > 0) {
+          summary += `\nKey Medical History:\n`;
+          summary += tags.join(', ') + '\n';
+      }
+
+      setSummaryText(summary);
   };
 
   // --- Tool Handlers ---
@@ -1073,7 +1151,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                              </div>
                         </div>
                         
-                        {/* Categorized Tags (Unchanged) */}
+                        {/* Categorized Tags and Labs */}
                         <div>
                              <div className="flex justify-between items-center mb-2">
                                  <div className="flex gap-2 items-center flex-wrap">
@@ -1090,6 +1168,13 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                     </button>
                                     {editingClient && (
                                         <>
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowLabModal(true)}
+                                            className="text-xs bg-blue-100 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-200 text-blue-800 font-bold flex items-center gap-1"
+                                        >
+                                            🧪 {t.clients.labSuggestions}
+                                        </button>
                                         <button 
                                             type="button"
                                             onClick={() => handleOpenTool('dietary-recall', 'client', editingClient.id, editingClient.dietary_assessment)}
@@ -1156,7 +1241,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                 value={formData.notes}
                                 onChange={e => setFormData({...formData, notes: e.target.value})}
                                 className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-y whitespace-pre-wrap text-sm font-mono bg-gray-50 focus:bg-white"
-                                placeholder="Allergies, chronic conditions, past operations..."
+                                placeholder="Allergies, chronic conditions, past operations, lab requests..."
                              ></textarea>
                         </div>
 
@@ -1341,7 +1426,13 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
             {/* Report Tab (Unchanged) */}
             {activeTab === 'report' && editingClient && chartData && (
                  <div className="p-8 animate-fade-in">
-                     <div className="flex justify-end mb-6 no-print">
+                     <div className="flex justify-end mb-6 no-print gap-2">
+                        <button 
+                            onClick={generateSummary}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md flex items-center gap-2 transition"
+                        >
+                            <span>📝</span> {t.clients.generateSummary}
+                        </button>
                         <button 
                             onClick={handlePrintReport}
                             className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg shadow-md flex items-center gap-2 transition"
@@ -1349,6 +1440,20 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                             <span>🖨️</span> Print Report
                         </button>
                      </div>
+
+                     {summaryText && (
+                         <div className="mb-8 bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-inner">
+                             <div className="flex justify-between items-center mb-2">
+                                 <h3 className="font-bold text-gray-700">Generated Summary</h3>
+                                 <button onClick={() => {navigator.clipboard.writeText(summaryText); alert('Copied!');}} className="text-xs text-blue-600 hover:underline">Copy to Clipboard</button>
+                             </div>
+                             <textarea 
+                                readOnly 
+                                value={summaryText} 
+                                className="w-full h-40 p-3 text-sm font-mono border rounded bg-white resize-none focus:outline-none"
+                             ></textarea>
+                         </div>
+                     )}
 
                      <div className="space-y-8">
                          <div className="border-b-2 border-gray-200 pb-4 mb-6">
@@ -1412,6 +1517,44 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                  </div>
             )}
          </div>
+
+         {/* LAB SUGGESTIONS MODAL */}
+         {showLabModal && (
+             <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+                 <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-2xl">
+                     <div className="flex justify-between items-center mb-4">
+                         <h3 className="text-xl font-bold text-gray-800">Suggest Lab Tests</h3>
+                         <button onClick={() => setShowLabModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                     </div>
+                     
+                     <div className="space-y-3 mb-6">
+                         {labPanels.map(panel => (
+                             <div 
+                                key={panel.id}
+                                onClick={() => handleToggleLab(panel.id)}
+                                className={`p-4 rounded-lg border cursor-pointer transition flex items-center justify-between ${selectedLabs.has(panel.id) ? 'bg-blue-50 border-blue-500' : 'bg-white border-gray-200 hover:border-blue-300'}`}
+                             >
+                                 <div>
+                                     <div className="font-bold text-gray-800">{panel.title}</div>
+                                     <div className="text-sm text-gray-500 font-arabic">{panel.titleAr}</div>
+                                 </div>
+                                 <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${selectedLabs.has(panel.id) ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
+                                     {selectedLabs.has(panel.id) && <span className="text-white text-xs">✓</span>}
+                                 </div>
+                             </div>
+                         ))}
+                     </div>
+
+                     <button 
+                        onClick={saveLabRequests}
+                        disabled={selectedLabs.size === 0}
+                        className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition disabled:opacity-50"
+                     >
+                         Add Selected to Notes
+                     </button>
+                 </div>
+             </div>
+         )}
     </div>
   );
 };

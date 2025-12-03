@@ -1,4 +1,6 @@
 
+
+
 import { Translation } from "../types";
 
 export const en: Translation = {
@@ -98,6 +100,10 @@ export const en: Translation = {
     heightEstimator: {
         title: "Height Estimator",
         desc: "Estimate height using Ulna Length or Knee Height.",
+    },
+    labs: {
+        title: "Biochemical Labs",
+        desc: "Reference ranges and lab test panels.",
     }
   },
   clients: {
@@ -114,7 +120,9 @@ export const en: Translation = {
     gender: "Gender",
     noClients: "No clients found. Add your first client!",
     dietaryAssessment: "Dietary Assessment",
-    foodQuestionnaire: "Food Questionnaire"
+    foodQuestionnaire: "Food Questionnaire",
+    labSuggestions: "Suggest Labs",
+    generateSummary: "Generate Client Summary"
   },
   kcal: {
     title: "Advanced Calorie Calculator",
@@ -435,6 +443,10 @@ export const ar: Translation = {
     heightEstimator: {
         title: "مقدر الطول",
         desc: "تقدير الطول باستخدام طول الزند أو ارتفاع الركبة.",
+    },
+    labs: {
+        title: "التحاليل المعملية",
+        desc: "النطاقات الطبيعية وقوائم التحاليل المقترحة.",
     }
   },
   clients: {
@@ -451,7 +463,9 @@ export const ar: Translation = {
     gender: "النوع",
     noClients: "لا يوجد عملاء. أضف عميلك الأول!",
     dietaryAssessment: "التقييم الغذائي",
-    foodQuestionnaire: "استبيان العادات الغذائية"
+    foodQuestionnaire: "استبيان العادات الغذائية",
+    labSuggestions: "اقتراح تحاليل",
+    generateSummary: "إنشاء ملخص العميل"
   },
   kcal: {
     title: "حاسبة السعرات المتقدمة",

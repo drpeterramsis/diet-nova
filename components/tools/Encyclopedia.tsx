@@ -3,8 +3,9 @@ import React, { useState, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { encyclopediaData, EncyclopediaItem } from '../../data/encyclopediaData';
 import { drugsData, DrugItem } from '../../data/drugsData';
+import LabReference from './LabReference';
 
-type Sector = 'menu' | 'nutrients' | 'drugs';
+type Sector = 'menu' | 'nutrients' | 'drugs' | 'labs';
 
 const Encyclopedia: React.FC = () => {
   const { t, isRTL, lang } = useLanguage();
@@ -112,7 +113,24 @@ const Encyclopedia: React.FC = () => {
                     </button>
                 </div>
 
-                {/* 2. Drugs & Weight Card */}
+                {/* 2. Biochemical Labs Card */}
+                <div 
+                    onClick={() => setCurrentSector('labs')}
+                    className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-green-500"
+                >
+                    <div className="h-16 w-16 bg-green-50 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:bg-green-100 transition">
+                        🧬
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">{t.tools.labs.title}</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                        Reference ranges for blood tests, electrolytes, lipids, and suggested panels.
+                    </p>
+                    <button className="mt-auto text-green-600 font-bold text-sm bg-green-50 px-4 py-2 rounded-lg group-hover:bg-green-600 group-hover:text-white transition w-full">
+                        View Ranges
+                    </button>
+                </div>
+
+                {/* 3. Drugs & Weight Card */}
                 <div 
                     onClick={() => setCurrentSector('drugs')}
                     className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-red-500"
@@ -128,22 +146,25 @@ const Encyclopedia: React.FC = () => {
                         View Interactive Map
                     </button>
                 </div>
-
-                {/* Placeholder: Herbs (Future) */}
-                <div className="card bg-gray-50 border-dashed border-2 border-gray-200 p-6 flex flex-col items-center text-center opacity-70">
-                    <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center text-3xl mb-4 text-gray-400">
-                        🌿
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-400 mb-2">Herbs & Botanicals</h3>
-                    <p className="text-sm text-gray-400 mb-4">
-                        Scientific guide to herbal supplements and therapeutic uses.
-                    </p>
-                    <span className="mt-auto text-xs font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full">
-                        Coming Soon
-                    </span>
-                </div>
             </div>
         </div>
+      );
+  }
+
+  // --- LABS SECTOR VIEW ---
+  if (currentSector === 'labs') {
+      return (
+          <div className="animate-fade-in">
+              <div className="mb-4">
+                <button 
+                    onClick={() => setCurrentSector('menu')}
+                    className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2 text-sm font-medium"
+                >
+                    <span>←</span> Back to Sectors
+                </button>
+              </div>
+              <LabReference />
+          </div>
       );
   }
 

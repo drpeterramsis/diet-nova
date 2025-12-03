@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -14,6 +16,7 @@ import BmrCalculator from "./components/tools/BmrCalculator";
 import NFPEChecklist from "./components/tools/NFPEChecklist";
 import Encyclopedia from "./components/tools/Encyclopedia";
 import HeightEstimator from "./components/tools/HeightEstimator";
+import LabReference from "./components/tools/LabReference";
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -118,6 +121,9 @@ const Dashboard = ({
                   <div className="space-y-2">
                       <button onClick={() => onToolClick('encyclopedia')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-medium text-sm flex items-center justify-between">
                           <span>Encyclopedia</span> <span>→</span>
+                      </button>
+                      <button onClick={() => onToolClick('lab-reference')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-medium text-sm flex items-center justify-between">
+                          <span>Biochemical Labs</span> <span>→</span>
                       </button>
                   </div>
               </div>
@@ -383,6 +389,7 @@ const AppContent = () => {
                 />
             )}
             {activeTool === 'encyclopedia' && <Encyclopedia />}
+            {activeTool === 'lab-reference' && <LabReference />}
             {activeTool === 'height-estimator' && (
                 <HeightEstimator 
                     onClose={handleNavHome} 
