@@ -1,3 +1,4 @@
+
 import { Translation } from "../types";
 
 export const en: Translation = {
@@ -204,7 +205,13 @@ export const en: Translation = {
     leanBodyMass: "Lean Body Mass (LBM)",
     fatMass: "Fat Mass (FM)",
     targetWeightBF: "Target Wt (Based on Desired Fat %)",
-    desiredBodyFat: "Desired BF %"
+    desiredBodyFat: "Desired BF %",
+    // New Translations
+    mac: "Mid-Arm Circ. (MAC)",
+    tsf: "Triceps Skinfold (TSF)",
+    mamc: "Mid-Arm Muscle Circ. (MAMC)",
+    estBmi: "Est. BMI (from MAC)",
+    mm: "mm"
   },
   mealCreator: {
     searchPlaceholder: "Search food...",
@@ -535,7 +542,13 @@ export const ar: Translation = {
     leanBodyMass: "الكتلة العضلية الصافية (LBM)",
     fatMass: "كتلة الدهون (FM)",
     targetWeightBF: "الوزن المستهدف (بناءً على الدهون)",
-    desiredBodyFat: "نسبة الدهون المستهدفة %"
+    desiredBodyFat: "نسبة الدهون المستهدفة %",
+    // New Translations
+    mac: "محيط منتصف الذراع (MAC)",
+    tsf: "سمك ثنية الجلد (TSF)",
+    mamc: "محيط عضلات الذراع (MAMC)",
+    estBmi: "مؤشر كتلة الجسم المقدر (من MAC)",
+    mm: "مم"
   },
   mealCreator: {
     searchPlaceholder: "ابحث عن الطعام...",

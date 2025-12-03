@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
@@ -40,6 +41,10 @@ export interface KcalResults {
       ratio: string;
       status: string;
       color: string;
+  };
+  anthropometry?: {
+      estimatedBMI?: string;
+      mamc?: string;
   };
   bodyComposition?: {
       bodyFatPercent: number;
@@ -107,7 +112,11 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
 
   const [height, setHeight] = useState<number>(0);
   const [waist, setWaist] = useState<number>(0);
-  const [hip, setHip] = useState<number>(0); // New: Hip State
+  const [hip, setHip] = useState<number>(0); 
+  // New Anthropometry
+  const [mac, setMac] = useState<number>(0); // Mid Arm Circumference (cm)
+  const [tsf, setTsf] = useState<number>(0); // Triceps Skinfold (mm)
+
   const [physicalActivity, setPhysicalActivity] = useState<number>(0);
   
   const [currentWeight, setCurrentWeight] = useState<number>(0);
@@ -196,6 +205,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       setHeight(0);
       setWaist(0);
       setHip(0);
+      setMac(0);
+      setTsf(0);
       setPhysicalActivity(0);
       setCurrentWeight(0);
       setSelectedWeight(0);
@@ -230,6 +241,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const height_m = height_cm / 100;
     const waist_cm = waist;
     const hip_cm = hip;
+    const mac_cm = mac;
+    const tsf_mm = tsf;
     
     // 1. Dry Weight
     let weight = temp_weight - ascites - edema;
@@ -392,14 +405,36 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         whtrData = { ratio: ratio.toFixed(2), status, color };
     }
 
-    // 9. Protocol Check (30% Rule)
+    // 9. Anthropometry (New: Est BMI & MAMC)
+    let anthropometryData = undefined;
+    if (mac_cm > 0) {
+        let estBMI = 0;
+        if (gender === 'male') {
+            estBMI = (1.01 * mac_cm) - 4.7;
+        } else {
+            estBMI = (1.10 * mac_cm) - 6.7;
+        }
+        
+        let mamc_val = undefined;
+        if (tsf_mm > 0) {
+            // MAMC (cm) = MAC (cm) - (0.314 * TSF (mm))
+            mamc_val = mac_cm - (0.314 * tsf_mm);
+        }
+
+        anthropometryData = {
+            estimatedBMI: estBMI.toFixed(1),
+            mamc: mamc_val ? mamc_val.toFixed(1) : undefined
+        };
+    }
+
+    // 10. Protocol Check (30% Rule)
     const ibw30 = IBW_2 * 0.30;
     const threshold = IBW_2 + ibw30;
     const isHighObesity = weight > threshold;
     const recommendedWeight = isHighObesity ? ABW_2 : IBW_2;
     const recommendationLabel = isHighObesity ? 'useAdjusted' : 'useIdeal';
 
-    // 10. BMR & TEE (Mifflin/Harris)
+    // 11. BMR & TEE (Mifflin/Harris)
     let AW_BMR_harris = 0, SW_BMR_harris = 0;
     let AW_BMR_mifflin = 0, SW_BMR_mifflin = 0;
 
@@ -415,7 +450,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       SW_BMR_mifflin = (10 * selectedWeight) + (6.25 * height_cm) - (5 * age_years) - 161;
     }
 
-    // 11. Body Composition & Katch-McArdle
+    // 12. Body Composition & Katch-McArdle
     let bodyCompData = undefined;
     let katchData = undefined;
     
@@ -494,6 +529,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         whr: whrData,
         whtr: whtrData,
         
+        anthropometry: anthropometryData,
         bodyComposition: bodyCompData,
         
         elderlyInfo,
@@ -521,7 +557,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         }
     });
 
-  }, [gender, age, height, waist, hip, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, amputationPercent, bodyFatPercent, desiredBodyFat, deficit, t]);
+  }, [gender, age, height, waist, hip, mac, tsf, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, amputationPercent, bodyFatPercent, desiredBodyFat, deficit, t]);
 
   return {
     inputs: {
@@ -534,6 +570,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       height, setHeight,
       waist, setWaist,
       hip, setHip,
+      mac, setMac,
+      tsf, setTsf,
       physicalActivity, setPhysicalActivity,
       currentWeight, setCurrentWeight,
       selectedWeight, setSelectedWeight,

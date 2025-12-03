@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova - calculations Phase 2 _ v2.0.107",
-  "description": "Updates: Added InBody Calculations (Katch-McArdle BMR, Body Composition Estimates, Target Weight via Body Fat).",
+  "name": "Diet-Nova - calculations Phase 3 _ v2.0.108",
+  "description": "Updates: Added Anthropometric calculations (Est. BMI from MAC, MAMC from MAC/TSF).",
   "requestFramePermissions": []
 }

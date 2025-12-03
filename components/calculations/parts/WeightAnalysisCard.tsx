@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { KcalResults } from '../hooks/useKcalCalculations';
@@ -50,11 +51,34 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
               </div>
           )}
 
+          {/* Anthropometric Analysis (New) */}
+          {r.anthropometry && (r.anthropometry.estimatedBMI || r.anthropometry.mamc) && (
+              <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+                  <h4 className="text-xs font-bold text-purple-800 uppercase mb-2 flex items-center gap-1">
+                      📏 Anthropometric Analysis
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                      {r.anthropometry.estimatedBMI && (
+                          <div className="bg-white p-2 rounded shadow-sm">
+                              <div className="text-[10px] text-gray-500 uppercase">{t.kcal.estBmi}</div>
+                              <div className="font-bold text-purple-700">{r.anthropometry.estimatedBMI}</div>
+                          </div>
+                      )}
+                      {r.anthropometry.mamc && (
+                          <div className="bg-white p-2 rounded shadow-sm">
+                              <div className="text-[10px] text-gray-500 uppercase">{t.kcal.mamc}</div>
+                              <div className="font-bold text-purple-700">{r.anthropometry.mamc} <span className="text-xs text-gray-400">cm</span></div>
+                          </div>
+                      )}
+                  </div>
+              </div>
+          )}
+
           {/* Body Composition Indicators (InBody / Estimates) */}
           {r.bodyComposition && (
-              <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
                   <div className="flex justify-between items-center mb-3">
-                      <h4 className="text-xs font-bold text-purple-800 uppercase flex items-center gap-1">
+                      <h4 className="text-xs font-bold text-blue-800 uppercase flex items-center gap-1">
                           💪 Body Composition 
                           <span className="text-[9px] font-normal opacity-70 bg-white px-1 rounded">
                               {r.bodyComposition.bodyFatSource}
@@ -64,7 +88,7 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
                   <div className="grid grid-cols-3 gap-2 text-center mb-2">
                       <div className="bg-white p-2 rounded shadow-sm">
                           <div className="text-[10px] text-gray-500 uppercase">{t.kcal.bodyFat}</div>
-                          <div className="font-bold text-purple-700">{r.bodyComposition.bodyFatPercent}%</div>
+                          <div className="font-bold text-blue-700">{r.bodyComposition.bodyFatPercent}%</div>
                       </div>
                       <div className="bg-white p-2 rounded shadow-sm">
                           <div className="text-[10px] text-gray-500 uppercase">{t.kcal.fatMass}</div>
@@ -77,9 +101,9 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
                   </div>
                   
                   {r.bodyComposition.targetWeight && (
-                      <div className="mt-2 pt-2 border-t border-purple-200 text-center">
-                          <div className="text-[10px] text-purple-600 font-bold uppercase mb-1">{t.kcal.targetWeightBF}</div>
-                          <div className="text-lg font-mono font-bold text-purple-800">
+                      <div className="mt-2 pt-2 border-t border-blue-200 text-center">
+                          <div className="text-[10px] text-blue-600 font-bold uppercase mb-1">{t.kcal.targetWeightBF}</div>
+                          <div className="text-lg font-mono font-bold text-blue-800">
                               {r.bodyComposition.targetWeight} <span className="text-xs">kg</span>
                           </div>
                           {r.bodyComposition.targetWeightDiff && (

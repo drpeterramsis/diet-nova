@@ -7,6 +7,8 @@
 
 
 
+
+
 export type Language = 'en' | 'ar';
 
 export interface UserProfile {
@@ -296,6 +298,11 @@ export interface Translation {
     fatMass: string;
     targetWeightBF: string;
     desiredBodyFat: string;
+    mac: string;
+    tsf: string;
+    mamc: string;
+    estBmi: string;
+    mm: string;
   };
   mealCreator: {
     searchPlaceholder: string;

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { InputGroup, SelectGroup } from '../InputComponents';
@@ -23,6 +24,12 @@ interface PersonalInfoProps {
   setWaist: (v: number) => void;
   hip?: number;
   setHip?: (v: number) => void;
+  
+  mac?: number;
+  setMac?: (v: number) => void;
+  tsf?: number;
+  setTsf?: (v: number) => void;
+
   physicalActivity: number;
   setPhysicalActivity: (v: number) => void;
   
@@ -32,7 +39,8 @@ interface PersonalInfoProps {
 const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
   gender, setGender, 
   age, setAge, ageMode, setAgeMode, dob, setDob, reportDate, setReportDate, pediatricAge,
-  height, setHeight, waist, setWaist, hip, setHip, physicalActivity, setPhysicalActivity,
+  height, setHeight, waist, setWaist, hip, setHip, mac, setMac, tsf, setTsf,
+  physicalActivity, setPhysicalActivity,
   onOpenHeightEstimator
 }) => {
   const { t } = useLanguage();
@@ -153,6 +161,41 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
             </p>
         </div>
         
+        {/* Anthropometry Section */}
+        {mac !== undefined && setMac && tsf !== undefined && setTsf && (
+            <div className="col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-100">
+                <h3 className="font-bold text-xs text-purple-700 uppercase mb-3 border-b border-purple-200 pb-1">
+                    Anthropometry (Detailed)
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                            {t.kcal.mac}
+                        </label>
+                        <input
+                            type="number"
+                            value={mac || ''}
+                            onChange={(e) => setMac(Number(e.target.value))}
+                            placeholder="cm"
+                            className="w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 border-gray-200 focus:ring-purple-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+                            {t.kcal.tsf}
+                        </label>
+                        <input
+                            type="number"
+                            value={tsf || ''}
+                            onChange={(e) => setTsf(Number(e.target.value))}
+                            placeholder="mm"
+                            className="w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 border-gray-200 focus:ring-purple-500"
+                        />
+                    </div>
+                </div>
+            </div>
+        )}
+
         <div className="col-span-2">
             <SelectGroup 
             label={t.kcal.activity}

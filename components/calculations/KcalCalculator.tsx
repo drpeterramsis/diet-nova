@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useKcalCalculations, KcalInitialData } from './hooks/useKcalCalculations';
 import PersonalInfoCard from './parts/PersonalInfoCard';
@@ -33,6 +34,9 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               if (data.inputs.height) inputs.setHeight(data.inputs.height);
               if (data.inputs.waist) inputs.setWaist(data.inputs.waist);
               if (data.inputs.hip) inputs.setHip(data.inputs.hip);
+              // New Anthropometry
+              if (data.inputs.mac && inputs.setMac) inputs.setMac(data.inputs.mac);
+              if (data.inputs.tsf && inputs.setTsf) inputs.setTsf(data.inputs.tsf);
               
               if (data.inputs.physicalActivity) inputs.setPhysicalActivity(data.inputs.physicalActivity);
               if (data.inputs.currentWeight) inputs.setCurrentWeight(data.inputs.currentWeight);
@@ -55,6 +59,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
       } else if (activeVisit) {
           // If no specific kcal_data saved, try to use visit vitals directly
           if (activeVisit.visit.hip && inputs.setHip) inputs.setHip(activeVisit.visit.hip);
+          if (activeVisit.visit.miac && inputs.setMac) inputs.setMac(activeVisit.visit.miac); // Map MIAC to MAC
       }
   }, [activeVisit]); // Run once when visit changes
 
@@ -69,6 +74,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               height: inputs.height,
               waist: inputs.waist,
               hip: inputs.hip,
+              mac: inputs.mac, // Save MAC
+              tsf: inputs.tsf, // Save TSF
               currentWeight: inputs.currentWeight,
               selectedWeight: inputs.selectedWeight,
               usualWeight: inputs.usualWeight,
@@ -175,6 +182,9 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               height={inputs.height} setHeight={inputs.setHeight}
               waist={inputs.waist} setWaist={inputs.setWaist}
               hip={inputs.hip} setHip={inputs.setHip}
+              mac={inputs.mac} setMac={inputs.setMac}
+              tsf={inputs.tsf} setTsf={inputs.setTsf}
+
               physicalActivity={inputs.physicalActivity} setPhysicalActivity={inputs.setPhysicalActivity}
               
               onOpenHeightEstimator={() => setShowHeightEstimator(true)}
