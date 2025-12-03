@@ -54,146 +54,78 @@ export const labPanels: LabPanel[] = [
     }
 ];
 
-export interface ReferenceTable {
-    title: string;
-    headers: string[];
-    rows: string[][];
+export interface LabTestItem {
+    category: string;
+    test: string;
+    normal: string;
+    increase?: string;
+    decrease?: string;
 }
 
-export const labReferences: ReferenceTable[] = [
-    {
-        title: 'Vitals & General',
-        headers: ['Parameter', 'Value'],
-        rows: [
-            ['Heart Rate', '60-90 beat/min'],
-            ['Respiratory Rate', '12-15 breath/min'],
-            ['Blood Pressure', '120/80 mmHg'],
-            ['Temperature', '37 C'],
-            ['pH', '7.35-7.45'],
-            ['Osmolarity', '285-300 mOsm/kg'],
-            ['Plasma COP', '25 mmHg']
-        ]
-    },
-    {
-        title: 'Electrolytes',
-        headers: ['Electrolyte', 'ECF', 'ICF'],
-        rows: [
-            ['Cation Na+', '135-145', '10'],
-            ['K+', '3.5-5', '150'],
-            ['Anion Cl-', '98-108', '2'],
-            ['HCO3-', '22-28', '10'],
-            ['HPO4-', '1.5-2.5', '140'],
-            ['Total', '155', '202']
-        ]
-    },
-    {
-        title: 'Blood Glucose',
-        headers: ['State', 'Normal', 'Pre-Diabetic', 'Diabetic'],
-        rows: [
-            ['Post-prandial', '< 140 mg/dl', '140-199', '> 200'],
-            ['Fasting (mmol/L)', '3.5-6', 'IFG 6.1-6.9', '≥ 7'],
-            ['Random (mmol/dl)', '< 7.8', 'IGT 7.8-11.1', '≥ 11.1'],
-            ['HbA1C (mmol)', '4-5.6', '5.6-6.4', '≥ 6.5']
-        ]
-    },
-    {
-        title: 'Plasma Protein',
-        headers: ['Type', 'Value (Total 6-8 gm/dl)'],
-        rows: [
-            ['Albumin', '3.5-5 gm/dl'],
-            ['Globulin', '2.5-3.5 gm/dl'],
-            ['A:G Ratio', '1.2:1 - 2.5:1'],
-            ['Fibrinogen', '0.3 gm/dl'],
-            ['Prothrombin', '0.1 gm/dl']
-        ]
-    },
-    {
-        title: 'Lipid Profile',
-        headers: ['Parameter', 'Value'],
-        rows: [
-            ['Total Cholesterol', '150-200 mg/dl'],
-            ['HDL Cholesterol', '40-59 mg/dl'],
-            ['LDL Cholesterol', '< 130 mg/dl'],
-            ['TAG (Triglycerides)', '< 150 mg/dl']
-        ]
-    },
-    {
-        title: 'Blood Cells (CBC)',
-        headers: ['Cell', 'Value'],
-        rows: [
-            ['RBC (Male)', '5-5.5 millions/mm3'],
-            ['RBC (Female)', '4-5 millions/mm3'],
-            ['WBC', '4000-11000 /mm3'],
-            ['Platelets', '1.5-4 lakhs/mm3']
-        ]
-    },
-    {
-        title: 'WBC Differential',
-        headers: ['Type', 'Absolute', '%'],
-        rows: [
-            ['Neutrophils', '3000-600', '50-70%'],
-            ['Eosinophils', '150-300', '1-4%'],
-            ['Basophils', '0-100', '0.4%'],
-            ['Lymphocytes', '1500-4000', '20-40%'],
-            ['Monocytes', '300-600', '2-8%']
-        ]
-    },
-    {
-        title: 'Red Cell Indices',
-        headers: ['Index', 'Value'],
-        rows: [
-            ['MCV', '76-96 femto liter'],
-            ['MCH', '27-32 pico gram'],
-            ['MCHC', '31-35 gm/dl'],
-            ['Hematocrit (M)', '38-48%'],
-            ['Hematocrit (F)', '33-43%']
-        ]
-    },
-    {
-        title: 'Thyroid Profile',
-        headers: ['Hormone', 'Range'],
-        rows: [
-            ['T3 Total', '1.2-3 nmol/L'],
-            ['T3 Free', '3-9 pmol/L'],
-            ['T4 Total', '60-150 nmol/L'],
-            ['T4 Free', '10-30 pmol/L'],
-            ['TSH', '0.3-5 mIU/L']
-        ]
-    },
-    {
-        title: 'Coagulation',
-        headers: ['Test', 'Time'],
-        rows: [
-            ['BT (Bleeding Time)', '2-6 min'],
-            ['CT (Clotting Time)', '6-12 min'],
-            ['PT', '12-14 sec'],
-            ['aPTT', '30-40 sec']
-        ]
-    },
-    {
-        title: 'Blood Chemistry',
-        headers: ['Analyte', 'Value'],
-        rows: [
-            ['Ammonia', '30-60 µgm/dl'],
-            ['Bilirubin Total', '0.2-1.2 mg/dl'],
-            ['BUN', '7-18.6 mg/dl'],
-            ['Ferritin', '20-200 µgm/L'],
-            ['Iron', '50-150 µgm/dl'],
-            ['Ketone Body', '< 1 mg/dl'],
-            ['Creatinine (M)', '0.9-1.3 mg/dl'],
-            ['Creatinine (F)', '0.6-1.1 mg/dl'],
-            ['Uric Acid (M)', '3-7 mg/dl'],
-            ['Uric Acid (F)', '2-6 mg/dl']
-        ]
-    },
-    {
-        title: 'Blood Gases',
-        headers: ['Parameter', 'Value'],
-        rows: [
-            ['PaCO2', '35-45 mmHg'],
-            ['PaO2', '85-100 mmHg'],
-            ['Plasma Anion Gap', '8-16 meq/L'],
-            ['TCO2', '26 mmol/L']
-        ]
-    }
+export const labTestsEncyclopedia: LabTestItem[] = [
+    // Vitals & General
+    { category: 'Vitals', test: 'Heart Rate', normal: '60-90 beat/min', increase: 'Tachycardia, Stress, Fever, Anemia', decrease: 'Bradycardia, Athletes, Hypothyroidism' },
+    { category: 'Vitals', test: 'Respiratory Rate', normal: '12-15 breath/min', increase: 'Asthma, Pneumonia, Anxiety', decrease: 'Opioids, Brain injury' },
+    { category: 'Vitals', test: 'Blood Pressure', normal: '120/80 mmHg', increase: 'Hypertension, Stress', decrease: 'Hypotension, Shock, Dehydration' },
+    { category: 'Vitals', test: 'BMI', normal: '18.5 - 24.9', increase: 'Obesity 🍔', decrease: 'Underweight 📉' },
+    
+    // Blood Glucose
+    { category: 'Diabetes', test: 'Fasting Blood Sugar (FBS)', normal: '3.5 - 6 mmol/L (70-100 mg/dl)', increase: 'Diabetes, Stress, Cushing\'s', decrease: 'Insulin overdose, Starvation' },
+    { category: 'Diabetes', test: 'Post-Prandial (PP)', normal: '< 140 mg/dl', increase: 'Diabetes, Insulin Resistance', decrease: 'Reactive Hypoglycemia' },
+    { category: 'Diabetes', test: 'HbA1C', normal: '4 - 5.6 %', increase: 'Poorly controlled Diabetes', decrease: 'Anemia, Hemolysis' },
+    { category: 'Diabetes', test: 'Daily Insulin Sec', normal: '40-50 unit/day', increase: 'Insulin Resistance', decrease: 'Type 1 Diabetes' },
+
+    // Lipid Profile
+    { category: 'Lipids', test: 'Total Cholesterol', normal: '150 - 200 mg/dl', increase: 'Hypothyroidism, High fat diet, Genetics', decrease: 'Malnutrition, Hyperthyroidism' },
+    { category: 'Lipids', test: 'LDL Cholesterol', normal: '< 130 mg/dl', increase: 'Atherosclerosis risk 🛑', decrease: 'Rare genetic disorders' },
+    { category: 'Lipids', test: 'HDL Cholesterol', normal: '40 - 59 mg/dl', increase: 'Exercise, Genetics (Good) ✅', decrease: 'Smoking, Obesity, Sedentary' },
+    { category: 'Lipids', test: 'Triglycerides (TAG)', normal: '< 150 mg/dl', increase: 'Obesity, Diabetes, Alcohol', decrease: 'Malnutrition' },
+
+    // CBC & Hematology
+    { category: 'Hematology', test: 'RBC (Male)', normal: '5 - 5.5 million/mm3', increase: 'Polycythemia, Dehydration', decrease: 'Anemia, Hemorrhage' },
+    { category: 'Hematology', test: 'RBC (Female)', normal: '4 - 5 million/mm3', increase: 'Polycythemia, Dehydration', decrease: 'Anemia, Pregnancy' },
+    { category: 'Hematology', test: 'Hemoglobin (Hb)', normal: 'M: 13.5-17.5 | F: 12-15.5 gm/dl', increase: 'Polycythemia, Smoking', decrease: 'Anemia (Iron, B12 def)' },
+    { category: 'Hematology', test: 'WBC Total', normal: '4000 - 11000 /mm3', increase: 'Infection 🦠, Leukemia, Stress', decrease: 'Viral infection, Chemo, Aplastic anemia' },
+    { category: 'Hematology', test: 'Platelets', normal: '1.5 - 4 lakhs/mm3', increase: 'Thrombocytosis, Inflammation', decrease: 'Dengue, ITP, Liver disease' },
+    { category: 'Hematology', test: 'Neutrophils', normal: '50 - 70 %', increase: 'Bacterial Infection 🦠', decrease: 'Viral Infection, Chemo' },
+    { category: 'Hematology', test: 'Lymphocytes', normal: '20 - 40 %', increase: 'Viral Infection, CLL', decrease: 'HIV, Steroids' },
+    { category: 'Hematology', test: 'Eosinophils', normal: '1 - 4 %', increase: 'Allergy 🤧, Parasites 🪱', decrease: 'Steroid use' },
+    { category: 'Hematology', test: 'MCV', normal: '76 - 96 fl', increase: 'Macrocytic Anemia (B12/Folate def)', decrease: 'Microcytic Anemia (Iron def)' },
+    { category: 'Hematology', test: 'ESR (Male)', normal: '6-12 mm 1st hr', increase: 'Inflammation, Infection', decrease: 'Polycythemia, Sickle cell' },
+    { category: 'Hematology', test: 'ESR (Female)', normal: '12-18 mm 1st hr', increase: 'Inflammation, Pregnancy', decrease: 'Polycythemia' },
+
+    // Kidney Function
+    { category: 'Kidney', test: 'Creatinine (M)', normal: '0.9 - 1.3 mg/dl', increase: 'Kidney Failure, High muscle mass', decrease: 'Muscle wasting (Elderly)' },
+    { category: 'Kidney', test: 'Creatinine (F)', normal: '0.6 - 1.1 mg/dl', increase: 'Kidney Failure', decrease: 'Low muscle mass' },
+    { category: 'Kidney', test: 'Urea', normal: '15 - 40 mg%', increase: 'Dehydration, Kidney disease, High protein', decrease: 'Liver failure, Low protein diet' },
+    { category: 'Kidney', test: 'Uric Acid (M)', normal: '3 - 7 mg/dl', increase: 'Gout 🦶, Kidney stones', decrease: 'Liver disease' },
+    
+    // Liver & Proteins
+    { category: 'Liver', test: 'Albumin', normal: '3.5 - 5 gm/dl', increase: 'Dehydration', decrease: 'Liver disease, Malnutrition, Nephrotic syn' },
+    { category: 'Liver', test: 'Globulin', normal: '2.5 - 3.5 gm/dl', increase: 'Infection, Multiple Myeloma', decrease: 'Protein loss' },
+    { category: 'Liver', test: 'Bilirubin Total', normal: '0.2 - 1.2 mg/dl', increase: 'Jaundice, Hepatitis, Hemolysis', decrease: '-' },
+    { category: 'Liver', test: 'Ammonia', normal: '30 - 60 µgm/dl', increase: 'Severe Liver Disease (Hepatic Encephalopathy)', decrease: '-' },
+
+    // Electrolytes
+    { category: 'Electrolytes', test: 'Sodium (Na+)', normal: '135 - 145 mEq/L', increase: 'Dehydration, Diabetes Insipidus', decrease: 'Diuretics, Renal failure, SIADH' },
+    { category: 'Electrolytes', test: 'Potassium (K+)', normal: '3.5 - 5 mEq/L', increase: 'Renal failure, Acidosis 🛑', decrease: 'Diarrhea, Vomiting, Diuretics' },
+    { category: 'Electrolytes', test: 'Calcium (Ca)', normal: '8.5 - 10.5 mg/dl', increase: 'Hyperparathyroidism, Cancer', decrease: 'Vit D Deficiency, Renal failure' },
+    { category: 'Electrolytes', test: 'Phosphorus', normal: '2.5 - 4.5 mg/dl', increase: 'Renal failure', decrease: 'Refeeding syndrome ⚠️, Vit D def' },
+    { category: 'Electrolytes', test: 'Magnesium', normal: '1.7 - 2.2 mg/dl', increase: 'Renal failure', decrease: 'Diarrhea, Alcoholism' },
+
+    // Thyroid & Hormones
+    { category: 'Hormones', test: 'TSH', normal: '0.3 - 5 mIU/L', increase: 'Hypothyroidism 🐌', decrease: 'Hyperthyroidism 🐇' },
+    { category: 'Hormones', test: 'Free T3', normal: '3 - 9 pmol/L', increase: 'Hyperthyroidism', decrease: 'Hypothyroidism, Starvation' },
+    { category: 'Hormones', test: 'Free T4', normal: '10 - 30 pmol/L', increase: 'Hyperthyroidism', decrease: 'Hypothyroidism' },
+    { category: 'Hormones', test: 'Prolactin', normal: '1.4 - 24.2 ng/ml', increase: 'Pituitary tumor, Lactation, PCOS', decrease: '-' },
+
+    // Iron Profile
+    { category: 'Iron Profile', test: 'Serum Ferritin', normal: '20 - 200 µgm/L', increase: 'Inflammation, Hemochromatosis', decrease: 'Iron Deficiency Anemia' },
+    { category: 'Iron Profile', test: 'Serum Iron', normal: '50 - 150 µgm/dl', increase: 'Iron overload', decrease: 'Iron Deficiency' },
+    { category: 'Iron Profile', test: 'TIBC', normal: '300 - 400 µgm/dl', increase: 'Iron Deficiency', decrease: 'Chronic disease, Malnutrition' },
+
+    // Blood Gases
+    { category: 'Blood Gas', test: 'pH', normal: '7.35 - 7.45', increase: 'Alkalosis', decrease: 'Acidosis' },
+    { category: 'Blood Gas', test: 'PaCO2', normal: '35 - 45 mmHg', increase: 'Respiratory Acidosis (COPD)', decrease: 'Respiratory Alkalosis (Hyperventilation)' },
+    { category: 'Blood Gas', test: 'HCO3', normal: '22 - 28 mEq/L', increase: 'Metabolic Alkalosis', decrease: 'Metabolic Acidosis (DKA)' }
 ];

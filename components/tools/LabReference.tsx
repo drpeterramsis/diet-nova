@@ -1,95 +1,113 @@
 
-import React, { useState } from 'react';
-import { labReferences, labPanels } from '../../data/labData';
+import React, { useState, useMemo } from 'react';
+import { labTestsEncyclopedia } from '../../data/labData';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const LabReference: React.FC = () => {
     const { t } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
-    const filteredRefs = labReferences.filter(ref => 
-        ref.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        ref.rows.some(row => row.some(cell => cell.toLowerCase().includes(searchTerm.toLowerCase())))
-    );
+    // Get unique categories
+    const categories = useMemo(() => {
+        const cats = new Set(labTestsEncyclopedia.map(item => item.category));
+        return ['All', ...Array.from(cats)];
+    }, []);
+
+    const filteredLabs = useMemo(() => {
+        let data = labTestsEncyclopedia;
+        
+        if (selectedCategory !== 'All') {
+            data = data.filter(item => item.category === selectedCategory);
+        }
+
+        if (searchTerm) {
+            const q = searchTerm.toLowerCase();
+            data = data.filter(item => 
+                item.test.toLowerCase().includes(q) || 
+                item.increase?.toLowerCase().includes(q) ||
+                item.decrease?.toLowerCase().includes(q)
+            );
+        }
+        return data;
+    }, [searchTerm, selectedCategory]);
 
     return (
-        <div className="max-w-6xl mx-auto animate-fade-in space-y-8 pb-12">
+        <div className="max-w-7xl mx-auto animate-fade-in space-y-6 pb-12">
             
             {/* Header */}
-            <div className="text-center space-y-4 mb-8">
+            <div className="text-center space-y-4 mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <h1 className="text-3xl font-bold text-[var(--color-heading)] flex items-center justify-center gap-3">
                     <span>🧬</span> {t.tools.labs.title}
                 </h1>
-                <p className="text-gray-600 max-w-2xl mx-auto">
-                    Standard biochemical reference ranges and suggested test panels for clinical nutrition.
+                <p className="text-gray-600 max-w-2xl mx-auto text-sm">
+                    Comprehensive biochemical reference ranges, clinical significance, and causes for abnormalities.
                 </p>
-            </div>
-
-            {/* Panels Section */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                {labPanels.map(panel => (
-                    <div key={panel.id} className="card bg-white hover:shadow-lg transition-all border-t-4 border-t-[var(--color-primary)]">
-                        <h3 className="font-bold text-lg text-gray-800 mb-1">{panel.title}</h3>
-                        <p className="text-xs text-gray-500 font-arabic mb-4">{panel.titleAr}</p>
-                        <ul className="space-y-1.5">
-                            {panel.tests.map((test, i) => (
-                                <li key={i} className="text-sm text-gray-600 flex items-start gap-2">
-                                    <span className="text-[var(--color-primary)]">•</span>
-                                    {test}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                ))}
-            </div>
-
-            {/* Reference Ranges Section */}
-            <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-gray-800">Reference Ranges</h2>
+                
+                {/* Search & Filter */}
+                <div className="flex flex-col md:flex-row gap-4 justify-center items-center mt-4">
                     <input 
                         type="text" 
-                        placeholder="Search labs..." 
+                        placeholder="Search tests, causes..." 
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="p-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                        className="w-full md:w-96 p-2.5 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
                     />
+                    <select 
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="p-2.5 border rounded-lg bg-gray-50 focus:bg-white"
+                    >
+                        {categories.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                    </select>
                 </div>
+            </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 masonry">
-                    {filteredRefs.map((ref, idx) => (
-                        <div key={idx} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden break-inside-avoid h-fit">
-                            <div className="bg-gray-50 p-3 border-b border-gray-200 font-bold text-gray-700">
-                                {ref.title}
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-100 text-gray-600">
-                                        <tr>
-                                            {ref.headers.map((h, i) => (
-                                                <th key={i} className="p-2 text-left font-semibold">{h}</th>
-                                            ))}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {ref.rows.map((row, rIdx) => (
-                                            <tr key={rIdx} className="hover:bg-blue-50/50">
-                                                {row.map((cell, cIdx) => (
-                                                    <td key={cIdx} className={`p-2 ${cIdx === 0 ? 'font-medium text-gray-800' : 'text-gray-600 font-mono'}`}>
-                                                        {cell}
-                                                    </td>
-                                                ))}
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    ))}
+            {/* Table */}
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-gray-100 text-gray-700 uppercase text-xs font-bold">
+                            <tr>
+                                <th className="p-4 border-b">Test Name</th>
+                                <th className="p-4 border-b">Normal Range</th>
+                                <th className="p-4 border-b text-red-600 bg-red-50">Causes of Increase ⬆️</th>
+                                <th className="p-4 border-b text-blue-600 bg-blue-50">Causes of Decrease ⬇️</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {filteredLabs.map((item, idx) => (
+                                <tr key={idx} className="hover:bg-gray-50 transition">
+                                    <td className="p-4 font-medium text-gray-800 bg-white border-r border-gray-50 sticky left-0">
+                                        {item.test}
+                                        <span className="block text-[10px] text-gray-400 font-normal mt-1">{item.category}</span>
+                                    </td>
+                                    <td className="p-4 font-mono text-gray-700 whitespace-nowrap bg-gray-50/30">
+                                        {item.normal}
+                                    </td>
+                                    <td className="p-4 text-gray-600">
+                                        {item.increase || '-'}
+                                    </td>
+                                    <td className="p-4 text-gray-600">
+                                        {item.decrease || '-'}
+                                    </td>
+                                </tr>
+                            ))}
+                            {filteredLabs.length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="p-8 text-center text-gray-400">
+                                        No lab tests found matching "{searchTerm}"
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
                 </div>
-                {filteredRefs.length === 0 && (
-                    <div className="text-center py-10 text-gray-400">No references found.</div>
-                )}
+                <div className="bg-gray-50 p-2 text-xs text-center text-gray-400 border-t border-gray-200">
+                    Showing {filteredLabs.length} records
+                </div>
             </div>
         </div>
     );

@@ -63,7 +63,7 @@ const formatDateUK = (dateString: string | undefined) => {
     });
 };
 
-// Tags (unchanged)
+// Tags
 const TAG_CATEGORIES: Record<string, string[]> = {
     "📏 Anthropometry": ["Weight Gain 📈", "Weight Loss 📉", "Stunted Growth 📏"],
     "🏥 Special Conditions": ["Post-Op 🏥", "Bedridden 🛏️", "Wheelchair ♿", "Sedentary 🛋️", "Active 🏃", "Athlete 🏋️"],
@@ -71,6 +71,32 @@ const TAG_CATEGORIES: Record<string, string[]> = {
     "🩺 Medical History": ["Diabetes 🩸", "Hypertension 💓", "CVS Disease ❤️", "GIT Issues 🤢", "Pulmonary 🫁", "Renal 🦠", "Endocrine 🦋", "Food Allergies 🥜"],
     "👪 Family History": ["Family Obesity 👨‍👩‍👧", "Family Diabetes 🩸", "Family CVS ❤️"],
     "🌸 Female Only": ["PCOS 🌸", "Pregnancy 🤰", "Lactation 🤱", "Menopause 🥀", "Contraceptives 💊", "Irregular Cycle 🗓️"]
+};
+
+// Note Display Component
+const NoteDisplay: React.FC<{ text: string }> = ({ text }) => {
+    if (!text) return null;
+    return (
+        <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+            {text.split('\n').map((line, i) => {
+                const trimmed = line.trim();
+                // Check for Category Headers [Category]
+                if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                    return <div key={i} className="font-bold text-red-700 mt-3 mb-1 text-base">{line}</div>;
+                }
+                // Check for Tags bullet points
+                if (trimmed.startsWith('•')) {
+                    return <div key={i} className="font-bold text-red-600 ml-2 mb-0.5">{line}</div>;
+                }
+                // Check for Lab Results (e.g., "Hemoglobin: 12") - basic heuristic
+                if (trimmed.includes(':') && /\d/.test(trimmed)) {
+                     // Could be a lab result, make it standout slightly
+                     return <div key={i} className="ml-1 text-blue-800 font-medium">{line}</div>;
+                }
+                return <div key={i}>{line}</div>;
+            })}
+        </div>
+    );
 };
 
 const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal, onPlanMeals, onRunNFPE, autoOpenNew }) => {
@@ -105,7 +131,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
   // Lab Suggestions Modal State
   const [showLabModal, setShowLabModal] = useState(false);
-  const [selectedLabs, setSelectedLabs] = useState<Set<string>>(new Set());
+  const [selectedPanelId, setSelectedPanelId] = useState<string | null>(null);
+  const [labResults, setLabResults] = useState<Record<string, string>>({}); // Store transient results input
 
   // Form State (Client Profile)
   const [formData, setFormData] = useState<{
@@ -634,24 +661,28 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   };
 
   // --- Lab Suggestions Handlers ---
-  const handleToggleLab = (labId: string) => {
-      const newSet = new Set(selectedLabs);
-      if (newSet.has(labId)) newSet.delete(labId);
-      else newSet.add(labId);
-      setSelectedLabs(newSet);
+  const handleLabResultChange = (test: string, val: string) => {
+      setLabResults(prev => ({ ...prev, [test]: val }));
   };
 
   const saveLabRequests = () => {
-      if (!editingClient) return;
+      if (!editingClient || !selectedPanelId) return;
       
-      const requestedPanels = labPanels.filter(p => selectedLabs.has(p.id));
-      if (requestedPanels.length === 0) return;
+      const panel = labPanels.find(p => p.id === selectedPanelId);
+      if (!panel) return;
 
       const dateStr = new Date().toLocaleDateString('en-GB');
-      let labText = `\n\n[🧪 Lab Requests - ${dateStr}]\n`;
-      requestedPanels.forEach(panel => {
-          labText += `\n* ${panel.title} / ${panel.titleAr}:\n`;
-          panel.tests.forEach(test => labText += `  - ${test}\n`);
+      let labText = `\n\n[🧪 Labs: ${panel.title} - ${dateStr}]\n`;
+      
+      panel.tests.forEach(test => {
+          const result = labResults[test];
+          if (result && result.trim() !== '') {
+              // Write down result
+              labText += `  - ${test}: ${result}\n`;
+          } else {
+              // Just request
+              labText += `  - Request: ${test}\n`;
+          }
       });
 
       setFormData(prev => ({
@@ -659,8 +690,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
           notes: prev.notes + labText
       }));
       setShowLabModal(false);
-      setSelectedLabs(new Set());
-      setSaveSuccess("Lab requests added to notes! Don't forget to save.");
+      setSelectedPanelId(null);
+      setLabResults({});
+      setSaveSuccess("Lab info added to notes! Don't forget to save.");
       setTimeout(() => setSaveSuccess(''), 3000);
   };
 
@@ -797,7 +829,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   if (viewMode === 'list') {
     return (
         <div className="max-w-7xl mx-auto animate-fade-in space-y-6 pb-12">
-          {/* Header (Unchanged) */}
+          {/* Header */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
               <h1 className="text-3xl font-bold text-[var(--color-heading)] flex items-center gap-2">
@@ -814,7 +846,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
             </button>
           </div>
     
-          {/* Search (Unchanged) */}
+          {/* Search */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
              <div className="md:col-span-2 relative">
                 <input 
@@ -856,7 +888,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
              </div>
           </div>
     
-          {/* List Content (Unchanged) */}
+          {/* List Content */}
           {tableError && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-700 animate-fade-in">
                 <h3 className="text-lg font-bold mb-2">Database Configuration Error</h3>
@@ -952,7 +984,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   // --- RENDER: PROFILE (DETAILS) VIEW ---
   return (
     <div className="max-w-5xl mx-auto animate-fade-in pb-12">
-         {/* Profile Header (Unchanged) */}
+         {/* Profile Header */}
          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 no-print">
            <div className="flex items-center gap-4">
                <button 
@@ -998,7 +1030,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                  <div className="p-6">
                     <form id="clientForm" onSubmit={handleSubmitProfile} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                             {/* Left Col (Unchanged) */}
+                             {/* Left Col */}
                              <div className="md:col-span-5 space-y-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
                                  <h3 className="font-bold text-gray-700 text-sm uppercase border-b pb-2 mb-2">Core Identity</h3>
                                  <div>
@@ -1261,7 +1293,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
             {/* TAB: VISITS */}
             {activeTab === 'visits' && editingClient && (
                 <div className="p-6 space-y-8 animate-fade-in">
-                    {/* New Visit Form (Unchanged) */}
+                    {/* New Visit Form */}
                     <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm">
                         <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase">Record New Follow-up</h4>
                          <div className="text-xs text-blue-600 mb-3 opacity-80">
@@ -1413,7 +1445,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                          </div>
 
                                          {visit.notes && (
-                                             <p className="text-sm text-gray-700 whitespace-pre-wrap border-l-2 border-gray-200 pl-3 py-1">{visit.notes}</p>
+                                             <div className="border-l-2 border-gray-200 pl-3 py-1">
+                                                 <NoteDisplay text={visit.notes} />
+                                             </div>
                                          )}
                                     </div>
                                 </div>
@@ -1521,37 +1555,75 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
          {/* LAB SUGGESTIONS MODAL */}
          {showLabModal && (
              <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
-                 <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-2xl">
-                     <div className="flex justify-between items-center mb-4">
-                         <h3 className="text-xl font-bold text-gray-800">Suggest Lab Tests</h3>
-                         <button onClick={() => setShowLabModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                 <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-2xl flex flex-col max-h-[85vh]">
+                     <div className="flex justify-between items-center mb-4 border-b pb-2">
+                         <div>
+                             <h3 className="text-xl font-bold text-gray-800">Suggest Lab Tests</h3>
+                             <p className="text-xs text-gray-500">Select a category to view and request tests.</p>
+                         </div>
+                         <button onClick={() => {setShowLabModal(false); setSelectedPanelId(null); setLabResults({});}} className="text-gray-400 hover:text-gray-600 text-lg font-bold">✕</button>
                      </div>
                      
-                     <div className="space-y-3 mb-6">
-                         {labPanels.map(panel => (
-                             <div 
-                                key={panel.id}
-                                onClick={() => handleToggleLab(panel.id)}
-                                className={`p-4 rounded-lg border cursor-pointer transition flex items-center justify-between ${selectedLabs.has(panel.id) ? 'bg-blue-50 border-blue-500' : 'bg-white border-gray-200 hover:border-blue-300'}`}
-                             >
-                                 <div>
-                                     <div className="font-bold text-gray-800">{panel.title}</div>
-                                     <div className="text-sm text-gray-500 font-arabic">{panel.titleAr}</div>
-                                 </div>
-                                 <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${selectedLabs.has(panel.id) ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}>
-                                     {selectedLabs.has(panel.id) && <span className="text-white text-xs">✓</span>}
+                     <div className="overflow-y-auto flex-grow pr-1">
+                         {/* Step 1: Select Panel */}
+                         {!selectedPanelId ? (
+                             <div className="space-y-3">
+                                {labPanels.map(panel => (
+                                    <div 
+                                        key={panel.id}
+                                        onClick={() => setSelectedPanelId(panel.id)}
+                                        className="p-4 rounded-lg border bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition flex justify-between items-center"
+                                    >
+                                        <div>
+                                            <div className="font-bold text-gray-800">{panel.title}</div>
+                                            <div className="text-sm text-gray-500 font-arabic">{panel.titleAr}</div>
+                                        </div>
+                                        <span className="text-gray-400">→</span>
+                                    </div>
+                                ))}
+                             </div>
+                         ) : (
+                             // Step 2: View Tests & Enter Results
+                             <div className="space-y-4 animate-fade-in">
+                                 <button 
+                                    onClick={() => setSelectedPanelId(null)}
+                                    className="text-sm text-gray-500 hover:text-blue-600 flex items-center gap-1 mb-2"
+                                 >
+                                     ← Back to Categories
+                                 </button>
+                                 
+                                 <h4 className="font-bold text-blue-800 border-b border-blue-100 pb-2">
+                                     {labPanels.find(p => p.id === selectedPanelId)?.title}
+                                 </h4>
+
+                                 <div className="space-y-3">
+                                     {labPanels.find(p => p.id === selectedPanelId)?.tests.map(test => (
+                                         <div key={test} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                                             <div className="font-medium text-gray-800 text-sm mb-1">{test}</div>
+                                             <input 
+                                                type="text" 
+                                                placeholder="Result value (optional)" 
+                                                value={labResults[test] || ''}
+                                                onChange={(e) => handleLabResultChange(test, e.target.value)}
+                                                className="w-full text-xs p-1.5 border rounded focus:ring-1 focus:ring-blue-400 outline-none"
+                                             />
+                                         </div>
+                                     ))}
                                  </div>
                              </div>
-                         ))}
+                         )}
                      </div>
 
-                     <button 
-                        onClick={saveLabRequests}
-                        disabled={selectedLabs.size === 0}
-                        className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition disabled:opacity-50"
-                     >
-                         Add Selected to Notes
-                     </button>
+                     {selectedPanelId && (
+                        <div className="pt-4 mt-4 border-t flex justify-end">
+                            <button 
+                                onClick={saveLabRequests}
+                                className="w-full py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition shadow-md"
+                            >
+                                Add Tests to Notes
+                            </button>
+                        </div>
+                     )}
                  </div>
              </div>
          )}

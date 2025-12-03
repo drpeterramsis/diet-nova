@@ -123,10 +123,10 @@ const Encyclopedia: React.FC = () => {
                     </div>
                     <h3 className="text-xl font-bold text-gray-800 mb-2">{t.tools.labs.title}</h3>
                     <p className="text-sm text-gray-500 mb-4">
-                        Reference ranges for blood tests, electrolytes, lipids, and suggested panels.
+                        Reference ranges for blood tests, electrolytes, lipids, and suggested panels with clinical significance.
                     </p>
                     <button className="mt-auto text-green-600 font-bold text-sm bg-green-50 px-4 py-2 rounded-lg group-hover:bg-green-600 group-hover:text-white transition w-full">
-                        View Ranges
+                        View Encyclopedia
                     </button>
                 </div>
 
