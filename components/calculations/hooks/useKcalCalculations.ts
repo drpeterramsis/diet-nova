@@ -60,8 +60,9 @@ export interface KcalResults {
   };
   m1?: {
     bmiValue: number;
-    result: number;
     factor: number;
+    resultDry: number;
+    resultSel: number;
   };
   m2?: {
     actual: number[];
@@ -98,13 +99,14 @@ export interface KcalResults {
     };
   };
   m4?: {
-      sedentary: number;
-      moderate: number;
-      heavy: number;
+      factors: { sedentary: number, moderate: number, heavy: number };
       status: 'Overweight' | 'Normal' | 'Underweight';
+      dry: { sedentary: number, moderate: number, heavy: number };
+      sel: { sedentary: number, moderate: number, heavy: number };
   };
   m5?: {
-      result: number;
+      resultDry: number;
+      resultSel: number;
       category: string;
       notes: string[];
   }
@@ -272,17 +274,21 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const tsf_mm = tsf;
     
     // 1. Dry Weight
-    let weight = temp_weight - ascites - edema;
-    weight = weight < 0 ? 0 : weight;
+    let dryWeightVal = temp_weight - ascites - edema;
+    dryWeightVal = dryWeightVal < 0 ? 0 : dryWeightVal;
     
-    let weightLoss = usual_weight > 0 ? ((usual_weight - weight) / usual_weight) * 100 : 0;
-    weightLoss = weightLoss < 0 ? 0 : weightLoss;
+    // Weight Loss Calculation (Fix: allow both positive and negative to show gain/loss context, but primarily loss)
+    // Formula: (Usual - Actual) / Usual
+    let weightLoss = 0;
+    if (usual_weight > 0) {
+        weightLoss = ((usual_weight - dryWeightVal) / usual_weight) * 100;
+    }
 
     // 2. Weight Loss Reference
     let weightLossRef = '';
     let weightLossColor = '';
     
-    if (changeDuration > 0) {
+    if (changeDuration > 0 && weightLoss > 0) {
         let isSevere = false;
         let isModerate = false;
 
@@ -310,33 +316,36 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
             weightLossRef = 'Moderate Malnutrition';
             weightLossColor = 'text-orange-500';
         }
+    } else if (weightLoss < 0) {
+        weightLossRef = 'Weight Gain';
+        weightLossColor = 'text-blue-500';
     }
 
     // 3. Ideal Body Weight (IBW)
     let IBW = height_cm - 100; 
     IBW = IBW < 0 ? 0 : IBW;
-    let IBW_diff = weight > 0 ? ((weight - IBW) / weight) * 100 : 0;
+    let IBW_diff = dryWeightVal > 0 ? ((dryWeightVal - IBW) / dryWeightVal) * 100 : 0;
     let IBW_2 = 0, ABW = 0, ABW_2 = 0;
 
     if (gender === 'male') {
       IBW_2 = ((height_cm - 154) * 0.9) + 50;
-      ABW = ((weight - IBW) * 0.38) + IBW;
-      ABW_2 = ((weight - IBW_2) * 0.38) + IBW_2;
+      ABW = ((dryWeightVal - IBW) * 0.38) + IBW;
+      ABW_2 = ((dryWeightVal - IBW_2) * 0.38) + IBW_2;
     } else {
       IBW_2 = ((height_cm - 154) * 0.9) + 45.5;
-      ABW = ((weight - IBW) * 0.32) + IBW;
-      ABW_2 = ((weight - IBW_2) * 0.32) + IBW_2;
+      ABW = ((dryWeightVal - IBW) * 0.32) + IBW;
+      ABW_2 = ((dryWeightVal - IBW_2) * 0.32) + IBW_2;
     }
 
-    let IBW_sel_diff = weight > 0 ? ((weight - IBW_2) / weight) * 100 : 0;
+    let IBW_sel_diff = dryWeightVal > 0 ? ((dryWeightVal - IBW_2) / dryWeightVal) * 100 : 0;
 
     // 4. Amputation Adjustment (Osterkamp)
     let adjustedWeightAmputationStr = '';
-    if (amputationPercent > 0 && weight > 0) {
+    if (amputationPercent > 0 && dryWeightVal > 0) {
         // Formula: Adjusted BW = Actual BW / (100 - % Amputation) * 100
         const denom = 100 - amputationPercent;
         if (denom > 0) {
-            const adj = (weight / denom) * 100;
+            const adj = (dryWeightVal / denom) * 100;
             adjustedWeightAmputationStr = adj.toFixed(1);
         }
     }
@@ -353,7 +362,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         return { val, ref, col };
     };
 
-    const bmiData = calculateBMI(temp_weight, height_m);
+    const bmiData = calculateBMI(dryWeightVal, height_m);
     const bmiSelData = calculateBMI(selectedWeight, height_m);
 
     // Elderly logic (> 59y)
@@ -457,7 +466,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     // 10. Protocol Check (30% Rule)
     const ibw30 = IBW_2 * 0.30;
     const threshold = IBW_2 + ibw30;
-    const isHighObesity = weight > threshold;
+    const isHighObesity = dryWeightVal > threshold;
     const recommendedWeight = isHighObesity ? ABW_2 : IBW_2;
     const recommendationLabel = isHighObesity ? 'useAdjusted' : 'useIdeal';
 
@@ -469,65 +478,59 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     let AW_BMR_mifflin = 0, SW_BMR_mifflin = 0;
 
     if (gender === 'male') {
-      AW_BMR_harris = 66.5 + (13.75 * weight) + (5.003 * height_cm) - (6.75 * age_years);
+      AW_BMR_harris = 66.5 + (13.75 * dryWeightVal) + (5.003 * height_cm) - (6.75 * age_years);
       SW_BMR_harris = 66.5 + (13.75 * selectedWeight) + (5.003 * height_cm) - (6.75 * age_years);
-      AW_BMR_mifflin = (10 * weight) + (6.25 * height_cm) - (5 * age_years) + 5;
+      AW_BMR_mifflin = (10 * dryWeightVal) + (6.25 * height_cm) - (5 * age_years) + 5;
       SW_BMR_mifflin = (10 * selectedWeight) + (6.25 * height_cm) - (5 * age_years) + 5;
     } else {
-      AW_BMR_harris = 655.1 + (9.563 * weight) + (1.850 * height_cm) - (4.676 * age_years);
+      AW_BMR_harris = 655.1 + (9.563 * dryWeightVal) + (1.850 * height_cm) - (4.676 * age_years);
       SW_BMR_harris = 655.1 + (9.563 * selectedWeight) + (1.850 * height_cm) - (4.676 * age_years);
-      AW_BMR_mifflin = (10 * weight) + (6.25 * height_cm) - (5 * age_years) - 161;
+      AW_BMR_mifflin = (10 * dryWeightVal) + (6.25 * height_cm) - (5 * age_years) - 161;
       SW_BMR_mifflin = (10 * selectedWeight) + (6.25 * height_cm) - (5 * age_years) - 161;
     }
 
     // TEE Calculation (with 10% TEF)
     const tefFactor = 1.1; 
     
-    // NEW EQUATIONS (WHO/FAO & Schofield & ACCP & Ireton-Jones)
+    // NEW EQUATIONS (WHO/FAO & Schofield & ACCP & Ireton-Jones) - Using Dry Weight by default for these simple ones
     let whoBMR = 0;
     if (gender === 'male') {
-        if (age_years >= 0 && age_years < 3) whoBMR = (59.512 * weight) - 30.4;
-        else if (age_years < 10) whoBMR = (22.706 * weight) + 504.3;
-        else if (age_years < 18) whoBMR = (17.686 * weight) + 658.2;
-        else if (age_years < 30) whoBMR = (15.4 * weight) - (27 * height_m) + 717;
-        else if (age_years < 60) whoBMR = (11.3 * weight) + (16 * height_m) + 901;
-        else whoBMR = (8.8 * weight) + (1128 * height_m) - 1071;
+        if (age_years >= 0 && age_years < 3) whoBMR = (59.512 * dryWeightVal) - 30.4;
+        else if (age_years < 10) whoBMR = (22.706 * dryWeightVal) + 504.3;
+        else if (age_years < 18) whoBMR = (17.686 * dryWeightVal) + 658.2;
+        else if (age_years < 30) whoBMR = (15.4 * dryWeightVal) - (27 * height_m) + 717;
+        else if (age_years < 60) whoBMR = (11.3 * dryWeightVal) + (16 * height_m) + 901;
+        else whoBMR = (8.8 * dryWeightVal) + (1128 * height_m) - 1071;
     } else {
-        if (age_years >= 0 && age_years < 3) whoBMR = (58.317 * weight) - 31.1;
-        else if (age_years < 10) whoBMR = (20.315 * weight) + 485.9;
-        else if (age_years < 18) whoBMR = (13.384 * weight) + 692.6;
-        else if (age_years < 30) whoBMR = (13.3 * weight) + (334 * height_m) + 35;
-        else if (age_years < 60) whoBMR = (8.7 * weight) - (25 * height_m) + 865;
-        else whoBMR = (9.2 * weight) + (637 * height_m) - 302;
+        if (age_years >= 0 && age_years < 3) whoBMR = (58.317 * dryWeightVal) - 31.1;
+        else if (age_years < 10) whoBMR = (20.315 * dryWeightVal) + 485.9;
+        else if (age_years < 18) whoBMR = (13.384 * dryWeightVal) + 692.6;
+        else if (age_years < 30) whoBMR = (13.3 * dryWeightVal) + (334 * height_m) + 35;
+        else if (age_years < 60) whoBMR = (8.7 * dryWeightVal) - (25 * height_m) + 865;
+        else whoBMR = (9.2 * dryWeightVal) + (637 * height_m) - 302;
     }
 
     let schofieldBMR = 0;
     if (gender === 'male') {
-        if (age_years < 3) schofieldBMR = (0.167 * weight) + (15.174 * height_m) - 617.6;
-        else if (age_years < 10) schofieldBMR = (19.59 * weight) + (130.3 * height_m) + 414.9;
-        else if (age_years < 18) schofieldBMR = (16.25 * weight) + (137.2 * height_m) + 515.5;
-        // Adult Schofield usually defaults to WHO or has other coefficients, but mostly used for peds
-        // Using 18-30 for adults as fallback if needed or just limit to peds
-        else schofieldBMR = (15.057 * weight) + (100.4 * height_m) + 705.8; // Approx adult
+        if (age_years < 3) schofieldBMR = (0.167 * dryWeightVal) + (15.174 * height_m) - 617.6;
+        else if (age_years < 10) schofieldBMR = (19.59 * dryWeightVal) + (130.3 * height_m) + 414.9;
+        else if (age_years < 18) schofieldBMR = (16.25 * dryWeightVal) + (137.2 * height_m) + 515.5;
+        else schofieldBMR = (15.057 * dryWeightVal) + (100.4 * height_m) + 705.8; 
     } else {
-        if (age_years < 3) schofieldBMR = (16.252 * weight) + (1023.2 * height_m) - 413.5;
-        else if (age_years < 10) schofieldBMR = (16.969 * weight) + (161.8 * height_m) + 371.2;
-        else if (age_years < 18) schofieldBMR = (8.365 * weight) + (465 * height_m) + 200.0;
-        else schofieldBMR = (13.623 * weight) + (283 * height_m) + 98.2; // Approx adult
+        if (age_years < 3) schofieldBMR = (16.252 * dryWeightVal) + (1023.2 * height_m) - 413.5;
+        else if (age_years < 10) schofieldBMR = (16.969 * dryWeightVal) + (161.8 * height_m) + 371.2;
+        else if (age_years < 18) schofieldBMR = (8.365 * dryWeightVal) + (465 * height_m) + 200.0;
+        else schofieldBMR = (13.623 * dryWeightVal) + (283 * height_m) + 98.2; 
     }
 
     // ACCP Equation (American College of Chest Physicians)
-    // REE = 25 x weight (kg). 
-    // Logic: BMI 16-25 use actual. BMI > 25 use ideal. BMI < 16 use actual.
-    // We can use 'recommendedWeight' from protocol check as it aligns with Obese -> Ideal logic
-    let accpWeight = weight;
+    let accpWeight = dryWeightVal;
     if (bmiData.val > 25) accpWeight = IBW_2; // Ideal
     const accpBMR = 25 * accpWeight;
 
-    // Ireton-Jones 1997 (Spontaneously Breathing)
-    // REE = 1784 - 11(A) + 5(W) + (244 if Male) + (239 if Trauma) + (840 if Burns)
+    // Ireton-Jones 1997
     const ijMale = gender === 'male' ? 244 : 0;
-    const ijBMR = 1784 - (11 * age_years) + (5 * weight) + ijMale; // Assuming No Trauma/Burns
+    const ijBMR = 1784 - (11 * age_years) + (5 * dryWeightVal) + ijMale; 
 
     // 12. Body Composition & Katch-McArdle
     let bodyCompData = undefined;
@@ -548,10 +551,10 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         if (finalBodyFat < 0) finalBodyFat = 0;
     }
 
-    if (finalBodyFat > 0 && weight > 0) {
+    if (finalBodyFat > 0 && dryWeightVal > 0) {
         // Calculate Fat Mass and Lean Body Mass
-        const fatMass = weight * (finalBodyFat / 100);
-        const leanBodyMass = weight - fatMass;
+        const fatMass = dryWeightVal * (finalBodyFat / 100);
+        const leanBodyMass = dryWeightVal - fatMass;
         
         // Katch-McArdle BMR = 370 + (21.6 * LBM)
         const bmrKatch = 370 + (21.6 * leanBodyMass);
@@ -565,7 +568,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
             const desiredDecimal = Number(desiredBodyFat) / 100;
             if (desiredDecimal < 1) {
                 targetWeight = leanBodyMass / (1 - desiredDecimal);
-                targetWeightDiff = weight - targetWeight;
+                targetWeightDiff = dryWeightVal - targetWeight;
             }
         }
 
@@ -585,10 +588,13 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     }
 
     // --- METHOD 1 (BMI Based) ---
-    // If BMI > 40: Weight * 15
-    // If BMI <= 40: Weight * 20
+    // If BMI > 40: Weight * 15, Else: Weight * 20
     const m1Factor = bmiData.val > 40 ? 15 : 20;
-    const m1Result = weight * m1Factor;
+    const m1ResultDry = dryWeightVal * m1Factor;
+    
+    // For Selected
+    const m1FactorSel = bmiSelData.val > 40 ? 15 : 20;
+    const m1ResultSel = selectedWeight * m1FactorSel;
 
     // --- METHOD 4 (Ratio Equation) ---
     // Determine status
@@ -606,53 +612,64 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     }
 
     const m4Result = {
-        sedentary: weight * m4Factors.sedentary,
-        moderate: weight * m4Factors.moderate,
-        heavy: weight * m4Factors.heavy,
-        status: m4Status
+        factors: m4Factors,
+        status: m4Status,
+        dry: {
+            sedentary: dryWeightVal * m4Factors.sedentary,
+            moderate: dryWeightVal * m4Factors.moderate,
+            heavy: dryWeightVal * m4Factors.heavy
+        },
+        sel: {
+            sedentary: selectedWeight * m4Factors.sedentary,
+            moderate: selectedWeight * m4Factors.moderate,
+            heavy: selectedWeight * m4Factors.heavy
+        }
     };
 
     // --- METHOD 5 (Category Calorie Requirement) ---
-    let m5Result = 0;
+    let m5ResultDry = 0;
+    let m5ResultSel = 0;
     let m5Category = '';
     const m5Notes: string[] = [];
 
     if (age < 12) {
         // Child Logic
         if (age <= 1) {
-            m5Result = 1000;
+            m5ResultDry = 1000;
             m5Category = 'Child (First Year)';
         } else {
             // > 1 year
             const base = 1000;
             if (gender === 'female') {
-                m5Result = base + (100 * age);
+                m5ResultDry = base + (100 * age);
                 m5Category = 'Girl (1-12y)';
             } else {
-                m5Result = base + (125 * age);
+                m5ResultDry = base + (125 * age);
                 m5Category = 'Boy (1-12y)';
             }
         }
+        m5ResultSel = m5ResultDry; // Same for kids usually
     } else {
         // Adult Logic
-        // Base category
+        // Base category based on BMI of Dry Weight
         let baseFactor = 30; // Ideal
         if (bmiData.val >= 25) { baseFactor = 20; m5Category = 'Adult (Overweight)'; }
         else if (bmiData.val < 18.5) { baseFactor = 40; m5Category = 'Adult (Underweight)'; }
         else { m5Category = 'Adult (Ideal Weight)'; }
 
         // Calc base
-        m5Result = weight * baseFactor;
+        m5ResultDry = dryWeightVal * baseFactor;
+        m5ResultSel = selectedWeight * baseFactor;
 
         // Elderly Adjustment (> 50y)
         if (age > 50) {
-            // Deduct 10% per decade AFTER 50 (e.g. 60y = -10%, 70y = -20%)
-            // Assuming decade starts at 60 for the first 10% drop based on "additional decade"
             const decadesOver50 = Math.floor((age - 50) / 10);
             if (decadesOver50 > 0) {
                 const reductionPct = decadesOver50 * 10;
-                const reductionVal = m5Result * (reductionPct / 100);
-                m5Result -= reductionVal;
+                const reductionValDry = m5ResultDry * (reductionPct / 100);
+                const reductionValSel = m5ResultSel * (reductionPct / 100);
+                m5ResultDry -= reductionValDry;
+                m5ResultSel -= reductionValSel;
                 m5Notes.push(`Elderly Adjustment: -${reductionPct}%`);
             }
         }
@@ -661,7 +678,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     setResults({
         weightLoss: usual_weight > 0 ? weightLoss.toFixed(1) : '0',
         weightLossRef, weightLossColor,
-        dryWeight: weight.toFixed(1),
+        dryWeight: dryWeightVal.toFixed(1),
         bmi: bmiData.val.toFixed(1), bmiRef: bmiData.ref, bmiColor: bmiData.col,
         bmiSel: bmiSelData.val.toFixed(1), bmiSelRef: bmiSelData.ref, bmiSelColor: bmiSelData.col,
         IBW: IBW.toFixed(1), ABW: ABW.toFixed(1),
@@ -691,10 +708,11 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         m1: {
             bmiValue: bmiData.val,
             factor: m1Factor,
-            result: m1Result
+            resultDry: m1ResultDry,
+            resultSel: m1ResultSel
         },
         m2: {
-            actual: [weight * 25, weight * 30, weight * 35, weight * 40],
+            actual: [dryWeightVal * 25, dryWeightVal * 30, dryWeightVal * 35, dryWeightVal * 40],
             selected: [selectedWeight * 25, selectedWeight * 30, selectedWeight * 35, selectedWeight * 40]
         },
         m3: {
@@ -720,16 +738,17 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
             },
             accp: {
                 bmr: accpBMR,
-                tee: accpBMR // ACCP often used as TEE directly, but strictly it's REE estimate. We'll show as BMR and TEE=BMR*1.2
+                tee: accpBMR 
             },
             iretonJones: {
                 bmr: ijBMR,
-                tee: ijBMR // Ireton Jones calculates EEE directly often, so treat as TEE
+                tee: ijBMR 
             }
         },
         m4: m4Result,
         m5: {
-            result: m5Result,
+            resultDry: m5ResultDry,
+            resultSel: m5ResultSel,
             category: m5Category,
             notes: m5Notes
         }

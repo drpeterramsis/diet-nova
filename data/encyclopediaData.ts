@@ -30,7 +30,7 @@ export const encyclopediaData: EncyclopediaItem[] = [
     id: 'def_tee',
     name: 'Total Energy Expenditure (TEE)',
     category: 'Definition',
-    function: 'The amount of calories burned by the human body in one day adjusted to the amount of activity.\n\nTEE = BMR (60-80%) + Diet-induced thermogenesis (~10%) + Activity energy expenditure (~15-30%)',
+    function: 'Is the amount of calories burned by the human body in one day adjusted to the amount of activity.\n\nTotal energy expenditure (TEE) is composed of the energy costs of the processes essential for life (basal metabolic rate (BMR), 60–80% of TEE)\n+ the energy expended in order to digest, absorb, and convert food (diet-induced thermogenesis, ~10%)\n+ The energy expended during physical activities (activity energy expenditure, ~15–30%)',
     sources: '-',
     deficiency: '-'
   },

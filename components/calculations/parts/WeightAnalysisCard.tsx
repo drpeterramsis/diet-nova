@@ -11,20 +11,34 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
   const { t } = useLanguage();
 
   return (
-    <div className="card bg-white shadow-sm border border-gray-200">
-      <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
-          <h2 className="text-sm font-bold text-[var(--color-heading)] uppercase tracking-wider">
+    <div className="card bg-white shadow-md border border-blue-100 overflow-hidden">
+      <div className="p-3 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
+          <h2 className="text-sm font-bold text-blue-900 uppercase tracking-wider">
               {t.kcal.weightAnalysis}
           </h2>
           {/* Protocol Badge */}
           {r.protocol && (
-             <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${r.protocol.isHighObesity ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-green-100 text-green-700 border-green-200'}`}>
-                 {r.protocol.isHighObesity ? 'Adjusted Wt. Indicated' : 'Ideal Wt. Indicated'}
+             <span className={`text-[9px] font-bold px-2 py-1 rounded-full border ${r.protocol.isHighObesity ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-green-100 text-green-700 border-green-200'}`}>
+                 {r.protocol.isHighObesity ? 'Adjusted Wt' : 'Ideal Wt'}
              </span>
           )}
       </div>
 
       <div className="p-4 space-y-4">
+          {/* Weight Comparison Grid (New) */}
+          <div className="grid grid-cols-2 gap-4 p-3 rounded-lg bg-gray-50 border border-gray-100">
+              <div className="text-center border-r border-gray-200 pr-2">
+                  <div className="text-[10px] font-bold text-gray-400 uppercase">Dry (Actual)</div>
+                  <div className="font-mono font-bold text-lg text-gray-800">{r.dryWeight} kg</div>
+                  <div className={`text-xs font-bold ${r.bmiColor}`}>{r.bmi} BMI</div>
+              </div>
+              <div className="text-center pl-2">
+                  <div className="text-[10px] font-bold text-blue-400 uppercase">Selected</div>
+                  <div className="font-mono font-bold text-lg text-blue-800">{r.bmiSel !== '0.0' ? 'Using Sel.' : '-'}</div>
+                  <div className={`text-xs font-bold ${r.bmiSelColor}`}>{r.bmiSel} BMI</div>
+              </div>
+          </div>
+
           {/* Elderly Note */}
           {r.elderlyInfo && (
               <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded-r text-xs text-yellow-800">
@@ -33,56 +47,12 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
               </div>
           )}
 
-          {/* Waist Risk Analysis */}
-          {r.waistRisk && (
-              <div className="flex items-center justify-between p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
-                  <div>
-                      <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-0.5">Waist Circumference</div>
-                      <div className={`text-sm font-bold ${r.waistRisk.color}`}>
-                          {r.waistRisk.status}
-                      </div>
-                  </div>
-                  <div className="text-right">
-                      <div className="text-xl font-mono font-bold text-gray-700 leading-none">
-                          {r.waistRisk.value}
-                      </div>
-                      <div className="text-[10px] text-gray-400">cm</div>
-                  </div>
-              </div>
-          )}
-
-          {/* Anthropometric Analysis (New) */}
-          {r.anthropometry && (r.anthropometry.estimatedBMI || r.anthropometry.mamc) && (
-              <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
-                  <h4 className="text-xs font-bold text-purple-800 uppercase mb-2 flex items-center gap-1">
-                      📏 Anthropometric Analysis
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                      {r.anthropometry.estimatedBMI && (
-                          <div className="bg-white p-2 rounded shadow-sm">
-                              <div className="text-[10px] text-gray-500 uppercase">{t.kcal.estBmi}</div>
-                              <div className="font-bold text-purple-700">{r.anthropometry.estimatedBMI}</div>
-                          </div>
-                      )}
-                      {r.anthropometry.mamc && (
-                          <div className="bg-white p-2 rounded shadow-sm">
-                              <div className="text-[10px] text-gray-500 uppercase">{t.kcal.mamc}</div>
-                              <div className="font-bold text-purple-700">{r.anthropometry.mamc} <span className="text-xs text-gray-400">cm</span></div>
-                          </div>
-                      )}
-                  </div>
-              </div>
-          )}
-
           {/* Body Composition Indicators (InBody / Estimates) */}
           {r.bodyComposition && (
-              <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
-                  <div className="flex justify-between items-center mb-3">
+              <div className="bg-blue-50/50 rounded-lg p-3 border border-blue-100">
+                  <div className="flex justify-between items-center mb-2">
                       <h4 className="text-xs font-bold text-blue-800 uppercase flex items-center gap-1">
-                          💪 Body Composition 
-                          <span className="text-[9px] font-normal opacity-70 bg-white px-1 rounded">
-                              {r.bodyComposition.bodyFatSource}
-                          </span>
+                          💪 Body Comp ({r.bodyComposition.bodyFatSource})
                       </h4>
                   </div>
                   <div className="grid grid-cols-3 gap-2 text-center mb-2">
@@ -106,31 +76,6 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
                           <div className="text-lg font-mono font-bold text-blue-800">
                               {r.bodyComposition.targetWeight} <span className="text-xs">kg</span>
                           </div>
-                          {r.bodyComposition.targetWeightDiff && (
-                              <div className="text-xs text-gray-500">
-                                  To lose: {r.bodyComposition.targetWeightDiff} kg
-                              </div>
-                          )}
-                      </div>
-                  )}
-              </div>
-          )}
-
-          {/* Body Composition Indicators (WHR & WHtR) */}
-          {(r.whr || r.whtr) && (
-              <div className="grid grid-cols-2 gap-3">
-                  {r.whr && (
-                      <div className="p-3 bg-white border border-gray-100 rounded-lg shadow-sm text-center">
-                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">{t.kcal.whr}</div>
-                          <div className="text-lg font-mono font-bold text-gray-800 leading-none mb-1">{r.whr.ratio}</div>
-                          <div className={`text-[10px] font-bold ${r.whr.color}`}>{r.whr.status}</div>
-                      </div>
-                  )}
-                  {r.whtr && (
-                      <div className="p-3 bg-white border border-gray-100 rounded-lg shadow-sm text-center">
-                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">{t.kcal.whtr}</div>
-                          <div className="text-lg font-mono font-bold text-gray-800 leading-none mb-1">{r.whtr.ratio}</div>
-                          <div className={`text-[10px] font-bold ${r.whtr.color}`}>{r.whtr.status}</div>
                       </div>
                   )}
               </div>
@@ -138,67 +83,32 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
 
           {/* Protocol Recommendation Box */}
           {r.protocol && (
-              <div className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-50 to-white border-l-4 border-blue-500 rounded-r-lg shadow-sm">
-                  <div>
-                      <div className="text-xs text-gray-500 font-medium uppercase mb-0.5">{t.kcal.recommendation}</div>
-                      <div className="text-sm font-bold text-blue-800">
-                          {t.kcal[r.protocol.recommendationLabel as keyof typeof t.kcal]}
-                      </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2 bg-white border border-gray-200 rounded">
+                      <div className="text-gray-500 font-bold">IBW (Simple)</div>
+                      <div className="font-mono text-gray-800 font-bold">{r.IBW} kg</div>
                   </div>
-                  <div className="text-right">
-                      <div className="text-2xl font-mono font-bold text-blue-600 leading-none">
-                          {r.protocol.recommendedWeight.toFixed(1)}
-                      </div>
-                      <div className="text-[10px] text-gray-400">kg</div>
+                  <div className="p-2 bg-white border border-gray-200 rounded">
+                      <div className="text-gray-500 font-bold">IBW (Hamwi)</div>
+                      <div className="font-mono text-gray-800 font-bold">{r.IBW_2} kg</div>
                   </div>
+                  <div className="p-2 bg-white border border-gray-200 rounded">
+                      <div className="text-gray-500 font-bold">Adj. BW</div>
+                      <div className="font-mono text-gray-800 font-bold">{r.ABW_2} kg</div>
+                  </div>
+                  {r.adjustedWeightAmputation ? (
+                      <div className="p-2 bg-red-50 border border-red-200 rounded">
+                          <div className="text-red-500 font-bold">Amp. Adj.</div>
+                          <div className="font-mono text-red-800 font-bold">{r.adjustedWeightAmputation} kg</div>
+                      </div>
+                  ) : (
+                      <div className="p-2 bg-gray-50 border border-gray-200 rounded">
+                          <div className="text-gray-400 font-bold">Threshold</div>
+                          <div className="font-mono text-gray-500">{r.protocol.threshold.toFixed(1)} kg</div>
+                      </div>
+                  )}
               </div>
           )}
-
-          {/* Compact Grid of Weights */}
-          <div className="grid grid-cols-2 gap-2">
-              <div className="p-2.5 bg-gray-50 rounded border border-gray-100">
-                  <div className="flex justify-between items-end mb-1">
-                      <span className="text-[10px] text-gray-500 font-bold uppercase">{t.kcal.idealWeightSimple}</span>
-                      <span className="text-[10px] text-gray-400">{r.IBW_diff_val?.toFixed(0)}%</span>
-                  </div>
-                  <div className="font-mono font-bold text-gray-700">{r.IBW || '-'} <span className="text-xs font-normal text-gray-400">kg</span></div>
-              </div>
-
-              <div className="p-2.5 bg-gray-50 rounded border border-gray-100">
-                  <div className="flex justify-between items-end mb-1">
-                      <span className="text-[10px] text-gray-500 font-bold uppercase">{t.kcal.idealWeightAccurate}</span>
-                      <span className="text-[10px] text-gray-400">{r.IBW_sel_diff_val?.toFixed(0)}%</span>
-                  </div>
-                  <div className="font-mono font-bold text-gray-700">{r.IBW_2 || '-'} <span className="text-xs font-normal text-gray-400">kg</span></div>
-              </div>
-
-              <div className="p-2.5 bg-gray-50 rounded border border-gray-100">
-                  <div className="mb-1">
-                      <span className="text-[10px] text-gray-500 font-bold uppercase">{t.kcal.adjustedWeight}</span>
-                  </div>
-                  <div className="font-mono font-bold text-gray-700">{r.ABW || '-'} <span className="text-xs font-normal text-gray-400">kg</span></div>
-              </div>
-
-              {r.adjustedWeightAmputation ? (
-                  <div className="p-2.5 bg-red-50 rounded border border-red-100">
-                      <div className="mb-1">
-                          <span className="text-[10px] text-red-600 font-bold uppercase">{t.kcal.adjustedWeightAmp}</span>
-                      </div>
-                      <div className="font-mono font-bold text-red-800">{r.adjustedWeightAmputation} <span className="text-xs font-normal text-red-400">kg</span></div>
-                  </div>
-              ) : (
-                  <div className="p-2.5 bg-gray-50 rounded border border-gray-100">
-                      <div className="mb-1">
-                          <span className="text-[10px] text-gray-500 font-bold uppercase">{t.kcal.threshold}</span>
-                      </div>
-                      <div className="font-mono font-bold text-gray-600">{r.protocol?.threshold.toFixed(1) || '-'} <span className="text-xs font-normal text-gray-400">kg</span></div>
-                  </div>
-              )}
-          </div>
-
-          <div className="text-[10px] text-gray-400 italic bg-gray-50 p-2 rounded">
-              💡 Tip: If unable to measure Height/Weight, BMI can be estimated using MUAC.
-          </div>
       </div>
     </div>
   );

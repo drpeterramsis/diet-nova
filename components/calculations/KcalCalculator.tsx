@@ -1,6 +1,4 @@
 
-
-
 import React, { useEffect, useState } from 'react';
 import { useKcalCalculations, KcalInitialData } from './hooks/useKcalCalculations';
 import PersonalInfoCard from './parts/PersonalInfoCard';
@@ -19,6 +17,22 @@ interface KcalCalculatorProps {
   activeVisit?: { client: Client, visit: ClientVisit } | null;
 }
 
+const CollapsibleCard = ({ title, children, defaultOpen = false }: React.PropsWithChildren<{ title: string, defaultOpen?: boolean }>) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+    return (
+        <div className="card bg-white overflow-hidden transition-all duration-300">
+            <div 
+                className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50 transition border-b border-gray-100"
+                onClick={() => setIsOpen(!isOpen)}
+            >
+                <h3 className="font-bold text-gray-800 text-lg">{title}</h3>
+                <span className={`transform transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'}`}>▼</span>
+            </div>
+            {isOpen && <div className="p-4 animate-fade-in">{children}</div>}
+        </div>
+    );
+};
+
 const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialData, activeVisit }) => {
   const { t } = useLanguage();
   const { inputs, results, resetInputs } = useKcalCalculations(initialData);
@@ -30,13 +44,11 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
       if (activeVisit?.visit.kcal_data) {
           const data = activeVisit.visit.kcal_data;
           if (data.inputs) {
-              // Hydrate all persistent fields from saved data
               if (data.inputs.gender) inputs.setGender(data.inputs.gender);
               if (data.inputs.age) inputs.setAge(data.inputs.age);
               if (data.inputs.height) inputs.setHeight(data.inputs.height);
               if (data.inputs.waist) inputs.setWaist(data.inputs.waist);
               if (data.inputs.hip) inputs.setHip(data.inputs.hip);
-              // New Anthropometry
               if (data.inputs.mac && inputs.setMac) inputs.setMac(data.inputs.mac);
               if (data.inputs.tsf && inputs.setTsf) inputs.setTsf(data.inputs.tsf);
               
@@ -51,19 +63,16 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               if (data.inputs.changeDuration) inputs.setChangeDuration(data.inputs.changeDuration);
               if (data.inputs.amputationPercent && inputs.setAmputationPercent) inputs.setAmputationPercent(data.inputs.amputationPercent);
               
-              // New InBody/Body Fat fields
               if (data.inputs.bodyFatPercent && inputs.setBodyFatPercent) inputs.setBodyFatPercent(data.inputs.bodyFatPercent);
               if (data.inputs.desiredBodyFat && inputs.setDesiredBodyFat) inputs.setDesiredBodyFat(data.inputs.desiredBodyFat);
 
-              // Hydrate reqKcal
               if (data.inputs.reqKcal) inputs.setReqKcal(data.inputs.reqKcal);
           }
       } else if (activeVisit) {
-          // If no specific kcal_data saved, try to use visit vitals directly
           if (activeVisit.visit.hip && inputs.setHip) inputs.setHip(activeVisit.visit.hip);
-          if (activeVisit.visit.miac && inputs.setMac) inputs.setMac(activeVisit.visit.miac); // Map MIAC to MAC
+          if (activeVisit.visit.miac && inputs.setMac) inputs.setMac(activeVisit.visit.miac); 
       }
-  }, [activeVisit]); // Run once when visit changes
+  }, [activeVisit]); 
 
   const handleSaveToVisit = async () => {
       if (!activeVisit) return;
@@ -76,8 +85,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               height: inputs.height,
               waist: inputs.waist,
               hip: inputs.hip,
-              mac: inputs.mac, // Save MAC
-              tsf: inputs.tsf, // Save TSF
+              mac: inputs.mac,
+              tsf: inputs.tsf,
               currentWeight: inputs.currentWeight,
               selectedWeight: inputs.selectedWeight,
               usualWeight: inputs.usualWeight,
@@ -87,13 +96,11 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               edema: inputs.edema,
               changeDuration: inputs.changeDuration,
               amputationPercent: inputs.amputationPercent,
-              
               bodyFatPercent: inputs.bodyFatPercent,
               desiredBodyFat: inputs.desiredBodyFat,
-
               reqKcal: inputs.reqKcal
           },
-          results: results // Save calculated results for reference
+          results: results
       };
 
       try {
@@ -153,7 +160,6 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               <div className="flex items-center gap-3">
                   {saveStatus && <span className="text-sm font-medium text-green-700 animate-pulse">{saveStatus}</span>}
                   
-                  {/* Shortcut to Plan Meals if ReqKcal exists */}
                   {onPlanMeals && inputs.reqKcal && (
                       <button 
                           onClick={() => onPlanMeals(Number(inputs.reqKcal))}
@@ -173,48 +179,48 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
           </div>
       )}
 
-      {/* Main Grid: Inputs vs Results */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
         {/* Left Column: Inputs & Methods */}
         <div className="lg:col-span-2 space-y-6">
-            <PersonalInfoCard 
-              gender={inputs.gender} setGender={inputs.setGender}
-              
-              age={inputs.age} setAge={inputs.setAge}
-              ageMode={inputs.ageMode} setAgeMode={inputs.setAgeMode}
-              dob={inputs.dob} setDob={inputs.setDob}
-              reportDate={inputs.reportDate} setReportDate={inputs.setReportDate}
-              pediatricAge={inputs.pediatricAge}
+            <CollapsibleCard title={t.kcal.personalInfo} defaultOpen={true}>
+                <PersonalInfoCard 
+                gender={inputs.gender} setGender={inputs.setGender}
+                age={inputs.age} setAge={inputs.setAge}
+                ageMode={inputs.ageMode} setAgeMode={inputs.setAgeMode}
+                dob={inputs.dob} setDob={inputs.setDob}
+                reportDate={inputs.reportDate} setReportDate={inputs.setReportDate}
+                pediatricAge={inputs.pediatricAge}
+                height={inputs.height} setHeight={inputs.setHeight}
+                waist={inputs.waist} setWaist={inputs.setWaist}
+                hip={inputs.hip} setHip={inputs.setHip}
+                mac={inputs.mac} setMac={inputs.setMac}
+                tsf={inputs.tsf} setTsf={inputs.setTsf}
+                physicalActivity={inputs.physicalActivity} setPhysicalActivity={inputs.setPhysicalActivity}
+                onOpenHeightEstimator={() => setShowHeightEstimator(true)}
+                />
+            </CollapsibleCard>
 
-              height={inputs.height} setHeight={inputs.setHeight}
-              waist={inputs.waist} setWaist={inputs.setWaist}
-              hip={inputs.hip} setHip={inputs.setHip}
-              mac={inputs.mac} setMac={inputs.setMac}
-              tsf={inputs.tsf} setTsf={inputs.setTsf}
+            <CollapsibleCard title={t.kcal.weightInfo} defaultOpen={true}>
+                <WeightInfoCard 
+                currentWeight={inputs.currentWeight} setCurrentWeight={inputs.setCurrentWeight}
+                selectedWeight={inputs.selectedWeight} setSelectedWeight={inputs.setSelectedWeight}
+                usualWeight={inputs.usualWeight} setUsualWeight={inputs.setUsualWeight}
+                changeDuration={inputs.changeDuration} setChangeDuration={inputs.setChangeDuration}
+                ascites={inputs.ascites} setAscites={inputs.setAscites}
+                edema={inputs.edema} setEdema={inputs.setEdema}
+                amputationPercent={inputs.amputationPercent} setAmputationPercent={inputs.setAmputationPercent}
+                bodyFatPercent={inputs.bodyFatPercent} setBodyFatPercent={inputs.setBodyFatPercent}
+                />
+            </CollapsibleCard>
 
-              physicalActivity={inputs.physicalActivity} setPhysicalActivity={inputs.setPhysicalActivity}
-              
-              onOpenHeightEstimator={() => setShowHeightEstimator(true)}
-            />
-
-            <WeightInfoCard 
-              currentWeight={inputs.currentWeight} setCurrentWeight={inputs.setCurrentWeight}
-              selectedWeight={inputs.selectedWeight} setSelectedWeight={inputs.setSelectedWeight}
-              usualWeight={inputs.usualWeight} setUsualWeight={inputs.setUsualWeight}
-              changeDuration={inputs.changeDuration} setChangeDuration={inputs.setChangeDuration}
-              ascites={inputs.ascites} setAscites={inputs.setAscites}
-              edema={inputs.edema} setEdema={inputs.setEdema}
-              amputationPercent={inputs.amputationPercent} setAmputationPercent={inputs.setAmputationPercent}
-              
-              bodyFatPercent={inputs.bodyFatPercent} setBodyFatPercent={inputs.setBodyFatPercent}
-            />
-
-            <MethodsCard 
-              results={results}
-              deficit={inputs.deficit}
-              setDeficit={inputs.setDeficit}
-            />
+            <CollapsibleCard title={t.kcal.methods} defaultOpen={true}>
+                <MethodsCard 
+                results={results}
+                deficit={inputs.deficit}
+                setDeficit={inputs.setDeficit}
+                />
+            </CollapsibleCard>
         </div>
 
         {/* Right Column: Results */}
@@ -228,8 +234,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                 />
                 
                 {inputs.setDesiredBodyFat && (
-                    <div className="card bg-white p-4">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                    <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
+                        <label className="block text-xs font-bold text-blue-800 uppercase mb-2">
                             {t.kcal.desiredBodyFat}
                         </label>
                         <input 
@@ -251,7 +257,6 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
 
       </div>
 
-      {/* Height/Weight Estimator Modal */}
       {showHeightEstimator && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
               <HeightEstimator 

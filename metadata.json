@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova -Kcal Modifiy _ v2.0.114",
-  "description": "Updates: Method 3 fixes (TEE 0 issue), added WHO/FAO, Schofield, ACCP, and Ireton-Jones equations.",
+  "name": "Diet-Nova -Kcal Modifiy _ v2.0.116",
+  "description": "Updates: Dual weight analysis (Dry vs Selected), fixed weight loss calc, enhanced collapsible UI.",
   "requestFramePermissions": []
 }

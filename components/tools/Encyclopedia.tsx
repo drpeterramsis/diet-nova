@@ -95,25 +95,42 @@ const Encyclopedia: React.FC = () => {
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* 1. Vitamins & Minerals Chart Card */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+                {/* 1. Vitamins & Minerals */}
                 <div 
-                    onClick={() => setCurrentSector('nutrients')}
-                    className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-blue-500"
+                    onClick={() => { setCurrentSector('nutrients'); setActiveFilter('Vitamin'); }}
+                    className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-orange-500"
                 >
-                    <div className="h-16 w-16 bg-blue-50 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:bg-blue-100 transition">
+                    <div className="h-16 w-16 bg-orange-50 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:bg-orange-100 transition">
                         💊
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Nutrients & Definitions</h3>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Vitamins & Minerals</h3>
                     <p className="text-sm text-gray-500 mb-4">
-                        Comprehensive chart of vitamins, minerals, and key nutritional definitions.
+                        Comprehensive chart of essential vitamins and minerals, functions, and sources.
                     </p>
-                    <button className="mt-auto text-blue-600 font-bold text-sm bg-blue-50 px-4 py-2 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition w-full">
-                        View Chart & Cards
+                    <button className="mt-auto text-orange-600 font-bold text-sm bg-orange-50 px-4 py-2 rounded-lg group-hover:bg-orange-600 group-hover:text-white transition w-full">
+                        Explore Nutrients
                     </button>
                 </div>
 
-                {/* 2. Biochemical Labs Card */}
+                {/* 2. Definitions */}
+                <div 
+                    onClick={() => { setCurrentSector('nutrients'); setActiveFilter('Definition'); }}
+                    className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-purple-500"
+                >
+                    <div className="h-16 w-16 bg-purple-50 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:bg-purple-100 transition">
+                        📖
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">Nutritional Definitions</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                        Key terms: Basal Metabolism, BMR, and Total Energy Expenditure (TEE) details.
+                    </p>
+                    <button className="mt-auto text-purple-600 font-bold text-sm bg-purple-50 px-4 py-2 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition w-full">
+                        View Definitions
+                    </button>
+                </div>
+
+                {/* 3. Biochemical Labs */}
                 <div 
                     onClick={() => setCurrentSector('labs')}
                     className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-green-500"
@@ -123,14 +140,14 @@ const Encyclopedia: React.FC = () => {
                     </div>
                     <h3 className="text-xl font-bold text-gray-800 mb-2">{t.tools.labs.title}</h3>
                     <p className="text-sm text-gray-500 mb-4">
-                        Reference ranges for blood tests, electrolytes, lipids, and suggested panels with clinical significance.
+                        Reference ranges for blood tests, electrolytes, lipids, and suggested panels.
                     </p>
                     <button className="mt-auto text-green-600 font-bold text-sm bg-green-50 px-4 py-2 rounded-lg group-hover:bg-green-600 group-hover:text-white transition w-full">
                         View Encyclopedia
                     </button>
                 </div>
 
-                {/* 3. Drugs & Weight Card */}
+                {/* 4. Drugs & Weight */}
                 <div 
                     onClick={() => setCurrentSector('drugs')}
                     className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-red-500"

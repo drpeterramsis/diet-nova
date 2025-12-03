@@ -91,13 +91,6 @@ const ToolsGrid: React.FC<ToolsGridProps> = ({ onToolClick, setBmiOpen, isAuthen
         onClick={() => onToolClick('height-estimator')}
         icon={<span className="text-2xl">📏</span>}
       />
-      
-      <ToolCard
-        title={t.tools.encyclopedia.title}
-        desc={t.tools.encyclopedia.desc}
-        onClick={() => onToolClick('encyclopedia')}
-        icon={<span className="text-2xl">📚</span>}
-      />
     </div>
   );
 };
