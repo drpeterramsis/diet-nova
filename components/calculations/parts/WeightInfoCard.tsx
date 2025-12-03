@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { InputGroup, SelectGroup } from '../InputComponents';
@@ -66,28 +67,36 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
                   { value: 10, label: '6 Months' },
                 ]}
               />
-              <SelectGroup 
-                label={t.kcal.ascites}
-                value={ascites}
-                onChange={setAscites}
-                options={[
-                  { value: 0, label: 'None' },
-                  { value: 2.2, label: 'Minimal' },
-                  { value: 6, label: 'Moderate' },
-                  { value: 14, label: 'Severe' },
-                ]}
-              />
-              <SelectGroup 
-                label={t.kcal.edema}
-                value={edema}
-                onChange={setEdema}
-                options={[
-                  { value: 0, label: 'None' },
-                  { value: 1, label: 'Minimal' },
-                  { value: 5, label: 'Moderate' },
-                  { value: 10, label: 'Severe' },
-                ]}
-              />
+              
+              <div className="md:col-span-2 pt-2 border-t border-gray-100 mt-2">
+                  <p className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">
+                      Mendenhall's Figure (Fluid Correction)
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <SelectGroup 
+                        label={t.kcal.ascites}
+                        value={ascites}
+                        onChange={setAscites}
+                        options={[
+                          { value: 0, label: 'None' },
+                          { value: 2.2, label: 'Minimal (2.2kg)' },
+                          { value: 6, label: 'Moderate (6kg)' },
+                          { value: 14, label: 'Severe (14kg)' },
+                        ]}
+                      />
+                      <SelectGroup 
+                        label={t.kcal.edema}
+                        value={edema}
+                        onChange={setEdema}
+                        options={[
+                          { value: 0, label: 'None' },
+                          { value: 1, label: 'Minimal (1kg)' },
+                          { value: 5, label: 'Moderate (5kg)' },
+                          { value: 10, label: 'Severe (10kg)' },
+                        ]}
+                      />
+                  </div>
+              </div>
            </div>
         )}
       </div>
