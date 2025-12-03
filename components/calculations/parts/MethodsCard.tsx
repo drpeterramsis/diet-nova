@@ -93,7 +93,7 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results, deficit, setDeficit 
            {activeMethod === 'method3' && r.m3 && (
              <div className="space-y-4">
                <div className="flex items-center justify-between mb-2">
-                 <h3 className="font-bold text-gray-700">Method 3: BMR + PA + TEF</h3>
+                 <h3 className="font-bold text-gray-700">Method 3: Advanced Equations Comparison</h3>
                  <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold">{t.kcal.deficit}</span>
                     <input 
@@ -105,63 +105,96 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results, deficit, setDeficit 
                     />
                  </div>
                </div>
-               <table className="w-full text-sm">
-                 <thead>
-                   <tr className="border-b border-green-200">
-                     <th className="text-left pb-2">Metric</th>
-                     <th className="pb-2 text-right">Actual W.</th>
-                     <th className="pb-2 text-right">Selected W.</th>
-                   </tr>
-                 </thead>
-                 <tbody className="divide-y divide-white/50">
-                   {/* Mifflin */}
-                   <tr>
-                     <td className="py-1 text-xs uppercase tracking-wider opacity-70 font-bold bg-green-50/50" colSpan={3}>Mifflin-St Jeor (Recommended)</td>
-                   </tr>
-                   <tr>
-                      <td className="py-1 pl-2">BMR</td>
-                      <td className="text-right font-mono">{r.m3.mifflin.bmr[0].toFixed(0)}</td>
-                      <td className="text-right font-mono text-green-700 font-bold">{r.m3.mifflin.bmr[1].toFixed(0)}</td>
-                   </tr>
-                   <tr>
-                      <td className="py-1 pl-2">TEE (Incl. 10% TEF)</td>
-                      <td className="text-right font-mono">{(r.m3.mifflin.tee[0] - deficit).toFixed(0)}</td>
-                      <td className="text-right font-mono text-green-700 font-bold">{(r.m3.mifflin.tee[1] - deficit).toFixed(0)}</td>
-                   </tr>
+               
+               <div className="overflow-x-auto">
+                   <table className="w-full text-sm text-left border-collapse">
+                     <thead className="bg-white border-b border-gray-200 text-xs text-gray-500 uppercase">
+                       <tr>
+                         <th className="p-2 border-r">Equation</th>
+                         <th className="p-2 text-right">BMR/REE</th>
+                         <th className="p-2 text-right bg-green-50">TEE (Act)</th>
+                         <th className="p-2 text-right bg-blue-50 font-bold">Net (Def)</th>
+                       </tr>
+                     </thead>
+                     <tbody className="divide-y divide-gray-100 font-mono">
+                       {/* Mifflin */}
+                       <tr className="hover:bg-gray-50">
+                          <td className="p-2 border-r font-sans text-xs">
+                              Mifflin-St Jeor <span className="text-[9px] bg-green-100 text-green-800 px-1 rounded ml-1">Rec</span>
+                          </td>
+                          <td className="p-2 text-right">{r.m3.mifflin.bmr[0].toFixed(0)}</td>
+                          <td className="p-2 text-right bg-green-50/50">{r.m3.mifflin.tee[0].toFixed(0)}</td>
+                          <td className="p-2 text-right bg-blue-50/50 font-bold text-blue-700">{(r.m3.mifflin.tee[0] - deficit).toFixed(0)}</td>
+                       </tr>
+                       
+                       {/* Harris */}
+                       <tr className="hover:bg-gray-50">
+                          <td className="p-2 border-r font-sans text-xs">Harris-Benedict</td>
+                          <td className="p-2 text-right">{r.m3.harris.bmr[0].toFixed(0)}</td>
+                          <td className="p-2 text-right bg-green-50/50">{r.m3.harris.tee[0].toFixed(0)}</td>
+                          <td className="p-2 text-right bg-blue-50/50 font-bold text-blue-700">{(r.m3.harris.tee[0] - deficit).toFixed(0)}</td>
+                       </tr>
 
-                   {/* Katch-McArdle (If available) */}
-                   {r.m3.katch && (
-                       <>
-                       <tr>
-                         <td className="py-1 text-xs uppercase tracking-wider opacity-70 font-bold bg-purple-50/50 pt-3" colSpan={3}>Katch-McArdle (InBody/LBM)</td>
-                       </tr>
-                       <tr>
-                          <td className="py-1 pl-2">BMR (Based on LBM)</td>
-                          <td className="text-right font-mono text-purple-700 font-bold" colSpan={2}>{r.m3.katch.bmr.toFixed(0)}</td>
-                       </tr>
-                       <tr>
-                          <td className="py-1 pl-2">TEE (Incl. 10% TEF)</td>
-                          <td className="text-right font-mono text-purple-700 font-bold" colSpan={2}>{(r.m3.katch.tee - deficit).toFixed(0)}</td>
-                       </tr>
-                       </>
-                   )}
+                       {/* WHO */}
+                       {r.m3.who && (
+                           <tr className="hover:bg-gray-50">
+                              <td className="p-2 border-r font-sans text-xs">WHO/FAO</td>
+                              <td className="p-2 text-right">{r.m3.who.bmr.toFixed(0)}</td>
+                              <td className="p-2 text-right bg-green-50/50">{r.m3.who.tee.toFixed(0)}</td>
+                              <td className="p-2 text-right bg-blue-50/50 font-bold text-blue-700">{(r.m3.who.tee - deficit).toFixed(0)}</td>
+                           </tr>
+                       )}
 
-                   {/* Harris */}
-                   <tr>
-                     <td className="py-1 text-xs uppercase tracking-wider opacity-70 pt-3" colSpan={3}>Harris Benedict (Old)</td>
-                   </tr>
-                   <tr>
-                      <td className="py-1 pl-2">BMR</td>
-                      <td className="text-right font-mono">{r.m3.harris.bmr[0].toFixed(0)}</td>
-                      <td className="text-right font-mono text-green-700 font-bold">{r.m3.harris.bmr[1].toFixed(0)}</td>
-                   </tr>
-                   <tr>
-                      <td className="py-1 pl-2">TEE (Incl. 10% TEF)</td>
-                      <td className="text-right font-mono">{(r.m3.harris.tee[0] - deficit).toFixed(0)}</td>
-                      <td className="text-right font-mono text-green-700 font-bold">{(r.m3.harris.tee[1] - deficit).toFixed(0)}</td>
-                   </tr>
-                 </tbody>
-               </table>
+                        {/* Schofield */}
+                       {r.m3.schofield && (
+                           <tr className="hover:bg-gray-50">
+                              <td className="p-2 border-r font-sans text-xs">Schofield</td>
+                              <td className="p-2 text-right">{r.m3.schofield.bmr.toFixed(0)}</td>
+                              <td className="p-2 text-right bg-green-50/50">{r.m3.schofield.tee.toFixed(0)}</td>
+                              <td className="p-2 text-right bg-blue-50/50 font-bold text-blue-700">{(r.m3.schofield.tee - deficit).toFixed(0)}</td>
+                           </tr>
+                       )}
+
+                       {/* Katch (InBody) */}
+                       {r.m3.katch && (
+                           <tr className="hover:bg-purple-50 bg-purple-50/20">
+                              <td className="p-2 border-r font-sans text-xs text-purple-700">Katch (LBM)</td>
+                              <td className="p-2 text-right">{r.m3.katch.bmr.toFixed(0)}</td>
+                              <td className="p-2 text-right bg-green-50/50">{r.m3.katch.tee.toFixed(0)}</td>
+                              <td className="p-2 text-right bg-blue-50/50 font-bold text-blue-700">{(r.m3.katch.tee - deficit).toFixed(0)}</td>
+                           </tr>
+                       )}
+
+                       {/* Clinical Divider */}
+                       <tr className="bg-gray-100/50">
+                           <td colSpan={4} className="p-1 text-[10px] font-bold text-gray-500 uppercase text-center tracking-wider">Clinical / Hospital</td>
+                       </tr>
+
+                       {/* ACCP */}
+                       {r.m3.accp && (
+                           <tr className="hover:bg-gray-50">
+                              <td className="p-2 border-r font-sans text-xs">ACCP (Chest Phys)</td>
+                              <td className="p-2 text-right">{r.m3.accp.bmr.toFixed(0)}</td>
+                              <td className="p-2 text-right bg-green-50/50 text-gray-400 text-[10px] italic">N/A</td>
+                              <td className="p-2 text-right bg-blue-50/50 font-bold text-blue-700">{(r.m3.accp.bmr - deficit).toFixed(0)}</td>
+                           </tr>
+                       )}
+
+                       {/* Ireton-Jones */}
+                       {r.m3.iretonJones && (
+                           <tr className="hover:bg-gray-50">
+                              <td className="p-2 border-r font-sans text-xs">Ireton-Jones '97</td>
+                              <td className="p-2 text-right text-gray-400 text-[10px]">Direct TEE</td>
+                              <td className="p-2 text-right bg-green-50/50">{r.m3.iretonJones.tee.toFixed(0)}</td>
+                              <td className="p-2 text-right bg-blue-50/50 font-bold text-blue-700">{(r.m3.iretonJones.tee - deficit).toFixed(0)}</td>
+                           </tr>
+                       )}
+                     </tbody>
+                   </table>
+               </div>
+               <div className="text-[10px] text-gray-500 italic mt-2">
+                   * TEE includes Activity Factor & 10% TEF (except Clinical eqs). If Activity is 0, Default (1.2) is used.
+               </div>
              </div>
           )}
 

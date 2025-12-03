@@ -80,6 +80,22 @@ export interface KcalResults {
         bmr: number;
         tee: number;
     };
+    who?: {
+        bmr: number;
+        tee: number;
+    };
+    schofield?: {
+        bmr: number;
+        tee: number;
+    };
+    accp?: {
+        bmr: number;
+        tee: number;
+    };
+    iretonJones?: {
+        bmr: number;
+        tee: number;
+    };
   };
   m4?: {
       sedentary: number;
@@ -446,6 +462,9 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const recommendationLabel = isHighObesity ? 'useAdjusted' : 'useIdeal';
 
     // 11. BMR & TEE (Mifflin/Harris) - METHOD 3
+    // Use default PA 1.2 if not set to ensure TEE isn't 0
+    const paFactor = physicalActivity_val > 0 ? physicalActivity_val : 1.2;
+    
     let AW_BMR_harris = 0, SW_BMR_harris = 0;
     let AW_BMR_mifflin = 0, SW_BMR_mifflin = 0;
 
@@ -460,6 +479,55 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       AW_BMR_mifflin = (10 * weight) + (6.25 * height_cm) - (5 * age_years) - 161;
       SW_BMR_mifflin = (10 * selectedWeight) + (6.25 * height_cm) - (5 * age_years) - 161;
     }
+
+    // TEE Calculation (with 10% TEF)
+    const tefFactor = 1.1; 
+    
+    // NEW EQUATIONS (WHO/FAO & Schofield & ACCP & Ireton-Jones)
+    let whoBMR = 0;
+    if (gender === 'male') {
+        if (age_years >= 0 && age_years < 3) whoBMR = (59.512 * weight) - 30.4;
+        else if (age_years < 10) whoBMR = (22.706 * weight) + 504.3;
+        else if (age_years < 18) whoBMR = (17.686 * weight) + 658.2;
+        else if (age_years < 30) whoBMR = (15.4 * weight) - (27 * height_m) + 717;
+        else if (age_years < 60) whoBMR = (11.3 * weight) + (16 * height_m) + 901;
+        else whoBMR = (8.8 * weight) + (1128 * height_m) - 1071;
+    } else {
+        if (age_years >= 0 && age_years < 3) whoBMR = (58.317 * weight) - 31.1;
+        else if (age_years < 10) whoBMR = (20.315 * weight) + 485.9;
+        else if (age_years < 18) whoBMR = (13.384 * weight) + 692.6;
+        else if (age_years < 30) whoBMR = (13.3 * weight) + (334 * height_m) + 35;
+        else if (age_years < 60) whoBMR = (8.7 * weight) - (25 * height_m) + 865;
+        else whoBMR = (9.2 * weight) + (637 * height_m) - 302;
+    }
+
+    let schofieldBMR = 0;
+    if (gender === 'male') {
+        if (age_years < 3) schofieldBMR = (0.167 * weight) + (15.174 * height_m) - 617.6;
+        else if (age_years < 10) schofieldBMR = (19.59 * weight) + (130.3 * height_m) + 414.9;
+        else if (age_years < 18) schofieldBMR = (16.25 * weight) + (137.2 * height_m) + 515.5;
+        // Adult Schofield usually defaults to WHO or has other coefficients, but mostly used for peds
+        // Using 18-30 for adults as fallback if needed or just limit to peds
+        else schofieldBMR = (15.057 * weight) + (100.4 * height_m) + 705.8; // Approx adult
+    } else {
+        if (age_years < 3) schofieldBMR = (16.252 * weight) + (1023.2 * height_m) - 413.5;
+        else if (age_years < 10) schofieldBMR = (16.969 * weight) + (161.8 * height_m) + 371.2;
+        else if (age_years < 18) schofieldBMR = (8.365 * weight) + (465 * height_m) + 200.0;
+        else schofieldBMR = (13.623 * weight) + (283 * height_m) + 98.2; // Approx adult
+    }
+
+    // ACCP Equation (American College of Chest Physicians)
+    // REE = 25 x weight (kg). 
+    // Logic: BMI 16-25 use actual. BMI > 25 use ideal. BMI < 16 use actual.
+    // We can use 'recommendedWeight' from protocol check as it aligns with Obese -> Ideal logic
+    let accpWeight = weight;
+    if (bmiData.val > 25) accpWeight = IBW_2; // Ideal
+    const accpBMR = 25 * accpWeight;
+
+    // Ireton-Jones 1997 (Spontaneously Breathing)
+    // REE = 1784 - 11(A) + 5(W) + (244 if Male) + (239 if Trauma) + (840 if Burns)
+    const ijMale = gender === 'male' ? 244 : 0;
+    const ijBMR = 1784 - (11 * age_years) + (5 * weight) + ijMale; // Assuming No Trauma/Burns
 
     // 12. Body Composition & Katch-McArdle
     let bodyCompData = undefined;
@@ -487,7 +555,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         
         // Katch-McArdle BMR = 370 + (21.6 * LBM)
         const bmrKatch = 370 + (21.6 * leanBodyMass);
-        const teeKatch = (bmrKatch * (physicalActivity_val || 1.2)); // Default to sedentary if 0
+        const teeKatch = (bmrKatch * paFactor);
 
         // Target Weight Calc (if desired body fat is set)
         let targetWeight = undefined;
@@ -632,16 +700,32 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         m3: {
             harris: {
                 bmr: [AW_BMR_harris, SW_BMR_harris],
-                tee: [AW_BMR_harris * physicalActivity_val * 1.1, SW_BMR_harris * physicalActivity_val * 1.1] // Added 10% TEF (x1.1)
+                tee: [AW_BMR_harris * paFactor * tefFactor, SW_BMR_harris * paFactor * tefFactor]
             },
             mifflin: {
                 bmr: [AW_BMR_mifflin, SW_BMR_mifflin],
-                tee: [AW_BMR_mifflin * physicalActivity_val * 1.1, SW_BMR_mifflin * physicalActivity_val * 1.1] // Added 10% TEF (x1.1)
+                tee: [AW_BMR_mifflin * paFactor * tefFactor, SW_BMR_mifflin * paFactor * tefFactor]
             },
             katch: katchData ? {
                 bmr: katchData.bmr,
-                tee: katchData.tee * 1.1 // Added 10% TEF
-            } : undefined
+                tee: katchData.tee * tefFactor
+            } : undefined,
+            who: {
+                bmr: whoBMR,
+                tee: whoBMR * paFactor * tefFactor
+            },
+            schofield: {
+                bmr: schofieldBMR,
+                tee: schofieldBMR * paFactor * tefFactor
+            },
+            accp: {
+                bmr: accpBMR,
+                tee: accpBMR // ACCP often used as TEE directly, but strictly it's REE estimate. We'll show as BMR and TEE=BMR*1.2
+            },
+            iretonJones: {
+                bmr: ijBMR,
+                tee: ijBMR // Ireton Jones calculates EEE directly often, so treat as TEE
+            }
         },
         m4: m4Result,
         m5: {
