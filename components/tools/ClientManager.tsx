@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,7 +7,7 @@ import Loading from '../Loading';
 import { SimpleLineChart } from '../Visuals';
 import { DietaryAssessment } from './DietaryAssessment';
 import { FoodQuestionnaire } from './FoodQuestionnaire';
-import { labPanels } from '../../data/labData';
+import { labPanels, labTestsEncyclopedia, LabTestItem, LabPanel } from '../../data/labData';
 
 interface ClientManagerProps {
   initialClientId?: string | null;
@@ -131,6 +130,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
   // Lab Checklist State (Page View)
   const [labChecklistSelection, setLabChecklistSelection] = useState<Set<string>>(new Set());
+  const [labSearch, setLabSearch] = useState('');
 
   // Form State (Client Profile)
   const [formData, setFormData] = useState<{
@@ -204,6 +204,20 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
   // Refs for tracking initial load
   const processedInitialIdRef = useRef<string | null>(null);
+
+  // Derived state for Lab Search
+  const fullLabCategories = useMemo(() => {
+    const cats: Record<string, LabTestItem[]> = {};
+    const q = labSearch.toLowerCase();
+    labTestsEncyclopedia.forEach(item => {
+        if (item.test.toLowerCase().includes(q) || 
+            item.category.toLowerCase().includes(q)) {
+            if (!cats[item.category]) cats[item.category] = [];
+            cats[item.category].push(item);
+        }
+    });
+    return cats;
+  }, [labSearch]);
 
   useEffect(() => {
     fetchClients();
@@ -704,6 +718,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       }));
       
       setLabChecklistSelection(new Set()); // Clear selection
+      setLabSearch(''); // Clear search
       setViewMode('details'); // Return to details
       setSaveSuccess("Labs added to notes! Don't forget to save profile.");
       setTimeout(() => setSaveSuccess(''), 3000);
@@ -774,9 +789,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       if (toolTarget.type === 'client' && editingClient) {
         const updated = { ...editingClient, dietary_assessment: data };
         setEditingClient(updated);
-        setClients(prev => prev.map(c => c.id === updated.id ? updated : c));
+        setClients((prev: Client[]) => prev.map(c => c.id === updated.id ? updated : c));
       } else {
-        setVisits(prev => prev.map(v => v.id === toolTarget.id ? { ...v, dietary_assessment: data } : v));
+        setVisits((prev: ClientVisit[]) => prev.map(v => v.id === toolTarget.id ? { ...v, dietary_assessment: data } : v));
       }
       
       setViewMode('details');
@@ -801,9 +816,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       if (toolTarget.type === 'client' && editingClient) {
         const updated = { ...editingClient, food_questionnaire: data };
         setEditingClient(updated);
-        setClients(prev => prev.map(c => c.id === updated.id ? updated : c));
+        setClients((prev: Client[]) => prev.map(c => c.id === updated.id ? updated : c));
       } else {
-        setVisits(prev => prev.map(v => v.id === toolTarget.id ? { ...v, food_questionnaire: data } : v));
+        setVisits((prev: ClientVisit[]) => prev.map(v => v.id === toolTarget.id ? { ...v, food_questionnaire: data } : v));
       }
       
       setViewMode('details');
@@ -855,14 +870,19 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                       </h2>
                       <p className="text-blue-600 text-sm">Select tests to add to client notes.</p>
                   </div>
-                  <button onClick={() => setViewMode('details')} className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition shadow-sm font-medium text-sm">
+                  <button onClick={() => { setLabSearch(''); setViewMode('details'); }} className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition shadow-sm font-medium text-sm">
                       {t.common.back}
                   </button>
               </div>
 
-              <div className="space-y-6">
-                  {labPanels.map(panel => (
-                      <div key={panel.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              {/* Quick Select Panels */}
+              <div className="mb-8">
+                  <h3 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
+                      <span className="text-xl">⚡</span> Quick Select Panels
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {labPanels.map((panel: LabPanel) => (
+                      <div key={panel.id} className="bg-white rounded-xl shadow-sm border border-blue-100 overflow-hidden hover:shadow-md transition">
                           <div className="bg-blue-50 p-4 border-b border-blue-100 flex justify-between items-center">
                               <div>
                                   <h3 className="font-bold text-blue-900">{panel.title}</h3>
@@ -872,28 +892,83 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                   onClick={() => togglePanel(panel.tests)}
                                   className="text-xs bg-white text-blue-600 px-3 py-1 rounded border border-blue-200 hover:bg-blue-50"
                               >
-                                  Toggle All
+                                  Toggle
                               </button>
                           </div>
-                          <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          <div className="p-3 text-xs text-gray-600 space-y-1">
                               {panel.tests.map(test => {
                                   const isSelected = labChecklistSelection.has(test);
                                   return (
-                                      <div 
-                                          key={test} 
-                                          onClick={() => toggleLabTest(test)}
-                                          className={`p-3 rounded-lg border cursor-pointer flex items-center gap-3 transition ${isSelected ? 'bg-blue-100 border-blue-300' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
-                                      >
-                                          <div className={`w-5 h-5 rounded border flex items-center justify-center bg-white ${isSelected ? 'border-blue-500' : 'border-gray-300'}`}>
-                                              {isSelected && <span className="text-blue-600 text-sm font-bold">✓</span>}
-                                          </div>
-                                          <span className={`text-sm ${isSelected ? 'text-blue-900 font-medium' : 'text-gray-700'}`}>{test}</span>
+                                      <div key={test} onClick={() => toggleLabTest(test)} className={`flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded ${isSelected ? 'font-bold text-blue-700' : ''}`}>
+                                          <span className={`w-3 h-3 rounded-full border flex-shrink-0 ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}></span>
+                                          {test}
                                       </div>
-                                  );
+                                  )
                               })}
                           </div>
                       </div>
-                  ))}
+                    ))}
+                  </div>
+              </div>
+
+              {/* Full Library Section */}
+              <div className="space-y-6">
+                  <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-t border-gray-200 pt-6">
+                      <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
+                          <span className="text-xl">🧬</span> Full Laboratory Database
+                      </h3>
+                      <div className="relative w-full md:w-96">
+                          <input 
+                              type="text" 
+                              placeholder="Search all lab tests..." 
+                              value={labSearch}
+                              onChange={(e) => setLabSearch(e.target.value)}
+                              className="w-full p-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                      </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {Object.entries(fullLabCategories).map(([category, items]) => (
+                          <div key={category} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                              <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 font-bold text-gray-700 text-sm uppercase tracking-wide">
+                                  {category}
+                              </div>
+                              <div className="divide-y divide-gray-100">
+                                  {(items as LabTestItem[]).map((item) => {
+                                      const isSelected = labChecklistSelection.has(item.test);
+                                      return (
+                                          <div 
+                                              key={item.test} 
+                                              onClick={() => toggleLabTest(item.test)}
+                                              className={`p-3 cursor-pointer flex justify-between items-center hover:bg-blue-50 transition ${isSelected ? 'bg-blue-50' : 'bg-white'}`}
+                                          >
+                                              <div className="flex items-center gap-3">
+                                                  <div className={`w-5 h-5 rounded border flex items-center justify-center bg-white flex-shrink-0 ${isSelected ? 'border-blue-500' : 'border-gray-300'}`}>
+                                                      {isSelected && <span className="text-blue-600 text-sm font-bold">✓</span>}
+                                                  </div>
+                                                  <div>
+                                                      <div className={`text-sm ${isSelected ? 'text-blue-900 font-bold' : 'text-gray-800 font-medium'}`}>
+                                                          {item.test}
+                                                      </div>
+                                                      <div className="text-xs text-gray-400 font-mono">
+                                                          Range: {item.normal}
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                          </div>
+                                      );
+                                  })}
+                              </div>
+                          </div>
+                      ))}
+                      {Object.keys(fullLabCategories).length === 0 && (
+                          <div className="col-span-full text-center py-10 text-gray-400 border border-dashed rounded-lg">
+                              No lab tests found matching "{labSearch}"
+                          </div>
+                      )}
+                  </div>
               </div>
 
               <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 z-50 flex justify-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
@@ -903,7 +978,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                       </div>
                       <div className="flex gap-4">
                           <button 
-                              onClick={() => setViewMode('details')}
+                              onClick={() => { setLabSearch(''); setViewMode('details'); }}
                               className="px-6 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition"
                           >
                               {t.common.cancel}
