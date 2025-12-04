@@ -34,6 +34,54 @@ export const encyclopediaData: EncyclopediaItem[] = [
     sources: '-',
     deficiency: '-'
   },
+  {
+    id: 'def_rda',
+    name: 'Recommended Dietary Allowances (RDA)',
+    category: 'Definition',
+    function: 'Adequacy (Population)\nThe average daily dietary nutrient intake level sufficient to meet the nutrient requirements of nearly all (97%–98%) healthy individuals in a particular life stage and gender group.',
+    sources: '-',
+    deficiency: '-'
+  },
+  {
+    id: 'def_ai',
+    name: 'Adequate Intakes (AI)',
+    category: 'Definition',
+    function: 'Adequacy (Specific Case)\nThe recommended average daily intake level based on observed or experimentally determined approximations or estimates of nutrient intake by a group (or groups) of apparently healthy people that are assumed to be adequate - used when an RDA cannot be determined.',
+    sources: '-',
+    deficiency: '-'
+  },
+  {
+    id: 'def_cdrr',
+    name: 'Chronic Disease Risk Reduction Intakes (CDRR)',
+    category: 'Definition',
+    function: 'Risk Reduction\nA set of values utilized to characterize the reduction of risk for chronic disease.',
+    sources: '-',
+    deficiency: '-'
+  },
+  {
+    id: 'def_ul',
+    name: 'Tolerable Upper Intake Levels (UL)',
+    category: 'Definition',
+    function: 'Safety\nThe highest average daily nutrient intake level that is likely to pose no risk of adverse health effects to almost all individuals in the general population. As intake increases above the UL, the potential risk of adverse effects may increase.',
+    sources: '-',
+    deficiency: '-'
+  },
+  {
+    id: 'def_ear',
+    name: 'Estimated Average Requirements (EAR)',
+    category: 'Definition',
+    function: 'Research and Policy\nThe average daily nutrient intake level estimated to meet the requirement of half the healthy individuals in a particular life stage and gender group.',
+    sources: '-',
+    deficiency: '-'
+  },
+  {
+    id: 'def_amdr',
+    name: 'Acceptable Macronutrient Distribution Ranges (AMDR)',
+    category: 'Definition',
+    function: 'Healthful ranges for energy yielding nutrient\nA range of intakes for a particular energy source that is associated with reduced risk of chronic disease while providing adequate intakes of essential nutrients.',
+    sources: '-',
+    deficiency: '-'
+  },
   // VITAMINS
   {
     id: 'vit_a',

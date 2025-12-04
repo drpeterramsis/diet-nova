@@ -123,7 +123,7 @@ const Encyclopedia: React.FC = () => {
                     </div>
                     <h3 className="text-xl font-bold text-gray-800 mb-2">Nutritional Definitions</h3>
                     <p className="text-sm text-gray-500 mb-4">
-                        Key terms: Basal Metabolism, BMR, and Total Energy Expenditure (TEE) details.
+                        Key terms: Basal Metabolism, BMR, TEE, DRI, and other nutritional standards.
                     </p>
                     <button className="mt-auto text-purple-600 font-bold text-sm bg-purple-50 px-4 py-2 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition w-full">
                         View Definitions
@@ -296,6 +296,10 @@ const Encyclopedia: React.FC = () => {
   }
 
   // --- VITAMINS & MINERALS SECTOR VIEW ---
+  
+  // Check if we are viewing Definitions only to hide nutrient columns
+  const isDefinitionsOnly = activeFilter === 'Definition';
+
   return (
     <div className="max-w-7xl mx-auto animate-fade-in space-y-8 pb-12">
       {/* Sector Header & Back Button */}
@@ -370,9 +374,9 @@ const Encyclopedia: React.FC = () => {
                       <thead className="bg-gray-50 text-gray-700 uppercase text-xs">
                           <tr>
                               <th className="p-4 border-b w-1/5 bg-gray-50 sticky left-0 z-10">{lang === 'ar' ? 'المغذيات' : 'Item Name'}</th>
-                              <th className="p-4 border-b w-1/4">{t.encyclopedia.function}</th>
-                              <th className="p-4 border-b w-1/4">{t.encyclopedia.sources}</th>
-                              <th className="p-4 border-b w-1/4">{t.encyclopedia.deficiency}</th>
+                              <th className={`p-4 border-b ${isDefinitionsOnly ? 'w-4/5' : 'w-1/4'}`}>{t.encyclopedia.function}</th>
+                              {!isDefinitionsOnly && <th className="p-4 border-b w-1/4">{t.encyclopedia.sources}</th>}
+                              {!isDefinitionsOnly && <th className="p-4 border-b w-1/4">{t.encyclopedia.deficiency}</th>}
                           </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 text-sm">
@@ -389,8 +393,8 @@ const Encyclopedia: React.FC = () => {
                                       </span>
                                   </td>
                                   <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">{item.function}</td>
-                                  <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">{item.sources}</td>
-                                  <td className="p-4 text-red-600 align-top leading-relaxed whitespace-pre-line">{item.deficiency}</td>
+                                  {!isDefinitionsOnly && <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">{item.sources}</td>}
+                                  {!isDefinitionsOnly && <td className="p-4 text-red-600 align-top leading-relaxed whitespace-pre-line">{item.deficiency}</td>}
                               </tr>
                           ))}
                       </tbody>
@@ -435,19 +439,23 @@ const Encyclopedia: React.FC = () => {
                             <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.function}</p>
                         </div>
                         
-                        <div>
-                            <h4 className="font-bold text-gray-700 flex items-center gap-2 mb-1">
-                                <span className="text-lg">🥗</span> {t.encyclopedia.sources}
-                            </h4>
-                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.sources}</p>
-                        </div>
+                        {!isDefinitionsOnly && (
+                            <div>
+                                <h4 className="font-bold text-gray-700 flex items-center gap-2 mb-1">
+                                    <span className="text-lg">🥗</span> {t.encyclopedia.sources}
+                                </h4>
+                                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.sources}</p>
+                            </div>
+                        )}
 
-                        <div>
-                            <h4 className="font-bold text-red-700 flex items-center gap-2 mb-1">
-                                <span className="text-lg">⚠️</span> {t.encyclopedia.deficiency}
-                            </h4>
-                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.deficiency}</p>
-                        </div>
+                        {!isDefinitionsOnly && (
+                            <div>
+                                <h4 className="font-bold text-red-700 flex items-center gap-2 mb-1">
+                                    <span className="text-lg">⚠️</span> {t.encyclopedia.deficiency}
+                                </h4>
+                                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.deficiency}</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             ))}

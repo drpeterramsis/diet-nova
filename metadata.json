@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova -Kcal phase 7 _ v2.0.118",
-  "description": "Updates: Added specific Estimated Energy Requirements for Youth (M5) and Protein References (M6) based on IOM data.",
+  "name": "Diet-Nova -Kcal phase 7 _ v2.0.119",
+  "description": "Updates: Encyclopedia Definitions added (RDA, AI, EAR, etc) and UI cleaned up for Definitions view.",
   "requestFramePermissions": []
 }

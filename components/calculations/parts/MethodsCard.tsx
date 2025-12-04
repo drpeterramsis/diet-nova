@@ -228,18 +228,18 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results, deficit, setDeficit 
                           {r.m6.result.toFixed(0)} <span className="text-sm font-medium">kcal</span>
                       </div>
                       {r.m6.proteinRef && (
-                          <div className="mt-2 mb-2">
-                              <span className="text-xs font-bold text-gray-500 uppercase mr-2">Est. Protein Req:</span>
+                          <div className="mt-2 mb-2 bg-white/50 p-2 rounded inline-block">
+                              <span className="text-xs font-bold text-gray-500 uppercase mr-2">Protein:</span>
                               <span className="text-lg font-bold text-blue-700">{r.m6.proteinRef}</span>
                           </div>
                       )}
                       {r.m6.note && (
-                          <div className="text-xs bg-white text-purple-700 px-3 py-1 rounded-full border border-purple-200 inline-block font-medium">
+                          <div className="text-xs bg-white text-purple-700 px-3 py-1 rounded-full border border-purple-200 inline-block font-medium mt-2">
                               {r.m6.note}
                           </div>
                       )}
                       <div className="mt-3 text-[10px] text-gray-500 italic">
-                          Estimated Energy Requirement using IOM Equations based on Age, PA, Weight & Height.
+                          Based on Dietary Reference Intake (IOM 2002) for Energy & Protein.
                       </div>
                   </div>
               </div>
