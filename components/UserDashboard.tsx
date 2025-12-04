@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -126,7 +127,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
   return (
     <div className="container mx-auto px-4 py-8 animate-fade-in pb-24">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)] rounded-2xl p-8 text-white shadow-xl mb-8 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)] rounded-2xl p-8 text-white shadow-xl mb-10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/3 blur-3xl"></div>
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
@@ -151,23 +152,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
                 </button>
             </div>
         </div>
-      </div>
-
-      {/* Encyclopedia Sector */}
-      <div className="mb-10 bg-white rounded-xl shadow-sm border border-blue-100 p-1 flex items-center justify-between overflow-hidden">
-          <div className="p-4 pl-6 flex items-center gap-4">
-              <span className="text-3xl">📚</span>
-              <div>
-                  <h3 className="font-bold text-gray-800 text-lg">Knowledge Sector</h3>
-                  <p className="text-sm text-gray-500">Nutrient encyclopedia & reference charts</p>
-              </div>
-          </div>
-          <button 
-              onClick={() => onNavigateTool('encyclopedia')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 font-bold h-full flex items-center gap-2 transition"
-          >
-              Open Encyclopedia <span>→</span>
-          </button>
       </div>
 
       <div className={`grid grid-cols-1 ${isDoctor ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-8`}>
@@ -434,10 +418,10 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onNavigateTool, setBmiOpe
 
       </div>
       
-      {/* Tools Section */}
+      {/* Tools Section (Sectors) */}
       <div id="dashboard-tools" className="mt-12 border-t border-gray-200 pt-10">
-        <h2 className="text-2xl font-bold text-[var(--color-heading)] mb-6 flex items-center gap-2">
-           <span>🛠️</span> {t.header.tools}
+        <h2 className="text-2xl font-bold text-[var(--color-heading)] mb-8 flex items-center gap-2">
+           <span>🚀</span> Professional Tools Suite
         </h2>
         <ToolsGrid 
             onToolClick={(toolId) => onNavigateTool(toolId)} 
