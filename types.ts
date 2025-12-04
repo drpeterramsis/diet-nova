@@ -15,8 +15,6 @@
 
 
 
-
-
 export type Language = 'en' | 'ar';
 
 export interface UserProfile {
@@ -80,7 +78,6 @@ export interface Client {
   hip?: number;
   miac?: number;
   bmi?: number;
-  head_circumference?: number; // New for Pedia
   created_at: string;
 }
 
@@ -94,7 +91,6 @@ export interface ClientVisit {
   hip?: number;
   miac?: number;
   bmi?: number;
-  head_circumference?: number; // New for Pedia
   notes?: string;
   kcal_data?: any;
   meal_plan_data?: any;
