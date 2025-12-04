@@ -144,12 +144,9 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
                         onChange={setEdema}
                         options={[
                           { value: 0, label: 'None' },
-                          { value: 1, label: 'Adult: Minimal (1kg)' },
-                          { value: 5, label: 'Adult: Moderate (5kg)' },
-                          { value: 10, label: 'Adult: Severe (10kg)' },
-                          { value: 0.05, label: 'Pedia: Mild (5%)' },
-                          { value: 0.1, label: 'Pedia: Moderate (10%)' },
-                          { value: 0.2, label: 'Pedia: Severe (20%)' },
+                          { value: 1, label: 'Minimal (1kg)' },
+                          { value: 5, label: 'Moderate (5kg)' },
+                          { value: 10, label: 'Severe (10kg)' },
                         ]}
                       />
                   </div>

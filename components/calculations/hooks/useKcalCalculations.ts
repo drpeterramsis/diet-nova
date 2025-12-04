@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
@@ -284,17 +285,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const mac_cm = mac;
     const tsf_mm = tsf;
     
-    // 1. Dry Weight Calculation
-    let deduction = 0;
-    if (edema > 0 && edema < 1) {
-        // Percentage based (Pediatric)
-        deduction = temp_weight * edema;
-    } else {
-        // Absolute value (Adult KG)
-        deduction = edema;
-    }
-    
-    let dryWeightVal = temp_weight - ascites - deduction;
+    // 1. Dry Weight
+    let dryWeightVal = temp_weight - ascites - edema;
     dryWeightVal = dryWeightVal < 0 ? 0 : dryWeightVal;
     
     // Weight Loss Calculation (Fix: allow both positive and negative to show gain/loss context, but primarily loss)
