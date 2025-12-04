@@ -114,6 +114,7 @@ export interface KcalResults {
       result: number;
       label: string;
       note: string;
+      proteinRef?: string;
   }
 }
 
@@ -637,38 +638,70 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         }
     };
 
-    // --- METHOD 5 (Category Calorie Requirement) ---
+    // --- METHOD 5 (Estimated Minimum Energy Requirements - Revised) ---
     let m5ResultDry = 0;
     let m5ResultSel = 0;
     let m5Category = '';
     const m5Notes: string[] = [];
 
-    if (age < 12) {
-        // Child Logic
+    if (age <= 19) { 
         if (age <= 1) {
             m5ResultDry = 1000;
-            m5Category = 'Child (First Year)';
-        } else {
-            // > 1 year
-            const base = 1000;
-            if (gender === 'female') {
-                m5ResultDry = base + (100 * age);
-                m5Category = 'Girl (1-12y)';
+            m5ResultSel = 1000;
+            m5Category = 'Infant/Toddler (1st yr)';
+        } else if (age <= 10) {
+            // 1000 kcal + 100 kcal/yr up to 2000 kcal at age 10
+            m5ResultDry = 1000 + (age * 100);
+            m5ResultSel = 1000 + (age * 100);
+            m5Category = `Child (${age}y)`;
+        } else if (age <= 15) {
+            const yearsAfter10 = age - 10;
+            if (gender === 'male') {
+                 // 2000 + 200/yr after age 10
+                 const val = 2000 + (yearsAfter10 * 200);
+                 m5ResultDry = val;
+                 m5ResultSel = val;
+                 m5Category = `Adolescent Boy (${age}y)`;
             } else {
-                m5ResultDry = base + (125 * age);
-                m5Category = 'Boy (1-12y)';
+                 // 2000 + 50-100/yr after age 10. Avg 75.
+                 const val = 2000 + (yearsAfter10 * 75);
+                 m5ResultDry = val;
+                 m5ResultSel = val;
+                 m5Category = `Adolescent Girl (${age}y)`;
+                 m5Notes.push("Range: +50-100 kcal/yr after age 10");
+            }
+        } else {
+            // Age > 15
+            if (gender === 'male') {
+                 // Boys > 15 logic
+                 let factor = 32.5; // Sedentary avg (30-35)
+                 let activityLabel = 'Sedentary';
+                 if (physicalActivity_val >= 1.4 && physicalActivity_val < 1.7) {
+                     factor = 40; activityLabel = 'Moderate';
+                 } else if (physicalActivity_val >= 1.7) {
+                     factor = 50; activityLabel = 'Very Active';
+                 }
+                 m5ResultDry = dryWeightVal * factor;
+                 m5ResultSel = selectedWeight * factor;
+                 m5Category = `Male Youth >15 (${activityLabel})`;
+                 m5Notes.push(`Factor: ${factor} kcal/kg`);
+            } else {
+                 // Girls > 15: "Calculate as for an adult"
+                 let baseFactor = 30; // Ideal
+                 if (bmiData.val >= 25) { baseFactor = 20; m5Category = 'Female Youth >15 (Overweight)'; }
+                 else if (bmiData.val < 18.5) { baseFactor = 40; m5Category = 'Female Youth >15 (Underweight)'; }
+                 else { m5Category = 'Female Youth >15 (Ideal)'; }
+                 m5ResultDry = dryWeightVal * baseFactor;
+                 m5ResultSel = selectedWeight * baseFactor;
             }
         }
-        m5ResultSel = m5ResultDry; // Same for kids usually
     } else {
-        // Adult Logic
-        // Base category based on BMI of Dry Weight
-        let baseFactor = 30; // Ideal
+        // Adult (>19) Logic - Traditional Category
+        let baseFactor = 30;
         if (bmiData.val >= 25) { baseFactor = 20; m5Category = 'Adult (Overweight)'; }
         else if (bmiData.val < 18.5) { baseFactor = 40; m5Category = 'Adult (Underweight)'; }
-        else { m5Category = 'Adult (Ideal Weight)'; }
+        else { m5Category = 'Adult (Ideal)'; }
 
-        // Calc base
         m5ResultDry = dryWeightVal * baseFactor;
         m5ResultSel = selectedWeight * baseFactor;
 
@@ -686,10 +719,11 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         }
     }
 
-    // --- METHOD 6 (EER - IOM 2002) ---
+    // --- METHOD 6 (EER - IOM 2002) with Protein Reference ---
     let m6Result = 0;
     let m6Label = '';
     let m6Note = '';
+    let m6ProteinRef = '';
 
     // EER PA Coefficient Mapping
     // Mapped from user's selection (1.2 ~ 1.9) to standard DRI PA (1.0 ~ 1.48)
@@ -706,20 +740,44 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const H_m = height_m;
 
     if (age < 3 && totalMonths <= 35) {
-        if (totalMonths <= 3) m6Result = (89 * W - 100) + 175;
-        else if (totalMonths <= 6) m6Result = (89 * W - 100) + 56;
-        else if (totalMonths <= 12) m6Result = (89 * W - 100) + 22;
-        else m6Result = (89 * W - 100) + 20;
+        if (totalMonths <= 3) {
+             m6Result = (89 * W - 100) + 175;
+             m6ProteinRef = '9.1g';
+        }
+        else if (totalMonths <= 6) {
+             m6Result = (89 * W - 100) + 56;
+             m6ProteinRef = '9.1g';
+        }
+        else if (totalMonths <= 12) {
+             m6Result = (89 * W - 100) + 22;
+             m6ProteinRef = '11g';
+        }
+        else {
+             m6Result = (89 * W - 100) + 20;
+             m6ProteinRef = '13g';
+        }
         m6Label = `Infant (${totalMonths}mo)`;
     } 
     // 2. Children (3-18 years)
     else if (age >= 3 && age <= 18) {
         if (gender === 'male') {
-            if (age <= 8) m6Result = 88.5 - (61.9 * age) + paEER * (26.7 * W + 903 * H_m) + 20;
-            else m6Result = 88.5 - (61.9 * age) + paEER * (26.7 * W + 903 * H_m) + 25;
+            if (age <= 8) {
+                m6Result = 88.5 - (61.9 * age) + paEER * (26.7 * W + 903 * H_m) + 20;
+                m6ProteinRef = '19g';
+            }
+            else {
+                m6Result = 88.5 - (61.9 * age) + paEER * (26.7 * W + 903 * H_m) + 25;
+                m6ProteinRef = '34-52g';
+            }
         } else {
-            if (age <= 8) m6Result = 135.3 - (30.8 * age) + paEER * (10.0 * W + 934 * H_m) + 20;
-            else m6Result = 135.3 - (30.8 * age) + paEER * (10.0 * W + 934 * H_m) + 25;
+            if (age <= 8) {
+                m6Result = 135.3 - (30.8 * age) + paEER * (10.0 * W + 934 * H_m) + 20;
+                m6ProteinRef = '19g';
+            }
+            else {
+                m6Result = 135.3 - (30.8 * age) + paEER * (10.0 * W + 934 * H_m) + 25;
+                m6ProteinRef = '34-46g';
+            }
         }
         m6Label = `Child/Adolescent (${age}y)`;
     }
@@ -832,7 +890,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         m6: {
             result: m6Result,
             label: m6Label,
-            note: m6Note
+            note: m6Note,
+            proteinRef: m6ProteinRef
         }
     });
 

@@ -193,7 +193,7 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results, deficit, setDeficit 
           {/* METHOD 5 */}
           {activeMethod === 'method5' && r.m5 && (
               <div>
-                  <h3 className="font-bold text-gray-700 mb-2 text-sm">M5: Category Requirement</h3>
+                  <h3 className="font-bold text-gray-700 mb-2 text-sm">M5: Estimated Minimum Requirements</h3>
                   <div className="space-y-3">
                       <div className="flex justify-between border-b border-gray-200 pb-2">
                           <span className="text-sm text-gray-600">Category Applied</span>
@@ -221,12 +221,18 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results, deficit, setDeficit 
           {/* METHOD 6 (EER) */}
           {activeMethod === 'method6' && r.m6 && (
               <div className="p-2 animate-fade-in">
-                  <h3 className="font-bold text-purple-800 mb-2 text-sm">M6: EER (IOM 2002)</h3>
+                  <h3 className="font-bold text-purple-800 mb-2 text-sm">M6: EER & Protein (IOM/DRI)</h3>
                   <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 text-center shadow-sm">
                       <div className="text-xs text-purple-600 font-bold uppercase mb-1">{r.m6.label}</div>
                       <div className="text-3xl font-extrabold text-purple-900 mb-2">
                           {r.m6.result.toFixed(0)} <span className="text-sm font-medium">kcal</span>
                       </div>
+                      {r.m6.proteinRef && (
+                          <div className="mt-2 mb-2">
+                              <span className="text-xs font-bold text-gray-500 uppercase mr-2">Est. Protein Req:</span>
+                              <span className="text-lg font-bold text-blue-700">{r.m6.proteinRef}</span>
+                          </div>
+                      )}
                       {r.m6.note && (
                           <div className="text-xs bg-white text-purple-700 px-3 py-1 rounded-full border border-purple-200 inline-block font-medium">
                               {r.m6.note}
