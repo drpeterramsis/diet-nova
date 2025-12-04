@@ -3,6 +3,8 @@
 
 
 
+
+
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -47,7 +49,7 @@ const Dashboard = ({
   return (
     <>
       {/* Hero Section */}
-      <section className="relative text-center py-20 md:py-28 overflow-hidden bg-gradient-to-b from-[var(--color-bg-soft)] to-white">
+      <section className="relative text-center py-20 md:py-24 overflow-hidden bg-gradient-to-b from-[var(--color-bg-soft)] to-white">
         <div className="relative z-10 container mx-auto px-4 animate-fade-in">
           {session && (
               <div className="mb-4 inline-block px-4 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">
@@ -55,7 +57,7 @@ const Dashboard = ({
               </div>
           )}
           
-          <h2 className="text-4xl md:text-6xl font-extrabold text-[var(--color-heading)] mb-6 leading-tight">
+          <h2 className="text-4xl md:text-5xl font-extrabold text-[var(--color-heading)] mb-6 leading-tight">
             {t.home.welcome}
           </h2>
           <p className="text-lg md:text-xl text-[var(--color-text-light)] mb-10 max-w-2xl mx-auto leading-relaxed">
@@ -64,69 +66,86 @@ const Dashboard = ({
         </div>
       </section>
 
-      {/* Professional Sector Grid */}
+      {/* Professional Sector Grid - 4 Columns */}
       <section id="sectors" className="container mx-auto px-4 -mt-16 relative z-20 mb-16">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               
-              {/* Clinical Suite */}
-              <div className="bg-white rounded-2xl shadow-xl p-6 border-t-4 border-green-500 hover:transform hover:-translate-y-1 transition duration-300">
+              {/* Sector 1: Clinical Workspace */}
+              <div className="bg-white rounded-2xl shadow-xl p-5 border-t-4 border-green-600 hover:transform hover:-translate-y-1 transition duration-300">
                   <div className="flex items-center gap-3 mb-4">
                       <span className="text-3xl bg-green-50 p-2 rounded-lg">🩺</span>
-                      <h3 className="text-xl font-bold text-gray-800">Clinical Suite</h3>
+                      <h3 className="text-lg font-bold text-gray-800">Clinical Suite</h3>
                   </div>
-                  <p className="text-gray-500 text-sm mb-6 min-h-[40px]">Patient management, physical assessment, and anthropometry.</p>
-                  <div className="space-y-2">
-                      <button onClick={() => onToolClick('client-manager')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
+                  <p className="text-gray-500 text-xs mb-4 min-h-[32px]">Patient management, risk screening, and physical assessment.</p>
+                  <div className="space-y-1.5">
+                      <button onClick={() => onToolClick('client-manager')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-bold text-xs flex items-center justify-between">
                           <span>Patient Manager</span> <span>→</span>
                       </button>
-                      <button onClick={() => onToolClick('nfpe')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
-                          <span>NFPE Assessment</span> <span>→</span>
-                      </button>
-                      <button onClick={() => onToolClick('strong-kids')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
+                      <button onClick={() => onToolClick('strong-kids')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-bold text-xs flex items-center justify-between">
                           <span>STRONGkids Tool</span> <span>→</span>
                       </button>
+                      <button onClick={() => onToolClick('nfpe')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-bold text-xs flex items-center justify-between">
+                          <span>NFPE Assessment</span> <span>→</span>
+                      </button>
                   </div>
               </div>
 
-              {/* Dietetics Studio */}
-              <div className="bg-white rounded-2xl shadow-xl p-6 border-t-4 border-blue-500 hover:transform hover:-translate-y-1 transition duration-300">
+              {/* Sector 2: Body & Energy */}
+              <div className="bg-white rounded-2xl shadow-xl p-5 border-t-4 border-blue-600 hover:transform hover:-translate-y-1 transition duration-300">
                   <div className="flex items-center gap-3 mb-4">
-                      <span className="text-3xl bg-blue-50 p-2 rounded-lg">🥗</span>
-                      <h3 className="text-xl font-bold text-gray-800">Dietetics Studio</h3>
+                      <span className="text-3xl bg-blue-50 p-2 rounded-lg">⚡</span>
+                      <h3 className="text-lg font-bold text-gray-800">Body & Energy</h3>
                   </div>
-                  <p className="text-gray-500 text-sm mb-6 min-h-[40px]">Advanced calorie calculation, meal creation, and planning.</p>
-                  <div className="space-y-2">
-                      <button onClick={() => onToolClick('kcal')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-medium text-sm flex items-center justify-between">
+                  <p className="text-gray-500 text-xs mb-4 min-h-[32px]">Calculators for calories, BMR, BMI, and anthropometry.</p>
+                  <div className="space-y-1.5">
+                      <button onClick={() => onToolClick('kcal')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-bold text-xs flex items-center justify-between">
                           <span>Kcal Calculator</span> <span>→</span>
                       </button>
-                      <button onClick={() => onToolClick('meal-planner')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-medium text-sm flex items-center justify-between">
-                          <span>Meal Planner</span> <span>→</span>
+                      <button onClick={() => onToolClick('bmr')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-bold text-xs flex items-center justify-between">
+                          <span>BMR Calculator</span> <span>→</span>
                       </button>
-                      <button onClick={() => onToolClick('exchange-pro')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-medium text-sm flex items-center justify-between">
-                          <span>Food Exchanges</span> <span>→</span>
-                      </button>
-                      <button onClick={() => setBmiOpen(true)} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-medium text-sm flex items-center justify-between">
+                      <button onClick={() => setBmiOpen(true)} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-bold text-xs flex items-center justify-between">
                           <span>BMI Calculator</span> <span>→</span>
                       </button>
-                      <button onClick={() => onToolClick('bmr')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-medium text-sm flex items-center justify-between">
-                          <span>BMR Calculator</span> <span>→</span>
+                      <button onClick={() => onToolClick('height-estimator')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-bold text-xs flex items-center justify-between">
+                          <span>Height Estimator</span> <span>→</span>
                       </button>
                   </div>
               </div>
 
-              {/* Knowledge Base */}
-              <div className="bg-white rounded-2xl shadow-xl p-6 border-t-4 border-purple-500 hover:transform hover:-translate-y-1 transition duration-300">
+              {/* Sector 3: Diet & Planning */}
+              <div className="bg-white rounded-2xl shadow-xl p-5 border-t-4 border-orange-500 hover:transform hover:-translate-y-1 transition duration-300">
+                  <div className="flex items-center gap-3 mb-4">
+                      <span className="text-3xl bg-orange-50 p-2 rounded-lg">🥗</span>
+                      <h3 className="text-lg font-bold text-gray-800">Diet Planning</h3>
+                  </div>
+                  <p className="text-gray-500 text-xs mb-4 min-h-[32px]">Create meals, plan diets, and check food exchanges.</p>
+                  <div className="space-y-1.5">
+                      <button onClick={() => onToolClick('meal-planner')} className="w-full text-left px-3 py-2 rounded hover:bg-orange-50 text-orange-700 font-bold text-xs flex items-center justify-between">
+                          <span>Meal Planner</span> <span>→</span>
+                      </button>
+                      <button onClick={() => onToolClick('meal-creator')} className="w-full text-left px-3 py-2 rounded hover:bg-orange-50 text-orange-700 font-bold text-xs flex items-center justify-between">
+                          <span>Meal Creator</span> <span>→</span>
+                      </button>
+                      <button onClick={() => onToolClick('exchange-pro')} className="w-full text-left px-3 py-2 rounded hover:bg-orange-50 text-orange-700 font-bold text-xs flex items-center justify-between">
+                          <span>Food Exchanges</span> <span>→</span>
+                      </button>
+                  </div>
+              </div>
+
+              {/* Sector 4: Knowledge Base */}
+              <div className="bg-white rounded-2xl shadow-xl p-5 border-t-4 border-purple-600 hover:transform hover:-translate-y-1 transition duration-300">
                   <div className="flex items-center gap-3 mb-4">
                       <span className="text-3xl bg-purple-50 p-2 rounded-lg">📚</span>
-                      <h3 className="text-xl font-bold text-gray-800">Knowledge Base</h3>
+                      <h3 className="text-lg font-bold text-gray-800">Knowledge Hub</h3>
                   </div>
-                  <p className="text-gray-500 text-sm mb-6 min-h-[40px]">Reference data, encyclopedia, and metabolic rates.</p>
-                  <div className="space-y-2">
-                      <button onClick={() => onToolClick('encyclopedia')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-medium text-sm flex items-center justify-between">
-                          <span>Encyclopedia</span> <span>→</span>
+                  <p className="text-gray-500 text-xs mb-4 min-h-[32px]">Reference data for labs, drugs, vitamins, and minerals.</p>
+                  <div className="space-y-1.5">
+                      <button onClick={() => onToolClick('encyclopedia')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-bold text-xs flex items-center justify-between">
+                          <span>Encyclopedia (Vits/Drugs)</span> <span>→</span>
                       </button>
-                      <button onClick={() => onToolClick('lab-reference')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-medium text-sm flex items-center justify-between">
-                          <span>Biochemical Labs</span> <span>→</span>
+                      <button onClick={() => onToolClick('lab-reference')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-bold text-xs flex items-center justify-between">
+                          <span>Lab Reference</span> <span>→</span>
                       </button>
                   </div>
               </div>

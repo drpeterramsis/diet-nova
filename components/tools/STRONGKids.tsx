@@ -138,7 +138,7 @@ Intervention: ${result.intervention}`;
                             <td className="p-4">
                                 <p className="font-bold text-gray-800 mb-2">3. Is one of the following items present?</p>
                                 <ul className="text-xs text-gray-600 list-disc list-inside ml-2">
-                                    <li>Excessive diarrhea (≥5 per day) and/or vomiting (>3 times/day) during last 1-3 days</li>
+                                    <li>Excessive diarrhea (≥5 per day) and/or vomiting (&gt;3 times/day) during last 1-3 days</li>
                                     <li>Reduced food intake during last 1-3 days</li>
                                     <li>Pre-existing nutritional intervention (e.g. ONS or tube feeding)</li>
                                     <li>Inability to consume adequate nutritional intake because of pain</li>

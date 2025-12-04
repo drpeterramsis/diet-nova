@@ -76,8 +76,9 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, onLogi
                 </button>
             )}
 
+            {/* 1. Clinical Workspace */}
             <div className="pt-4 pb-2">
-                <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Clinical Suite</p>
+                <p className="px-4 text-xs font-bold text-green-600 uppercase tracking-wider mb-2">Clinical Workspace</p>
                 {isDoctor && (
                     <button onClick={() => handleNav('client-manager')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-green-50 hover:text-green-700 flex items-center gap-3 text-gray-600 text-sm">
                     <span>👥</span> {t.tools.clients.title}
@@ -91,29 +92,45 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, onLogi
                 </button>
             </div>
 
-            <div className="pt-2 pb-2">
-                <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Dietetics Studio</p>
+            {/* 2. Body & Energy */}
+            <div className="pt-2 pb-2 border-t border-gray-50">
+                <p className="px-4 text-xs font-bold text-blue-600 uppercase tracking-wider mb-2 mt-2">Body & Energy</p>
                 <button onClick={() => handleNav('kcal')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 text-gray-600 text-sm">
                 <span>🔥</span> {t.tools.kcal.title}
-                </button>
-                <button onClick={() => handleNav('meal-creator')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 text-gray-600 text-sm">
-                <span>🥗</span> {t.tools.mealCreator.title}
-                </button>
-                <button onClick={() => handleNav('meal-planner')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 text-gray-600 text-sm">
-                <span>📅</span> {t.tools.mealPlanner.title}
-                </button>
-                <button onClick={() => { onClose(); const btn = document.getElementById('bmi-btn'); if(btn) btn.click(); }} className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 text-gray-600 text-sm">
-                <span>⚖️</span> {t.tools.bmi.title}
                 </button>
                 <button onClick={() => handleNav('bmr')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 text-gray-600 text-sm">
                 <span>⚡</span> {t.tools.bmr.title}
                 </button>
+                <button onClick={() => { onClose(); const btn = document.getElementById('bmi-btn'); if(btn) btn.click(); }} className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 text-gray-600 text-sm">
+                <span>⚖️</span> {t.tools.bmi.title}
+                </button>
+                <button onClick={() => handleNav('height-estimator')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 text-gray-600 text-sm">
+                <span>📏</span> {t.tools.heightEstimator.title}
+                </button>
             </div>
 
-            <div className="pt-2 pb-2">
-                <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Knowledge Base</p>
+            {/* 3. Diet Planning */}
+            <div className="pt-2 pb-2 border-t border-gray-50">
+                <p className="px-4 text-xs font-bold text-orange-500 uppercase tracking-wider mb-2 mt-2">Diet Planning</p>
+                <button onClick={() => handleNav('meal-planner')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 text-gray-600 text-sm">
+                <span>📅</span> {t.tools.mealPlanner.title}
+                </button>
+                <button onClick={() => handleNav('meal-creator')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 text-gray-600 text-sm">
+                <span>🥗</span> {t.tools.mealCreator.title}
+                </button>
+                <button onClick={() => handleNav('exchange-pro')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 text-gray-600 text-sm">
+                <span>📋</span> {t.tools.exchangePro.title}
+                </button>
+            </div>
+
+            {/* 4. Knowledge Base */}
+            <div className="pt-2 pb-2 border-t border-gray-50">
+                <p className="px-4 text-xs font-bold text-purple-600 uppercase tracking-wider mb-2 mt-2">Knowledge Base</p>
                 <button onClick={() => handleNav('encyclopedia')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-purple-50 hover:text-purple-700 flex items-center gap-3 text-gray-600 text-sm">
                 <span>📚</span> {t.tools.encyclopedia.title}
+                </button>
+                <button onClick={() => handleNav('lab-reference')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-purple-50 hover:text-purple-700 flex items-center gap-3 text-gray-600 text-sm">
+                <span>🧬</span> {t.tools.labs.title}
                 </button>
             </div>
           </nav>
