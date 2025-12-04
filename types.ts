@@ -15,6 +15,7 @@
 
 
 
+
 export type Language = 'en' | 'ar';
 
 export interface UserProfile {
@@ -74,6 +75,7 @@ export interface Client {
   // Latest anthropometrics snapshot
   weight?: number;
   height?: number;
+  head_circumference?: number; // New Pedia Field
   waist?: number;
   hip?: number;
   miac?: number;
@@ -87,6 +89,7 @@ export interface ClientVisit {
   visit_date: string;
   weight?: number;
   height?: number;
+  head_circumference?: number; // New Pedia Field
   waist?: number;
   hip?: number;
   miac?: number;
