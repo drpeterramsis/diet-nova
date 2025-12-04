@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova Pre Charts_ v2.0.128",
-  "description": "Updates: Added Pediatric MAMC Tool, updated Pediatric Waist tool saving logic.",
+  "name": "Diet-Nova all Charts_ v2.0.129",
+  "description": "Updates: Added Pediatric Growth Monitor (WHO 5-19y) with charts and Client Profile integration.",
   "requestFramePermissions": []
 }
