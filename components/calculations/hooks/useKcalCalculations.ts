@@ -286,7 +286,15 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const tsf_mm = tsf;
     
     // 1. Dry Weight
-    let dryWeightVal = temp_weight - ascites - edema;
+    // If Edema is fractional (percentage mode for pedia), multiply. Else subtract.
+    let dryWeightVal = 0;
+    if (edema > 0 && edema < 1) {
+        dryWeightVal = temp_weight * (1 - edema);
+    } else {
+        dryWeightVal = temp_weight - edema;
+    }
+    dryWeightVal -= ascites;
+    
     dryWeightVal = dryWeightVal < 0 ? 0 : dryWeightVal;
     
     // Weight Loss Calculation (Fix: allow both positive and negative to show gain/loss context, but primarily loss)

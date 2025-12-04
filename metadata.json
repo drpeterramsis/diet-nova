@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova Pedia ِAdvance _ v2.0.125",
-  "description": "Updates: Pediatric Profile enhancements (Length/Height, Head Circ, Waist Charts, Edema adjustments).",
+  "name": "Diet-Nova Pedia Advance _ v2.0.126",
+  "description": "Updates: Pediatric Profile enhancements (Length/Height, Head Circ, Waist Charts Table 18, Edema percentages). Fixes: JSX syntax error.",
   "requestFramePermissions": []
 }

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,37 +10,21 @@ import { FoodQuestionnaire } from './FoodQuestionnaire';
 import { labPanels, labTestsEncyclopedia, LabTestItem, LabPanel } from '../../data/labData';
 import STRONGKids from './STRONGKids';
 
-// Helper for Plan Stats
-const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
-  starch: { cho: 15, pro: 3, fat: 0, kcal: 80 },
-  veg: { cho: 5, pro: 2, fat: 0, kcal: 25 },
-  fruit: { cho: 15, pro: 0, fat: 0, kcal: 60 },
-  meatLean: { cho: 0, pro: 7, fat: 3, kcal: 45 },
-  meatMed: { cho: 0, pro: 7, fat: 5, kcal: 75 },
-  meatHigh: { cho: 0, pro: 7, fat: 8, kcal: 100 },
-  milkSkim: { cho: 15, pro: 8, fat: 3, kcal: 100 },
-  milkLow: { cho: 15, pro: 8, fat: 5, kcal: 120 },
-  milkWhole: { cho: 15, pro: 8, fat: 8, kcal: 160 },
-  legumes: { cho: 15, pro: 7, fat: 0, kcal: 110 },
-  fats: { cho: 0, pro: 0, fat: 5, kcal: 45 },
-  sugar: { cho: 5, pro: 0, fat: 0, kcal: 20 },
-};
-
-// Waist Circumference Percentiles
+// Waist Circumference Percentiles (Table 18: US 2007-2010)
 const WAIST_PERCENTILES: Record<'boys' | 'girls', Record<number, [number, number, number]>> = {
     boys: {
-        2: [42.9, 47.1, 50.6], 3: [44.7, 49.2, 54.0], 4: [46.5, 51.3, 57.4], 5: [48.3, 53.3, 60.8],
-        6: [50.1, 55.4, 64.2], 7: [51.9, 57.5, 67.6], 8: [53.7, 59.6, 71.0], 9: [55.5, 61.7, 74.3],
-        10: [57.3, 63.7, 77.7], 11: [59.1, 65.8, 81.1], 12: [60.9, 67.9, 84.5], 13: [62.7, 70.0, 87.9],
-        14: [64.5, 72.1, 91.3], 15: [66.3, 74.1, 94.7], 16: [68.1, 76.2, 98.1], 17: [69.9, 78.3, 101.5],
-        18: [71.7, 80.4, 104.9]
+        2: [44.8, 48.2, 52.0], 3: [46.0, 50.1, 54.6], 4: [47.9, 51.5, 57.5], 5: [49.0, 53.6, 60.8],
+        6: [49.5, 54.6, 69.6], 7: [50.9, 56.7, 71.3], 8: [53.3, 59.5, 78.1], 9: [54.6, 61.0, 85.0],
+        10: [57.1, 66.5, 85.6], 11: [58.9, 67.2, 90.4], 12: [59.9, 71.5, 93.7], 13: [64.6, 72.7, 96.7],
+        14: [64.4, 74.2, 101.3], 15: [67.1, 76.3, 99.9], 16: [68.3, 80.0, 106.1], 17: [70.0, 79.5, 108.0],
+        18: [72.2, 85.3, 105.9]
     },
     girls: {
-        2: [43.1, 47.4, 52.5], 3: [44.7, 49.3, 55.4], 4: [46.3, 51.2, 58.2], 5: [47.9, 53.1, 61.1],
-        6: [49.5, 55.0, 64.0], 7: [51.1, 56.9, 66.8], 8: [52.7, 58.8, 69.7], 9: [54.3, 60.7, 72.6],
-        10: [55.9, 62.5, 75.5], 11: [57.5, 64.4, 78.3], 12: [59.1, 66.3, 81.2], 13: [60.7, 68.2, 84.1],
-        14: [62.3, 70.1, 86.9], 15: [63.9, 72.1, 89.8], 16: [65.5, 73.9, 92.7], 17: [67.1, 75.8, 95.5],
-        18: [68.7, 77.7, 98.4]
+        2: [43.9, 47.5, 52.9], 3: [45.4, 49.9, 55.0], 4: [46.9, 51.1, 58.3], 5: [49.2, 54.0, 63.3],
+        6: [49.8, 56.0, 64.3], 7: [51.0, 57.0, 72.9], 8: [52.3, 61.8, 78.7], 9: [54.5, 63.3, 83.0],
+        10: [57.1, 68.6, 88.8], 11: [58.9, 69.2, 93.6], 12: [60.6, 73.9, 95.1], 13: [64.8, 73.7, 96.8],
+        14: [67.5, 77.3, 94.4], 15: [68.5, 78.4, 101.4], 16: [69.7, 78.2, 106.6], 17: [66.6, 79.6, 99.5],
+        18: [70.0, 80.8, 107.1]
     }
 };
 
@@ -75,7 +58,7 @@ const WaistCircumferenceTable: React.FC<{gender: 'male' | 'female'}> = ({ gender
                 </table>
             </div>
             <div className="p-1 text-[10px] text-gray-500 bg-gray-50 border-t text-center">
-                > 90th percentile increases risk for cardiovascular factors & insulin resistance.
+                &gt; 90th percentile increases risk for cardiovascular factors & insulin resistance.
             </div>
         </div>
     );
@@ -91,6 +74,28 @@ const generateCode = (name: string) => {
     const random = Math.floor(1000 + Math.random() * 9000);
     const year = new Date().getFullYear().toString().slice(-2);
     return `${initials}-${year}-${random}`;
+};
+
+const calculateDetailedAge = (dobString: string, visitDateString: string) => {
+    if (!dobString || !visitDateString) return null;
+    const birth = new Date(dobString);
+    const visit = new Date(visitDateString);
+    if (isNaN(birth.getTime()) || isNaN(visit.getTime())) return null;
+
+    let years = visit.getFullYear() - birth.getFullYear();
+    let months = visit.getMonth() - birth.getMonth();
+    let days = visit.getDate() - birth.getDate();
+
+    if (days < 0) {
+        months--;
+        const prevMonth = new Date(visit.getFullYear(), visit.getMonth(), 0);
+        days += prevMonth.getDate();
+    }
+    if (months < 0) {
+        years--;
+        months += 12;
+    }
+    return { years: Math.max(0, years), months: Math.max(0, months), days: Math.max(0, days) };
 };
 
 interface ClientManagerProps {
@@ -118,6 +123,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const [searchQuery, setSearchQuery] = useState('');
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [activeTab, setActiveTab] = useState<'profile' | 'visits' | 'report'>('profile');
+  const [showWaistChart, setShowWaistChart] = useState(false);
   
   // Forms
   const [formData, setFormData] = useState({
@@ -156,9 +162,26 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const [saveSuccess, setSaveSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Derived state for display
+  const detailedAge = useMemo(() => {
+      return calculateDetailedAge(formData.dob, formData.visit_date);
+  }, [formData.dob, formData.visit_date]);
+
+  const isPediatric = formData.age !== '' && Number(formData.age) < 19;
+  const isInfant = formData.age !== '' && Number(formData.age) < 2; // < 24 months
+  const showHeadCirc = formData.age !== '' && Number(formData.age) <= 3; // <= 36 months
+
   useEffect(() => {
     fetchClients();
   }, [session]);
+
+  // Update age when DOB changes
+  useEffect(() => {
+      if (formData.dob) {
+          const d = calculateDetailedAge(formData.dob, new Date().toISOString().split('T')[0]);
+          if (d) setFormData(prev => ({ ...prev, age: d.years }));
+      }
+  }, [formData.dob]);
 
   const fetchClients = async () => {
     if (!session) return;
@@ -416,15 +439,60 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                       <div>
                           <label className="block text-sm font-bold text-gray-700 mb-1">{t.kcal.dob}</label>
                           <input type="date" value={formData.dob} onChange={e => setFormData({...formData, dob: e.target.value})} className="w-full p-2 border rounded-lg" />
+                          {detailedAge && (
+                              <p className="text-xs text-green-600 mt-1 font-mono">
+                                  {detailedAge.years}Y, {detailedAge.months}M, {detailedAge.days}D
+                              </p>
+                          )}
                       </div>
                   </div>
                   
                   <div className="pt-4 border-t border-gray-100">
                       <h3 className="font-bold text-gray-800 mb-3">Latest Measurements</h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <input type="number" placeholder="Wt (kg)" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value === '' ? '' : Number(e.target.value)})} className="p-2 border rounded" />
-                          <input type="number" placeholder="Ht (cm)" value={formData.height} onChange={e => setFormData({...formData, height: e.target.value === '' ? '' : Number(e.target.value)})} className="p-2 border rounded" />
-                          <input type="number" placeholder="Waist (cm)" value={formData.waist} onChange={e => setFormData({...formData, waist: e.target.value === '' ? '' : Number(e.target.value)})} className="p-2 border rounded" />
+                          <input 
+                            type="number" 
+                            placeholder="Wt (kg)" 
+                            value={formData.weight} 
+                            onChange={e => setFormData({...formData, weight: e.target.value === '' ? '' : Number(e.target.value)})} 
+                            className="p-2 border rounded" 
+                          />
+                          <input 
+                            type="number" 
+                            placeholder={isInfant ? "Length (cm)" : "Height (cm)"}
+                            value={formData.height} 
+                            onChange={e => setFormData({...formData, height: e.target.value === '' ? '' : Number(e.target.value)})} 
+                            className="p-2 border rounded" 
+                          />
+                          <div className="relative">
+                            <input 
+                                type="number" 
+                                placeholder="Waist (cm)" 
+                                value={formData.waist} 
+                                onFocus={() => setShowWaistChart(true)}
+                                onChange={e => setFormData({...formData, waist: e.target.value === '' ? '' : Number(e.target.value)})} 
+                                className="p-2 border rounded w-full" 
+                            />
+                            {showWaistChart && isPediatric && (
+                                <div className="absolute top-full left-0 z-50 w-64 bg-white shadow-xl">
+                                    <div className="flex justify-end p-1 bg-gray-100">
+                                        <button type="button" onClick={() => setShowWaistChart(false)} className="text-xs text-gray-500">Close</button>
+                                    </div>
+                                    <WaistCircumferenceTable gender={formData.gender} />
+                                </div>
+                            )}
+                          </div>
+                          
+                          {showHeadCirc && (
+                              <input 
+                                type="number" 
+                                placeholder="Head Circ (cm)" 
+                                value={formData.head_circumference} 
+                                onChange={e => setFormData({...formData, head_circumference: e.target.value === '' ? '' : Number(e.target.value)})} 
+                                className="p-2 border rounded border-blue-300 bg-blue-50" 
+                              />
+                          )}
+                          
                           <input type="number" placeholder="Hip (cm)" value={formData.hip} onChange={e => setFormData({...formData, hip: e.target.value === '' ? '' : Number(e.target.value)})} className="p-2 border rounded" />
                       </div>
                   </div>
@@ -448,9 +516,28 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                   {/* Add Visit Form */}
                   <form onSubmit={handleAddVisit} className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
                       <h3 className="font-bold text-blue-800 mb-4">Add New Visit</h3>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                           <input type="date" required value={newVisitData.visit_date} onChange={e => setNewVisitData({...newVisitData, visit_date: e.target.value})} className="p-2 border rounded" />
                           <input type="number" placeholder="Weight (kg)" value={newVisitData.weight} onChange={e => setNewVisitData({...newVisitData, weight: e.target.value === '' ? '' : Number(e.target.value)})} className="p-2 border rounded" />
+                          
+                          <input 
+                            type="number" 
+                            placeholder={isInfant ? "Length (cm)" : "Height (cm)"}
+                            value={newVisitData.height} 
+                            onChange={e => setNewVisitData({...newVisitData, height: e.target.value === '' ? '' : Number(e.target.value)})} 
+                            className="p-2 border rounded" 
+                          />
+                          
+                          {showHeadCirc && (
+                              <input 
+                                type="number" 
+                                placeholder="Head Circ (cm)" 
+                                value={newVisitData.head_circumference} 
+                                onChange={e => setNewVisitData({...newVisitData, head_circumference: e.target.value === '' ? '' : Number(e.target.value)})} 
+                                className="p-2 border rounded border-blue-300 bg-blue-50" 
+                              />
+                          )}
+
                           <input type="text" placeholder="Notes..." value={newVisitData.notes} onChange={e => setNewVisitData({...newVisitData, notes: e.target.value})} className="p-2 border rounded" />
                       </div>
                       <button type="submit" disabled={submitting} className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 disabled:opacity-50 text-sm">Add Visit</button>
@@ -463,7 +550,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                               <tr>
                                   <th className="p-3">Date</th>
                                   <th className="p-3">Weight</th>
+                                  <th className="p-3">{isInfant ? 'Length' : 'Height'}</th>
                                   <th className="p-3">BMI</th>
+                                  {showHeadCirc && <th className="p-3">HC</th>}
                                   <th className="p-3">Notes</th>
                                   <th className="p-3">Actions</th>
                               </tr>
@@ -473,7 +562,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                   <tr key={v.id} className="border-t hover:bg-gray-50">
                                       <td className="p-3">{new Date(v.visit_date).toLocaleDateString()}</td>
                                       <td className="p-3 font-bold">{v.weight} kg</td>
-                                      <td className="p-3">{v.bmi}</td>
+                                      <td className="p-3">{v.height || '-'} cm</td>
+                                      <td className="p-3">{v.bmi || '-'}</td>
+                                      {showHeadCirc && <td className="p-3">{v.head_circumference || '-'} cm</td>}
                                       <td className="p-3 text-gray-500 truncate max-w-xs">{v.notes}</td>
                                       <td className="p-3 flex gap-2">
                                           {onAnalyzeInKcal && <button onClick={() => onAnalyzeInKcal(editingClient, v)} className="text-blue-600 hover:underline text-xs">Analyze</button>}
@@ -481,7 +572,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                       </td>
                                   </tr>
                               ))}
-                              {visits.length === 0 && <tr><td colSpan={5} className="p-4 text-center text-gray-400">No visits recorded.</td></tr>}
+                              {visits.length === 0 && <tr><td colSpan={showHeadCirc ? 7 : 6} className="p-4 text-center text-gray-400">No visits recorded.</td></tr>}
                           </tbody>
                       </table>
                   </div>
