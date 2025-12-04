@@ -9,18 +9,7 @@ import { DietaryAssessment } from './DietaryAssessment';
 import { FoodQuestionnaire } from './FoodQuestionnaire';
 import { labPanels, labTestsEncyclopedia, LabTestItem, LabPanel } from '../../data/labData';
 
-interface ClientManagerProps {
-  initialClientId?: string | null;
-  onAnalyzeInKcal?: (client: Client, visit: ClientVisit) => void;
-  onPlanMeals?: (client: Client, visit: ClientVisit) => void;
-  onRunNFPE?: (client: Client) => void;
-  autoOpenNew?: boolean;
-}
-
-type SortOption = 'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'clinic';
-type GroupOption = 'none' | 'clinic' | 'month';
-
-// Food Groups Factors for Calculation
+// Helper for Plan Stats (Copied from MealPlanner logic for display)
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
   starch: { cho: 15, pro: 3, fat: 0, kcal: 80 },
   veg: { cho: 5, pro: 2, fat: 0, kcal: 25 },
@@ -38,20 +27,29 @@ const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kca
 
 const calculatePlanStats = (servings: Record<string, number>) => {
     let cho = 0, pro = 0, fat = 0, kcal = 0;
-    if (!servings) return { cho, pro, fat, kcal };
-    
     Object.keys(servings).forEach(group => {
         const s = servings[group] || 0;
-        const f = GROUP_FACTORS[group];
-        if (f) {
-            cho += s * f.cho;
-            pro += s * f.pro;
-            fat += s * f.fat;
-            kcal += s * f.kcal;
+        const factor = GROUP_FACTORS[group];
+        if (factor) {
+            cho += s * factor.cho;
+            pro += s * factor.pro;
+            fat += s * factor.fat;
+            kcal += s * factor.kcal;
         }
     });
     return { cho, pro, fat, kcal };
 };
+
+interface ClientManagerProps {
+  initialClientId?: string | null;
+  onAnalyzeInKcal?: (client: Client, visit: ClientVisit) => void;
+  onPlanMeals?: (client: Client, visit: ClientVisit) => void;
+  onRunNFPE?: (client: Client) => void;
+  autoOpenNew?: boolean;
+}
+
+type SortOption = 'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'clinic';
+type GroupOption = 'none' | 'clinic' | 'month';
 
 const formatDateUK = (dateString: string | undefined) => {
     if (!dateString) return '-';
@@ -170,6 +168,28 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     hip: '',
     miac: ''
   });
+
+  // Pediatric Form State
+  const [pediatricData, setPediatricData] = useState({
+    birthTerm: '', // 9th month / Premature
+    birthWeight: '',
+    birthHeight: '',
+    feedingType: '', // Breastfeeding type
+    weightAt1Year: '',
+    birthHealthIssues: '',
+    weaningAge: '',
+    headCircumference: '',
+    mealsCount: '', // Meals + Snacks
+    refusedFoods: '',
+    lovedFoods: '',
+    eatingOut: '',
+    tastePreference: '', // Savory vs Sweets
+    breakfast: '',
+    eatingDisorders: '',
+    medications: '',
+    psychIssues: '',
+    familyHistory: ''
+  });
   
   const profileBMI = useMemo(() => {
       const w = Number(formData.weight);
@@ -229,14 +249,12 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       }
   }, [autoOpenNew]);
 
-  // Handle Initial Client ID Load (Fixed: Only runs if ID changes or on first load)
+  // Handle Initial Client ID Load
   useEffect(() => {
       if (initialClientId && clients.length > 0) {
-          // Check if this ID has already been processed to avoid re-opening on list updates
           if (processedInitialIdRef.current !== initialClientId) {
               const target = clients.find(c => c.id === initialClientId);
               if (target) {
-                  // Only force open if we are not already editing it
                   if (!editingClient || editingClient.id !== target.id) {
                       handleOpenProfile(target);
                   }
@@ -435,6 +453,13 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     setAllTagsExpanded(false);
     setSummaryText('');
     
+    // Reset Pediatric Data
+    setPediatricData({
+        birthTerm: '', birthWeight: '', birthHeight: '', feedingType: '', weightAt1Year: '', birthHealthIssues: '',
+        weaningAge: '', headCircumference: '', mealsCount: '', refusedFoods: '', lovedFoods: '', eatingOut: '',
+        tastePreference: '', breakfast: '', eatingDisorders: '', medications: '', psychIssues: '', familyHistory: ''
+    });
+
     if (client) {
       setEditingClient(client);
       setNoJob(client.job === 'Unemployed / No Job');
@@ -512,6 +537,44 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       const newState = !allTagsExpanded;
       setAllTagsExpanded(newState);
       if (newState) setExpandedCategory(null);
+  };
+
+  const appendPediatricDataToNotes = () => {
+      if (!confirm("Add pediatric data to clinical notes?")) return;
+      
+      const pd = pediatricData;
+      let text = `\n[👶 Pediatric History & Habits]\n`;
+      if (pd.birthTerm) text += `- Birth Term: ${pd.birthTerm}\n`;
+      if (pd.birthWeight) text += `- Birth Weight: ${pd.birthWeight}\n`;
+      if (pd.birthHeight) text += `- Birth Height: ${pd.birthHeight}\n`;
+      if (pd.feedingType) text += `- Feeding Type: ${pd.feedingType}\n`;
+      if (pd.weightAt1Year) text += `- Wt at 1yr: ${pd.weightAt1Year}\n`;
+      if (pd.birthHealthIssues) text += `- Birth Health Issues: ${pd.birthHealthIssues}\n`;
+      if (pd.weaningAge) text += `- Weaning Age: ${pd.weaningAge}\n`;
+      if (pd.headCircumference) text += `- Head Circ: ${pd.headCircumference} cm\n`;
+      
+      text += `\n[🥣 Current Habits]\n`;
+      if (pd.mealsCount) text += `- Meals/Snacks: ${pd.mealsCount}\n`;
+      if (pd.refusedFoods) text += `- Refused Food: ${pd.refusedFoods}\n`;
+      if (pd.lovedFoods) text += `- Loved Food: ${pd.lovedFoods}\n`;
+      if (pd.eatingOut) text += `- Eating Out: ${pd.eatingOut}\n`;
+      if (pd.tastePreference) text += `- Preference: ${pd.tastePreference}\n`;
+      if (pd.breakfast) text += `- Breakfast: ${pd.breakfast}\n`;
+      
+      if (pd.eatingDisorders || pd.medications || pd.psychIssues || pd.familyHistory) {
+          text += `\n[⚠️ Medical/Psych]\n`;
+          if (pd.eatingDisorders) text += `- Eating Disorders: ${pd.eatingDisorders}\n`;
+          if (pd.medications) text += `- Meds: ${pd.medications}\n`;
+          if (pd.psychIssues) text += `- Psych: ${pd.psychIssues}\n`;
+          if (pd.familyHistory) text += `- Family Hx: ${pd.familyHistory}\n`;
+      }
+
+      setFormData(prev => ({
+          ...prev,
+          notes: prev.notes + "\n" + text
+      }));
+      setSaveSuccess("Added to notes!");
+      setTimeout(() => setSaveSuccess(''), 2000);
   };
 
   const handleSubmitProfile = async (e: React.FormEvent) => {
@@ -1156,7 +1219,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
   // --- RENDER: PROFILE (DETAILS) VIEW ---
   return (
-    <div className="max-w-5xl mx-auto animate-fade-in pb-12">
+    <div className="max-w-[1920px] mx-auto animate-fade-in pb-12">
          {/* Profile Header */}
          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 no-print">
            <div className="flex items-center gap-4">
@@ -1202,82 +1265,70 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
             {activeTab === 'profile' && (
                  <div className="p-6">
                     <form id="clientForm" onSubmit={handleSubmitProfile} className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                             {/* Left Col */}
-                             <div className="md:col-span-5 space-y-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
-                                 <h3 className="font-bold text-gray-700 text-sm uppercase border-b pb-2 mb-2">Core Identity</h3>
-                                 <div>
-                                     <label className="block text-xs font-bold text-gray-500 mb-1">{t.clients.name} *</label>
-                                     <input 
-                                        type="text" required
-                                        value={formData.full_name}
-                                        onChange={e => {
-                                            const val = e.target.value;
-                                            setFormData(prev => ({...prev, full_name: val, client_code: prev.client_code || generateCode(val)}));
-                                        }}
-                                        className="w-full p-2 border rounded focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-sm"
-                                     />
-                                 </div>
-                                 <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 mb-1">Gender</label>
-                                        <select 
-                                            value={formData.gender}
-                                            onChange={e => setFormData({...formData, gender: e.target.value as 'male' | 'female'})}
-                                            className="w-full p-2 border rounded outline-none bg-white text-sm"
-                                        >
-                                            <option value="male">{t.kcal.male}</option>
-                                            <option value="female">{t.kcal.female}</option>
-                                        </select>
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                             
+                             {/* Left Col: Info & Measurements (Span 7) */}
+                             <div className="lg:col-span-7 space-y-6">
+                                {/* Core Identity */}
+                                <div className="bg-gray-50 p-5 rounded-xl border border-gray-100">
+                                    <h3 className="font-bold text-gray-700 text-sm uppercase border-b pb-2 mb-2">Core Identity</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="col-span-1 md:col-span-2">
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">{t.clients.name} *</label>
+                                            <input 
+                                                type="text" required
+                                                value={formData.full_name}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    setFormData(prev => ({...prev, full_name: val, client_code: prev.client_code || generateCode(val)}));
+                                                }}
+                                                className="w-full p-2 border rounded focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">Gender</label>
+                                            <select 
+                                                value={formData.gender}
+                                                onChange={e => setFormData({...formData, gender: e.target.value as 'male' | 'female'})}
+                                                className="w-full p-2 border rounded outline-none bg-white text-sm"
+                                            >
+                                                <option value="male">{t.kcal.male}</option>
+                                                <option value="female">{t.kcal.female}</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">Age</label>
+                                            <input 
+                                                type="number" 
+                                                value={formData.age}
+                                                onChange={e => setFormData({...formData, age: e.target.value === '' ? '' : Number(e.target.value)})}
+                                                className="w-full p-2 border rounded outline-none bg-white text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">DOB</label>
+                                            <input 
+                                                type="date" 
+                                                value={formData.dob}
+                                                onChange={e => setFormData({...formData, dob: e.target.value})}
+                                                className="w-full p-2 border rounded outline-none text-sm"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">Phone</label>
+                                            <input 
+                                                type="text" 
+                                                value={formData.phone}
+                                                onChange={e => setFormData({...formData, phone: e.target.value})}
+                                                className="w-full p-2 border rounded outline-none text-sm"
+                                                dir="ltr"
+                                            />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 mb-1">Age</label>
-                                        <input 
-                                            type="number" 
-                                            value={formData.age}
-                                            onChange={e => setFormData({...formData, age: e.target.value === '' ? '' : Number(e.target.value)})}
-                                            className="w-full p-2 border rounded outline-none bg-white text-sm"
-                                        />
-                                    </div>
-                                 </div>
-                                 <div>
-                                     <label className="block text-xs font-bold text-gray-500 mb-1">DOB</label>
-                                     <input 
-                                        type="date" 
-                                        value={formData.dob}
-                                        onChange={e => setFormData({...formData, dob: e.target.value})}
-                                        className="w-full p-2 border rounded outline-none text-sm"
-                                     />
-                                     {formData.dob && (
-                                         <span className="text-xs text-gray-400 mt-1 block text-right">
-                                             {formatDateUK(formData.dob)}
-                                         </span>
-                                     )}
-                                 </div>
-                                 <div>
-                                     <label className="block text-xs font-bold text-gray-500 mb-1">Phone</label>
-                                     <input 
-                                        type="text" 
-                                        value={formData.phone}
-                                        onChange={e => setFormData({...formData, phone: e.target.value})}
-                                        className="w-full p-2 border rounded outline-none text-sm"
-                                        dir="ltr"
-                                     />
-                                 </div>
-                                 <div>
-                                     <label className="block text-xs font-bold text-gray-500 mb-1">Client Code</label>
-                                     <input 
-                                        type="text" 
-                                        value={formData.client_code}
-                                        onChange={e => setFormData({...formData, client_code: e.target.value})}
-                                        className="w-full p-2 border rounded outline-none font-mono text-sm bg-white"
-                                     />
-                                 </div>
-                             </div>
+                                </div>
 
-                             {/* Right Col */}
-                             <div className="md:col-span-7 space-y-5">
-                                 <div className="grid grid-cols-2 gap-4">
+                                {/* Marital & Job */}
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 mb-1">Marital Status</label>
                                         <select 
@@ -1322,9 +1373,10 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                             </label>
                                         </div>
                                     </div>
-                                 </div>
+                                </div>
 
-                                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                {/* Measurements */}
+                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
                                      <h3 className="font-bold text-blue-800 text-xs uppercase mb-3">1st Visit Measurements</h3>
                                      <div className="grid grid-cols-3 gap-4">
                                          <div>
@@ -1352,102 +1404,227 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                              <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.miac} onChange={e => setFormData({...formData, miac: e.target.value === '' ? '' : Number(e.target.value)})} />
                                          </div>
                                      </div>
-                                 </div>
-                             </div>
-                        </div>
-                        
-                        {/* Categorized Tags and Labs */}
-                        <div>
-                             <div className="flex justify-between items-center mb-2">
-                                 <div className="flex gap-2 items-center flex-wrap">
-                                    <label className="block text-xs font-bold text-gray-500">📝 Medical Notes & History</label>
-                                    <button type="button" onClick={insertTemplate} className="text-xs bg-gray-100 px-2 py-0.5 rounded border hover:bg-gray-200 text-gray-600">
-                                        Insert Template
-                                    </button>
-                                    <button 
-                                        type="button"
-                                        onClick={handleRunNFPE}
-                                        className="text-xs bg-red-100 px-2 py-0.5 rounded border border-red-200 hover:bg-red-200 text-red-700 font-bold flex items-center gap-1"
-                                    >
-                                        🩺 NFPE
-                                    </button>
-                                    {editingClient && (
-                                        <>
-                                        <button 
-                                            type="button"
-                                            onClick={() => handleOpenTool('lab-checklist', 'client', editingClient.id)}
-                                            className="text-xs bg-blue-100 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-200 text-blue-800 font-bold flex items-center gap-1"
-                                        >
-                                            🧪 {t.clients.labSuggestions}
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            onClick={() => handleOpenTool('dietary-recall', 'client', editingClient.id, editingClient.dietary_assessment)}
-                                            className="text-xs bg-yellow-100 px-2 py-0.5 rounded border border-yellow-200 hover:bg-yellow-200 text-yellow-800 font-bold flex items-center gap-1"
-                                        >
-                                            📅 Dietary Recall
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            onClick={() => handleOpenTool('food-questionnaire', 'client', editingClient.id, editingClient.food_questionnaire)}
-                                            className="text-xs bg-green-100 px-2 py-0.5 rounded border border-green-200 hover:bg-green-200 text-green-800 font-bold flex items-center gap-1"
-                                        >
-                                            🥗 Food Q.
-                                        </button>
-                                        </>
-                                    )}
-                                 </div>
-                                 <button 
-                                    type="button"
-                                    onClick={toggleAllTags}
-                                    className="text-xs text-white bg-[var(--color-primary)] px-3 py-1 rounded font-medium hover:bg-[var(--color-primary-hover)] shadow-sm"
-                                 >
-                                     {allTagsExpanded ? 'Collapse' : 'Expand All'}
-                                 </button>
-                             </div>
-                             
-                             <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 mb-4">
-                                {Object.entries(TAG_CATEGORIES).map(([category, tags]) => {
-                                    if (category === "🌸 Female Only" && formData.gender === "male") return null;
-                                    const isExpanded = allTagsExpanded || expandedCategory === category;
-                                    return (
-                                        <div key={category} className="bg-white first:rounded-t-lg last:rounded-b-lg">
+                                </div>
+
+                                {/* Pediatric History Form */}
+                                {(formData.age !== '' && Number(formData.age) < 18) && (
+                                    <div className="bg-pink-50 p-5 rounded-xl border border-pink-100">
+                                        <h3 className="font-bold text-pink-700 text-sm uppercase border-b border-pink-200 pb-2 mb-4 flex justify-between items-center">
+                                            <span>👶 Pediatric History & Habits</span>
                                             <button 
-                                                type="button"
-                                                onClick={() => setExpandedCategory(isExpanded && !allTagsExpanded ? null : category)}
-                                                className="w-full px-4 py-2 text-left flex justify-between items-center hover:bg-gray-50 transition"
+                                                type="button" 
+                                                onClick={appendPediatricDataToNotes}
+                                                className="text-xs bg-white text-pink-600 px-3 py-1 rounded border border-pink-300 hover:bg-pink-50 shadow-sm"
                                             >
-                                                <span className="text-sm font-medium text-gray-700">{category}</span>
-                                                {!allTagsExpanded && (
-                                                    <span className="text-gray-400">{isExpanded ? '▲' : '▼'}</span>
-                                                )}
+                                                📝 Add to Notes
                                             </button>
-                                            {isExpanded && (
-                                                <div className="px-4 pb-3 pt-1 flex flex-wrap gap-2 animate-fade-in bg-gray-50/50 border-t border-gray-50">
-                                                    {tags.map(tag => (
-                                                        <button
-                                                            key={tag}
-                                                            type="button"
-                                                            onClick={() => addTag(tag, category)}
-                                                            className="px-2 py-1 bg-white hover:bg-blue-50 text-gray-700 text-xs rounded border border-gray-200 hover:border-blue-300 transition shadow-sm"
-                                                        >
-                                                            + {tag}
-                                                        </button>
-                                                    ))}
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {/* Birth */}
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Birth Term</label>
+                                                    <select 
+                                                        className="w-full p-1.5 text-xs border rounded"
+                                                        value={pediatricData.birthTerm}
+                                                        onChange={e => setPediatricData({...pediatricData, birthTerm: e.target.value})}
+                                                    >
+                                                        <option value="">Select...</option>
+                                                        <option value="Full Term (9m)">Full Term (9m)</option>
+                                                        <option value="Premature">Premature</option>
+                                                    </select>
                                                 </div>
-                                            )}
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Birth Wt (kg)</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.birthWeight} onChange={e => setPediatricData({...pediatricData, birthWeight: e.target.value})} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Birth Ht (cm)</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.birthHeight} onChange={e => setPediatricData({...pediatricData, birthHeight: e.target.value})} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Head Circ (cm)</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.headCircumference} onChange={e => setPediatricData({...pediatricData, headCircumference: e.target.value})} />
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Early Life */}
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Feeding Type</label>
+                                                    <input type="text" placeholder="Breast/Formula..." className="w-full p-1.5 text-xs border rounded" value={pediatricData.feedingType} onChange={e => setPediatricData({...pediatricData, feedingType: e.target.value})} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Weaning Age</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.weaningAge} onChange={e => setPediatricData({...pediatricData, weaningAge: e.target.value})} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Wt at 1 Year</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.weightAt1Year} onChange={e => setPediatricData({...pediatricData, weightAt1Year: e.target.value})} />
+                                                </div>
+                                                <div className="col-span-full">
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Birth Health Issues</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.birthHealthIssues} onChange={e => setPediatricData({...pediatricData, birthHealthIssues: e.target.value})} />
+                                                </div>
+                                            </div>
+
+                                            {/* Current Habits */}
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-2 border-t border-pink-100">
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Meals Count</label>
+                                                    <input type="text" placeholder="Meals + Snacks" className="w-full p-1.5 text-xs border rounded" value={pediatricData.mealsCount} onChange={e => setPediatricData({...pediatricData, mealsCount: e.target.value})} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Refused Food</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.refusedFoods} onChange={e => setPediatricData({...pediatricData, refusedFoods: e.target.value})} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Loved Food</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.lovedFoods} onChange={e => setPediatricData({...pediatricData, lovedFoods: e.target.value})} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Eating Out</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.eatingOut} onChange={e => setPediatricData({...pediatricData, eatingOut: e.target.value})} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Preference</label>
+                                                    <select className="w-full p-1.5 text-xs border rounded" value={pediatricData.tastePreference} onChange={e => setPediatricData({...pediatricData, tastePreference: e.target.value})}>
+                                                        <option value="">Select...</option>
+                                                        <option value="Sweets">Sweets</option>
+                                                        <option value="Savory">Savory</option>
+                                                        <option value="Both">Both</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Breakfast?</label>
+                                                    <select className="w-full p-1.5 text-xs border rounded" value={pediatricData.breakfast} onChange={e => setPediatricData({...pediatricData, breakfast: e.target.value})}>
+                                                        <option value="">Select...</option>
+                                                        <option value="Yes">Yes</option>
+                                                        <option value="No">No</option>
+                                                        <option value="Sometimes">Sometimes</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            {/* Medical */}
+                                            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-pink-100">
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Eating Disorders</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.eatingDisorders} onChange={e => setPediatricData({...pediatricData, eatingDisorders: e.target.value})} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Medications</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.medications} onChange={e => setPediatricData({...pediatricData, medications: e.target.value})} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Psych Issues</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.psychIssues} onChange={e => setPediatricData({...pediatricData, psychIssues: e.target.value})} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Family Hx</label>
+                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.familyHistory} onChange={e => setPediatricData({...pediatricData, familyHistory: e.target.value})} />
+                                                </div>
+                                            </div>
                                         </div>
-                                    );
-                                })}
+                                    </div>
+                                )}
                              </div>
 
-                             <textarea 
-                                rows={8}
-                                value={formData.notes}
-                                onChange={e => setFormData({...formData, notes: e.target.value})}
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-y whitespace-pre-wrap text-sm font-mono bg-gray-50 focus:bg-white"
-                                placeholder="Allergies, chronic conditions, past operations, lab requests..."
-                             ></textarea>
+                             {/* Right Col: Notes (Span 5) */}
+                             <div className="lg:col-span-5 h-full flex flex-col">
+                                 <div className="sticky top-4">
+                                     <div className="flex justify-between items-center mb-2">
+                                         <div className="flex gap-2 items-center flex-wrap">
+                                            <label className="block text-xs font-bold text-gray-500">📝 Medical Notes & History</label>
+                                            <button type="button" onClick={insertTemplate} className="text-xs bg-gray-100 px-2 py-0.5 rounded border hover:bg-gray-200 text-gray-600">
+                                                Template
+                                            </button>
+                                            <button 
+                                                type="button"
+                                                onClick={handleRunNFPE}
+                                                className="text-xs bg-red-100 px-2 py-0.5 rounded border border-red-200 hover:bg-red-200 text-red-700 font-bold flex items-center gap-1"
+                                            >
+                                                🩺 NFPE
+                                            </button>
+                                            {editingClient && (
+                                                <>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleOpenTool('lab-checklist', 'client', editingClient.id)}
+                                                    className="text-xs bg-blue-100 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-200 text-blue-800 font-bold flex items-center gap-1"
+                                                >
+                                                    🧪 Labs
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleOpenTool('dietary-recall', 'client', editingClient.id, editingClient.dietary_assessment)}
+                                                    className="text-xs bg-yellow-100 px-2 py-0.5 rounded border border-yellow-200 hover:bg-yellow-200 text-yellow-800 font-bold flex items-center gap-1"
+                                                >
+                                                    📅 Recall
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleOpenTool('food-questionnaire', 'client', editingClient.id, editingClient.food_questionnaire)}
+                                                    className="text-xs bg-green-100 px-2 py-0.5 rounded border border-green-200 hover:bg-green-200 text-green-800 font-bold flex items-center gap-1"
+                                                >
+                                                    🥗 Food Q.
+                                                </button>
+                                                </>
+                                            )}
+                                         </div>
+                                         <button 
+                                            type="button"
+                                            onClick={toggleAllTags}
+                                            className="text-xs text-white bg-[var(--color-primary)] px-3 py-1 rounded font-medium hover:bg-[var(--color-primary-hover)] shadow-sm"
+                                         >
+                                             {allTagsExpanded ? 'Collapse' : 'Expand'}
+                                         </button>
+                                     </div>
+                                     
+                                     <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 mb-4 max-h-60 overflow-y-auto">
+                                        {Object.entries(TAG_CATEGORIES).map(([category, tags]) => {
+                                            if (category === "🌸 Female Only" && formData.gender === "male") return null;
+                                            const isExpanded = allTagsExpanded || expandedCategory === category;
+                                            return (
+                                                <div key={category} className="bg-white first:rounded-t-lg last:rounded-b-lg">
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setExpandedCategory(isExpanded && !allTagsExpanded ? null : category)}
+                                                        className="w-full px-4 py-2 text-left flex justify-between items-center hover:bg-gray-50 transition"
+                                                    >
+                                                        <span className="text-sm font-medium text-gray-700">{category}</span>
+                                                        {!allTagsExpanded && (
+                                                            <span className="text-gray-400">{isExpanded ? '▲' : '▼'}</span>
+                                                        )}
+                                                    </button>
+                                                    {isExpanded && (
+                                                        <div className="px-4 pb-3 pt-1 flex flex-wrap gap-2 animate-fade-in bg-gray-50/50 border-t border-gray-50">
+                                                            {tags.map(tag => (
+                                                                <button
+                                                                    key={tag}
+                                                                    type="button"
+                                                                    onClick={() => addTag(tag, category)}
+                                                                    className="px-2 py-1 bg-white hover:bg-blue-50 text-gray-700 text-xs rounded border border-gray-200 hover:border-blue-300 transition shadow-sm"
+                                                                >
+                                                                    + {tag}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                     </div>
+
+                                     <textarea 
+                                        rows={16}
+                                        value={formData.notes}
+                                        onChange={e => setFormData({...formData, notes: e.target.value})}
+                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-y whitespace-pre-wrap text-sm font-mono bg-gray-50 focus:bg-white min-h-[400px]"
+                                        placeholder="Clinical notes appear here..."
+                                     ></textarea>
+                                 </div>
+                             </div>
                         </div>
 
                         <div className="flex justify-end pt-4 border-t border-gray-100">

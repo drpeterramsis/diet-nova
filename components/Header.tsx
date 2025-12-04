@@ -52,7 +52,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavi
             <h1 className="text-2xl font-bold tracking-wide flex items-center">
               Diet<span className="text-[var(--color-primary-light)]">Nova</span>
               <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full hidden sm:inline-block">
-                v2.0.119
+                v2.0.120
               </span>
             </h1>
           </div>
