@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -60,7 +61,7 @@ const formatDateUK = (dateString: string | undefined) => {
     });
 };
 
-// Tags
+// General Note Tags
 const TAG_CATEGORIES: Record<string, string[]> = {
     "📏 Anthropometry": ["Weight Gain 📈", "Weight Loss 📉", "Stunted Growth 📏"],
     "🏥 Special Conditions": ["Post-Op 🏥", "Bedridden 🛏️", "Wheelchair ♿", "Sedentary 🛋️", "Active 🏃", "Athlete 🏋️"],
@@ -68,6 +69,15 @@ const TAG_CATEGORIES: Record<string, string[]> = {
     "🩺 Medical History": ["Diabetes 🩸", "Hypertension 💓", "CVS Disease ❤️", "GIT Issues 🤢", "Pulmonary 🫁", "Renal 🦠", "Endocrine 🦋", "Food Allergies 🥜"],
     "👪 Family History": ["Family Obesity 👨‍👩‍👧", "Family Diabetes 🩸", "Family CVS ❤️"],
     "🌸 Female Only": ["PCOS 🌸", "Pregnancy 🤰", "Lactation 🤱", "Menopause 🥀", "Contraceptives 💊", "Irregular Cycle 🗓️"]
+};
+
+// Pediatric Tags (New)
+const PEDIATRIC_TAG_CATEGORIES: Record<string, string[]> = {
+    "👶 Birth & Early Life": ["Full Term (9m)", "Premature", "C-Section", "Natural Birth", "Normal Birth Wt", "Low Birth Wt", "High Birth Wt", "Jaundice at birth", "Incubator needed"],
+    "🍼 Feeding History": ["Exclusive Breastfeeding", "Formula Feeding", "Mixed Feeding", "Weaning < 6m", "Weaning > 6m", "Milk Allergy", "Lactose Intolerance"],
+    "🥣 Eating Habits": ["Good Appetite", "Poor Appetite", "Picky Eater", "Slow Eater", "Overeating", "Refuses Breakfast", "Eats Breakfast", "Snacks Frequently", "Eats Out Often"],
+    "🥦 Food Preferences": ["Loves Sweets 🍬", "Loves Savory 🧂", "Refuses Veggies 🥦", "Refuses Meat 🍖", "Loves Fruits 🍎", "Refuses Milk 🥛", "Loves Fast Food 🍔"],
+    "⚠️ Medical/Behavioral": ["Eating Disorder", "Food Neophobia", "Constipation", "Diarrhea", "Vomiting", "Family Hx Obesity", "Sedentary Child", "Active Child"]
 };
 
 // Note Display Component
@@ -121,6 +131,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [allTagsExpanded, setAllTagsExpanded] = useState(false);
+  
+  // Pediatric Accordion State
+  const [expandedPediatricCategory, setExpandedPediatricCategory] = useState<string | null>(null);
 
   // Tool Targets (For Dietary/Food Q)
   const [toolTarget, setToolTarget] = useState<{type: 'client' | 'visit', id: string, initialData?: any} | null>(null);
@@ -167,28 +180,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     waist: '',
     hip: '',
     miac: ''
-  });
-
-  // Pediatric Form State
-  const [pediatricData, setPediatricData] = useState({
-    birthTerm: '', // 9th month / Premature
-    birthWeight: '',
-    birthHeight: '',
-    feedingType: '', // Breastfeeding type
-    weightAt1Year: '',
-    birthHealthIssues: '',
-    weaningAge: '',
-    headCircumference: '',
-    mealsCount: '', // Meals + Snacks
-    refusedFoods: '',
-    lovedFoods: '',
-    eatingOut: '',
-    tastePreference: '', // Savory vs Sweets
-    breakfast: '',
-    eatingDisorders: '',
-    medications: '',
-    psychIssues: '',
-    familyHistory: ''
   });
   
   const profileBMI = useMemo(() => {
@@ -452,13 +443,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     setExpandedCategory(null);
     setAllTagsExpanded(false);
     setSummaryText('');
-    
-    // Reset Pediatric Data
-    setPediatricData({
-        birthTerm: '', birthWeight: '', birthHeight: '', feedingType: '', weightAt1Year: '', birthHealthIssues: '',
-        weaningAge: '', headCircumference: '', mealsCount: '', refusedFoods: '', lovedFoods: '', eatingOut: '',
-        tastePreference: '', breakfast: '', eatingDisorders: '', medications: '', psychIssues: '', familyHistory: ''
-    });
+    setExpandedPediatricCategory(null);
 
     if (client) {
       setEditingClient(client);
@@ -528,7 +513,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       } else {
           setFormData(prev => ({
               ...prev,
-              notes: (prev.notes ? prev.notes + '\n' : '') + `• ${tag}`
+              notes: (prev.notes ? prev.notes + '\n' : '') + `\n[${categoryName}]\n• ${tag}\n`
           }));
       }
   };
@@ -537,44 +522,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       const newState = !allTagsExpanded;
       setAllTagsExpanded(newState);
       if (newState) setExpandedCategory(null);
-  };
-
-  const appendPediatricDataToNotes = () => {
-      if (!confirm("Add pediatric data to clinical notes?")) return;
-      
-      const pd = pediatricData;
-      let text = `\n[👶 Pediatric History & Habits]\n`;
-      if (pd.birthTerm) text += `- Birth Term: ${pd.birthTerm}\n`;
-      if (pd.birthWeight) text += `- Birth Weight: ${pd.birthWeight}\n`;
-      if (pd.birthHeight) text += `- Birth Height: ${pd.birthHeight}\n`;
-      if (pd.feedingType) text += `- Feeding Type: ${pd.feedingType}\n`;
-      if (pd.weightAt1Year) text += `- Wt at 1yr: ${pd.weightAt1Year}\n`;
-      if (pd.birthHealthIssues) text += `- Birth Health Issues: ${pd.birthHealthIssues}\n`;
-      if (pd.weaningAge) text += `- Weaning Age: ${pd.weaningAge}\n`;
-      if (pd.headCircumference) text += `- Head Circ: ${pd.headCircumference} cm\n`;
-      
-      text += `\n[🥣 Current Habits]\n`;
-      if (pd.mealsCount) text += `- Meals/Snacks: ${pd.mealsCount}\n`;
-      if (pd.refusedFoods) text += `- Refused Food: ${pd.refusedFoods}\n`;
-      if (pd.lovedFoods) text += `- Loved Food: ${pd.lovedFoods}\n`;
-      if (pd.eatingOut) text += `- Eating Out: ${pd.eatingOut}\n`;
-      if (pd.tastePreference) text += `- Preference: ${pd.tastePreference}\n`;
-      if (pd.breakfast) text += `- Breakfast: ${pd.breakfast}\n`;
-      
-      if (pd.eatingDisorders || pd.medications || pd.psychIssues || pd.familyHistory) {
-          text += `\n[⚠️ Medical/Psych]\n`;
-          if (pd.eatingDisorders) text += `- Eating Disorders: ${pd.eatingDisorders}\n`;
-          if (pd.medications) text += `- Meds: ${pd.medications}\n`;
-          if (pd.psychIssues) text += `- Psych: ${pd.psychIssues}\n`;
-          if (pd.familyHistory) text += `- Family Hx: ${pd.familyHistory}\n`;
-      }
-
-      setFormData(prev => ({
-          ...prev,
-          notes: prev.notes + "\n" + text
-      }));
-      setSaveSuccess("Added to notes!");
-      setTimeout(() => setSaveSuccess(''), 2000);
   };
 
   const handleSubmitProfile = async (e: React.FormEvent) => {
@@ -1406,125 +1353,46 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                      </div>
                                 </div>
 
-                                {/* Pediatric History Form */}
+                                {/* Pediatric History Tags */}
                                 {(formData.age !== '' && Number(formData.age) < 18) && (
                                     <div className="bg-pink-50 p-5 rounded-xl border border-pink-100">
-                                        <h3 className="font-bold text-pink-700 text-sm uppercase border-b border-pink-200 pb-2 mb-4 flex justify-between items-center">
-                                            <span>👶 Pediatric History & Habits</span>
-                                            <button 
-                                                type="button" 
-                                                onClick={appendPediatricDataToNotes}
-                                                className="text-xs bg-white text-pink-600 px-3 py-1 rounded border border-pink-300 hover:bg-pink-50 shadow-sm"
-                                            >
-                                                📝 Add to Notes
-                                            </button>
+                                        <h3 className="font-bold text-pink-700 text-sm uppercase border-b border-pink-200 pb-2 mb-4">
+                                            👶 Pediatric History & Habits (Tags)
                                         </h3>
-                                        <div className="space-y-4">
-                                            {/* Birth */}
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Birth Term</label>
-                                                    <select 
-                                                        className="w-full p-1.5 text-xs border rounded"
-                                                        value={pediatricData.birthTerm}
-                                                        onChange={e => setPediatricData({...pediatricData, birthTerm: e.target.value})}
-                                                    >
-                                                        <option value="">Select...</option>
-                                                        <option value="Full Term (9m)">Full Term (9m)</option>
-                                                        <option value="Premature">Premature</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Birth Wt (kg)</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.birthWeight} onChange={e => setPediatricData({...pediatricData, birthWeight: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Birth Ht (cm)</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.birthHeight} onChange={e => setPediatricData({...pediatricData, birthHeight: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Head Circ (cm)</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.headCircumference} onChange={e => setPediatricData({...pediatricData, headCircumference: e.target.value})} />
-                                                </div>
-                                            </div>
-                                            
-                                            {/* Early Life */}
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Feeding Type</label>
-                                                    <input type="text" placeholder="Breast/Formula..." className="w-full p-1.5 text-xs border rounded" value={pediatricData.feedingType} onChange={e => setPediatricData({...pediatricData, feedingType: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Weaning Age</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.weaningAge} onChange={e => setPediatricData({...pediatricData, weaningAge: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Wt at 1 Year</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.weightAt1Year} onChange={e => setPediatricData({...pediatricData, weightAt1Year: e.target.value})} />
-                                                </div>
-                                                <div className="col-span-full">
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Birth Health Issues</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.birthHealthIssues} onChange={e => setPediatricData({...pediatricData, birthHealthIssues: e.target.value})} />
-                                                </div>
-                                            </div>
-
-                                            {/* Current Habits */}
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-2 border-t border-pink-100">
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Meals Count</label>
-                                                    <input type="text" placeholder="Meals + Snacks" className="w-full p-1.5 text-xs border rounded" value={pediatricData.mealsCount} onChange={e => setPediatricData({...pediatricData, mealsCount: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Refused Food</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.refusedFoods} onChange={e => setPediatricData({...pediatricData, refusedFoods: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Loved Food</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.lovedFoods} onChange={e => setPediatricData({...pediatricData, lovedFoods: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Eating Out</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.eatingOut} onChange={e => setPediatricData({...pediatricData, eatingOut: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Preference</label>
-                                                    <select className="w-full p-1.5 text-xs border rounded" value={pediatricData.tastePreference} onChange={e => setPediatricData({...pediatricData, tastePreference: e.target.value})}>
-                                                        <option value="">Select...</option>
-                                                        <option value="Sweets">Sweets</option>
-                                                        <option value="Savory">Savory</option>
-                                                        <option value="Both">Both</option>
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Breakfast?</label>
-                                                    <select className="w-full p-1.5 text-xs border rounded" value={pediatricData.breakfast} onChange={e => setPediatricData({...pediatricData, breakfast: e.target.value})}>
-                                                        <option value="">Select...</option>
-                                                        <option value="Yes">Yes</option>
-                                                        <option value="No">No</option>
-                                                        <option value="Sometimes">Sometimes</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-
-                                            {/* Medical */}
-                                            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-pink-100">
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Eating Disorders</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.eatingDisorders} onChange={e => setPediatricData({...pediatricData, eatingDisorders: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Medications</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.medications} onChange={e => setPediatricData({...pediatricData, medications: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Psych Issues</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.psychIssues} onChange={e => setPediatricData({...pediatricData, psychIssues: e.target.value})} />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] text-pink-600 font-bold mb-1">Family Hx</label>
-                                                    <input type="text" className="w-full p-1.5 text-xs border rounded" value={pediatricData.familyHistory} onChange={e => setPediatricData({...pediatricData, familyHistory: e.target.value})} />
-                                                </div>
-                                            </div>
+                                        <p className="text-xs text-pink-600 mb-3 opacity-80">Click a tag to add it to notes.</p>
+                                        
+                                        <div className="space-y-3">
+                                            {Object.entries(PEDIATRIC_TAG_CATEGORIES).map(([category, tags]) => {
+                                                const isExpanded = expandedPediatricCategory === category;
+                                                return (
+                                                    <div key={category} className="bg-white rounded-lg border border-pink-200 overflow-hidden">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setExpandedPediatricCategory(isExpanded ? null : category)}
+                                                            className="w-full px-3 py-2 text-left flex justify-between items-center hover:bg-pink-50 transition"
+                                                        >
+                                                            <span className="text-xs font-bold text-pink-700">{category}</span>
+                                                            <span className="text-pink-400 text-xs">{isExpanded ? '▲' : '▼'}</span>
+                                                        </button>
+                                                        
+                                                        {/* Always show if expanded, or just first few if not? Let's rely on expansion. */}
+                                                        {isExpanded && (
+                                                            <div className="p-3 flex flex-wrap gap-2 bg-pink-50/30">
+                                                                {tags.map(tag => (
+                                                                    <button
+                                                                        key={tag}
+                                                                        type="button"
+                                                                        onClick={() => addTag(tag, category)}
+                                                                        className="px-2 py-1 bg-white hover:bg-pink-100 text-gray-700 text-xs rounded border border-pink-200 hover:border-pink-300 transition shadow-sm"
+                                                                    >
+                                                                        + {tag}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
@@ -1622,7 +1490,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                         onChange={e => setFormData({...formData, notes: e.target.value})}
                                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-y whitespace-pre-wrap text-sm font-mono bg-gray-50 focus:bg-white min-h-[400px]"
                                         placeholder="Clinical notes appear here..."
-                                     ></textarea>
+                                    ></textarea>
                                  </div>
                              </div>
                         </div>
