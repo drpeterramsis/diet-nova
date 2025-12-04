@@ -1,10 +1,4 @@
 
-
-
-
-
-
-
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -22,6 +16,7 @@ import Encyclopedia from "./components/tools/Encyclopedia";
 import HeightEstimator from "./components/tools/HeightEstimator";
 import LabReference from "./components/tools/LabReference";
 import STRONGKids from "./components/tools/STRONGKids"; // Import STRONGKids
+import PediatricWaist from "./components/tools/PediatricWaist"; // Import PediatricWaist
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -419,6 +414,9 @@ const AppContent = () => {
                 <HeightEstimator 
                     onClose={handleNavHome} 
                 />
+            )}
+            {activeTool === 'pediatric-waist' && (
+                <PediatricWaist onClose={handleNavHome} />
             )}
 
           </div>

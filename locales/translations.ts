@@ -1,8 +1,4 @@
 
-
-
-
-
 import { Translation } from "../types";
 
 export const en: Translation = {
@@ -110,6 +106,10 @@ export const en: Translation = {
     strongKids: {
         title: "STRONGkids Risk Assessment",
         desc: "Nutritional risk screening tool for children (1mo - 18y)."
+    },
+    pediatricWaist: {
+        title: "Waist Percentile (Pedia)",
+        desc: "Waist circumference percentiles for children & adolescents (2-19y)."
     }
   },
   clients: {
@@ -462,6 +462,10 @@ export const ar: Translation = {
     strongKids: {
         title: "تقييم STRONGkids",
         desc: "أداة فحص مخاطر سوء التغذية للأطفال (1 شهر - 18 سنة)."
+    },
+    pediatricWaist: {
+        title: "محيط الخصر (أطفال)",
+        desc: "مئينات محيط الخصر للأطفال والمراهقين (2-19 سنة)."
     }
   },
   clients: {

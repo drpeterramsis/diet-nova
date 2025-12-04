@@ -1,86 +1,60 @@
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export type Language = 'en' | 'ar';
 
 export interface UserProfile {
   id: string;
-  email: string;
   full_name: string;
   role: 'doctor' | 'patient';
+  email?: string;
+  created_at?: string;
 }
 
 export interface SavedMeal {
   id: string;
-  name: string;
-  created_at: string;
-  data: any; // JSON data of the meal plan
-  tool_type: 'meal-planner' | 'meal-creator';
   user_id: string;
+  name: string;
+  tool_type: 'meal-creator' | 'meal-planner';
+  data: any;
+  created_at: string;
 }
 
 export interface DietaryAssessmentData {
   days: number;
-  dates: string[]; // Array of date strings corresponding to days
-  recall: {
-    [key: string]: { // key is row id (e.g., 'breakfast')
-      [day: string]: string; // day is 'day1', 'day2' -> value is text
-    }
-  };
+  dates: string[];
+  recall: Record<string, Record<string, string>>;
 }
 
 export interface FoodQuestionnaireData {
-  answers: {
-    [key: string]: string; // key is question ID (e.g., 'red_meat'), value is frequency code (e.g., 'daily')
-  };
-  notes?: {
-    [key: string]: string; // key is question ID, value is user note
-  };
+  answers: Record<string, string>;
+  notes: Record<string, string>;
   updatedAt: string;
 }
 
 export interface Client {
   id: string;
   doctor_id: string;
-  client_code?: string;
   full_name: string;
+  client_code?: string;
   visit_date: string;
   dob?: string;
-  clinic: string;
+  clinic?: string;
   phone?: string;
   notes?: string;
-  nfpe_data?: any;
-  dietary_assessment?: DietaryAssessmentData; 
-  food_questionnaire?: FoodQuestionnaireData; // New: JSON for Baseline FFQ
   age?: number;
   gender?: 'male' | 'female';
   marital_status?: string;
   kids_count?: number;
   job?: string;
-  // Latest anthropometrics snapshot
   weight?: number;
   height?: number;
-  head_circumference?: number; // New Pedia Field
   waist?: number;
   hip?: number;
   miac?: number;
+  head_circumference?: number;
   bmi?: number;
-  created_at: string;
+  dietary_assessment?: DietaryAssessmentData;
+  food_questionnaire?: FoodQuestionnaireData;
+  nfpe_data?: any;
 }
 
 export interface ClientVisit {
@@ -89,17 +63,16 @@ export interface ClientVisit {
   visit_date: string;
   weight?: number;
   height?: number;
-  head_circumference?: number; // New Pedia Field
   waist?: number;
   hip?: number;
   miac?: number;
+  head_circumference?: number;
   bmi?: number;
   notes?: string;
   kcal_data?: any;
   meal_plan_data?: any;
   dietary_assessment?: DietaryAssessmentData;
-  food_questionnaire?: FoodQuestionnaireData; // New: JSON for Visit FFQ
-  created_at: string;
+  food_questionnaire?: FoodQuestionnaireData;
 }
 
 export interface Translation {
@@ -205,6 +178,10 @@ export interface Translation {
         desc: string;
     };
     strongKids: {
+        title: string;
+        desc: string;
+    };
+    pediatricWaist: {
         title: string;
         desc: string;
     };

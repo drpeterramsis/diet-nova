@@ -90,6 +90,9 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, onLogi
                 <button onClick={() => handleNav('strong-kids')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-green-50 hover:text-green-700 flex items-center gap-3 text-gray-600 text-sm">
                 <span>👶</span> {t.tools.strongKids.title}
                 </button>
+                <button onClick={() => handleNav('pediatric-waist')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-green-50 hover:text-green-700 flex items-center gap-3 text-gray-600 text-sm">
+                <span>📐</span> {t.tools.pediatricWaist.title}
+                </button>
             </div>
 
             {/* 2. Body & Energy */}

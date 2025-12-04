@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova Pre Modification _ v2.0.125",
-  "description": "Updates: Client Profile Pedia refinements (Length, Head Circ, Edema), Age Calc.",
+  "name": "Diet-Nova Pre Charts_ v2.0.127",
+  "description": "Updates: Added Pediatric Waist Percentile tool (2-19y) with reference chart and risk analysis.",
   "requestFramePermissions": []
 }

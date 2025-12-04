@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,6 +11,7 @@ import { FoodQuestionnaire } from './FoodQuestionnaire';
 import { labPanels, labTestsEncyclopedia, LabTestItem, LabPanel } from '../../data/labData';
 import STRONGKids from './STRONGKids';
 import LabReference from './LabReference';
+import PediatricWaist from './PediatricWaist';
 
 // Helper for Plan Stats (Copied from MealPlanner logic for display)
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
@@ -180,7 +182,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const { session } = useAuth();
   
   // View State
-  const [viewMode, setViewMode] = useState<'list' | 'details' | 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'details' | 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist'>('list');
 
   // Data State
   const [clients, setClients] = useState<Client[]>([]);
@@ -334,7 +336,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       }
   }, [initialClientId, clients]);
 
-  useEffect(() => {
+  // Age Calculation Function
+  const calculateAge = () => {
       if (formData.dob) {
           const birth = new Date(formData.dob);
           const visit = new Date(formData.visit_date);
@@ -366,6 +369,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       } else {
           setAgeDetail(null);
       }
+  };
+
+  // Run calc on load or when dates change
+  useEffect(() => {
+      calculateAge();
   }, [formData.dob, formData.visit_date]);
   
   useEffect(() => {
@@ -890,7 +898,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   };
 
   // --- Tool Handlers ---
-  const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids', type: 'client' | 'visit', id: string, initialData?: any) => {
+  const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist', type: 'client' | 'visit', id: string, initialData?: any) => {
     window.scrollTo({ top: 0, behavior: 'smooth' }); // Auto-scroll to top
     if (view === 'lab-checklist') {
         // Lab Checklist is a special view acting on the profile notes
@@ -898,6 +906,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         setLabChecklistSelection(new Set()); // Reset selection
     } else if (view === 'strong-kids') {
         setViewMode('strong-kids');
+    } else if (view === 'pediatric-waist') {
+        setViewMode('pediatric-waist');
+        if (type === 'client') {
+            setToolTarget({ type, id, initialData }); // Use toolTarget to store profile data for component props
+        }
     } else {
         setToolTarget({ type, id, initialData });
         setViewMode(view);
@@ -967,6 +980,20 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       );
   }
 
+  // --- RENDER: PEDIATRIC WAIST VIEW ---
+  if (viewMode === 'pediatric-waist') {
+      return (
+          <div className="animate-fade-in">
+              <PediatricWaist 
+                  initialGender={formData.gender}
+                  initialAge={formData.age !== '' ? Number(formData.age) : undefined}
+                  initialWaist={formData.waist !== '' ? Number(formData.waist) : undefined}
+                  onClose={() => setViewMode('details')} 
+              />
+          </div>
+      );
+  }
+
   // --- RENDER: DIETARY RECALL VIEW ---
   if (viewMode === 'dietary-recall' && toolTarget) {
       return (
@@ -1000,11 +1027,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       return (
           <div className="max-w-5xl mx-auto animate-fade-in pb-12">
               <LabReference /> 
-              {/* Note: In previous file, I rendered LabReference separately. 
-                  However, I will restore the full checklist logic here if requested, 
-                  but for brevity and since I didn't get instructions to change lab view,
-                  I'll restore the original code for this view.
-              */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 flex justify-between items-center">
                   <div>
                       <h2 className="text-2xl font-bold text-blue-800 flex items-center gap-2">
@@ -1412,13 +1434,22 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
                                         <div className="md:col-span-2">
                                             <label className="block text-xs font-bold text-gray-500 mb-1">Calculated Age</label>
-                                            <div className="flex items-center gap-2 bg-white p-2 border rounded">
-                                                <span className="font-bold text-gray-800 text-sm">{formData.age || 0} Years</span>
-                                                {ageDetail && (
-                                                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 font-mono">
-                                                        {ageDetail.y}y {ageDetail.m}m {ageDetail.d}d
-                                                    </span>
-                                                )}
+                                            <div className="flex items-center gap-2 bg-white p-2 border rounded justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-gray-800 text-sm">{formData.age || 0} Years</span>
+                                                    {ageDetail && (
+                                                        <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 font-mono">
+                                                            {ageDetail.y}y {ageDetail.m}m {ageDetail.d}d
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={calculateAge}
+                                                    className="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 border border-gray-200"
+                                                >
+                                                    Calculate
+                                                </button>
                                             </div>
                                         </div>
 
@@ -1493,7 +1524,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                          </div>
                                          <div>
                                              <label className="block text-[10px] font-bold text-blue-600 uppercase">
-                                                 {formData.age !== '' && Number(formData.age) < 2 ? 'Length (cm)' : 'Height (cm)'}
+                                                 {ageDetail && (ageDetail.y * 12 + ageDetail.m) < 24 ? 'Length (cm)' : 'Height (cm)'}
                                              </label>
                                              <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.height} onChange={e => setFormData({...formData, height: e.target.value === '' ? '' : Number(e.target.value)})} />
                                          </div>
@@ -1513,7 +1544,20 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
                                          <div>
                                              <label className="block text-[10px] font-bold text-blue-600 uppercase">Waist (cm)</label>
-                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.waist} onChange={e => setFormData({...formData, waist: e.target.value === '' ? '' : Number(e.target.value)})} />
+                                             <div className="flex gap-1">
+                                                 <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.waist} onChange={e => setFormData({...formData, waist: e.target.value === '' ? '' : Number(e.target.value)})} />
+                                                 {/* Pediatric Waist Tool Link */}
+                                                 {formData.age !== '' && Number(formData.age) >= 2 && Number(formData.age) <= 19 && (
+                                                     <button 
+                                                        type="button" 
+                                                        onClick={() => handleOpenTool('pediatric-waist', 'client', editingClient?.id || '', { gender: formData.gender, age: formData.age, waist: formData.waist })}
+                                                        className="px-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded text-[10px] font-bold border border-blue-200"
+                                                        title="Pediatric Waist Percentile Tool"
+                                                     >
+                                                         📉 %
+                                                     </button>
+                                                 )}
+                                             </div>
                                          </div>
                                          <div>
                                              <label className="block text-[10px] font-bold text-blue-600 uppercase">Hip (cm)</label>
@@ -1543,14 +1587,14 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                         onClick={() => setEdemaCorrectionPercent(0.1)}
                                                         className={`px-3 py-1.5 ${edemaCorrectionPercent === 0.1 ? 'bg-red-50 text-red-700 font-bold' : 'hover:bg-gray-50'}`}
                                                      >
-                                                         0.1 (10%)
+                                                         10% (0.1)
                                                      </button>
                                                      <button 
                                                         type="button" 
                                                         onClick={() => setEdemaCorrectionPercent(0.2)}
                                                         className={`px-3 py-1.5 ${edemaCorrectionPercent === 0.2 ? 'bg-red-50 text-red-700 font-bold' : 'hover:bg-gray-50'}`}
                                                      >
-                                                         0.2 (20%)
+                                                         20% (0.2)
                                                      </button>
                                                  </div>
                                                  {edemaCorrectionPercent > 0 && formData.weight && (
@@ -1763,7 +1807,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                     </div>
                                     <div>
                                         <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">
-                                            {editingClient.age && editingClient.age < 2 ? 'Length (cm)' : 'Ht (cm)'}
+                                            {ageDetail && (ageDetail.y * 12 + ageDetail.m) < 24 ? 'Length (cm)' : 'Ht (cm)'}
                                         </label>
                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.height} onChange={e => setNewVisitData({...newVisitData, height: e.target.value === '' ? '' : Number(e.target.value)})} />
                                     </div>
@@ -1842,7 +1886,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                          </div>
                                          
                                          <div className="grid grid-cols-4 gap-2 text-xs text-gray-600 mb-4 bg-gray-50 p-3 rounded border border-gray-100">
-                                             <div><span className="font-bold text-gray-400 uppercase block">{editingClient.age && editingClient.age < 2 ? 'Length' : 'Ht'}</span> {visit.height || '-'} cm</div>
+                                             <div><span className="font-bold text-gray-400 uppercase block">{ageDetail && (ageDetail.y * 12 + ageDetail.m) < 24 ? 'Length' : 'Ht'}</span> {visit.height || '-'} cm</div>
                                              <div><span className="font-bold text-gray-400 uppercase block">Waist</span> {visit.waist || '-'} cm</div>
                                              {visit.head_circumference && <div><span className="font-bold text-gray-400 uppercase block">Head Circ.</span> {visit.head_circumference} cm</div>}
                                              <div><span className="font-bold text-gray-400 uppercase block">MIAC</span> {visit.miac || '-'} cm</div>
