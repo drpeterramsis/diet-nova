@@ -1441,56 +1441,48 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                             </select>
                                         </div>
                                         
-                                        <div className="md:col-span-2 grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-bold text-gray-500 mb-1">Visit Date</label>
-                                                <div className="flex gap-2">
-                                                    <input 
-                                                        type="date" 
-                                                        value={formData.visit_date}
-                                                        onChange={e => setFormData({...formData, visit_date: e.target.value})}
-                                                        className="w-full p-2 border rounded outline-none text-sm"
-                                                    />
-                                                    <button 
-                                                        type="button" 
-                                                        onClick={() => setFormData({...formData, visit_date: new Date().toISOString().split('T')[0]})}
-                                                        className="px-2 bg-gray-200 text-xs rounded hover:bg-gray-300 whitespace-nowrap"
-                                                        title="Set to Today"
-                                                    >
-                                                        Today
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-gray-500 mb-1">DOB</label>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">Visit Date</label>
+                                            <div className="flex gap-2">
                                                 <input 
                                                     type="date" 
-                                                    value={formData.dob}
-                                                    onChange={e => setFormData({...formData, dob: e.target.value})}
+                                                    value={formData.visit_date}
+                                                    onChange={e => setFormData({...formData, visit_date: e.target.value})}
                                                     className="w-full p-2 border rounded outline-none text-sm"
                                                 />
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setFormData({...formData, visit_date: new Date().toISOString().split('T')[0]})}
+                                                    className="px-2 bg-gray-200 text-xs rounded hover:bg-gray-300 whitespace-nowrap"
+                                                    title="Set to Today"
+                                                >
+                                                    Today
+                                                </button>
                                             </div>
                                         </div>
 
-                                        <div className="md:col-span-2">
-                                            <label className="block text-xs font-bold text-gray-500 mb-1">Calculated Age</label>
-                                            <div className="flex items-center gap-2 bg-white p-2 border rounded justify-between">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-gray-800 text-sm">{formData.age || 0} Years</span>
-                                                    {ageDetail && (
-                                                        <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 font-mono">
-                                                            {ageDetail.y}y {ageDetail.m}m {ageDetail.d}d
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <button 
-                                                    type="button" 
-                                                    onClick={calculateAge}
-                                                    className="text-xs bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 border border-gray-200"
-                                                >
-                                                    Calculate
-                                                </button>
-                                            </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">Date of Birth (Auto-Calc Age)</label>
+                                            <input 
+                                                type="date" 
+                                                value={formData.dob}
+                                                onChange={e => setFormData({...formData, dob: e.target.value})}
+                                                className="w-full p-2 border rounded outline-none text-sm"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 mb-1">
+                                                Age (Years) 
+                                                {ageDetail && <span className="text-[10px] font-normal text-blue-600 ml-1 bg-blue-50 px-1 rounded">({ageDetail.y}y {ageDetail.m}m)</span>}
+                                            </label>
+                                            <input 
+                                                type="number" 
+                                                value={formData.age}
+                                                onChange={e => setFormData({...formData, age: e.target.value === '' ? '' : Number(e.target.value)})}
+                                                className="w-full p-2 border rounded outline-none text-sm font-bold text-gray-800 focus:ring-2 focus:ring-[var(--color-primary)]"
+                                                placeholder="Enter manually"
+                                            />
                                         </div>
 
                                         <div>

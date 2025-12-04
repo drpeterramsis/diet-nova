@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova all Charts_ v2.0.129",
-  "description": "Updates: Added Pediatric Growth Monitor (WHO 5-19y) with charts and Client Profile integration.",
+  "name": "Diet-Nova Client Profile Update _ v2.0.129",
+  "description": "Updates: Client Profile now supports manual age entry alongside auto-calculation from DOB.",
   "requestFramePermissions": []
 }
