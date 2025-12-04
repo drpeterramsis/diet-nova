@@ -8,9 +8,10 @@ interface PediatricWaistProps {
     initialAge?: number;
     initialWaist?: number;
     onClose?: () => void;
+    onSave?: (note: string) => void;
 }
 
-const PediatricWaist: React.FC<PediatricWaistProps> = ({ initialGender, initialAge, initialWaist, onClose }) => {
+const PediatricWaist: React.FC<PediatricWaistProps> = ({ initialGender, initialAge, initialWaist, onClose, onSave }) => {
     const { t } = useLanguage();
     const [gender, setGender] = useState<'male' | 'female'>(initialGender || 'male');
     const [age, setAge] = useState<number>(initialAge || 10);
@@ -53,6 +54,16 @@ const PediatricWaist: React.FC<PediatricWaistProps> = ({ initialGender, initialA
         return { percentile, color, risk, ref };
     }, [waist, clampedAge, data]);
 
+    const handleSave = () => {
+        if (!analysis || !onSave) return;
+        const note = `[Pediatric Waist Analysis]
+• Age: ${age}y, Gender: ${gender}
+• Waist: ${waist} cm
+• Percentile: ${analysis.percentile}
+• Interpretation: ${analysis.risk} (Ref 90th: ${analysis.ref.p90} cm)`;
+        onSave(note);
+    };
+
     // --- Chart Logic ---
     const chartHeight = 300;
     const chartWidth = 600;
@@ -73,7 +84,7 @@ const PediatricWaist: React.FC<PediatricWaistProps> = ({ initialGender, initialA
     };
 
     return (
-        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 max-w-4xl mx-auto animate-fade-in">
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 max-w-4xl mx-auto animate-fade-in relative">
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -82,7 +93,11 @@ const PediatricWaist: React.FC<PediatricWaistProps> = ({ initialGender, initialA
                     <p className="text-sm text-gray-500">Percentiles for ages 2-19 years (US 2007-2010)</p>
                 </div>
                 {onClose && (
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 )}
             </div>
 
@@ -141,6 +156,14 @@ const PediatricWaist: React.FC<PediatricWaistProps> = ({ initialGender, initialA
                             <div className="mt-3 text-xs text-gray-400 border-t pt-2">
                                 Ref 90th: {analysis.ref.p90} cm
                             </div>
+                            {onSave && (
+                                <button 
+                                    onClick={handleSave}
+                                    className="mt-3 w-full bg-[var(--color-primary)] text-white py-2 rounded text-sm font-bold hover:bg-[var(--color-primary-hover)] transition shadow-sm"
+                                >
+                                    Save to Notes
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div className="text-center text-sm text-gray-400 py-4">Enter waist circumference to see analysis.</div>

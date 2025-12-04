@@ -17,6 +17,7 @@ import HeightEstimator from "./components/tools/HeightEstimator";
 import LabReference from "./components/tools/LabReference";
 import STRONGKids from "./components/tools/STRONGKids"; // Import STRONGKids
 import PediatricWaist from "./components/tools/PediatricWaist"; // Import PediatricWaist
+import PediatricMAMC from "./components/tools/PediatricMAMC"; // Import PediatricMAMC
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -417,6 +418,9 @@ const AppContent = () => {
             )}
             {activeTool === 'pediatric-waist' && (
                 <PediatricWaist onClose={handleNavHome} />
+            )}
+            {activeTool === 'pediatric-mamc' && (
+                <PediatricMAMC onClose={handleNavHome} />
             )}
 
           </div>

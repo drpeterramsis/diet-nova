@@ -12,6 +12,7 @@ import { labPanels, labTestsEncyclopedia, LabTestItem, LabPanel } from '../../da
 import STRONGKids from './STRONGKids';
 import LabReference from './LabReference';
 import PediatricWaist from './PediatricWaist';
+import PediatricMAMC from './PediatricMAMC';
 
 // Helper for Plan Stats (Copied from MealPlanner logic for display)
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
@@ -182,7 +183,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const { session } = useAuth();
   
   // View State
-  const [viewMode, setViewMode] = useState<'list' | 'details' | 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'details' | 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist' | 'pediatric-mamc'>('list');
 
   // Data State
   const [clients, setClients] = useState<Client[]>([]);
@@ -813,6 +814,24 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       setTimeout(() => setSaveSuccess(''), 3000);
   };
 
+  const handleSaveWaistAnalysis = (note: string) => {
+      if (!editingClient) return;
+      const updatedNotes = formData.notes ? formData.notes + "\n\n" + note : note;
+      setFormData(prev => ({ ...prev, notes: updatedNotes }));
+      setViewMode('details');
+      setSaveSuccess("Waist analysis added to notes.");
+      setTimeout(() => setSaveSuccess(''), 3000);
+  };
+
+  const handleSaveMAMC = (note: string) => {
+      if (!editingClient) return;
+      const updatedNotes = formData.notes ? formData.notes + "\n\n" + note : note;
+      setFormData(prev => ({ ...prev, notes: updatedNotes }));
+      setViewMode('details');
+      setSaveSuccess("MAMC analysis added to notes.");
+      setTimeout(() => setSaveSuccess(''), 3000);
+  };
+
   // --- Lab Suggestions Handlers ---
   const toggleLabTest = (test: string) => {
       const newSet = new Set(labChecklistSelection);
@@ -898,7 +917,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   };
 
   // --- Tool Handlers ---
-  const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist', type: 'client' | 'visit', id: string, initialData?: any) => {
+  const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist' | 'pediatric-mamc', type: 'client' | 'visit', id: string, initialData?: any) => {
     window.scrollTo({ top: 0, behavior: 'smooth' }); // Auto-scroll to top
     if (view === 'lab-checklist') {
         // Lab Checklist is a special view acting on the profile notes
@@ -910,6 +929,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         setViewMode('pediatric-waist');
         if (type === 'client') {
             setToolTarget({ type, id, initialData }); // Use toolTarget to store profile data for component props
+        }
+    } else if (view === 'pediatric-mamc') {
+        setViewMode('pediatric-mamc');
+        if (type === 'client') {
+            setToolTarget({ type, id, initialData });
         }
     } else {
         setToolTarget({ type, id, initialData });
@@ -988,7 +1012,23 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                   initialGender={formData.gender}
                   initialAge={formData.age !== '' ? Number(formData.age) : undefined}
                   initialWaist={formData.waist !== '' ? Number(formData.waist) : undefined}
+                  onSave={handleSaveWaistAnalysis}
                   onClose={() => setViewMode('details')} 
+              />
+          </div>
+      );
+  }
+
+  // --- RENDER: PEDIATRIC MAMC VIEW ---
+  if (viewMode === 'pediatric-mamc') {
+      return (
+          <div className="animate-fade-in">
+              <PediatricMAMC
+                  initialGender={formData.gender}
+                  initialAge={formData.age !== '' ? Number(formData.age) : undefined}
+                  initialMac={formData.miac !== '' ? Number(formData.miac) : undefined}
+                  onSave={handleSaveMAMC}
+                  onClose={() => setViewMode('details')}
               />
           </div>
       );
@@ -1565,7 +1605,20 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                          </div>
                                          <div>
                                              <label className="block text-[10px] font-bold text-blue-600 uppercase">MIAC (cm)</label>
-                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.miac} onChange={e => setFormData({...formData, miac: e.target.value === '' ? '' : Number(e.target.value)})} />
+                                             <div className="flex gap-1">
+                                                 <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.miac} onChange={e => setFormData({...formData, miac: e.target.value === '' ? '' : Number(e.target.value)})} />
+                                                 {/* Pediatric MAMC Tool Link */}
+                                                 {formData.age !== '' && Number(formData.age) >= 2 && Number(formData.age) <= 19 && (
+                                                     <button 
+                                                        type="button" 
+                                                        onClick={() => handleOpenTool('pediatric-mamc', 'client', editingClient?.id || '', { gender: formData.gender, age: formData.age, mac: formData.miac })}
+                                                        className="px-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded text-[10px] font-bold border border-blue-200"
+                                                        title="MAC/MAMC Analysis Tool"
+                                                     >
+                                                         📉 MAC
+                                                     </button>
+                                                 )}
+                                             </div>
                                          </div>
                                      </div>
 

@@ -59,6 +59,12 @@ const ToolsGrid: React.FC<ToolsGridProps> = ({ onToolClick, setBmiOpen, isAuthen
                     onClick={() => onToolClick('pediatric-waist')}
                     icon={<span className="text-2xl">📐</span>}
                 />
+                <ToolCard
+                    title="Pediatric MAMC"
+                    desc="Mid-Arm Muscle Circumference (2-19y) analysis."
+                    onClick={() => onToolClick('pediatric-mamc')}
+                    icon={<span className="text-2xl">💪</span>}
+                />
             </>
         ))}
 
