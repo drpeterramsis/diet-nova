@@ -13,6 +13,8 @@
 
 
 
+
+
 export type Language = 'en' | 'ar';
 
 export interface UserProfile {
@@ -196,6 +198,10 @@ export interface Translation {
         desc: string;
     };
     labs: {
+        title: string;
+        desc: string;
+    };
+    strongKids: {
         title: string;
         desc: string;
     };

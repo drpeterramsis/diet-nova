@@ -2,6 +2,7 @@
 
 
 
+
 import { Translation } from "../types";
 
 export const en: Translation = {
@@ -105,6 +106,10 @@ export const en: Translation = {
     labs: {
         title: "Biochemical Labs",
         desc: "Reference ranges and lab test panels.",
+    },
+    strongKids: {
+        title: "STRONGkids Risk Assessment",
+        desc: "Nutritional risk screening tool for children (1mo - 18y)."
     }
   },
   clients: {
@@ -345,7 +350,7 @@ export const en: Translation = {
       equation: "Equation",
       chumlea: "Chumlea et al.",
       bapen: "BAPEN / MUST Chart",
-      mac: "MAC (cm)",
+      mac: "Mid-Arm Circ. (MAC)",
       cc: "Calf Circ (cm)",
       ssf: "Subscapular (mm)",
       sisf: "Suprailiac (mm)"
@@ -453,6 +458,10 @@ export const ar: Translation = {
     labs: {
         title: "التحاليل المعملية",
         desc: "النطاقات الطبيعية وقوائم التحاليل المقترحة.",
+    },
+    strongKids: {
+        title: "تقييم STRONGkids",
+        desc: "أداة فحص مخاطر سوء التغذية للأطفال (1 شهر - 18 سنة)."
     }
   },
   clients: {

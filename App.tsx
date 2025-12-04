@@ -1,6 +1,8 @@
 
 
 
+
+
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -17,6 +19,7 @@ import NFPEChecklist from "./components/tools/NFPEChecklist";
 import Encyclopedia from "./components/tools/Encyclopedia";
 import HeightEstimator from "./components/tools/HeightEstimator";
 import LabReference from "./components/tools/LabReference";
+import STRONGKids from "./components/tools/STRONGKids"; // Import STRONGKids
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -79,8 +82,8 @@ const Dashboard = ({
                       <button onClick={() => onToolClick('nfpe')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
                           <span>NFPE Assessment</span> <span>→</span>
                       </button>
-                      <button onClick={() => onToolClick('height-estimator')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
-                          <span>Height Estimator</span> <span>→</span>
+                      <button onClick={() => onToolClick('strong-kids')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-medium text-sm flex items-center justify-between">
+                          <span>STRONGkids Tool</span> <span>→</span>
                       </button>
                   </div>
               </div>
@@ -387,6 +390,9 @@ const AppContent = () => {
                     client={currentClientForNFPE} 
                     onBack={currentClientForNFPE ? handleBackFromNFPE : undefined} 
                 />
+            )}
+            {activeTool === 'strong-kids' && (
+                <STRONGKids onClose={handleNavHome} />
             )}
             {activeTool === 'encyclopedia' && <Encyclopedia />}
             {activeTool === 'lab-reference' && <LabReference />}
