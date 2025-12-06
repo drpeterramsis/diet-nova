@@ -1,4 +1,4 @@
-import React, { useEffect, useState, PropsWithChildren } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useKcalCalculations, KcalInitialData } from './hooks/useKcalCalculations';
 import PersonalInfoCard from './parts/PersonalInfoCard';
 import WeightInfoCard from './parts/WeightInfoCard';
@@ -19,7 +19,7 @@ interface KcalCalculatorProps {
   activeVisit?: { client: Client; visit: ClientVisit } | null;
 }
 
-const CollapsibleCard = ({ title, children, defaultOpen = false }: PropsWithChildren<{ title: string, defaultOpen?: boolean }>) => {
+const CollapsibleCard = ({ title, children, defaultOpen = false }: { title: string, children: React.ReactNode, defaultOpen?: boolean }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
         <div className="card bg-white shadow-sm border border-gray-100 overflow-hidden">
