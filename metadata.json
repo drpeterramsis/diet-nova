@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova Check-Point 01 _ v2.0.133",
-  "description": "Updates: Added comprehensive CDC and WHO Growth Charts tool (Infant to 20y). Integrated with Clinical Workspace and Client Profile.",
+  "name": "Diet-Nova CheckPoint 01 _ v2.0.133",
+  "description": "Updates: Enhanced Growth Charts with Age/DOB calculator, BMI auto-calc, and multi-chart view (Weight, Height, Head Circ).",
   "requestFramePermissions": []
 }
