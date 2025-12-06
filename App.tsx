@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -18,6 +19,7 @@ import LabReference from "./components/tools/LabReference";
 import STRONGKids from "./components/tools/STRONGKids"; // Import STRONGKids
 import PediatricWaist from "./components/tools/PediatricWaist"; // Import PediatricWaist
 import PediatricMAMC from "./components/tools/PediatricMAMC"; // Import PediatricMAMC
+import GrowthCharts from "./components/tools/GrowthCharts"; // Import GrowthCharts
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -80,8 +82,8 @@ const Dashboard = ({
                       <button onClick={() => onToolClick('strong-kids')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-bold text-xs flex items-center justify-between">
                           <span>STRONGkids Tool</span> <span>→</span>
                       </button>
-                      <button onClick={() => onToolClick('nfpe')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-bold text-xs flex items-center justify-between">
-                          <span>NFPE Assessment</span> <span>→</span>
+                      <button onClick={() => onToolClick('growth-charts')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-bold text-xs flex items-center justify-between">
+                          <span>Growth Charts</span> <span>→</span>
                       </button>
                   </div>
               </div>
@@ -421,6 +423,11 @@ const AppContent = () => {
             )}
             {activeTool === 'pediatric-mamc' && (
                 <PediatricMAMC onClose={handleNavHome} />
+            )}
+            {activeTool === 'growth-charts' && (
+                <GrowthCharts 
+                    onClose={handleNavHome} 
+                />
             )}
 
           </div>

@@ -1,4 +1,5 @@
 
+
 import { Translation } from "../types";
 
 export const en: Translation = {
@@ -110,6 +111,10 @@ export const en: Translation = {
     pediatricWaist: {
         title: "Waist Percentile (Pedia)",
         desc: "Waist circumference percentiles for children & adolescents (2-19y)."
+    },
+    growthCharts: {
+        title: "Growth Charts (WHO/CDC)",
+        desc: "Comprehensive growth tracking for infants, children & adolescents."
     }
   },
   clients: {
@@ -466,6 +471,10 @@ export const ar: Translation = {
     pediatricWaist: {
         title: "محيط الخصر (أطفال)",
         desc: "مئينات محيط الخصر للأطفال والمراهقين (2-19 سنة)."
+    },
+    growthCharts: {
+        title: "منحنيات النمو (WHO/CDC)",
+        desc: "تتبع النمو الشامل للرضع والأطفال والمراهقين."
     }
   },
   clients: {

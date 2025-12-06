@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova Ready for Charts _ v2.0.131",
-  "description": "Updates: Kcal Calculator now supports Length for <2y, integrated chart tools, and calculation notes.",
+  "name": "Diet-Nova Growth Charts _ v2.0.132",
+  "description": "Updates: Added comprehensive CDC and WHO Growth Charts tool (Infant to 20y). Integrated with Clinical Workspace and Client Profile.",
   "requestFramePermissions": []
 }

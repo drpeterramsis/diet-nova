@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -13,6 +15,7 @@ import STRONGKids from './STRONGKids';
 import LabReference from './LabReference';
 import PediatricWaist from './PediatricWaist';
 import PediatricMAMC from './PediatricMAMC';
+import GrowthCharts from './GrowthCharts';
 
 // Helper for Plan Stats (Copied from MealPlanner logic for display)
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
@@ -183,7 +186,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const { session } = useAuth();
   
   // View State
-  const [viewMode, setViewMode] = useState<'list' | 'details' | 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist' | 'pediatric-mamc'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'details' | 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist' | 'pediatric-mamc' | 'growth-charts'>('list');
 
   // Data State
   const [clients, setClients] = useState<Client[]>([]);
@@ -913,7 +916,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   };
 
   // --- Tool Handlers ---
-  const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist' | 'pediatric-mamc', type: 'client' | 'visit', id: string, initialData?: any) => {
+  const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist' | 'pediatric-mamc' | 'growth-charts', type: 'client' | 'visit', id: string, initialData?: any) => {
     window.scrollTo({ top: 0, behavior: 'smooth' }); // Auto-scroll to top
     if (view === 'lab-checklist') {
         // Lab Checklist is a special view acting on the profile notes
@@ -928,6 +931,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         }
     } else if (view === 'pediatric-mamc') {
         setViewMode('pediatric-mamc');
+        if (type === 'client') {
+            setToolTarget({ type, id, initialData });
+        }
+    } else if (view === 'growth-charts') {
+        setViewMode('growth-charts');
         if (type === 'client') {
             setToolTarget({ type, id, initialData });
         }
@@ -1024,6 +1032,25 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                   initialAge={formData.age !== '' ? Number(formData.age) : undefined}
                   initialMac={formData.miac !== '' ? Number(formData.miac) : undefined}
                   onSave={handleSaveMAMC}
+                  onClose={() => setViewMode('details')}
+              />
+          </div>
+      );
+  }
+
+  // --- RENDER: GROWTH CHARTS VIEW ---
+  if (viewMode === 'growth-charts') {
+      return (
+          <div className="animate-fade-in">
+              <GrowthCharts
+                  initialData={{
+                      gender: formData.gender,
+                      age: formData.age !== '' ? Number(formData.age) : 0,
+                      weight: formData.weight !== '' ? Number(formData.weight) : undefined,
+                      height: formData.height !== '' ? Number(formData.height) : undefined,
+                      head_circumference: formData.head_circumference !== '' ? Number(formData.head_circumference) : undefined,
+                      bmi: profileBMI ? Number(profileBMI) : undefined
+                  }}
                   onClose={() => setViewMode('details')}
               />
           </div>
@@ -1612,19 +1639,28 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                 </div>
 
                                 {/* Pediatric History Tags */}
-                                {(formData.age !== '' && Number(formData.age) < 18) && (
+                                {(formData.age !== '' && Number(formData.age) < 20) && (
                                     <div className="bg-pink-50 p-5 rounded-xl border border-pink-100">
                                         <div className="flex justify-between items-center mb-4 border-b border-pink-200 pb-2">
                                             <h3 className="font-bold text-pink-700 text-sm uppercase">
-                                                👶 Pediatric History & Habits (Tags)
+                                                👶 Pediatric Assessment
                                             </h3>
-                                            <button 
-                                                type="button"
-                                                onClick={() => handleOpenTool('strong-kids', 'client', editingClient?.id || '')}
-                                                className="text-xs bg-white text-pink-600 px-3 py-1 rounded border border-pink-300 font-bold hover:bg-pink-100 transition"
-                                            >
-                                                Run STRONGkids Assessment
-                                            </button>
+                                            <div className="flex gap-2">
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleOpenTool('strong-kids', 'client', editingClient?.id || '')}
+                                                    className="text-xs bg-white text-pink-600 px-3 py-1 rounded border border-pink-300 font-bold hover:bg-pink-100 transition"
+                                                >
+                                                    STRONGkids
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleOpenTool('growth-charts', 'client', editingClient?.id || '', { gender: formData.gender, age: formData.age, weight: formData.weight, height: formData.height, head_circumference: formData.head_circumference, bmi: profileBMI })}
+                                                    className="text-xs bg-blue-600 text-white px-3 py-1 rounded border border-blue-600 font-bold hover:bg-blue-700 transition"
+                                                >
+                                                    📈 Growth Charts
+                                                </button>
+                                            </div>
                                         </div>
                                         <p className="text-xs text-pink-600 mb-3 opacity-80">Click a tag to add it to notes.</p>
                                         

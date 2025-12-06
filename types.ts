@@ -185,6 +185,10 @@ export interface Translation {
         title: string;
         desc: string;
     };
+    growthCharts: {
+        title: string;
+        desc: string;
+    };
   };
   clients: {
     title: string;
