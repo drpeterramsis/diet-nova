@@ -7,6 +7,8 @@ import MethodsCard from './parts/MethodsCard';
 import ResultsSummaryCard from './parts/ResultsSummaryCard';
 import WeightAnalysisCard from './parts/WeightAnalysisCard';
 import HeightEstimator from '../tools/HeightEstimator';
+import PediatricWaist from '../tools/PediatricWaist';
+import PediatricMAMC from '../tools/PediatricMAMC';
 import { Client, ClientVisit } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -37,7 +39,11 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
   const { t } = useLanguage();
   const { inputs, results, resetInputs } = useKcalCalculations(initialData);
   const [saveStatus, setSaveStatus] = useState('');
+  
+  // Modal States
   const [showHeightEstimator, setShowHeightEstimator] = useState(false);
+  const [showPediatricWaist, setShowPediatricWaist] = useState(false);
+  const [showPediatricMAMC, setShowPediatricMAMC] = useState(false);
 
   // Hydrate state from activeVisit.kcal_data if available
   useEffect(() => {
@@ -68,6 +74,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               if (data.inputs.desiredBodyFat && inputs.setDesiredBodyFat) inputs.setDesiredBodyFat(data.inputs.desiredBodyFat);
 
               if (data.inputs.reqKcal) inputs.setReqKcal(data.inputs.reqKcal);
+              if (data.inputs.notes) inputs.setNotes(data.inputs.notes);
           }
       } else if (activeVisit) {
           if (activeVisit.visit.hip && inputs.setHip) inputs.setHip(activeVisit.visit.hip);
@@ -100,7 +107,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               amputationPercent: inputs.amputationPercent,
               bodyFatPercent: inputs.bodyFatPercent,
               desiredBodyFat: inputs.desiredBodyFat,
-              reqKcal: inputs.reqKcal
+              reqKcal: inputs.reqKcal,
+              notes: inputs.notes
           },
           results: results
       };
@@ -129,6 +137,14 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
       inputs.setCurrentWeight(w);
       inputs.setSelectedWeight(w);
       setShowHeightEstimator(false);
+  };
+
+  const handleToolNoteSave = (note: string) => {
+      const newNotes = inputs.notes ? inputs.notes + "\n\n" + note : note;
+      inputs.setNotes(newNotes);
+      // Close the modal
+      setShowPediatricWaist(false);
+      setShowPediatricMAMC(false);
   };
 
   return (
@@ -200,6 +216,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                 tsf={inputs.tsf} setTsf={inputs.setTsf}
                 physicalActivity={inputs.physicalActivity} setPhysicalActivity={inputs.setPhysicalActivity}
                 onOpenHeightEstimator={() => setShowHeightEstimator(true)}
+                onOpenPediatricWaist={() => setShowPediatricWaist(true)}
+                onOpenPediatricMAMC={() => setShowPediatricMAMC(true)}
                 />
             </CollapsibleCard>
 
@@ -235,6 +253,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                     onPlanMeals={onPlanMeals} 
                     reqKcal={inputs.reqKcal}
                     setReqKcal={inputs.setReqKcal}
+                    notes={inputs.notes}
+                    setNotes={inputs.setNotes}
                 />
                 
                 {inputs.setDesiredBodyFat && (
@@ -261,17 +281,48 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
 
       </div>
 
+      {/* Modals for Tools */}
       {showHeightEstimator && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-              <HeightEstimator 
-                  onClose={() => setShowHeightEstimator(false)}
-                  onApplyHeight={applyEstimatedHeight}
-                  onApplyWeight={applyEstimatedWeight}
-                  initialData={{
-                      gender: inputs.gender,
-                      age: inputs.age
-                  }}
-              />
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="w-full max-w-lg">
+                <HeightEstimator 
+                    onClose={() => setShowHeightEstimator(false)}
+                    onApplyHeight={applyEstimatedHeight}
+                    onApplyWeight={applyEstimatedWeight}
+                    initialData={{
+                        gender: inputs.gender,
+                        age: inputs.age
+                    }}
+                />
+              </div>
+          </div>
+      )}
+
+      {showPediatricWaist && (
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+                  <PediatricWaist 
+                      onClose={() => setShowPediatricWaist(false)}
+                      initialGender={inputs.gender}
+                      initialAge={inputs.age}
+                      initialWaist={inputs.waist}
+                      onSave={handleToolNoteSave}
+                  />
+              </div>
+          </div>
+      )}
+
+      {showPediatricMAMC && (
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+                  <PediatricMAMC 
+                      onClose={() => setShowPediatricMAMC(false)}
+                      initialGender={inputs.gender}
+                      initialAge={inputs.age}
+                      initialMac={inputs.mac}
+                      onSave={handleToolNoteSave}
+                  />
+              </div>
           </div>
       )}
     </div>

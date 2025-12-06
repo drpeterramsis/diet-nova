@@ -37,6 +37,8 @@ interface PersonalInfoProps {
   setPregnancyState?: (v: PregnancyState) => void;
 
   onOpenHeightEstimator?: () => void;
+  onOpenPediatricWaist?: () => void;
+  onOpenPediatricMAMC?: () => void;
 }
 
 const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
@@ -45,9 +47,13 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
   height, setHeight, waist, setWaist, hip, setHip, mac, setMac, tsf, setTsf,
   physicalActivity, setPhysicalActivity,
   pregnancyState, setPregnancyState,
-  onOpenHeightEstimator
+  onOpenHeightEstimator,
+  onOpenPediatricWaist,
+  onOpenPediatricMAMC
 }) => {
   const { t } = useLanguage();
+
+  const isInfant = age < 2; // < 24 months
 
   return (
     <div className="card bg-white">
@@ -163,18 +169,34 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
 
         <div className="col-span-2 md:col-span-1 space-y-5">
             <div className="relative">
-                <InputGroup label={t.kcal.height} value={height} onChange={setHeight} error={height === 0} />
+                <InputGroup 
+                    label={isInfant ? "Length (cm)" : t.kcal.height} 
+                    value={height} 
+                    onChange={setHeight} 
+                    error={height === 0} 
+                />
                 {onOpenHeightEstimator && (
                     <button 
                         onClick={onOpenHeightEstimator}
                         className="absolute top-0 right-0 text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 hover:bg-blue-100"
                     >
-                        Estimate Ht/Wt?
+                        Estimate Ht?
                     </button>
                 )}
             </div>
             <div className="grid grid-cols-2 gap-3">
-                <InputGroup label={t.kcal.waist} value={waist} onChange={setWaist} error={waist === 0} />
+                <div className="relative">
+                    <InputGroup label={t.kcal.waist} value={waist} onChange={setWaist} error={waist === 0} />
+                    {onOpenPediatricWaist && age >= 2 && age <= 19 && (
+                        <button 
+                            onClick={onOpenPediatricWaist}
+                            className="absolute top-0 right-0 text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 hover:bg-blue-100"
+                            title="Pediatric Waist Analysis"
+                        >
+                            📊 Chart
+                        </button>
+                    )}
+                </div>
                 {hip !== undefined && setHip && (
                     <InputGroup label={t.kcal.hip} value={hip} onChange={setHip} />
                 )}
@@ -187,9 +209,19 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
         {/* Anthropometry Section */}
         {mac !== undefined && setMac && tsf !== undefined && setTsf && (
             <div className="col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-100">
-                <h3 className="font-bold text-xs text-purple-700 uppercase mb-3 border-b border-purple-200 pb-1">
-                    Anthropometry (Detailed)
-                </h3>
+                <div className="flex justify-between items-center mb-3 border-b border-purple-200 pb-1">
+                    <h3 className="font-bold text-xs text-purple-700 uppercase">
+                        Anthropometry (Detailed)
+                    </h3>
+                    {onOpenPediatricMAMC && age >= 2 && age <= 19 && (
+                        <button 
+                            onClick={onOpenPediatricMAMC}
+                            className="text-[10px] bg-white text-purple-600 px-2 py-1 rounded border border-purple-200 hover:bg-purple-100 font-bold"
+                        >
+                            💪 Pediatric MAMC Tool
+                        </button>
+                    )}
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-[var(--color-text)] mb-2">

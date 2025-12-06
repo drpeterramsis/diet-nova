@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova Client Profile_ v2.0.130",
-  "description": "Updates: Client Profile age display updated with days. Edema correction moved to Kcal Calculator.",
+  "name": "Diet-Nova Pre-Charts _ v2.0.131",
+  "description": "Updates: Kcal Calculator now supports Length for <2y, integrated chart tools, and calculation notes.",
   "requestFramePermissions": []
 }

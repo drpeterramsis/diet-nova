@@ -8,9 +8,11 @@ interface ResultsSummaryProps {
   onPlanMeals?: (kcal: number) => void;
   reqKcal?: number | '';
   setReqKcal?: (val: number | '') => void;
+  notes?: string;
+  setNotes?: (val: string) => void;
 }
 
-const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanMeals, reqKcal, setReqKcal }) => {
+const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanMeals, reqKcal, setReqKcal, notes, setNotes }) => {
   const { t } = useLanguage();
 
   return (
@@ -52,8 +54,22 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
 
           {/* Action Area */}
           {onPlanMeals && setReqKcal !== undefined && (
-            <div className="pt-4 border-t border-gray-700/50 animate-fade-in">
-               <div className="mb-4">
+            <div className="pt-4 border-t border-gray-700/50 animate-fade-in space-y-4">
+               {/* Notes Field */}
+               {setNotes !== undefined && (
+                   <div>
+                       <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-wider">Calculation Notes</label>
+                       <textarea 
+                           className="w-full p-2 bg-white/5 border border-white/10 rounded-lg focus:ring-1 focus:ring-green-500 outline-none text-xs text-white placeholder-gray-600 resize-none"
+                           placeholder="Add notes for this calculation..."
+                           rows={3}
+                           value={notes}
+                           onChange={(e) => setNotes(e.target.value)}
+                       />
+                   </div>
+               )}
+
+               <div>
                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-wider">{t.kcal.kcalRequired}</label>
                    <input 
                      type="number" 

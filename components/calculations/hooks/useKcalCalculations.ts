@@ -175,6 +175,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
   const [pregnancyState, setPregnancyState] = useState<PregnancyState>('none');
 
   const [deficit, setDeficit] = useState<number>(0);
+  const [notes, setNotes] = useState<string>('');
   
   // Results
   const [reqKcal, setReqKcal] = useState<number | ''>('');
@@ -263,6 +264,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       setPregnancyState('none');
       setDeficit(0);
       setReqKcal('');
+      setNotes('');
   };
 
   // Recalculate whenever inputs change
@@ -963,7 +965,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       desiredBodyFat, setDesiredBodyFat,
       pregnancyState, setPregnancyState,
       deficit, setDeficit,
-      reqKcal, setReqKcal
+      reqKcal, setReqKcal,
+      notes, setNotes
     },
     results,
     resetInputs
