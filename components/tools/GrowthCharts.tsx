@@ -167,9 +167,10 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
     };
 
     // --- Chart SVG Renderer (Reusable) ---
-    const ChartSVG = ({ metric }: { metric: 'bmi' | 'weight' | 'height' | 'head' }) => {
-        const dataset = getDataset(metric, standard);
-        if (!dataset) return <div className="h-64 flex items-center justify-center text-gray-400">No chart data available for this range/metric.</div>;
+    const ChartSVG = ({ metric, standardOverride }: { metric: 'bmi' | 'weight' | 'height' | 'head', standardOverride?: 'WHO' | 'CDC' }) => {
+        const currentStandard = standardOverride || standard;
+        const dataset = getDataset(metric, currentStandard);
+        if (!dataset) return <div className="h-64 flex items-center justify-center text-gray-400 text-xs border rounded bg-gray-50">No chart data ({currentStandard} {metric})</div>;
 
         const dataPoints = gender === 'male' ? dataset.male : dataset.female;
         const userVal = metric === 'bmi' ? currentBMI : (metric === 'weight' ? Number(weight) : (metric === 'height' ? Number(height) : Number(headCirc)));
@@ -194,8 +195,8 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         const createPath = (key: keyof GrowthPoint) => 'M ' + dataPoints.map(d => `${getX(d.age)},${getY(d[key] as number)}`).join(' L ');
 
         return (
-            <div className="border border-gray-200 rounded-xl bg-white p-2 overflow-hidden shadow-sm">
-                <h4 className="text-center font-bold text-gray-700 mb-2">{dataset.label}</h4>
+            <div className="border border-gray-200 rounded-xl bg-white p-2 overflow-hidden shadow-sm break-inside-avoid">
+                <h4 className="text-center font-bold text-gray-700 mb-2 text-sm">{dataset.label}</h4>
                 <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-auto">
                     {/* Grid Lines */}
                     {[0, 0.25, 0.5, 0.75, 1].map(pct => {
@@ -236,7 +237,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
     return (
         <div className="bg-white p-4 md:p-6 rounded-xl shadow-lg border border-gray-100 max-w-6xl mx-auto animate-fade-in flex flex-col min-h-[80vh]">
             
-            {/* Header & Mode Switch */}
+            {/* --- SCREEN HEADER (Hidden on Print) --- */}
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 no-print">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -263,19 +264,96 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                 )}
             </div>
 
-            {/* Print Header (Only visible on print) */}
-            <div className="hidden print:block mb-8 text-center border-b-2 border-gray-800 pb-4">
-                <h1 className="text-3xl font-serif font-bold text-gray-900">{clinicName}</h1>
-                <p className="text-lg text-gray-600">{doctorName}</p>
-                <div className="mt-4 flex justify-between text-sm">
-                    <span>Patient: <strong>{clientName || 'N/A'}</strong></span>
-                    <span>Date: <strong>{new Date().toLocaleDateString()}</strong></span>
+            {/* --- PRINT ONLY LAYOUT --- */}
+            <div className="hidden print:block">
+                {/* Print Header */}
+                <div className="border-b-2 border-gray-800 pb-4 mb-6">
+                    <div className="flex justify-between items-end">
+                        <div>
+                           <h1 className="text-3xl font-serif font-bold text-gray-900 mb-1">{clinicName}</h1>
+                           <p className="text-sm text-gray-600 font-bold">{doctorName}</p>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-xs text-gray-500">Report Date: {new Date().toLocaleDateString()}</div>
+                            <div className="text-xs text-gray-400">Diet-Nova System v2.0.134</div>
+                        </div>
+                    </div>
+                    {/* Patient Data Grid */}
+                    <div className="mt-6 border-t border-gray-300 pt-4">
+                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Patient Information</h3>
+                        <div className="grid grid-cols-4 gap-4 text-sm bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <div>
+                                <span className="block text-gray-500 text-xs">Name</span>
+                                <span className="font-bold">{clientName || 'N/A'}</span>
+                            </div>
+                            <div>
+                                <span className="block text-gray-500 text-xs">Gender</span>
+                                <span className="font-bold capitalize">{gender}</span>
+                            </div>
+                            <div>
+                                <span className="block text-gray-500 text-xs">DOB</span>
+                                <span className="font-bold">{dob || 'N/A'}</span>
+                            </div>
+                            <div>
+                                <span className="block text-gray-500 text-xs">Calc. Age</span>
+                                <span className="font-bold">{calculatedAge.display}</span>
+                            </div>
+                            {/* Row 2 */}
+                            <div className="mt-2">
+                                <span className="block text-gray-500 text-xs">Weight</span>
+                                <span className="font-bold">{weight ? weight + ' kg' : '-'}</span>
+                            </div>
+                            <div className="mt-2">
+                                <span className="block text-gray-500 text-xs">Height</span>
+                                <span className="font-bold">{height ? height + ' cm' : '-'}</span>
+                            </div>
+                            <div className="mt-2">
+                                <span className="block text-gray-500 text-xs">BMI</span>
+                                <span className="font-bold">{currentBMI > 0 ? currentBMI : '-'}</span>
+                            </div>
+                            <div className="mt-2">
+                                <span className="block text-gray-500 text-xs">Head Circ.</span>
+                                <span className="font-bold">{headCirc ? headCirc + ' cm' : '-'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Print Content: Charts Dual Mode */}
+                <div className="space-y-8">
+                    {/* WHO Section */}
+                    <div>
+                        <h3 className="text-lg font-bold border-b border-gray-300 mb-4 pb-1">WHO Standards (5-19 Years)</h3>
+                        <div className="grid grid-cols-2 gap-6">
+                            <ChartSVG metric="weight" standardOverride="WHO" />
+                            <ChartSVG metric="height" standardOverride="WHO" />
+                            <ChartSVG metric="bmi" standardOverride="WHO" />
+                        </div>
+                    </div>
+
+                    <div className="break-before-page pt-8" />
+
+                    {/* CDC Section */}
+                    <div>
+                        <h3 className="text-lg font-bold border-b border-gray-300 mb-4 pb-1">CDC Standards (2-20 Years / 0-36 Months)</h3>
+                        <div className="grid grid-cols-2 gap-6">
+                            <ChartSVG metric="weight" standardOverride="CDC" />
+                            <ChartSVG metric="height" standardOverride="CDC" />
+                            <ChartSVG metric="bmi" standardOverride="CDC" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Print Footer */}
+                <div className="fixed bottom-0 left-0 w-full text-center text-[10px] text-gray-400 border-t p-2 bg-white">
+                    Diet-Nova Clinical Report | v2.0.134 | {new Date().toLocaleDateString()}
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+            {/* --- SCREEN CONTENT --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow no-print">
                 {/* --- Left Column: Inputs --- */}
-                <div className="lg:col-span-3 space-y-6 bg-gray-50 p-4 rounded-xl h-fit border border-gray-100 no-print">
+                <div className="lg:col-span-3 space-y-6 bg-gray-50 p-4 rounded-xl h-fit border border-gray-100">
                     <div>
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Standard</label>
                         <div className="flex rounded-md overflow-hidden border border-gray-300">
@@ -368,7 +446,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                 {/* --- Right Column: Visualization --- */}
                 <div className="lg:col-span-9">
                     
-                    {/* View: Charts */}
+                    {/* View: Charts (Screen) */}
                     {view === 'charts' && (
                         <div className="space-y-4">
                             <div className="flex gap-2 mb-4 bg-gray-50 p-1 rounded-lg w-fit overflow-x-auto">
@@ -392,84 +470,71 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                         </div>
                     )}
 
-                    {/* View: Report (and Print View) */}
-                    <div className={`${view === 'report' ? 'block' : 'hidden print:block'} space-y-8`}>
-                        
-                        {/* Report Config (Screen Only) */}
-                        <div className="no-print bg-yellow-50 p-4 rounded-xl border border-yellow-100 flex flex-col sm:flex-row gap-4 justify-between items-end">
-                            <div className="w-full sm:w-auto flex-grow">
-                                <h4 className="font-bold text-yellow-800 text-sm mb-2">Report Header Configuration</h4>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <input type="text" value={clinicName} onChange={e => setClinicName(e.target.value)} className="p-2 border rounded text-sm w-full" placeholder="Clinic Name" />
-                                    <input type="text" value={doctorName} onChange={e => setDoctorName(e.target.value)} className="p-2 border rounded text-sm w-full" placeholder="Doctor Name" />
+                    {/* View: Report Config (Screen) */}
+                    {view === 'report' && (
+                        <div className="space-y-8">
+                            <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-100 flex flex-col sm:flex-row gap-4 justify-between items-end">
+                                <div className="w-full sm:w-auto flex-grow">
+                                    <h4 className="font-bold text-yellow-800 text-sm mb-2">Report Header Configuration</h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <input type="text" value={clinicName} onChange={e => setClinicName(e.target.value)} className="p-2 border rounded text-sm w-full" placeholder="Clinic Name" />
+                                        <input type="text" value={doctorName} onChange={e => setDoctorName(e.target.value)} className="p-2 border rounded text-sm w-full" placeholder="Doctor Name" />
+                                    </div>
                                 </div>
+                                <button onClick={handlePrint} className="bg-gray-800 text-white px-6 py-2 rounded-lg font-bold shadow hover:bg-gray-900 transition flex items-center gap-2">
+                                    <span>🖨️</span> Print Full Report
+                                </button>
                             </div>
-                            <button onClick={handlePrint} className="bg-gray-800 text-white px-6 py-2 rounded-lg font-bold shadow hover:bg-gray-900 transition flex items-center gap-2">
-                                <span>🖨️</span> Print Report
-                            </button>
-                        </div>
 
-                        {/* Summary Table */}
-                        <div className="border border-gray-300 rounded-lg overflow-hidden">
-                            <table className="w-full text-sm">
-                                <thead className="bg-gray-100 text-gray-800 border-b border-gray-300">
-                                    <tr>
-                                        <th className="p-3 text-left">Measurement</th>
-                                        <th className="p-3 text-center">Value</th>
-                                        <th className="p-3 text-center">Percentile</th>
-                                        <th className="p-3 text-center">Status</th>
-                                        <th className="p-3 text-center text-gray-500">Ref (50th)</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-200">
-                                    {/* Weight */}
-                                    <tr>
-                                        <td className="p-3 font-medium">Weight</td>
-                                        <td className="p-3 text-center">{weight || '-'} kg</td>
-                                        <td className={`p-3 text-center font-bold ${analysis.weight?.color}`}>{analysis.weight?.percentile || '-'}</td>
-                                        <td className="p-3 text-center">{analysis.weight?.risk || '-'}</td>
-                                        <td className="p-3 text-center text-gray-500">{analysis.weight?.p50 || '-'}</td>
-                                    </tr>
-                                    {/* Height */}
-                                    <tr>
-                                        <td className="p-3 font-medium">Height</td>
-                                        <td className="p-3 text-center">{height || '-'} cm</td>
-                                        <td className={`p-3 text-center font-bold ${analysis.height?.color}`}>{analysis.height?.percentile || '-'}</td>
-                                        <td className="p-3 text-center">{analysis.height?.risk || '-'}</td>
-                                        <td className="p-3 text-center text-gray-500">{analysis.height?.p50 || '-'}</td>
-                                    </tr>
-                                    {/* BMI */}
-                                    <tr>
-                                        <td className="p-3 font-medium">BMI</td>
-                                        <td className="p-3 text-center">{currentBMI || '-'}</td>
-                                        <td className={`p-3 text-center font-bold ${analysis.bmi?.color}`}>{analysis.bmi?.percentile || '-'}</td>
-                                        <td className="p-3 text-center">{analysis.bmi?.risk || '-'}</td>
-                                        <td className="p-3 text-center text-gray-500">{analysis.bmi?.p50 || '-'}</td>
-                                    </tr>
-                                    {/* Head */}
-                                    <tr>
-                                        <td className="p-3 font-medium">Head Circ.</td>
-                                        <td className="p-3 text-center">{headCirc || '-'} cm</td>
-                                        <td className={`p-3 text-center font-bold ${analysis.head?.color}`}>{analysis.head?.percentile || '-'}</td>
-                                        <td className="p-3 text-center">{analysis.head?.risk || '-'}</td>
-                                        <td className="p-3 text-center text-gray-500">{analysis.head?.p50 || '-'}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            {/* Screen Summary Table */}
+                            <div className="border border-gray-300 rounded-lg overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-gray-100 text-gray-800 border-b border-gray-300">
+                                        <tr>
+                                            <th className="p-3 text-left">Measurement</th>
+                                            <th className="p-3 text-center">Value</th>
+                                            <th className="p-3 text-center">Percentile</th>
+                                            <th className="p-3 text-center">Status</th>
+                                            <th className="p-3 text-center text-gray-500">Ref (50th)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        <tr>
+                                            <td className="p-3 font-medium">Weight</td>
+                                            <td className="p-3 text-center">{weight || '-'} kg</td>
+                                            <td className={`p-3 text-center font-bold ${analysis.weight?.color}`}>{analysis.weight?.percentile || '-'}</td>
+                                            <td className="p-3 text-center">{analysis.weight?.risk || '-'}</td>
+                                            <td className="p-3 text-center text-gray-500">{analysis.weight?.p50 || '-'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-3 font-medium">Height</td>
+                                            <td className="p-3 text-center">{height || '-'} cm</td>
+                                            <td className={`p-3 text-center font-bold ${analysis.height?.color}`}>{analysis.height?.percentile || '-'}</td>
+                                            <td className="p-3 text-center">{analysis.height?.risk || '-'}</td>
+                                            <td className="p-3 text-center text-gray-500">{analysis.height?.p50 || '-'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-3 font-medium">BMI</td>
+                                            <td className="p-3 text-center">{currentBMI || '-'}</td>
+                                            <td className={`p-3 text-center font-bold ${analysis.bmi?.color}`}>{analysis.bmi?.percentile || '-'}</td>
+                                            <td className="p-3 text-center">{analysis.bmi?.risk || '-'}</td>
+                                            <td className="p-3 text-center text-gray-500">{analysis.bmi?.p50 || '-'}</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-3 font-medium">Head Circ.</td>
+                                            <td className="p-3 text-center">{headCirc || '-'} cm</td>
+                                            <td className={`p-3 text-center font-bold ${analysis.head?.color}`}>{analysis.head?.percentile || '-'}</td>
+                                            <td className="p-3 text-center">{analysis.head?.risk || '-'}</td>
+                                            <td className="p-3 text-center text-gray-500">{analysis.head?.p50 || '-'}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="text-center text-xs text-gray-400 mt-4">
+                                On screen shows currently selected standard only. Print to see both WHO and CDC charts.
+                            </div>
                         </div>
-
-                        {/* All Charts for Print */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 break-inside-avoid">
-                            <div className="break-inside-avoid"><ChartSVG metric="weight" /></div>
-                            <div className="break-inside-avoid"><ChartSVG metric="height" /></div>
-                            <div className="break-inside-avoid"><ChartSVG metric="bmi" /></div>
-                            <div className="break-inside-avoid"><ChartSVG metric="head" /></div>
-                        </div>
-
-                        <div className="text-center text-xs text-gray-400 mt-8 pt-4 border-t">
-                            Generated by Diet-Nova System • Standards: {standard} • {new Date().toLocaleDateString()}
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
