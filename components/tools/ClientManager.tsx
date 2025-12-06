@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -831,6 +828,15 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       setTimeout(() => setSaveSuccess(''), 3000);
   };
 
+  const handleSaveGrowthCharts = (note: string) => {
+      if (!editingClient) return;
+      const updatedNotes = formData.notes ? formData.notes + "\n\n" + note : note;
+      setFormData(prev => ({ ...prev, notes: updatedNotes }));
+      setViewMode('details');
+      setSaveSuccess("Growth Chart analysis added to notes.");
+      setTimeout(() => setSaveSuccess(''), 3000);
+  };
+
   // --- Lab Suggestions Handlers ---
   const toggleLabTest = (test: string) => {
       const newSet = new Set(labChecklistSelection);
@@ -1044,6 +1050,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
           <div className="animate-fade-in">
               <GrowthCharts
                   initialData={{
+                      name: editingClient?.full_name || '',
                       gender: formData.gender,
                       age: formData.age !== '' ? Number(formData.age) : 0,
                       weight: formData.weight !== '' ? Number(formData.weight) : undefined,
@@ -1051,6 +1058,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                       head_circumference: formData.head_circumference !== '' ? Number(formData.head_circumference) : undefined,
                       bmi: profileBMI ? Number(profileBMI) : undefined
                   }}
+                  onSave={handleSaveGrowthCharts}
                   onClose={() => setViewMode('details')}
               />
           </div>
@@ -1655,7 +1663,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                 </button>
                                                 <button 
                                                     type="button"
-                                                    onClick={() => handleOpenTool('growth-charts', 'client', editingClient?.id || '', { gender: formData.gender, age: formData.age, weight: formData.weight, height: formData.height, head_circumference: formData.head_circumference, bmi: profileBMI })}
+                                                    onClick={() => handleOpenTool('growth-charts', 'client', editingClient?.id || '', { name: formData.full_name, gender: formData.gender, age: formData.age, weight: formData.weight, height: formData.height, head_circumference: formData.head_circumference, bmi: profileBMI })}
                                                     className="text-xs bg-blue-600 text-white px-3 py-1 rounded border border-blue-600 font-bold hover:bg-blue-700 transition"
                                                 >
                                                     📈 Growth Charts

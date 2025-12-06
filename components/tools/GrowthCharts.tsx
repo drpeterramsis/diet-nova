@@ -4,6 +4,7 @@ import { growthDatasets, GrowthPoint, GrowthDataset } from '../../data/growthCha
 
 interface GrowthChartsProps {
     initialData?: {
+        name?: string;
         gender: 'male' | 'female';
         age: number;
         weight?: number;
@@ -12,16 +13,32 @@ interface GrowthChartsProps {
         head_circumference?: number;
     };
     onClose?: () => void;
+    onSave?: (note: string) => void;
 }
 
-const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose }) => {
+interface AssessmentResult {
+    datasetId: string;
+    label: string;
+    value: number;
+    percentile: string;
+    color: string;
+    interpretation: string;
+}
+
+const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSave }) => {
     const { t } = useLanguage();
     
     // --- State ---
     const [standard, setStandard] = useState<'WHO' | 'CDC'>('WHO');
     const [gender, setGender] = useState<'male' | 'female'>(initialData?.gender || 'male');
     
+    // Report Fields
+    const [patientName, setPatientName] = useState(initialData?.name || '');
+    const [clinicName, setClinicName] = useState('Diet-Nova');
+    const [nutritionistName, setNutritionistName] = useState('Dr. Peter Ramsis');
+
     // Age Inputs
+    const [ageMode, setAgeMode] = useState<'auto' | 'manual'>('auto');
     const [dob, setDob] = useState<string>('');
     const [ageYears, setAgeYears] = useState<number>(initialData?.age || 0);
     const [ageMonths, setAgeMonths] = useState<number>(0);
@@ -42,7 +59,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose }) => 
 
     // 1. Calculate Age from DOB
     useEffect(() => {
-        if (dob) {
+        if (ageMode === 'auto' && dob) {
             const birthDate = new Date(dob);
             const today = new Date();
             if (!isNaN(birthDate.getTime())) {
@@ -59,7 +76,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose }) => 
                 setAgeMonths(months);
             }
         }
-    }, [dob]);
+    }, [dob, ageMode]);
 
     // 2. Auto Calculate BMI
     useEffect(() => {
@@ -72,19 +89,37 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose }) => 
         }
     }, [weight, height]);
 
+    // --- Calculation Helper ---
+    const calculateInterpretation = (dataset: GrowthDataset, val: number): { percentile: string, color: string, interpretation: string } => {
+        const dataPoints = gender === 'male' ? dataset.male : dataset.female;
+        const currentX = dataset.xLabel.includes('Months') ? totalMonths : ageDecimal;
+        
+        // Find reference point (closest age)
+        const ref = dataPoints.reduce((prev, curr) => 
+            Math.abs(curr.age - currentX) < Math.abs(prev.age - currentX) ? curr : prev
+        );
+
+        let pText = '';
+        let pColor = '';
+        let interp = '';
+
+        if (val < ref.p3) { pText = '< 3rd'; pColor = '#ef4444'; interp = 'Low / Underweight'; }
+        else if (val < ref.p15) { pText = '3rd - 15th'; pColor = '#f97316'; interp = 'Risk of Low'; }
+        else if (val < ref.p50) { pText = '15th - 50th'; pColor = '#22c55e'; interp = 'Normal'; }
+        else if (val < ref.p85) { pText = '50th - 85th'; pColor = '#22c55e'; interp = 'Normal / Above Avg'; }
+        else if (val < ref.p97) { pText = '85th - 97th'; pColor = '#f97316'; interp = 'Risk of High / Overweight'; }
+        else { pText = '> 97th'; pColor = '#ef4444'; interp = 'High / Obese'; }
+
+        return { percentile: pText, color: pColor, interpretation: interp };
+    };
+
     // --- Chart Logic ---
 
     // Determine relevant datasets based on Age & Standard
-    const visibleCharts = useMemo(() => {
+    const { visibleCharts, results } = useMemo(() => {
         const charts: { dataset: GrowthDataset, userVal: number }[] = [];
+        const res: AssessmentResult[] = [];
         const datasets = Object.values(growthDatasets).filter(d => d.type === standard);
-
-        // Filter based on age range logic
-        // 0-36m (Infant) vs 2-20y / 5-19y (Child)
-        const isInfant = totalMonths < 24; // Use infant charts if < 2 years usually, CDC goes to 36m.
-        // For simplicity:
-        // If age < 2 years: Use 0-36m charts
-        // If age >= 2 years: Use 2-20y or 5-19y charts
 
         datasets.forEach(d => {
             let include = false;
@@ -112,10 +147,21 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose }) => 
 
             if (include) {
                 charts.push({ dataset: d, userVal: val });
+                if (val > 0) {
+                    const analysis = calculateInterpretation(d, val);
+                    res.push({
+                        datasetId: d.id,
+                        label: d.label,
+                        value: val,
+                        percentile: analysis.percentile,
+                        color: analysis.color,
+                        interpretation: analysis.interpretation
+                    });
+                }
             }
         });
 
-        // Sort order: Weight, Height, BMI, Head
+        // Sort order: Weight, Length/Height, BMI, Head
         const order = ['weight', 'length', 'height', 'bmi', 'head'];
         charts.sort((a, b) => {
             const aIdx = order.findIndex(k => a.dataset.id.includes(k));
@@ -123,35 +169,41 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose }) => 
             return aIdx - bIdx;
         });
 
-        return charts;
-    }, [standard, totalMonths, ageYears, weight, height, headCirc, bmi]);
+        return { visibleCharts: charts, results: res };
+    }, [standard, totalMonths, ageYears, weight, height, headCirc, bmi, gender]);
+
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const handleSaveToNotes = () => {
+        if (!onSave) return;
+        
+        let note = `[Growth Chart Assessment - ${new Date().toLocaleDateString('en-GB')}]\n`;
+        note += `Standard: ${standard} | Age: ${ageYears}y ${ageMonths}m | Gender: ${gender}\n`;
+        note += `Measurements:\n`;
+        if (weight) note += `- Weight: ${weight} kg\n`;
+        if (height) note += `- Height: ${height} cm\n`;
+        if (bmi) note += `- BMI: ${bmi} kg/m²\n`;
+        if (headCirc) note += `- Head Circ: ${headCirc} cm\n`;
+        
+        if (results.length > 0) {
+            note += `\nInterpretations:\n`;
+            results.forEach(r => {
+                note += `- ${r.label}: ${r.value} (${r.percentile}) -> ${r.interpretation}\n`;
+            });
+        }
+        
+        onSave(note);
+    };
 
     // --- Single Chart Component ---
     const GrowthChartSVG = ({ dataset, userVal }: { dataset: GrowthDataset, userVal: number }) => {
         const dataPoints = gender === 'male' ? dataset.male : dataset.female;
         if (!dataPoints || dataPoints.length === 0) return <div className="text-xs text-gray-400 p-4">No Data Available</div>;
 
-        // Interpret Result
-        let interpretation = null;
         const currentX = dataset.xLabel.includes('Months') ? totalMonths : ageDecimal;
         
-        // Find reference point (closest age)
-        const ref = dataPoints.reduce((prev, curr) => 
-            Math.abs(curr.age - currentX) < Math.abs(prev.age - currentX) ? curr : prev
-        );
-
-        if (userVal > 0) {
-            let pText = '';
-            let pColor = '';
-            if (userVal < ref.p3) { pText = '< 3rd'; pColor = '#ef4444'; }
-            else if (userVal < ref.p15) { pText = '3rd - 15th'; pColor = '#f97316'; }
-            else if (userVal < ref.p50) { pText = '15th - 50th'; pColor = '#22c55e'; }
-            else if (userVal < ref.p85) { pText = '50th - 85th'; pColor = '#22c55e'; }
-            else if (userVal < ref.p97) { pText = '85th - 97th'; pColor = '#f97316'; }
-            else { pText = '> 97th'; pColor = '#ef4444'; }
-            interpretation = { text: pText, color: pColor };
-        }
-
         // SVG Dimensions
         const width = 400;
         const height = 250;
@@ -174,17 +226,22 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose }) => 
             return 'M ' + dataPoints.map(d => `${getX(d.age)},${getY(d[key] as number)}`).join(' L ');
         };
 
+        const result = results.find(r => r.datasetId === dataset.id);
+
         return (
-            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm flex flex-col h-full">
+            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm flex flex-col h-full break-inside-avoid">
                 <div className="flex justify-between items-start mb-2">
                     <div>
                         <h4 className="font-bold text-gray-700 text-sm">{dataset.label}</h4>
                         <p className="text-[10px] text-gray-400">{dataset.yLabel}</p>
                     </div>
-                    {interpretation && (
-                        <span className="text-xs font-bold px-2 py-1 rounded bg-gray-50" style={{ color: interpretation.color }}>
-                            {interpretation.text}
-                        </span>
+                    {result && (
+                        <div className="text-right">
+                            <span className="block text-xs font-bold px-2 py-0.5 rounded bg-gray-50" style={{ color: result.color }}>
+                                {result.percentile}
+                            </span>
+                            <span className="block text-[9px] text-gray-500">{result.interpretation}</span>
+                        </div>
                     )}
                 </div>
                 
@@ -228,7 +285,9 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose }) => 
 
     return (
         <div className="bg-gray-50 p-6 rounded-xl shadow-lg border border-gray-100 max-w-6xl mx-auto animate-fade-in relative">
-            <div className="flex justify-between items-center mb-6">
+            
+            {/* Header / No Print Controls */}
+            <div className="flex justify-between items-center mb-6 no-print">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                         <span>📈</span> {t.tools.growthCharts.title}
@@ -252,14 +311,36 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose }) => 
                             CDC
                         </button>
                     </div>
+                    {onSave && (
+                        <button onClick={handleSaveToNotes} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg font-bold text-sm hover:bg-[var(--color-primary-hover)] transition">
+                            Save to Profile
+                        </button>
+                    )}
+                    <button onClick={handlePrint} className="px-4 py-2 bg-gray-800 text-white rounded-lg font-bold text-sm hover:bg-gray-900 transition">
+                        🖨️ Report
+                    </button>
                     {onClose && (
                         <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-white transition">✕</button>
                     )}
                 </div>
             </div>
 
-            {/* Inputs Grid */}
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6">
+            {/* --- REPORT HEADER (Visible only in Print) --- */}
+            <div className="hidden print:block mb-8 text-center border-b-2 border-black pb-4">
+                <h1 className="text-3xl font-bold uppercase">{clinicName}</h1>
+                <p className="text-lg">Growth Assessment Report</p>
+                <p className="text-sm">Nutritionist: {nutritionistName}</p>
+                <p className="text-sm">Date: {new Date().toLocaleDateString('en-GB')}</p>
+            </div>
+
+            {/* Inputs Grid (Hidden in Print) */}
+            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 no-print">
+                <div className="mb-4 pb-2 border-b border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <input type="text" placeholder="Clinic Name" value={clinicName} onChange={e => setClinicName(e.target.value)} className="text-xs border-b border-gray-300 focus:border-blue-500 outline-none p-1" />
+                    <input type="text" placeholder="Nutritionist Name" value={nutritionistName} onChange={e => setNutritionistName(e.target.value)} className="text-xs border-b border-gray-300 focus:border-blue-500 outline-none p-1" />
+                    <input type="text" placeholder="Patient Name (Optional)" value={patientName} onChange={e => setPatientName(e.target.value)} className="text-xs border-b border-gray-300 focus:border-blue-500 outline-none p-1" />
+                </div>
+
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                     {/* Row 1: Personal */}
                     <div className="col-span-2 md:col-span-1">
@@ -269,17 +350,22 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose }) => 
                             <button onClick={() => setGender('female')} className={`flex-1 py-1.5 text-sm ${gender === 'female' ? 'bg-pink-600 text-white' : 'bg-gray-50'}`}>Female</button>
                         </div>
                     </div>
+                    
                     <div className="col-span-2 md:col-span-1">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date of Birth</label>
-                        <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full p-1.5 border rounded text-sm" />
-                    </div>
-                    <div className="col-span-1">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Age (Years)</label>
-                        <input type="number" value={ageYears} onChange={(e) => setAgeYears(Number(e.target.value))} className="w-full p-1.5 border rounded text-sm" min="0" />
-                    </div>
-                    <div className="col-span-1">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Age (Months)</label>
-                        <input type="number" value={ageMonths} onChange={(e) => setAgeMonths(Number(e.target.value))} className="w-full p-1.5 border rounded text-sm" min="0" max="11" />
+                        <div className="flex justify-between mb-1">
+                            <label className="block text-xs font-bold text-gray-500 uppercase">Age Mode</label>
+                            <button onClick={() => setAgeMode(ageMode === 'auto' ? 'manual' : 'auto')} className="text-[10px] text-blue-600 underline">
+                                {ageMode === 'auto' ? 'Switch to Manual' : 'Switch to Auto'}
+                            </button>
+                        </div>
+                        {ageMode === 'auto' ? (
+                            <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full p-1.5 border rounded text-sm" />
+                        ) : (
+                            <div className="flex gap-1">
+                                <input type="number" placeholder="Yrs" value={ageYears} onChange={(e) => setAgeYears(Number(e.target.value))} className="w-1/2 p-1.5 border rounded text-sm" min="0" />
+                                <input type="number" placeholder="Mos" value={ageMonths} onChange={(e) => setAgeMonths(Number(e.target.value))} className="w-1/2 p-1.5 border rounded text-sm" min="0" max="11" />
+                            </div>
+                        )}
                     </div>
 
                     {/* Row 2: Measurements */}
@@ -306,11 +392,61 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose }) => 
                 </div>
             </div>
 
+            {/* --- PATIENT DATA SUMMARY (Print Mode) --- */}
+            <div className="hidden print:block mb-6 border p-4 rounded bg-gray-50">
+                <table className="w-full text-sm">
+                    <tbody>
+                        <tr>
+                            <td className="font-bold w-32">Patient Name:</td>
+                            <td>{patientName || 'N/A'}</td>
+                            <td className="font-bold w-32">Gender:</td>
+                            <td className="capitalize">{gender}</td>
+                        </tr>
+                        <tr>
+                            <td className="font-bold">Age:</td>
+                            <td>{ageYears} Years, {ageMonths} Months</td>
+                            <td className="font-bold">DOB:</td>
+                            <td>{dob || 'N/A'}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            {/* --- SUMMARY TABLE --- */}
+            {results.length > 0 && (
+                <div className="mb-8">
+                    <h3 className="font-bold text-gray-700 mb-2 uppercase text-sm border-b border-gray-200 pb-1">Assessment Summary</h3>
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                        <table className="w-full text-sm">
+                            <thead className="bg-gray-100 text-gray-700 text-xs uppercase">
+                                <tr>
+                                    <th className="p-3 text-left">Parameter</th>
+                                    <th className="p-3 text-center">Value</th>
+                                    <th className="p-3 text-center">Percentile</th>
+                                    <th className="p-3 text-left">Interpretation</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {results.map((res) => (
+                                    <tr key={res.datasetId}>
+                                        <td className="p-3 font-medium">{res.label}</td>
+                                        <td className="p-3 text-center font-bold">{res.value}</td>
+                                        <td className="p-3 text-center" style={{ color: res.color, fontWeight: 'bold' }}>{res.percentile}</td>
+                                        <td className="p-3 text-gray-600">{res.interpretation}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
             {/* Charts Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+            <h3 className="font-bold text-gray-700 mb-4 uppercase text-sm border-b border-gray-200 pb-1 print:mb-2">Growth Charts</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 print:gap-8 print:block">
                 {visibleCharts.length > 0 ? (
                     visibleCharts.map((chart) => (
-                        <div key={chart.dataset.id} className="h-80">
+                        <div key={chart.dataset.id} className="h-80 print:h-96 print:mb-8 print:break-inside-avoid">
                             <GrowthChartSVG dataset={chart.dataset} userVal={chart.userVal} />
                         </div>
                     ))
@@ -321,6 +457,10 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose }) => 
                         {standard === 'WHO' && ageYears < 5 && <p className="text-xs mt-2 text-red-400">(WHO data currently available for 5-19y only. Switch to CDC for infants/toddlers)</p>}
                     </div>
                 )}
+            </div>
+            
+            <div className="text-center text-xs text-gray-400 mt-8 hidden print:block border-t pt-2">
+                Report generated by Diet-Nova System
             </div>
         </div>
     );
