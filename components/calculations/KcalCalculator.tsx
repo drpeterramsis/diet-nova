@@ -60,6 +60,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               if (data.inputs.deficit) inputs.setDeficit(data.inputs.deficit);
               if (data.inputs.ascites) inputs.setAscites(data.inputs.ascites);
               if (data.inputs.edema) inputs.setEdema(data.inputs.edema);
+              if (data.inputs.edemaCorrectionPercent && inputs.setEdemaCorrectionPercent) inputs.setEdemaCorrectionPercent(data.inputs.edemaCorrectionPercent);
               if (data.inputs.changeDuration) inputs.setChangeDuration(data.inputs.changeDuration);
               if (data.inputs.amputationPercent && inputs.setAmputationPercent) inputs.setAmputationPercent(data.inputs.amputationPercent);
               
@@ -94,6 +95,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               deficit: inputs.deficit,
               ascites: inputs.ascites,
               edema: inputs.edema,
+              edemaCorrectionPercent: inputs.edemaCorrectionPercent,
               changeDuration: inputs.changeDuration,
               amputationPercent: inputs.amputationPercent,
               bodyFatPercent: inputs.bodyFatPercent,
@@ -209,8 +211,10 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                 changeDuration={inputs.changeDuration} setChangeDuration={inputs.setChangeDuration}
                 ascites={inputs.ascites} setAscites={inputs.setAscites}
                 edema={inputs.edema} setEdema={inputs.setEdema}
+                edemaCorrectionPercent={inputs.edemaCorrectionPercent} setEdemaCorrectionPercent={inputs.setEdemaCorrectionPercent}
                 amputationPercent={inputs.amputationPercent} setAmputationPercent={inputs.setAmputationPercent}
                 bodyFatPercent={inputs.bodyFatPercent} setBodyFatPercent={inputs.setBodyFatPercent}
+                age={inputs.age}
                 />
             </CollapsibleCard>
 

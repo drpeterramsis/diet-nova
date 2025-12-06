@@ -210,9 +210,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   // Age Detail State
   const [ageDetail, setAgeDetail] = useState<{y: number, m: number, d: number} | null>(null);
 
-  // Edema Correction State (Local UI only for Pedia Profile)
-  const [edemaCorrectionPercent, setEdemaCorrectionPercent] = useState<number>(0);
-
   // Tool Targets (For Dietary/Food Q)
   const [toolTarget, setToolTarget] = useState<{type: 'client' | 'visit', id: string, initialData?: any} | null>(null);
   const [isSavingTool, setIsSavingTool] = useState(false);
@@ -551,7 +548,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     setSummaryText('');
     setExpandedPediatricCategory(null);
     setAgeDetail(null);
-    setEdemaCorrectionPercent(0);
 
     if (client) {
       setEditingClient(client);
@@ -1474,7 +1470,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                         <div>
                                             <label className="block text-xs font-bold text-gray-500 mb-1">
                                                 Age (Years) 
-                                                {ageDetail && <span className="text-[10px] font-normal text-blue-600 ml-1 bg-blue-50 px-1 rounded">({ageDetail.y}y {ageDetail.m}m)</span>}
+                                                {ageDetail && <span className="text-[10px] font-normal text-blue-600 ml-1 bg-blue-50 px-1 rounded">({ageDetail.y}y {ageDetail.m}m {ageDetail.d}d)</span>}
                                             </label>
                                             <input 
                                                 type="number" 
@@ -1613,44 +1609,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                              </div>
                                          </div>
                                      </div>
-
-                                     {/* Pedia: Edema Correction Calculator */}
-                                     {formData.age !== '' && Number(formData.age) < 18 && (
-                                         <div className="mt-3 pt-3 border-t border-blue-200">
-                                             <label className="block text-[10px] font-bold text-red-600 uppercase mb-1">Edema Weight Correction</label>
-                                             <div className="flex flex-col sm:flex-row gap-2 items-center">
-                                                 <div className="flex rounded border border-red-200 bg-white overflow-hidden text-xs">
-                                                     <button 
-                                                        type="button" 
-                                                        onClick={() => setEdemaCorrectionPercent(0)}
-                                                        className={`px-3 py-1.5 ${edemaCorrectionPercent === 0 ? 'bg-red-50 text-red-700 font-bold' : 'hover:bg-gray-50'}`}
-                                                     >
-                                                         None
-                                                     </button>
-                                                     <button 
-                                                        type="button" 
-                                                        onClick={() => setEdemaCorrectionPercent(0.1)}
-                                                        className={`px-3 py-1.5 ${edemaCorrectionPercent === 0.1 ? 'bg-red-50 text-red-700 font-bold' : 'hover:bg-gray-50'}`}
-                                                     >
-                                                         10% (0.1)
-                                                     </button>
-                                                     <button 
-                                                        type="button" 
-                                                        onClick={() => setEdemaCorrectionPercent(0.2)}
-                                                        className={`px-3 py-1.5 ${edemaCorrectionPercent === 0.2 ? 'bg-red-50 text-red-700 font-bold' : 'hover:bg-gray-50'}`}
-                                                     >
-                                                         20% (0.2)
-                                                     </button>
-                                                 </div>
-                                                 {edemaCorrectionPercent > 0 && formData.weight && (
-                                                     <div className="text-xs font-bold text-red-700 bg-red-50 px-2 py-1.5 rounded border border-red-200">
-                                                         Dry Wt: {(Number(formData.weight) * (1 - edemaCorrectionPercent)).toFixed(2)} kg
-                                                     </div>
-                                                 )}
-                                             </div>
-                                             <p className="text-[10px] text-gray-400 mt-1">* Adjusts for fluid retention in severe malnutrition (SAM). Not saved to DB.</p>
-                                         </div>
-                                     )}
                                 </div>
 
                                 {/* Pediatric History Tags */}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { InputGroup, SelectGroup } from '../InputComponents';
@@ -15,18 +16,23 @@ interface WeightInfoProps {
   setAscites: (v: number) => void;
   edema: number;
   setEdema: (v: number) => void;
+  edemaCorrectionPercent?: number;
+  setEdemaCorrectionPercent?: (v: number) => void;
   amputationPercent?: number;
   setAmputationPercent?: (v: number) => void;
   bodyFatPercent?: number | '';
   setBodyFatPercent?: (v: number | '') => void;
+  age?: number;
 }
 
 const WeightInfoCard: React.FC<WeightInfoProps> = ({
   currentWeight, setCurrentWeight, selectedWeight, setSelectedWeight,
   usualWeight, setUsualWeight, changeDuration, setChangeDuration,
   ascites, setAscites, edema, setEdema,
+  edemaCorrectionPercent, setEdemaCorrectionPercent,
   amputationPercent, setAmputationPercent,
-  bodyFatPercent, setBodyFatPercent
+  bodyFatPercent, setBodyFatPercent,
+  age
 }) => {
   const { t } = useLanguage();
   const [showSpecialCondition, setShowSpecialCondition] = useState(false);
@@ -60,6 +66,8 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
   const updateAmp = (key: string, val: number) => {
       setAmpSelection(prev => ({ ...prev, [key]: val }));
   };
+
+  const isPediatric = age !== undefined && age < 18;
 
   return (
     <div className="card bg-white">
@@ -122,9 +130,47 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
                 ]}
               />
               
+              {/* Edema Correction (Percentage) - Primarily for Pediatrics/SAM */}
+              {setEdemaCorrectionPercent && (isPediatric || (edemaCorrectionPercent || 0) > 0) && (
+                  <div className="md:col-span-2 pt-2 border-t border-red-100 mt-2 bg-red-50/50 p-3 rounded">
+                      <label className="block text-xs font-bold text-red-600 uppercase mb-2">Edema Weight Correction (Pediatric/SAM)</label>
+                      <div className="flex flex-col sm:flex-row gap-3 items-center">
+                          <div className="flex rounded border border-red-200 bg-white overflow-hidden text-xs shadow-sm">
+                              <button 
+                                type="button" 
+                                onClick={() => setEdemaCorrectionPercent(0)}
+                                className={`px-3 py-2 transition ${!edemaCorrectionPercent ? 'bg-red-50 text-red-700 font-bold' : 'hover:bg-gray-50'}`}
+                              >
+                                  None
+                              </button>
+                              <button 
+                                type="button" 
+                                onClick={() => setEdemaCorrectionPercent(0.1)}
+                                className={`px-3 py-2 transition ${edemaCorrectionPercent === 0.1 ? 'bg-red-50 text-red-700 font-bold' : 'hover:bg-gray-50'}`}
+                              >
+                                  10%
+                              </button>
+                              <button 
+                                type="button" 
+                                onClick={() => setEdemaCorrectionPercent(0.2)}
+                                className={`px-3 py-2 transition ${edemaCorrectionPercent === 0.2 ? 'bg-red-50 text-red-700 font-bold' : 'hover:bg-gray-50'}`}
+                              >
+                                  20%
+                              </button>
+                          </div>
+                          {(edemaCorrectionPercent || 0) > 0 && currentWeight > 0 && (
+                              <div className="text-xs font-bold text-red-700 bg-white px-3 py-2 rounded border border-red-200 shadow-sm">
+                                  Corrected Dry Wt: {(currentWeight * (1 - (edemaCorrectionPercent || 0))).toFixed(2)} kg
+                              </div>
+                          )}
+                      </div>
+                      <p className="text-[10px] text-gray-400 mt-1 italic">* Percentage reduction for fluid retention in severe malnutrition. Overrides standard deduction below.</p>
+                  </div>
+              )}
+
               <div className="md:col-span-2 pt-2 border-t border-gray-100 mt-2">
                   <p className="text-xs font-bold text-gray-500 mb-3 uppercase tracking-wide">
-                      Mendenhall's Figure (Fluid Correction)
+                      Mendenhall's Figure (Standard Fluid Correction)
                   </p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <SelectGroup 

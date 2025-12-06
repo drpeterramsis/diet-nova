@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova Client Profile Update _ v2.0.129",
-  "description": "Updates: Client Profile now supports manual age entry alongside auto-calculation from DOB.",
+  "name": "Diet-Nova Client Profile_ v2.0.130",
+  "description": "Updates: Client Profile age display updated with days. Edema correction moved to Kcal Calculator.",
   "requestFramePermissions": []
 }

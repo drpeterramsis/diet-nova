@@ -163,6 +163,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
   const [changeDuration, setChangeDuration] = useState<number>(0);
   const [ascites, setAscites] = useState<number>(0);
   const [edema, setEdema] = useState<number>(0);
+  const [edemaCorrectionPercent, setEdemaCorrectionPercent] = useState<number>(0); // Percentage Correction (0, 0.1, 0.2)
+
   const [amputationPercent, setAmputationPercent] = useState<number>(0);
   
   // New InBody/Body Comp Inputs
@@ -254,6 +256,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       setChangeDuration(0);
       setAscites(0);
       setEdema(0);
+      setEdemaCorrectionPercent(0);
       setAmputationPercent(0);
       setBodyFatPercent('');
       setDesiredBodyFat('');
@@ -285,11 +288,21 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const mac_cm = mac;
     const tsf_mm = tsf;
     
-    // 1. Dry Weight
-    let dryWeightVal = temp_weight - ascites - edema;
+    // 1. Dry Weight Calculation
+    let dryWeightVal = 0;
+    
+    if (edemaCorrectionPercent > 0) {
+        // Percentage correction (typically for pediatric/malnutrition)
+        // Ignores absolute ascites/edema values if percentage is used
+        dryWeightVal = temp_weight * (1 - edemaCorrectionPercent);
+    } else {
+        // Absolute correction (Mendenhall)
+        dryWeightVal = temp_weight - ascites - edema;
+    }
+    
     dryWeightVal = dryWeightVal < 0 ? 0 : dryWeightVal;
     
-    // Weight Loss Calculation (Fix: allow both positive and negative to show gain/loss context, but primarily loss)
+    // Weight Loss Calculation
     // Formula: (Usual - Actual) / Usual
     let weightLoss = 0;
     if (usual_weight > 0) {
@@ -922,7 +935,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         }
     });
 
-  }, [gender, age, height, waist, hip, mac, tsf, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, amputationPercent, bodyFatPercent, desiredBodyFat, pregnancyState, pediatricAge, deficit, t]);
+  }, [gender, age, height, waist, hip, mac, tsf, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, edemaCorrectionPercent, amputationPercent, bodyFatPercent, desiredBodyFat, pregnancyState, pediatricAge, deficit, t]);
 
   return {
     inputs: {
@@ -944,6 +957,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       changeDuration, setChangeDuration,
       ascites, setAscites,
       edema, setEdema,
+      edemaCorrectionPercent, setEdemaCorrectionPercent,
       amputationPercent, setAmputationPercent,
       bodyFatPercent, setBodyFatPercent,
       desiredBodyFat, setDesiredBodyFat,
