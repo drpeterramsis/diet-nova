@@ -19,7 +19,7 @@ interface KcalCalculatorProps {
   activeVisit?: { client: Client; visit: ClientVisit } | null;
 }
 
-const CollapsibleCard = ({ title, children, defaultOpen = false }: { title: string, children?: React.ReactNode, defaultOpen?: boolean }) => {
+const CollapsibleCard = ({ title, children, defaultOpen = false }: { title: string, children: React.ReactNode, defaultOpen?: boolean }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
         <div className="card bg-white shadow-sm border border-gray-100 overflow-hidden">
