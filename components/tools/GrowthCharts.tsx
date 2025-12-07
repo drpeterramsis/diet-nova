@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { growthDatasets, GrowthPoint, GrowthDataset } from '../../data/growthChartData';
@@ -92,23 +93,42 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
     // --- Calculation Helper ---
     const calculateInterpretation = (dataset: GrowthDataset, val: number): { percentile: string, color: string, interpretation: string } => {
         const dataPoints = gender === 'male' ? dataset.male : dataset.female;
-        const currentX = dataset.xLabel.includes('Months') ? totalMonths : ageDecimal;
         
-        // Find reference point (closest age)
+        // Determine X Axis Value based on Dataset Config
+        let currentX = 0;
+        if (dataset.xLabel.includes('Length') || dataset.xLabel.includes('Stature')) {
+            currentX = Number(height); // Use Height/Length as X
+        } else if (dataset.xLabel.includes('Months')) {
+            currentX = totalMonths; // Use Age in Months
+        } else {
+            currentX = ageDecimal; // Use Age in Years
+        }
+        
+        // Find reference point (closest X match)
         const ref = dataPoints.reduce((prev, curr) => 
             Math.abs(curr.age - currentX) < Math.abs(prev.age - currentX) ? curr : prev
         );
+
+        // Safety: If ref is too far (e.g. height is out of range for wt/len chart), skip
+        if (Math.abs(ref.age - currentX) > 5 && (dataset.xLabel.includes('Length') || dataset.xLabel.includes('Stature'))) {
+             return { percentile: 'Out of Range', color: '#9ca3af', interpretation: 'Measurements outside chart range' };
+        }
 
         let pText = '';
         let pColor = '';
         let interp = '';
 
         if (val < ref.p3) { pText = '< 3rd'; pColor = '#ef4444'; interp = 'Low / Underweight'; }
-        else if (val < ref.p15) { pText = '3rd - 15th'; pColor = '#f97316'; interp = 'Risk of Low'; }
-        else if (val < ref.p50) { pText = '15th - 50th'; pColor = '#22c55e'; interp = 'Normal'; }
-        else if (val < ref.p85) { pText = '50th - 85th'; pColor = '#22c55e'; interp = 'Normal / Above Avg'; }
-        else if (val < ref.p97) { pText = '85th - 97th'; pColor = '#f97316'; interp = 'Risk of High / Overweight'; }
-        else { pText = '> 97th'; pColor = '#ef4444'; interp = 'High / Obese'; }
+        else if (ref.p5 && val < ref.p5) { pText = '3rd - 5th'; pColor = '#f97316'; interp = 'Risk of Low'; } // CDC specific
+        else if (ref.p15 && val < ref.p15) { pText = '5th - 15th'; pColor = '#f97316'; interp = 'Risk of Low'; } // WHO uses 15
+        else if (ref.p25 && val < ref.p25) { pText = '10th - 25th'; pColor = '#22c55e'; interp = 'Normal'; }
+        else if (val < ref.p50) { pText = '25th - 50th'; pColor = '#22c55e'; interp = 'Normal'; }
+        else if (ref.p75 && val < ref.p75) { pText = '50th - 75th'; pColor = '#22c55e'; interp = 'Normal'; }
+        else if (ref.p85 && val < ref.p85) { pText = '75th - 85th'; pColor = '#22c55e'; interp = 'Normal'; }
+        else if (ref.p90 && val < ref.p90) { pText = '85th - 90th'; pColor = '#f97316'; interp = 'Risk of High'; }
+        else if (ref.p95 && val < ref.p95) { pText = '90th - 95th'; pColor = '#f97316'; interp = 'High Risk'; }
+        else if (val < ref.p97) { pText = '95th - 97th'; pColor = '#ef4444'; interp = 'High / Overweight'; }
+        else { pText = '> 97th'; pColor = '#ef4444'; interp = 'Very High / Obese'; }
 
         return { percentile: pText, color: pColor, interpretation: interp };
     };
@@ -128,9 +148,10 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             if (d.ageRange === '0-36m') {
                 if (totalMonths <= 36) {
                     include = true;
-                    if (d.id.includes('weight')) val = Number(weight);
-                    else if (d.id.includes('length')) val = Number(height);
-                    else if (d.id.includes('head')) val = Number(headCirc);
+                    // Map value to Y axis
+                    if (d.yLabel.includes('Weight')) val = Number(weight);
+                    else if (d.yLabel.includes('Length')) val = Number(height);
+                    else if (d.yLabel.includes('Head')) val = Number(headCirc);
                 }
             } else if (d.ageRange === '2-20y' || d.ageRange === '5-19y') {
                 if (ageYears >= 2) {
@@ -138,9 +159,9 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                     if (d.ageRange === '5-19y' && ageYears < 5) include = false;
                     else {
                         include = true;
-                        if (d.id.includes('weight')) val = Number(weight);
-                        else if (d.id.includes('height')) val = Number(height);
-                        else if (d.id.includes('bmi')) val = Number(bmi);
+                        if (d.yLabel.includes('Weight')) val = Number(weight);
+                        else if (d.yLabel.includes('Stature') || d.yLabel.includes('Height')) val = Number(height);
+                        else if (d.yLabel.includes('BMI')) val = Number(bmi);
                     }
                 }
             }
@@ -148,25 +169,32 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             if (include) {
                 charts.push({ dataset: d, userVal: val });
                 if (val > 0) {
-                    const analysis = calculateInterpretation(d, val);
-                    res.push({
-                        datasetId: d.id,
-                        label: d.label,
-                        value: val,
-                        percentile: analysis.percentile,
-                        color: analysis.color,
-                        interpretation: analysis.interpretation
-                    });
+                    // Check if we have X value for W/L or W/S
+                    const hasX = (d.xLabel.includes('Length') || d.xLabel.includes('Stature')) ? (Number(height) > 0) : true;
+                    
+                    if (hasX) {
+                        const analysis = calculateInterpretation(d, val);
+                        res.push({
+                            datasetId: d.id,
+                            label: d.label,
+                            value: val,
+                            percentile: analysis.percentile,
+                            color: analysis.color,
+                            interpretation: analysis.interpretation
+                        });
+                    }
                 }
             }
         });
 
-        // Sort order: Weight, Length/Height, BMI, Head
-        const order = ['weight', 'length', 'height', 'bmi', 'head'];
+        // Sort order: Weight, Length/Height, BMI, Head, Weight-for-Length
+        const order = ['weight-for-age', 'length-for-age', 'height-for-age', 'bmi', 'head', 'weight-for-length', 'weight-for-stature'];
         charts.sort((a, b) => {
-            const aIdx = order.findIndex(k => a.dataset.id.includes(k));
-            const bIdx = order.findIndex(k => b.dataset.id.includes(k));
-            return aIdx - bIdx;
+            const aLabel = a.dataset.label.toLowerCase();
+            const bLabel = b.dataset.label.toLowerCase();
+            const aIdx = order.findIndex(k => aLabel.includes(k));
+            const bIdx = order.findIndex(k => bLabel.includes(k));
+            return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
         });
 
         return { visibleCharts: charts, results: res };
@@ -202,11 +230,19 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         const dataPoints = gender === 'male' ? dataset.male : dataset.female;
         if (!dataPoints || dataPoints.length === 0) return <div className="text-xs text-gray-400 p-4">No Data Available</div>;
 
-        const currentX = dataset.xLabel.includes('Months') ? totalMonths : ageDecimal;
+        // Determine X Axis
+        let currentX = 0;
+        if (dataset.xLabel.includes('Length') || dataset.xLabel.includes('Stature')) {
+            currentX = Number(height);
+        } else if (dataset.xLabel.includes('Months')) {
+            currentX = totalMonths;
+        } else {
+            currentX = ageDecimal;
+        }
         
         // SVG Dimensions
         const width = 400;
-        const height = 250;
+        const heightPx = 250;
         const pad = { t: 20, r: 30, b: 30, l: 40 };
 
         // Scales
@@ -220,7 +256,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         const yMax = Math.ceil(Math.max(...yVals) * 1.1);
 
         const getX = (val: number) => pad.l + ((val - xMin) / (xMax - xMin)) * (width - pad.l - pad.r);
-        const getY = (val: number) => height - pad.b - ((val - yMin) / (yMax - yMin)) * (height - pad.b - pad.t);
+        const getY = (val: number) => heightPx - pad.b - ((val - yMin) / (yMax - yMin)) * (heightPx - pad.b - pad.t);
 
         const createPath = (key: keyof GrowthPoint) => {
             return 'M ' + dataPoints.map(d => `${getX(d.age)},${getY(d[key] as number)}`).join(' L ');
@@ -246,7 +282,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                 </div>
                 
                 <div className="flex-grow relative">
-                    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto">
+                    <svg viewBox={`0 0 ${width} ${heightPx}`} className="w-full h-auto">
                         {/* Grid Y */}
                         {[0, 0.25, 0.5, 0.75, 1].map(pct => {
                             const val = yMin + pct * (yMax - yMin);
@@ -261,22 +297,27 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
 
                         {/* Percentiles */}
                         <path d={createPath('p97')} fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="4,4" />
-                        <path d={createPath('p85')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" />
+                        {dataset.male[0].p95 && <path d={createPath('p95')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="2,2" />}
+                        {dataset.male[0].p90 && <path d={createPath('p90')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" />}
+                        {dataset.male[0].p85 && <path d={createPath('p85')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" />}
                         <path d={createPath('p50')} fill="none" stroke="#22c55e" strokeWidth="1.5" />
-                        <path d={createPath('p15')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" />
+                        {dataset.male[0].p25 && <path d={createPath('p25')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" />}
+                        {dataset.male[0].p15 && <path d={createPath('p15')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" />}
+                        {dataset.male[0].p10 && <path d={createPath('p10')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" />}
+                        {dataset.male[0].p5 && <path d={createPath('p5')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="2,2" />}
                         <path d={createPath('p3')} fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="4,4" />
 
                         {/* User Point */}
-                        {userVal > 0 && (
+                        {userVal > 0 && currentX >= xMin && currentX <= xMax && (
                             <>
                                 <circle cx={getX(currentX)} cy={getY(userVal)} r="5" fill="#3b82f6" stroke="white" strokeWidth="2" />
                                 <line x1={pad.l} y1={getY(userVal)} x2={width - pad.r} y2={getY(userVal)} stroke="#3b82f6" strokeWidth="1" strokeDasharray="2,2" opacity="0.5" />
-                                <line x1={getX(currentX)} y1={pad.t} x2={getX(currentX)} y2={height - pad.b} stroke="#3b82f6" strokeWidth="1" strokeDasharray="2,2" opacity="0.5" />
+                                <line x1={getX(currentX)} y1={pad.t} x2={getX(currentX)} y2={heightPx - pad.b} stroke="#3b82f6" strokeWidth="1" strokeDasharray="2,2" opacity="0.5" />
                             </>
                         )}
 
                         {/* Axis Label X */}
-                        <text x={width/2} y={height - 5} textAnchor="middle" fontSize="10" fill="#9ca3af">{dataset.xLabel}</text>
+                        <text x={width/2} y={heightPx - 5} textAnchor="middle" fontSize="10" fill="#9ca3af">{dataset.xLabel}</text>
                     </svg>
                 </div>
             </div>
