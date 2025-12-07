@@ -132,11 +132,12 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         let interp = '';
         let biv = false;
 
-        // BIV Flagging Logic (Heuristic based on range width)
-        // If value is significantly outside P3 or P97
+        // BIV Flagging Logic (Heuristic based on range width approximation)
+        // Note: Actual BIV uses Z-scores which require L,M,S tables not fully available here.
+        // This heuristic flags values roughly outside the -5 SD / +5 SD equivalent range.
         const range = ref.p97 - ref.p3;
-        const extremeLow = ref.p3 - (range * 0.5); // Roughly -5 SD zone
-        const extremeHigh = ref.p97 + (range * 0.5); // Roughly +5 SD zone
+        const extremeLow = ref.p3 - (range * 0.6); 
+        const extremeHigh = ref.p97 + (range * 0.6); 
 
         if (val < extremeLow || val > extremeHigh) {
             biv = true;
@@ -408,13 +409,21 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
 
             {/* Inputs Grid (Hidden in Print) */}
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 no-print">
-                {/* Important Reminder */}
-                <div className="mb-4 bg-yellow-50 text-yellow-800 text-xs p-3 rounded-lg border border-yellow-200 shadow-sm">
-                    <strong className="block text-yellow-900 mb-1 text-sm">⚠️ Protocol Reminder</strong>
-                    <ul className="list-disc list-inside space-y-1">
-                        <li>For children from <strong>birth to 2 years</strong>, use <span className="font-bold text-blue-700">WHO</span> growth charts.</li>
-                        <li>For children <strong>2 to 20 years</strong>, use <span className="font-bold text-blue-700">CDC</span> growth charts.</li>
-                        <li>Observations with extreme values (absolute z-scores &gt; 5) are flagged as <span className="font-bold text-red-600">Biologically Implausible (BIV)</span>.</li>
+                {/* Protocol Reminder */}
+                <div className="mb-4 bg-yellow-50 text-yellow-900 text-xs p-3 rounded-lg border border-yellow-200 shadow-sm space-y-2">
+                    <strong className="block text-sm">⚠️ Clinical Protocol (CDC/WHO)</strong>
+                    <ul className="list-disc list-inside space-y-1 ml-1">
+                        <li><strong>&lt; 2 Years:</strong> Use <span className="font-bold text-blue-700">WHO</span> standards (0-24m).</li>
+                        <li><strong>2 - 20 Years:</strong> Use <span className="font-bold text-blue-700">CDC</span> growth charts (2000/2022).</li>
+                        <li><strong>Obesity:</strong> CDC 2022 Extended BMI charts recommended for BMI ≥ 95th percentile.</li>
+                        <li>
+                            <strong>Biologically Implausible Values (BIV):</strong> Extreme outliers may be flagged.
+                            <ul className="list-square list-inside ml-4 text-[10px] text-yellow-800 mt-1">
+                                <li>Weight: &lt; -5 SD or &gt; +8 SD</li>
+                                <li>Height: &lt; -5 SD or &gt; +4 SD</li>
+                                <li>BMI: &lt; -4 SD or &gt; +8 SD</li>
+                            </ul>
+                        </li>
                     </ul>
                 </div>
 
@@ -454,7 +463,16 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                             </div>
                         </div>
                         {ageMode === 'auto' ? (
-                            <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                            <>
+                                <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                                {ageYears !== undefined && ageMonths !== undefined && (
+                                    <div className="mt-2 text-center">
+                                        <span className="inline-block bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full border border-blue-200">
+                                            {ageYears} Years, {ageMonths} Months
+                                        </span>
+                                    </div>
+                                )}
+                            </>
                         ) : (
                             <div className="flex gap-2 items-center">
                                 <div className="relative w-1/2">
