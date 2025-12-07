@@ -1,5 +1,6 @@
+
 {
-  "name": "Copy of Diet-Nova CheckPoint 03 _ v2.0.136",
-  "description": "Updates: WHO Growth Charts (0-24m) data update with LMS Z-score precision. Enhanced accuracy for infants.",
+  "name": "Diet-Nova CheckPoint 03.3 _ v2.0.139",
+  "description": "Updates: Fixed syntax error in Growth Charts Data. WHO Head Circumference data (0-24m) precision update.",
   "requestFramePermissions": []
 }
