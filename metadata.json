@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova CheckPoint 03.3 _ v2.0.139",
-  "description": "Updates: Fixed syntax error in Growth Charts Data. WHO Head Circumference data (0-24m) precision update.",
+  "name": "Diet-Nova CheckPoint 03.5 _ v2.0.140",
+  "description": "Updates: Enhanced Growth Charts UI, Age Mode selector, and WHO Infants reminders.",
   "requestFramePermissions": []
 }
