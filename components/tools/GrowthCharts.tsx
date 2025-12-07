@@ -24,6 +24,7 @@ interface AssessmentResult {
     percentile: string;
     color: string;
     interpretation: string;
+    biv?: boolean; // Flag for Biologically Implausible Value
 }
 
 const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSave }) => {
@@ -96,7 +97,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
     }, [weight, height]);
 
     // --- Calculation Helper ---
-    const calculateInterpretation = (dataset: GrowthDataset, val: number): { percentile: string, color: string, interpretation: string } => {
+    const calculateInterpretation = (dataset: GrowthDataset, val: number): AssessmentResult => {
         const dataPoints = gender === 'male' ? dataset.male : dataset.female;
         
         // Determine X Axis Value based on Dataset Config
@@ -116,12 +117,30 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
 
         // Safety: If ref is too far (e.g. height is out of range for wt/len chart), skip
         if (Math.abs(ref.age - currentX) > 5 && (dataset.xLabel.includes('Length') || dataset.xLabel.includes('Stature'))) {
-             return { percentile: 'Out of Range', color: '#9ca3af', interpretation: 'Measurements outside chart range' };
+             return { 
+                 datasetId: dataset.id,
+                 label: dataset.label,
+                 value: val,
+                 percentile: 'Out of Range', 
+                 color: '#9ca3af', 
+                 interpretation: 'Measurements outside chart range' 
+             };
         }
 
         let pText = '';
         let pColor = '';
         let interp = '';
+        let biv = false;
+
+        // BIV Flagging Logic (Heuristic based on range width)
+        // If value is significantly outside P3 or P97
+        const range = ref.p97 - ref.p3;
+        const extremeLow = ref.p3 - (range * 0.5); // Roughly -5 SD zone
+        const extremeHigh = ref.p97 + (range * 0.5); // Roughly +5 SD zone
+
+        if (val < extremeLow || val > extremeHigh) {
+            biv = true;
+        }
 
         if (val < ref.p3) { pText = '< 3rd'; pColor = '#ef4444'; interp = 'Low / Underweight'; }
         else if (ref.p5 && val < ref.p5) { pText = '3rd - 5th'; pColor = '#f97316'; interp = 'Risk of Low'; } // CDC specific
@@ -135,7 +154,15 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         else if (val < ref.p97) { pText = '95th - 97th'; pColor = '#ef4444'; interp = 'High / Overweight'; }
         else { pText = '> 97th'; pColor = '#ef4444'; interp = 'Very High / Obese'; }
 
-        return { percentile: pText, color: pColor, interpretation: interp };
+        return { 
+            datasetId: dataset.id,
+            label: dataset.label,
+            value: val,
+            percentile: pText, 
+            color: pColor, 
+            interpretation: interp,
+            biv
+        };
     };
 
     // --- Chart Logic ---
@@ -150,43 +177,34 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             let include = false;
             let val = 0;
 
-            if (d.ageRange === '0-36m') {
-                if (totalMonths <= 36) {
-                    include = true;
-                    // Map value to Y axis
-                    if (d.yLabel.includes('Weight')) val = Number(weight);
-                    else if (d.yLabel.includes('Length')) val = Number(height);
-                    else if (d.yLabel.includes('Head')) val = Number(headCirc);
-                }
+            if (d.ageRange === '0-24m') {
+                 if (totalMonths <= 24) include = true;
+            } else if (d.ageRange === '0-36m') {
+                if (totalMonths <= 36) include = true;
             } else if (d.ageRange === '2-20y' || d.ageRange === '5-19y') {
                 if (ageYears >= 2) {
                     // Specific check for WHO 5-19
                     if (d.ageRange === '5-19y' && ageYears < 5) include = false;
-                    else {
-                        include = true;
-                        if (d.yLabel.includes('Weight')) val = Number(weight);
-                        else if (d.yLabel.includes('Stature') || d.yLabel.includes('Height')) val = Number(height);
-                        else if (d.yLabel.includes('BMI')) val = Number(bmi);
-                    }
+                    else include = true;
                 }
             }
 
             if (include) {
+                // Map value to Y axis
+                if (d.yLabel.includes('Weight')) val = Number(weight);
+                else if (d.yLabel.includes('Length') || d.yLabel.includes('Stature') || d.yLabel.includes('Height')) val = Number(height);
+                else if (d.yLabel.includes('Head')) val = Number(headCirc);
+                else if (d.yLabel.includes('BMI')) val = Number(bmi);
+
                 charts.push({ dataset: d, userVal: val });
+                
                 if (val > 0) {
                     // Check if we have X value for W/L or W/S
                     const hasX = (d.xLabel.includes('Length') || d.xLabel.includes('Stature')) ? (Number(height) > 0) : true;
                     
                     if (hasX) {
                         const analysis = calculateInterpretation(d, val);
-                        res.push({
-                            datasetId: d.id,
-                            label: d.label,
-                            value: val,
-                            percentile: analysis.percentile,
-                            color: analysis.color,
-                            interpretation: analysis.interpretation
-                        });
+                        res.push(analysis);
                     }
                 }
             }
@@ -229,8 +247,8 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             note += `\nInterpretations:\n`;
             results.forEach(r => {
                 note += `- ${r.label}: ${r.value} (${r.percentile}) -> ${r.interpretation}\n`;
-                if (r.percentile.includes('< 3rd') || r.percentile.includes('> 97th')) {
-                    note += `  ⚠️ Flag: Potential Biologically Implausible Value (BIV) or Extreme Outlier. Verify measurement.\n`;
+                if (r.biv) {
+                    note += `  ⚠️ FLAG: BIV (Biologically Implausible Value) / Extreme Outlier. Please verify.\n`;
                 }
             });
         }
@@ -278,7 +296,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         const result = results.find(r => r.datasetId === dataset.id);
 
         return (
-            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm flex flex-col h-full break-inside-avoid">
+            <div className={`bg-white border rounded-xl p-3 shadow-sm flex flex-col h-full break-inside-avoid ${result?.biv ? 'border-red-300 ring-1 ring-red-200' : 'border-gray-200'}`}>
                 <div className="flex justify-between items-start mb-2">
                     <div>
                         <h4 className="font-bold text-gray-700 text-sm">{dataset.label}</h4>
@@ -290,6 +308,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                                 {result.percentile}
                             </span>
                             <span className="block text-[9px] text-gray-500">{result.interpretation}</span>
+                            {result.biv && <span className="block text-[9px] text-red-600 font-bold bg-red-50 px-1 rounded mt-1">⚠️ BIV Flag</span>}
                         </div>
                     )}
                 </div>
@@ -351,7 +370,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    <div className="flex bg-white rounded-lg p-1 border border-gray-200">
+                    <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
                         <button 
                             onClick={() => setStandard('WHO')}
                             className={`px-4 py-1.5 rounded-md text-sm font-bold transition ${standard === 'WHO' ? 'bg-blue-100 text-blue-700' : 'text-gray-500 hover:bg-gray-50'}`}
@@ -366,11 +385,11 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                         </button>
                     </div>
                     {onSave && (
-                        <button onClick={handleSaveToNotes} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg font-bold text-sm hover:bg-[var(--color-primary-hover)] transition">
+                        <button onClick={handleSaveToNotes} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg font-bold text-sm hover:bg-[var(--color-primary-hover)] transition shadow-sm">
                             Save to Profile
                         </button>
                     )}
-                    <button onClick={handlePrint} className="px-4 py-2 bg-gray-800 text-white rounded-lg font-bold text-sm hover:bg-gray-900 transition">
+                    <button onClick={handlePrint} className="px-4 py-2 bg-gray-800 text-white rounded-lg font-bold text-sm hover:bg-gray-900 transition shadow-sm">
                         🖨️ Report
                     </button>
                     {onClose && (
@@ -390,8 +409,13 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             {/* Inputs Grid (Hidden in Print) */}
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 no-print">
                 {/* Important Reminder */}
-                <div className="mb-4 bg-yellow-50 text-yellow-800 text-xs p-3 rounded border border-yellow-200 font-medium">
-                    <strong>Reminder:</strong> For children from birth to 2 years, use WHO growth charts. For children 2 to 20 years, use CDC growth charts.
+                <div className="mb-4 bg-yellow-50 text-yellow-800 text-xs p-3 rounded-lg border border-yellow-200 shadow-sm">
+                    <strong className="block text-yellow-900 mb-1 text-sm">⚠️ Protocol Reminder</strong>
+                    <ul className="list-disc list-inside space-y-1">
+                        <li>For children from <strong>birth to 2 years</strong>, use <span className="font-bold text-blue-700">WHO</span> growth charts.</li>
+                        <li>For children <strong>2 to 20 years</strong>, use <span className="font-bold text-blue-700">CDC</span> growth charts.</li>
+                        <li>Observations with extreme values (absolute z-scores > 5) are flagged as <span className="font-bold text-red-600">Biologically Implausible (BIV)</span>.</li>
+                    </ul>
                 </div>
 
                 <div className="mb-4 pb-2 border-b border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -400,13 +424,13 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                     <input type="text" placeholder="Patient Name (Optional)" value={patientName} onChange={e => setPatientName(e.target.value)} className="text-xs border-b border-gray-300 focus:border-blue-500 outline-none p-1" />
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 items-end">
                     {/* Row 1: Personal */}
                     <div className="col-span-2 md:col-span-1">
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Gender</label>
-                        <div className="flex rounded overflow-hidden border border-gray-300">
-                            <button onClick={() => setGender('male')} className={`flex-1 py-1.5 text-sm ${gender === 'male' ? 'bg-blue-600 text-white' : 'bg-gray-50'}`}>Male</button>
-                            <button onClick={() => setGender('female')} className={`flex-1 py-1.5 text-sm ${gender === 'female' ? 'bg-pink-600 text-white' : 'bg-gray-50'}`}>Female</button>
+                        <div className="flex rounded-lg overflow-hidden border border-gray-300 shadow-sm">
+                            <button onClick={() => setGender('male')} className={`flex-1 py-1.5 text-sm font-bold transition ${gender === 'male' ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>Male</button>
+                            <button onClick={() => setGender('female')} className={`flex-1 py-1.5 text-sm font-bold transition ${gender === 'female' ? 'bg-pink-600 text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>Female</button>
                         </div>
                     </div>
                     
@@ -414,32 +438,32 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                         <div className="flex justify-between mb-1 items-center">
                             <label className="block text-xs font-bold text-gray-500 uppercase">Age Mode</label>
                             {/* Professional Toggle for Manual/Auto */}
-                            <div className="flex bg-gray-100 p-0.5 rounded text-[10px]">
+                            <div className="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200">
                                 <button
                                     onClick={() => setAgeMode('auto')}
-                                    className={`px-2 py-0.5 rounded transition ${ageMode === 'auto' ? 'bg-white shadow text-blue-600 font-bold' : 'text-gray-500'}`}
+                                    className={`px-3 py-0.5 rounded-md text-[10px] font-bold transition ${ageMode === 'auto' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
                                     Auto
                                 </button>
                                 <button
                                     onClick={() => setAgeMode('manual')}
-                                    className={`px-2 py-0.5 rounded transition ${ageMode === 'manual' ? 'bg-white shadow text-blue-600 font-bold' : 'text-gray-500'}`}
+                                    className={`px-3 py-0.5 rounded-md text-[10px] font-bold transition ${ageMode === 'manual' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
                                     Manual
                                 </button>
                             </div>
                         </div>
                         {ageMode === 'auto' ? (
-                            <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full p-1.5 border rounded text-sm" />
+                            <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
                         ) : (
-                            <div className="flex gap-1 items-center">
+                            <div className="flex gap-2 items-center">
                                 <div className="relative w-1/2">
-                                    <input type="number" placeholder="0" value={ageYears} onChange={(e) => setAgeYears(Number(e.target.value))} className="w-full p-1.5 border rounded text-sm text-center" min="0" />
-                                    <span className="absolute right-1 top-1.5 text-[10px] text-gray-400">Yrs</span>
+                                    <input type="number" placeholder="0" value={ageYears} onChange={(e) => setAgeYears(Number(e.target.value))} className="w-full p-2 border rounded-lg text-sm text-center font-bold focus:ring-2 focus:ring-blue-500 outline-none" min="0" />
+                                    <span className="absolute right-2 top-2 text-[10px] text-gray-400 font-bold uppercase">Yrs</span>
                                 </div>
                                 <div className="relative w-1/2">
-                                    <input type="number" placeholder="0" value={ageMonths} onChange={(e) => setAgeMonths(Number(e.target.value))} className="w-full p-1.5 border rounded text-sm text-center" min="0" max="11" />
-                                    <span className="absolute right-1 top-1.5 text-[10px] text-gray-400">Mos</span>
+                                    <input type="number" placeholder="0" value={ageMonths} onChange={(e) => setAgeMonths(Number(e.target.value))} className="w-full p-2 border rounded-lg text-sm text-center font-bold focus:ring-2 focus:ring-blue-500 outline-none" min="0" max="11" />
+                                    <span className="absolute right-2 top-2 text-[10px] text-gray-400 font-bold uppercase">Mos</span>
                                 </div>
                             </div>
                         )}
@@ -448,42 +472,45 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                     {/* Row 2: Measurements */}
                     <div className="col-span-1">
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Weight (kg)</label>
-                        <input type="number" value={weight} onChange={(e) => setWeight(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-1.5 border rounded text-sm font-bold text-blue-700" placeholder="0" />
+                        <input type="number" value={weight} onChange={(e) => setWeight(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-2 border rounded-lg text-sm font-bold text-blue-700 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0" />
                     </div>
                     <div className="col-span-1">
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{totalMonths < 24 ? 'Length' : 'Height'} (cm)</label>
-                        <input type="number" value={height} onChange={(e) => setHeight(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-1.5 border rounded text-sm font-bold text-blue-700" placeholder="0" />
+                        <input type="number" value={height} onChange={(e) => setHeight(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-2 border rounded-lg text-sm font-bold text-blue-700 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0" />
                     </div>
                     <div className="col-span-1">
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Head Circ (cm)</label>
-                        <input type="number" value={headCirc} onChange={(e) => setHeadCirc(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-1.5 border rounded text-sm font-bold text-purple-700" placeholder="0" />
+                        <input type="number" value={headCirc} onChange={(e) => setHeadCirc(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-2 border rounded-lg text-sm font-bold text-purple-700 focus:ring-2 focus:ring-purple-500 outline-none" placeholder="0" />
                     </div>
                     
                     {/* Calculated */}
                     <div className="col-span-1 md:col-span-2 lg:col-span-1">
                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">BMI (Auto)</label>
-                        <div className="w-full p-1.5 border rounded text-sm bg-gray-100 text-center font-mono font-bold text-gray-700">
+                        <div className="w-full p-2 border rounded-lg text-sm bg-gray-100 text-center font-mono font-bold text-gray-700">
                             {bmi || '-'}
                         </div>
                     </div>
                 </div>
 
                 {/* Additional Inputs for WHO Infants (<2y) */}
-                {standard === 'WHO' && totalMonths < 24 && (
+                {standard === 'WHO' && totalMonths <= 24 && (
                     <div className="mt-4 pt-3 border-t border-dashed border-gray-200">
-                        <p className="text-xs font-bold text-green-700 uppercase mb-2">Detailed Infant Metrics (Recording Only)</p>
+                        <div className="flex justify-between items-center mb-2">
+                            <p className="text-xs font-bold text-green-700 uppercase">Detailed Infant Metrics (Recording Only)</p>
+                            <span className="text-[10px] bg-green-50 text-green-600 px-2 py-0.5 rounded border border-green-100">0-2 Years</span>
+                        </div>
                         <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Arm Circ (cm)</label>
-                                <input type="number" value={armCirc} onChange={(e) => setArmCirc(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-1.5 border rounded text-sm" placeholder="MAC" />
+                                <input type="number" value={armCirc} onChange={(e) => setArmCirc(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-1.5 border rounded text-sm focus:ring-1 focus:ring-green-500 outline-none" placeholder="MAC" />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">TSF (mm)</label>
-                                <input type="number" value={tsf} onChange={(e) => setTsf(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-1.5 border rounded text-sm" placeholder="Triceps" />
+                                <input type="number" value={tsf} onChange={(e) => setTsf(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-1.5 border rounded text-sm focus:ring-1 focus:ring-green-500 outline-none" placeholder="Triceps" />
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">SSF (mm)</label>
-                                <input type="number" value={ssf} onChange={(e) => setSsf(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-1.5 border rounded text-sm" placeholder="Subscapular" />
+                                <input type="number" value={ssf} onChange={(e) => setSsf(e.target.value === '' ? '' : Number(e.target.value))} className="w-full p-1.5 border rounded text-sm focus:ring-1 focus:ring-green-500 outline-none" placeholder="Subscapular" />
                             </div>
                         </div>
                     </div>
@@ -526,15 +553,17 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {results.map((res) => (
-                                    <tr key={res.datasetId}>
+                                    <tr key={res.datasetId} className={res.biv ? "bg-red-50" : ""}>
                                         <td className="p-3 font-medium">{res.label}</td>
                                         <td className="p-3 text-center font-bold">{res.value}</td>
                                         <td className="p-3 text-center" style={{ color: res.color, fontWeight: 'bold' }}>{res.percentile}</td>
                                         <td className="p-3 text-gray-600">
                                             {res.interpretation}
                                             {/* Flag for extreme outliers */}
-                                            {(res.percentile.includes('< 3rd') || res.percentile.includes('> 97th')) && (
-                                                <span className="block text-[10px] text-red-500 font-bold mt-1">⚠️ Possible BIV (Extreme)</span>
+                                            {res.biv && (
+                                                <span className="block text-[10px] text-red-600 font-bold mt-1 bg-red-100 px-2 py-0.5 rounded w-fit">
+                                                    ⚠️ Biologically Implausible (BIV)
+                                                </span>
                                             )}
                                         </td>
                                     </tr>
@@ -558,7 +587,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                     <div className="col-span-full text-center py-10 text-gray-400 bg-white rounded-xl border border-dashed border-gray-300">
                         <span className="text-4xl block mb-2">📊</span>
                         No charts available for this age range ({ageYears}y {ageMonths}m) in {standard} standard.
-                        {standard === 'WHO' && ageYears < 5 && <p className="text-xs mt-2 text-red-400">(WHO data currently available for 5-19y only. Switch to CDC for infants/toddlers)</p>}
+                        {standard === 'WHO' && ageYears < 5 && totalMonths > 24 && <p className="text-xs mt-2 text-red-400">(WHO data gap between 24m-5y? Please check CDC for this range or update source)</p>}
                     </div>
                 )}
             </div>
