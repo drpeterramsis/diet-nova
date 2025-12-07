@@ -414,7 +414,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                     <ul className="list-disc list-inside space-y-1">
                         <li>For children from <strong>birth to 2 years</strong>, use <span className="font-bold text-blue-700">WHO</span> growth charts.</li>
                         <li>For children <strong>2 to 20 years</strong>, use <span className="font-bold text-blue-700">CDC</span> growth charts.</li>
-                        <li>Observations with extreme values (absolute z-scores > 5) are flagged as <span className="font-bold text-red-600">Biologically Implausible (BIV)</span>.</li>
+                        <li>Observations with extreme values (absolute z-scores &gt; 5) are flagged as <span className="font-bold text-red-600">Biologically Implausible (BIV)</span>.</li>
                     </ul>
                 </div>
 
