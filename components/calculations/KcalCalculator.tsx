@@ -23,7 +23,7 @@ interface KcalCalculatorProps {
 const CollapsibleCard = ({ title, children, defaultOpen = false }: React.PropsWithChildren<{ title: string, defaultOpen?: boolean }>) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
-        <div className="card bg-white overflow-hidden transition-all duration-300">
+        <div className={`card bg-white transition-all duration-300 ${isOpen ? 'overflow-visible' : 'overflow-hidden'}`}>
             <div 
                 className="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50 transition border-b border-gray-100"
                 onClick={() => setIsOpen(!isOpen)}

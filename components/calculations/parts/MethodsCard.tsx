@@ -1,6 +1,3 @@
-
-
-
 import React, { useState } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { KcalResults } from '../hooks/useKcalCalculations';
@@ -11,13 +8,13 @@ interface MethodsCardProps {
   setDeficit: (v: number) => void;
 }
 
-// Tooltip Helper
+// Tooltip Helper - Fixed Z-Index
 const EquationTooltip: React.FC<{ formula: string }> = ({ formula }) => (
     <div className="group relative inline-block ml-1">
         <span className="cursor-help text-gray-400 text-[10px] font-mono border border-gray-300 rounded px-1 hover:bg-gray-100 hover:text-blue-600 transition">
             fx
         </span>
-        <div className="hidden group-hover:block absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] bg-gray-800 text-white text-[10px] p-2 rounded shadow-lg break-words text-center leading-tight">
+        <div className="hidden group-hover:block absolute z-[999] bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] bg-gray-800 text-white text-[10px] p-2 rounded shadow-lg break-words text-center leading-tight">
             {formula}
             <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
         </div>
@@ -62,7 +59,7 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
       </div>
 
       {/* Render Active Method */}
-      <div className="bg-white rounded-xl overflow-hidden animate-fade-in border border-gray-100">
+      <div className="bg-white rounded-xl overflow-visible animate-fade-in border border-gray-100">
           
           {/* PEDIATRIC METHODS */}
           {activeMethod === 'pediatric' && r.pediatricMethods && r.pediatric && (
@@ -184,7 +181,7 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
                         type="number" 
                         value={deficit} 
                         onChange={(e) => setDeficit(Number(e.target.value))}
-                        className="w-12 h-6 p-1 rounded border text-center text-xs bg-red-50 border-red-200"
+                        className="w-12 h-6 p-1 rounded border text-center text-xs bg-red-50 border-red-200 font-bold text-red-700"
                     />
                  </div>
                </div>
@@ -193,9 +190,9 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
                  <thead className="bg-gray-100 text-gray-600 text-[10px] uppercase">
                    <tr>
                      <th className="p-2 text-left border-b w-1/4">Equation</th>
-                     <th className="p-2 text-center border-b">BMR (Dry)</th>
-                     <th className="p-2 text-center border-b bg-gray-50 font-bold text-gray-800">TEE (Dry)</th>
-                     <th className="p-2 text-center border-b bg-blue-50 font-bold text-blue-800">TEE (Sel)</th>
+                     <th className="p-2 text-center border-b">BMR (Base)</th>
+                     <th className="p-2 text-center border-b bg-gray-50 font-bold text-gray-800">Target (Dry)</th>
+                     <th className="p-2 text-center border-b bg-blue-50 font-bold text-blue-800">Target (Sel)</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-gray-100">
@@ -218,8 +215,8 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
                  </tbody>
                </table>
                {deficit > 0 && (
-                   <div className="text-[10px] text-center text-red-500 mt-1 font-bold">
-                       Results shown are TEE. Subtract {deficit} manually or apply in Planner.
+                   <div className="text-[10px] text-center text-green-600 mt-1 font-bold bg-green-50 p-1 rounded">
+                       Note: Results include -{deficit} kcal deficit applied to TEE.
                    </div>
                )}
              </div>

@@ -621,6 +621,14 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     
     const actFactor = physicalActivity_val > 0 ? physicalActivity_val : 1.2;
 
+    // Apply Deficit Logic here for M3
+    // Note: If actFactor is 1.0 (BMR), we usually don't subtract deficit from BMR directly, but TEE.
+    // Assuming actFactor is applied to get TEE, then subtract deficit.
+    const harrisDryTEE = (harrisDry * actFactor) - deficit;
+    const harrisSelTEE = (harrisSel * actFactor) - deficit;
+    const mifflinDryTEE = (mifflinDry * actFactor) - deficit;
+    const mifflinSelTEE = (mifflinSel * actFactor) - deficit;
+
     // M5: Simple 30 kcal/kg
     let m5ResultDry = dryWeightVal * 30;
     let m5ResultSel = selWeightVal * 30;
@@ -673,8 +681,9 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         m1: { bmiValue: bmiVal, factor: m1Factor, resultDry: m1Dry, resultSel: m1Sel },
         m2: { actual: m2Actual, selected: m2Selected },
         m3: {
-            harris: { bmrDry: harrisDry, teeDry: harrisDry * actFactor, bmrSel: harrisSel, teeSel: harrisSel * actFactor },
-            mifflin: { bmrDry: mifflinDry, teeDry: mifflinDry * actFactor, bmrSel: mifflinSel, teeSel: mifflinSel * actFactor }
+            // Updated to return TEE (calculated with activity - deficit)
+            harris: { bmrDry: harrisDry, teeDry: harrisDryTEE, bmrSel: harrisSel, teeSel: harrisSelTEE },
+            mifflin: { bmrDry: mifflinDry, teeDry: mifflinDryTEE, bmrSel: mifflinSel, teeSel: mifflinSelTEE }
         },
         m5: { resultDry: m5ResultDry, resultSel: m5ResultSel, category: 'Adult', notes: [] },
         m6: { resultDry: m6ResultDry, resultSel: m6ResultSel, label: 'Adult EER (IOM)', note: '', proteinRef: m6Formula },
