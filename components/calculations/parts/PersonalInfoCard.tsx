@@ -39,6 +39,7 @@ interface PersonalInfoProps {
   onOpenHeightEstimator?: () => void;
   onOpenPediatricWaist?: () => void;
   onOpenPediatricMAMC?: () => void;
+  onOpenGrowthCharts?: () => void;
 }
 
 const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
@@ -49,17 +50,30 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
   pregnancyState, setPregnancyState,
   onOpenHeightEstimator,
   onOpenPediatricWaist,
-  onOpenPediatricMAMC
+  onOpenPediatricMAMC,
+  onOpenGrowthCharts
 }) => {
   const { t } = useLanguage();
 
   const isInfant = age < 2; // < 24 months
+  const isPediatric = pediatricAge !== null || age < 20;
 
   return (
     <div className="card bg-white p-3">
       <div className="flex items-center gap-2 mb-3 pb-1 border-b border-gray-100">
         <span className="text-xl">👤</span>
         <h2 className="text-lg font-bold text-[var(--color-heading)]">{t.kcal.personalInfo}</h2>
+        
+        {/* Growth Charts Trigger - Visible if Pediatric */}
+        {isPediatric && onOpenGrowthCharts && (
+            <button 
+                onClick={onOpenGrowthCharts}
+                className="ml-auto bg-blue-100 hover:bg-blue-200 text-blue-800 text-[10px] font-bold px-2 py-1 rounded-full border border-blue-200 flex items-center gap-1 transition"
+                title="Open Growth Charts"
+            >
+                <span>📈</span> Charts
+            </button>
+        )}
       </div>
       
       {/* Condensed Grid: 2 cols on mobile, 4 on desktop */}

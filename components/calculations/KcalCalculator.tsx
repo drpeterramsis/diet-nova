@@ -9,6 +9,7 @@ import WeightAnalysisCard from './parts/WeightAnalysisCard';
 import HeightEstimator from '../tools/HeightEstimator';
 import PediatricWaist from '../tools/PediatricWaist';
 import PediatricMAMC from '../tools/PediatricMAMC';
+import GrowthCharts from '../tools/GrowthCharts';
 import { Client, ClientVisit } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -44,6 +45,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
   const [showHeightEstimator, setShowHeightEstimator] = useState(false);
   const [showPediatricWaist, setShowPediatricWaist] = useState(false);
   const [showPediatricMAMC, setShowPediatricMAMC] = useState(false);
+  const [showGrowthCharts, setShowGrowthCharts] = useState(false);
 
   // Hydrate state from activeVisit.kcal_data if available
   useEffect(() => {
@@ -142,10 +144,14 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
   const handleToolNoteSave = (note: string) => {
       const newNotes = inputs.notes ? inputs.notes + "\n\n" + note : note;
       inputs.setNotes(newNotes);
-      // Close the modal
+      // Close the modals
       setShowPediatricWaist(false);
       setShowPediatricMAMC(false);
+      setShowGrowthCharts(false);
   };
+
+  // Check if current mode is pediatric
+  const isPediatric = inputs.pediatricAge !== null || inputs.age < 20;
 
   return (
     <div className="max-w-[1920px] mx-auto animate-fade-in relative">
@@ -197,10 +203,11 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
           </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* 3 Column Layout for XL screens */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         
-        {/* Left Column: Inputs & Methods */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Column 1: Inputs */}
+        <div className="space-y-6">
             <CollapsibleCard title={t.kcal.personalInfo} defaultOpen={true}>
                 <PersonalInfoCard 
                 gender={inputs.gender} setGender={inputs.setGender}
@@ -218,6 +225,7 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                 onOpenHeightEstimator={() => setShowHeightEstimator(true)}
                 onOpenPediatricWaist={() => setShowPediatricWaist(true)}
                 onOpenPediatricMAMC={() => setShowPediatricMAMC(true)}
+                onOpenGrowthCharts={() => setShowGrowthCharts(true)}
                 />
             </CollapsibleCard>
 
@@ -235,7 +243,10 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                 age={inputs.age}
                 />
             </CollapsibleCard>
+        </div>
 
+        {/* Column 2: Methods */}
+        <div className="space-y-6">
             <CollapsibleCard title={t.kcal.methods} defaultOpen={true}>
                 <MethodsCard 
                 results={results}
@@ -245,8 +256,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
             </CollapsibleCard>
         </div>
 
-        {/* Right Column: Results */}
-        <div className="lg:col-span-1 space-y-6">
+        {/* Column 3: Results (Sticky on large screens) */}
+        <div className="space-y-6">
             <div className="sticky top-24 space-y-4">
                 <ResultsSummaryCard 
                     results={results} 
@@ -320,6 +331,24 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                       initialGender={inputs.gender}
                       initialAge={inputs.age}
                       initialMac={inputs.mac}
+                      onSave={handleToolNoteSave}
+                  />
+              </div>
+          </div>
+      )}
+
+      {/* Growth Charts Modal */}
+      {showGrowthCharts && (
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="w-full max-w-6xl max-h-[95vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
+                  <GrowthCharts 
+                      onClose={() => setShowGrowthCharts(false)}
+                      initialData={{
+                          gender: inputs.gender,
+                          age: inputs.age,
+                          weight: inputs.currentWeight,
+                          height: inputs.height
+                      }}
                       onSave={handleToolNoteSave}
                   />
               </div>

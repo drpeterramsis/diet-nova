@@ -32,6 +32,7 @@ interface AssessmentResult {
     recommendations?: {
         physical?: string;
         labs?: string;
+        management?: string; // New field for Weight Management Advice
     };
 }
 
@@ -56,6 +57,28 @@ function percentileToZScore(p: number): number | null {
     if (prob < 0.5) z = -z;
     
     return parseFloat(z.toFixed(2));
+}
+
+// Helper: Get Pediatric Weight Management Advice (Based on Table)
+function getPediatricWeightManagementAdvice(ageYears: number, percentile: number): string | undefined {
+    if (ageYears < 2 || ageYears > 18) return undefined;
+    if (percentile < 85) return undefined;
+
+    // Logic based on provided table
+    if (ageYears >= 2 && ageYears <= 5) {
+        if (percentile >= 99) return "Gradual wt loss of up to 0.5 kg/month if BMI > 21 or 22.";
+        if (percentile >= 95) return "Weight maintenance.";
+        if (percentile >= 85) return "No Risk: Maintain wt velocity. | With Risk: Decrease wt velocity or wt maintenance.";
+    } else if (ageYears >= 6 && ageYears <= 11) {
+        if (percentile >= 99) return "Wt loss not to exceed an average of 1 kg/week.";
+        if (percentile >= 95) return "Wt maintenance or gradual loss (0.5 kg/month).";
+        if (percentile >= 85) return "No Risk: Maintain wt velocity. | With Risk: Decrease wt velocity or wt maintenance.";
+    } else if (ageYears >= 12 && ageYears <= 18) {
+        if (percentile >= 99) return "Wt loss not to exceed an average of 1 kg/week.";
+        if (percentile >= 95) return "Wt loss not to exceed an average of 1 kg/week.";
+        if (percentile >= 85) return "No Risk: Maintain wt velocity (after linear growth complete, maintain wt). | With Risk: Decrease wt velocity or wt maintenance.";
+    }
+    return undefined;
 }
 
 const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSave }) => {
@@ -257,10 +280,6 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         }
 
         // CDC Override for BMI (85-95 Overweight, >95 Obese)
-        // If Standard is CDC, we might want to stick to CDC terminology strictly, 
-        // BUT the user asked to follow the specific table. The table lists CDC columns too.
-        // The table says CDC Overweight is 85th-95th. The Logic above says 85-97 is Risk/Overweight.
-        // Let's refine for CDC standard specifically if needed.
         if (standard === 'CDC' && metricType === 'bmi') {
             if (percentile >= 95) {
                 interpretation = "Obese";
@@ -269,7 +288,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             } else if (percentile >= 85) {
                 interpretation = "Overweight";
                 color = '#f97316';
-                recommendation = "Equation for overweight and obese children"; // Or weight maintenance
+                recommendation = "Equation for overweight and obese children";
             }
         }
 
@@ -346,23 +365,33 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         else if (dataset.yLabel.includes('Head')) metricType = 'head';
 
         // Get Clinical Logic based on Percentile/Z-Score
-        // Use exactP if available, otherwise estimate from range (not ideal but fallback)
         const pForLogic = exactP !== null ? exactP : (val > ref.p97 ? 99 : val < ref.p3 ? 1 : 50);
         
         const { interpretation, color, recommendation } = getClinicalInterpretation(metricType, pForLogic, standard);
 
-        // Additional Recommendations (from previous logic, kept for detail)
-        let detailedRecs = undefined;
+        // Additional Recommendations
+        let detailedRecs: AssessmentResult['recommendations'] = undefined;
+        
         if (metricType === 'bmi' && exactP) {
+            // Pediatric Weight Management Instructions (New Feature)
+            const managementAdvice = getPediatricWeightManagementAdvice(ageYears, exactP);
+
             if (exactP >= 85 && exactP < 95) {
                 detailedRecs = {
                     physical: "Blood pressure, full exam",
-                    labs: "Fasting lipid profile. Conditional testing for abnormalities in blood glucose or liver function."
+                    labs: "Fasting lipid profile. Conditional testing for abnormalities in blood glucose or liver function.",
+                    management: managementAdvice
                 };
             } else if (exactP >= 95) {
                 detailedRecs = {
                     physical: "Blood pressure, full exam",
-                    labs: "Fasting lipid profile, fasting glucose level & post prandial (every 2 years), ALT and AST levels (every 2 years)."
+                    labs: "Fasting lipid profile, fasting glucose level & post prandial (every 2 years), ALT and AST levels (every 2 years).",
+                    management: managementAdvice
+                };
+            } else if (managementAdvice) {
+                // For cases like >= 99th or if just management advice is relevant
+                detailedRecs = {
+                    management: managementAdvice
                 };
             }
         }
@@ -470,8 +499,9 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                 if (r.equationRecommendation) note += `  [Eq]: ${r.equationRecommendation}\n`;
                 
                 if (r.recommendations) {
-                    note += `  [Rec] Physical: ${r.recommendations.physical}\n`;
-                    note += `  [Rec] Labs: ${r.recommendations.labs}\n`;
+                    if (r.recommendations.physical) note += `  [Rec] Physical: ${r.recommendations.physical}\n`;
+                    if (r.recommendations.labs) note += `  [Rec] Labs: ${r.recommendations.labs}\n`;
+                    if (r.recommendations.management) note += `  [PLAN] Weight Mgmt: ${r.recommendations.management}\n`;
                 }
 
                 if (r.biv) {
@@ -861,15 +891,27 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                                 <div className="font-bold text-blue-900 mb-2 flex items-center gap-2">
                                     Based on {res.label} ({res.interpretation})
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                    <div className="bg-white p-3 rounded border border-blue-100">
-                                        <div className="font-bold text-gray-700 mb-1 text-xs uppercase">🩺 Physical Examination</div>
-                                        <div className="text-gray-600">{res.recommendations?.physical}</div>
-                                    </div>
-                                    <div className="bg-white p-3 rounded border border-blue-100">
-                                        <div className="font-bold text-gray-700 mb-1 text-xs uppercase">🧪 Laboratory Tests</div>
-                                        <div className="text-gray-600">{res.recommendations?.labs}</div>
-                                    </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                                    {res.recommendations?.management && (
+                                        <div className="bg-orange-50 p-3 rounded border border-orange-200 col-span-1 md:col-span-2 lg:col-span-3">
+                                            <div className="font-bold text-orange-800 mb-1 text-xs uppercase flex items-center gap-2">
+                                                <span>⚖️</span> Weight Management Goal
+                                            </div>
+                                            <div className="text-orange-900 font-medium leading-relaxed">{res.recommendations.management}</div>
+                                        </div>
+                                    )}
+                                    {res.recommendations?.physical && (
+                                        <div className="bg-white p-3 rounded border border-blue-100">
+                                            <div className="font-bold text-gray-700 mb-1 text-xs uppercase">🩺 Physical Examination</div>
+                                            <div className="text-gray-600">{res.recommendations.physical}</div>
+                                        </div>
+                                    )}
+                                    {res.recommendations?.labs && (
+                                        <div className="bg-white p-3 rounded border border-blue-100">
+                                            <div className="font-bold text-gray-700 mb-1 text-xs uppercase">🧪 Laboratory Tests</div>
+                                            <div className="text-gray-600">{res.recommendations.labs}</div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
