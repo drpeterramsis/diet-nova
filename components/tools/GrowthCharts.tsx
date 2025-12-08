@@ -23,9 +23,37 @@ interface AssessmentResult {
     value: number;
     rangeLabel: string; // e.g. "50th - 75th"
     exactPercentile: number | null; // e.g. 65.4
+    zScore: number | null; // e.g. +1.2
     color: string;
     interpretation: string;
     biv?: boolean; // Flag for Biologically Implausible Value
+    recommendations?: {
+        physical?: string;
+        labs?: string;
+    };
+}
+
+// Helper: Approximate Inverse Normal Distribution (Probit) to get Z-Score from Percentile
+// Source: Abramowitz and Stegun (1964) formula
+function percentileToZScore(p: number): number | null {
+    if (p <= 0 || p >= 100) return null;
+    
+    // Convert percentage to decimal probability
+    const prob = p / 100;
+    
+    const c0 = 2.515517;
+    const c1 = 0.802853;
+    const c2 = 0.010328;
+    const d1 = 1.432788;
+    const d2 = 0.189269;
+    const d3 = 0.001308;
+
+    const t = Math.sqrt(-2 * Math.log(Math.min(prob, 1 - prob)));
+    let z = t - ((c2 * t + c1) * t + c0) / (((d3 * t + d2) * t + d1) * t + 1);
+
+    if (prob < 0.5) z = -z;
+    
+    return parseFloat(z.toFixed(2));
 }
 
 const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSave }) => {
@@ -151,6 +179,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                  value: val,
                  rangeLabel: 'Out of Range',
                  exactPercentile: null,
+                 zScore: null,
                  color: '#9ca3af', 
                  interpretation: 'Measurements outside chart range' 
              };
@@ -160,6 +189,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         let pColor = '';
         let interp = '';
         let biv = false;
+        let recommendations = undefined;
 
         // BIV Flagging Logic (Heuristic based on range width approximation)
         const range = ref.p97 - ref.p3;
@@ -170,20 +200,54 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             biv = true;
         }
 
-        // Calculate Exact Percentile
+        // Calculate Exact Percentile & Z-Score
         const exactP = interpolatePercentile(val, ref);
+        const zScore = exactP ? percentileToZScore(exactP) : null;
 
-        if (val < ref.p3) { pText = '< 3rd'; pColor = '#ef4444'; interp = 'Low / Underweight'; }
-        else if (ref.p5 && val < ref.p5) { pText = '3rd - 5th'; pColor = '#f97316'; interp = 'Risk of Low'; } // CDC specific
-        else if (ref.p15 && val < ref.p15) { pText = '5th - 15th'; pColor = '#f97316'; interp = 'Risk of Low'; } // WHO uses 15
-        else if (ref.p25 && val < ref.p25) { pText = '10th - 25th'; pColor = '#22c55e'; interp = 'Normal'; }
-        else if (val < ref.p50) { pText = '25th - 50th'; pColor = '#22c55e'; interp = 'Normal'; }
-        else if (ref.p75 && val < ref.p75) { pText = '50th - 75th'; pColor = '#22c55e'; interp = 'Normal'; }
-        else if (ref.p85 && val < ref.p85) { pText = '75th - 85th'; pColor = '#22c55e'; interp = 'Normal'; }
-        else if (ref.p90 && val < ref.p90) { pText = '85th - 90th'; pColor = '#f97316'; interp = 'Risk of High'; }
-        else if (ref.p95 && val < ref.p95) { pText = '90th - 95th'; pColor = '#f97316'; interp = 'High Risk'; }
-        else if (val < ref.p97) { pText = '95th - 97th'; pColor = '#ef4444'; interp = 'High / Overweight'; }
-        else { pText = '> 97th'; pColor = '#ef4444'; interp = 'Very High / Obese'; }
+        if (val < ref.p3) { pText = '< 3rd'; pColor = '#ef4444'; interp = 'Underweight (< 5%)'; }
+        else if (ref.p5 && val < ref.p5) { pText = '3rd - 5th'; pColor = '#f97316'; interp = 'Risk of Underweight (< 5%)'; }
+        else if (ref.p15 && val < ref.p15) { pText = '5th - 15th'; pColor = '#22c55e'; interp = 'Normal (5-84%)'; }
+        else if (ref.p25 && val < ref.p25) { pText = '15th - 25th'; pColor = '#22c55e'; interp = 'Normal (5-84%)'; }
+        else if (val < ref.p50) { pText = '25th - 50th'; pColor = '#22c55e'; interp = 'Normal (5-84%)'; }
+        else if (ref.p75 && val < ref.p75) { pText = '50th - 75th'; pColor = '#22c55e'; interp = 'Normal (5-84%)'; }
+        else if (ref.p85 && val < ref.p85) { pText = '75th - 85th'; pColor = '#22c55e'; interp = 'Normal (5-84%)'; }
+        else if (ref.p90 && val < ref.p90) { 
+            pText = '85th - 90th'; 
+            pColor = '#f97316'; 
+            interp = 'Overweight (85-94%)'; 
+        }
+        else if (ref.p95 && val < ref.p95) { 
+            pText = '90th - 95th'; 
+            pColor = '#f97316'; 
+            interp = 'Overweight (85-94%)'; 
+        }
+        else if (val < ref.p97) { 
+            pText = '95th - 97th'; 
+            pColor = '#ef4444'; 
+            interp = 'Obese (95-99%)'; 
+        }
+        else { 
+            pText = '> 97th'; 
+            pColor = '#ef4444'; 
+            interp = 'Morbid Obesity (> 99%)'; 
+        }
+
+        // Recommendations Logic (Based on BMI Percentile for Children > 2y)
+        if (dataset.yLabel.includes('BMI') && exactP) {
+            if (exactP >= 85 && exactP < 95) {
+                // Overweight (85th-94th)
+                recommendations = {
+                    physical: "Blood pressure, full exam",
+                    labs: "Fasting lipid profile. Conditional testing for abnormalities in blood glucose or liver function."
+                };
+            } else if (exactP >= 95) {
+                // Obese (>= 95th)
+                recommendations = {
+                    physical: "Blood pressure, full exam",
+                    labs: "Fasting lipid profile, fasting glucose level & post prandial (every 2 years), ALT and AST levels (every 2 years)."
+                };
+            }
+        }
 
         return { 
             datasetId: dataset.id,
@@ -191,9 +255,11 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             value: val,
             rangeLabel: pText,
             exactPercentile: exactP,
+            zScore,
             color: pColor, 
             interpretation: interp,
-            biv
+            biv,
+            recommendations
         };
     };
 
@@ -279,7 +345,14 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             note += `\nInterpretations:\n`;
             results.forEach(r => {
                 const pVal = r.exactPercentile ? r.exactPercentile.toFixed(1) + 'th' : r.rangeLabel;
-                note += `- ${r.label}: ${r.value} (${pVal}) -> ${r.interpretation}\n`;
+                const zVal = r.zScore !== null ? `(Z: ${r.zScore > 0 ? '+' : ''}${r.zScore} SD)` : '';
+                note += `- ${r.label}: ${r.value} → ${pVal} ${zVal} | ${r.interpretation}\n`;
+                
+                if (r.recommendations) {
+                    note += `  [RECOMMENDATION] Physical: ${r.recommendations.physical}\n`;
+                    note += `  [RECOMMENDATION] Labs: ${r.recommendations.labs}\n`;
+                }
+
                 if (r.biv) {
                     note += `  ⚠️ FLAG: BIV (Biologically Implausible Value) / Extreme Outlier. Please verify.\n`;
                 }
@@ -349,6 +422,11 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                                 <span className="text-lg font-bold leading-none" style={{ color: result.color }}>
                                     {result.exactPercentile ? result.exactPercentile.toFixed(1) + 'th' : result.rangeLabel}
                                 </span>
+                                {result.zScore !== null && (
+                                    <span className="text-xs font-mono font-bold text-gray-700 bg-gray-100 px-1 rounded my-0.5">
+                                        Z: {result.zScore > 0 ? '+' : ''}{result.zScore} SD
+                                    </span>
+                                )}
                                 <span className="text-[10px] text-gray-500">{result.interpretation}</span>
                             </div>
                             {result.biv && <span className="block text-[9px] text-red-600 font-bold bg-red-50 px-1 rounded mt-1">⚠️ BIV</span>}
@@ -481,15 +559,15 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                 <div className="mb-4 bg-yellow-50 text-yellow-900 text-xs p-3 rounded-lg border border-yellow-200 shadow-sm space-y-2">
                     <strong className="block text-sm">⚠️ Clinical Protocol (CDC/WHO)</strong>
                     <ul className="list-disc list-inside space-y-1 ml-1">
-                        <li><strong>&lt; 2 Years:</strong> Use <span className="font-bold text-blue-700">WHO</span> standards (0-24m).</li>
-                        <li><strong>2 - 20 Years:</strong> Use <span className="font-bold text-blue-700">CDC</span> growth charts (2000/2022).</li>
-                        <li><strong>Obesity:</strong> CDC 2022 Extended BMI charts recommended for BMI ≥ 95th percentile.</li>
-                        <li>
-                            <strong>Biologically Implausible Values (BIV):</strong> Extreme outliers may be flagged.
-                            <ul className="list-square list-inside ml-4 text-[10px] text-yellow-800 mt-1">
-                                <li>Weight: &lt; -5 SD or &gt; +8 SD</li>
-                                <li>Height: &lt; -5 SD or &gt; +4 SD</li>
-                                <li>BMI: &lt; -4 SD or &gt; +8 SD</li>
+                        <li><strong>&lt; 2 Years:</strong> Use <span className="font-bold text-blue-700">WHO</span> standards (0-24m). (Zero +/- 2SD for Z-Score)</li>
+                        <li><strong>2 - 20 Years:</strong> Use <span className="font-bold text-blue-700">CDC</span> or WHO growth charts.</li>
+                        <li><strong>BMI Classification:</strong>
+                            <ul className="list-inside ml-4 text-[10px] text-yellow-800 mt-1 grid grid-cols-2 gap-x-4">
+                                <li>&lt; 5%: Underweight</li>
+                                <li>5-84%: Normal</li>
+                                <li>85-94%: Overweight</li>
+                                <li>95-99%: Obese</li>
+                                <li>&gt; 99%: Morbid Obesity</li>
                             </ul>
                         </li>
                     </ul>
@@ -613,7 +691,8 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                                 <tr>
                                     <th className="p-3 text-left">Parameter</th>
                                     <th className="p-3 text-center">Value</th>
-                                    <th className="p-3 text-center">Calculated Percentile</th>
+                                    <th className="p-3 text-center">Percentile</th>
+                                    <th className="p-3 text-center">Z-Score</th>
                                     <th className="p-3 text-left">Interpretation</th>
                                 </tr>
                             </thead>
@@ -625,9 +704,15 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                                         <td className="p-3 text-center" style={{ color: res.color, fontWeight: 'bold' }}>
                                             {res.exactPercentile ? res.exactPercentile.toFixed(1) + 'th' : res.rangeLabel}
                                         </td>
+                                        <td className="p-3 text-center font-mono text-xs">
+                                            {res.zScore !== null ? (
+                                                <span className={`px-2 py-0.5 rounded ${Math.abs(res.zScore) > 2 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                                                    {res.zScore > 0 ? '+' : ''}{res.zScore} SD
+                                                </span>
+                                            ) : '-'}
+                                        </td>
                                         <td className="p-3 text-gray-600">
                                             {res.interpretation}
-                                            {/* Flag for extreme outliers */}
                                             {res.biv && (
                                                 <span className="block text-[10px] text-red-600 font-bold mt-1 bg-red-100 px-2 py-0.5 rounded w-fit">
                                                     ⚠️ Biologically Implausible (BIV)
@@ -638,6 +723,34 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+
+            {/* --- RECOMMENDATIONS SECTION --- */}
+            {results.some(r => r.recommendations) && (
+                <div className="mb-8 animate-fade-in break-inside-avoid">
+                    <h3 className="font-bold text-blue-800 mb-2 uppercase text-sm border-b border-blue-200 pb-1 flex items-center gap-2">
+                        <span>📋</span> Clinical Recommendations
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                        {results.filter(r => r.recommendations).map(res => (
+                            <div key={res.datasetId + '-rec'} className="bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-sm">
+                                <div className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+                                    Based on {res.label} ({res.interpretation})
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    <div className="bg-white p-3 rounded border border-blue-100">
+                                        <div className="font-bold text-gray-700 mb-1 text-xs uppercase">🩺 Physical Examination</div>
+                                        <div className="text-gray-600">{res.recommendations?.physical}</div>
+                                    </div>
+                                    <div className="bg-white p-3 rounded border border-blue-100">
+                                        <div className="font-bold text-gray-700 mb-1 text-xs uppercase">🧪 Laboratory Tests</div>
+                                        <div className="text-gray-600">{res.recommendations?.labs}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
