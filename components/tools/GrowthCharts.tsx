@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { growthDatasets, GrowthPoint, GrowthDataset } from '../../data/growthChartData';
 
@@ -21,7 +21,8 @@ interface AssessmentResult {
     datasetId: string;
     label: string;
     value: number;
-    percentile: string;
+    rangeLabel: string; // e.g. "50th - 75th"
+    exactPercentile: number | null; // e.g. 65.4
     color: string;
     interpretation: string;
     biv?: boolean; // Flag for Biologically Implausible Value
@@ -96,6 +97,33 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         }
     }, [weight, height]);
 
+    // --- Helper: Interpolate Exact Percentile ---
+    const interpolatePercentile = (val: number, ref: GrowthPoint): number | null => {
+        // Define known percentiles available in data
+        const percentiles = [3, 5, 10, 15, 25, 50, 75, 85, 90, 95, 97];
+        
+        // Map data keys to values
+        const points = percentiles.map(p => ({
+            p,
+            val: (ref as any)[`p${p}`] as number | undefined
+        })).filter(pt => pt.val !== undefined) as {p: number, val: number}[];
+
+        if (val < points[0].val) return points[0].p - 1; // Below lowest
+        if (val > points[points.length - 1].val) return points[points.length - 1].p + 1; // Above highest
+
+        for (let i = 0; i < points.length - 1; i++) {
+            const lower = points[i];
+            const upper = points[i+1];
+            
+            if (val >= lower.val && val <= upper.val) {
+                // Linear interpolation: P = P_low + ( (Val - Val_low) / (Val_high - Val_low) ) * (P_high - P_low)
+                const fraction = (val - lower.val) / (upper.val - lower.val);
+                return lower.p + fraction * (upper.p - lower.p);
+            }
+        }
+        return null;
+    };
+
     // --- Calculation Helper ---
     const calculateInterpretation = (dataset: GrowthDataset, val: number): AssessmentResult => {
         const dataPoints = gender === 'male' ? dataset.male : dataset.female;
@@ -121,7 +149,8 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                  datasetId: dataset.id,
                  label: dataset.label,
                  value: val,
-                 percentile: 'Out of Range', 
+                 rangeLabel: 'Out of Range',
+                 exactPercentile: null,
                  color: '#9ca3af', 
                  interpretation: 'Measurements outside chart range' 
              };
@@ -133,8 +162,6 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         let biv = false;
 
         // BIV Flagging Logic (Heuristic based on range width approximation)
-        // Note: Actual BIV uses Z-scores which require L,M,S tables not fully available here.
-        // This heuristic flags values roughly outside the -5 SD / +5 SD equivalent range.
         const range = ref.p97 - ref.p3;
         const extremeLow = ref.p3 - (range * 0.6); 
         const extremeHigh = ref.p97 + (range * 0.6); 
@@ -142,6 +169,9 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         if (val < extremeLow || val > extremeHigh) {
             biv = true;
         }
+
+        // Calculate Exact Percentile
+        const exactP = interpolatePercentile(val, ref);
 
         if (val < ref.p3) { pText = '< 3rd'; pColor = '#ef4444'; interp = 'Low / Underweight'; }
         else if (ref.p5 && val < ref.p5) { pText = '3rd - 5th'; pColor = '#f97316'; interp = 'Risk of Low'; } // CDC specific
@@ -159,7 +189,8 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             datasetId: dataset.id,
             label: dataset.label,
             value: val,
-            percentile: pText, 
+            rangeLabel: pText,
+            exactPercentile: exactP,
             color: pColor, 
             interpretation: interp,
             biv
@@ -247,7 +278,8 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         if (results.length > 0) {
             note += `\nInterpretations:\n`;
             results.forEach(r => {
-                note += `- ${r.label}: ${r.value} (${r.percentile}) -> ${r.interpretation}\n`;
+                const pVal = r.exactPercentile ? r.exactPercentile.toFixed(1) + 'th' : r.rangeLabel;
+                note += `- ${r.label}: ${r.value} (${pVal}) -> ${r.interpretation}\n`;
                 if (r.biv) {
                     note += `  ⚠️ FLAG: BIV (Biologically Implausible Value) / Extreme Outlier. Please verify.\n`;
                 }
@@ -260,6 +292,12 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
     // --- Single Chart Component ---
     const GrowthChartSVG = ({ dataset, userVal }: { dataset: GrowthDataset, userVal: number }) => {
         const dataPoints = gender === 'male' ? dataset.male : dataset.female;
+        // Animation Ref
+        const [isLoaded, setIsLoaded] = useState(false);
+        useEffect(() => {
+            setTimeout(() => setIsLoaded(true), 100);
+        }, []);
+
         if (!dataPoints || dataPoints.length === 0) return <div className="text-xs text-gray-400 p-4">No Data Available</div>;
 
         // Determine X Axis
@@ -273,9 +311,9 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         }
         
         // SVG Dimensions
-        const width = 400;
-        const heightPx = 250;
-        const pad = { t: 20, r: 30, b: 30, l: 40 };
+        const width = 500;
+        const heightPx = 300;
+        const pad = { t: 30, r: 40, b: 40, l: 50 };
 
         // Scales
         const xMin = dataPoints[0].age;
@@ -291,68 +329,95 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         const getY = (val: number) => heightPx - pad.b - ((val - yMin) / (yMax - yMin)) * (heightPx - pad.b - pad.t);
 
         const createPath = (key: keyof GrowthPoint) => {
+            // Cubic Bezier smoothing could be added here, but polyline is standard for clinical
             return 'M ' + dataPoints.map(d => `${getX(d.age)},${getY(d[key] as number)}`).join(' L ');
         };
 
         const result = results.find(r => r.datasetId === dataset.id);
 
         return (
-            <div className={`bg-white border rounded-xl p-3 shadow-sm flex flex-col h-full break-inside-avoid ${result?.biv ? 'border-red-300 ring-1 ring-red-200' : 'border-gray-200'}`}>
-                <div className="flex justify-between items-start mb-2">
+            <div className={`bg-white border rounded-xl p-3 shadow-sm flex flex-col h-full break-inside-avoid print:shadow-none print:border-gray-300 ${result?.biv ? 'border-red-300 ring-1 ring-red-200' : 'border-gray-200'}`}>
+                {/* Chart Header with Integrated Result for Print */}
+                <div className="flex justify-between items-start mb-2 border-b border-gray-100 pb-2 print:border-gray-200">
                     <div>
-                        <h4 className="font-bold text-gray-700 text-sm">{dataset.label}</h4>
-                        <p className="text-[10px] text-gray-400">{dataset.yLabel}</p>
+                        <h4 className="font-bold text-gray-800 text-sm">{dataset.label}</h4>
+                        <p className="text-[10px] text-gray-500 font-medium">{dataset.yLabel} vs {dataset.xLabel}</p>
                     </div>
                     {result && (
                         <div className="text-right">
-                            <span className="block text-xs font-bold px-2 py-0.5 rounded bg-gray-50" style={{ color: result.color }}>
-                                {result.percentile}
-                            </span>
-                            <span className="block text-[9px] text-gray-500">{result.interpretation}</span>
-                            {result.biv && <span className="block text-[9px] text-red-600 font-bold bg-red-50 px-1 rounded mt-1">⚠️ BIV Flag</span>}
+                            <div className="flex flex-col items-end">
+                                <span className="text-lg font-bold leading-none" style={{ color: result.color }}>
+                                    {result.exactPercentile ? result.exactPercentile.toFixed(1) + 'th' : result.rangeLabel}
+                                </span>
+                                <span className="text-[10px] text-gray-500">{result.interpretation}</span>
+                            </div>
+                            {result.biv && <span className="block text-[9px] text-red-600 font-bold bg-red-50 px-1 rounded mt-1">⚠️ BIV</span>}
                         </div>
                     )}
                 </div>
                 
-                <div className="flex-grow relative">
-                    <svg viewBox={`0 0 ${width} ${heightPx}`} className="w-full h-auto">
+                <div className="flex-grow relative w-full h-full">
+                    <svg viewBox={`0 0 ${width} ${heightPx}`} className="w-full h-full" preserveAspectRatio="xMidYMid meet">
                         {/* Grid Y */}
-                        {[0, 0.25, 0.5, 0.75, 1].map(pct => {
+                        {[0, 0.2, 0.4, 0.6, 0.8, 1].map(pct => {
                             const val = yMin + pct * (yMax - yMin);
                             const y = getY(val);
                             return (
                                 <g key={pct}>
-                                    <line x1={pad.l} y1={y} x2={width - pad.r} y2={y} stroke="#f3f4f6" />
-                                    <text x={pad.l - 5} y={y + 3} textAnchor="end" fontSize="10" fill="#9ca3af">{val.toFixed(1)}</text>
+                                    <line x1={pad.l} y1={y} x2={width - pad.r} y2={y} stroke="#f0f0f0" strokeWidth="1" />
+                                    <text x={pad.l - 8} y={y + 3} textAnchor="end" fontSize="10" fill="#9ca3af" fontWeight="500">{val.toFixed(0)}</text>
+                                </g>
+                            );
+                        })}
+                        {/* Grid X */}
+                        {[0, 0.2, 0.4, 0.6, 0.8, 1].map(pct => {
+                            const val = xMin + pct * (xMax - xMin);
+                            const x = getX(val);
+                            return (
+                                <g key={pct}>
+                                    <line x1={x} y1={pad.t} x2={x} y2={heightPx - pad.b} stroke="#f0f0f0" strokeWidth="1" />
+                                    <text x={x} y={heightPx - pad.b + 12} textAnchor="middle" fontSize="10" fill="#9ca3af" fontWeight="500">{val.toFixed(0)}</text>
                                 </g>
                             );
                         })}
 
-                        {/* Percentiles */}
-                        <path d={createPath('p97')} fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="4,4" />
-                        {dataset.male[0].p95 && <path d={createPath('p95')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="2,2" />}
-                        {dataset.male[0].p90 && <path d={createPath('p90')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" />}
-                        {dataset.male[0].p85 && <path d={createPath('p85')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" />}
-                        <path d={createPath('p50')} fill="none" stroke="#22c55e" strokeWidth="1.5" />
-                        {dataset.male[0].p25 && <path d={createPath('p25')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" />}
-                        {dataset.male[0].p15 && <path d={createPath('p15')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" />}
-                        {dataset.male[0].p10 && <path d={createPath('p10')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" />}
-                        {dataset.male[0].p5 && <path d={createPath('p5')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="2,2" />}
-                        <path d={createPath('p3')} fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="4,4" />
+                        {/* Percentile Lines with Animation Class */}
+                        {/* 97th & 3rd - RED */}
+                        <path d={createPath('p97')} fill="none" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={isLoaded ? 'animate-draw' : 'opacity-0'} />
+                        <path d={createPath('p3')} fill="none" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={isLoaded ? 'animate-draw' : 'opacity-0'} />
+                        <text x={width - pad.r + 5} y={getY(dataPoints[dataPoints.length-1].p97 as number)} fontSize="9" fill="#ef4444" alignmentBaseline="middle">97</text>
+                        <text x={width - pad.r + 5} y={getY(dataPoints[dataPoints.length-1].p3 as number)} fontSize="9" fill="#ef4444" alignmentBaseline="middle">3</text>
+
+                        {/* 85th & 15th - ORANGE */}
+                        {dataset.male[0].p85 && <path d={createPath('p85')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" className={isLoaded ? 'animate-draw' : 'opacity-0'} />}
+                        {dataset.male[0].p15 && <path d={createPath('p15')} fill="none" stroke="#f97316" strokeWidth="1" strokeDasharray="4,4" className={isLoaded ? 'animate-draw' : 'opacity-0'} />}
+                        
+                        {/* 50th - GREEN (Bold) */}
+                        <path d={createPath('p50')} fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isLoaded ? 'animate-draw' : 'opacity-0'} />
+                        <text x={width - pad.r + 5} y={getY(dataPoints[dataPoints.length-1].p50 as number)} fontSize="10" fill="#16a34a" fontWeight="bold" alignmentBaseline="middle">50</text>
 
                         {/* User Point */}
                         {userVal > 0 && currentX >= xMin && currentX <= xMax && (
-                            <>
-                                <circle cx={getX(currentX)} cy={getY(userVal)} r="5" fill="#3b82f6" stroke="white" strokeWidth="2" />
-                                <line x1={pad.l} y1={getY(userVal)} x2={width - pad.r} y2={getY(userVal)} stroke="#3b82f6" strokeWidth="1" strokeDasharray="2,2" opacity="0.5" />
-                                <line x1={getX(currentX)} y1={pad.t} x2={getX(currentX)} y2={heightPx - pad.b} stroke="#3b82f6" strokeWidth="1" strokeDasharray="2,2" opacity="0.5" />
-                            </>
+                            <g>
+                                {/* Dotted Guide Lines */}
+                                <line x1={pad.l} y1={getY(userVal)} x2={getX(currentX)} y2={getY(userVal)} stroke="#2563eb" strokeWidth="1" strokeDasharray="3,3" opacity="0.6" />
+                                <line x1={getX(currentX)} y1={getY(userVal)} x2={getX(currentX)} y2={heightPx - pad.b} stroke="#2563eb" strokeWidth="1" strokeDasharray="3,3" opacity="0.6" />
+                                {/* Point */}
+                                <circle cx={getX(currentX)} cy={getY(userVal)} r="6" fill="#2563eb" fillOpacity="0.2" />
+                                <circle cx={getX(currentX)} cy={getY(userVal)} r="3" fill="#2563eb" stroke="white" strokeWidth="1" />
+                            </g>
                         )}
-
-                        {/* Axis Label X */}
-                        <text x={width/2} y={heightPx - 5} textAnchor="middle" fontSize="10" fill="#9ca3af">{dataset.xLabel}</text>
                     </svg>
                 </div>
+                <style>{`
+                    .animate-draw {
+                        animation: dash 1.5s ease-out forwards;
+                    }
+                    @keyframes dash {
+                        from { stroke-dasharray: 1000; stroke-dashoffset: 1000; opacity: 0.5; }
+                        to { stroke-dasharray: 1000; stroke-dashoffset: 0; opacity: 1; }
+                    }
+                `}</style>
             </div>
         );
     };
@@ -400,11 +465,14 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             </div>
 
             {/* --- REPORT HEADER (Visible only in Print) --- */}
-            <div className="hidden print:block mb-8 text-center border-b-2 border-black pb-4">
-                <h1 className="text-3xl font-bold uppercase">{clinicName}</h1>
-                <p className="text-lg">Growth Assessment Report</p>
-                <p className="text-sm">Nutritionist: {nutritionistName}</p>
-                <p className="text-sm">Date: {new Date().toLocaleDateString('en-GB')}</p>
+            <div className="hidden print:block mb-6 text-center border-b-2 border-black pb-2">
+                <h1 className="text-2xl font-bold uppercase">{clinicName}</h1>
+                <p className="text-md">Growth Assessment Report</p>
+                <div className="flex justify-center gap-6 text-xs mt-1">
+                    <span>Patient: <strong>{patientName || 'N/A'}</strong></span>
+                    <span>Age: <strong>{ageYears}y {ageMonths}m</strong></span>
+                    <span>Date: <strong>{new Date().toLocaleDateString('en-GB')}</strong></span>
+                </div>
             </div>
 
             {/* Inputs Grid (Hidden in Print) */}
@@ -535,26 +603,6 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                 )}
             </div>
 
-            {/* --- PATIENT DATA SUMMARY (Print Mode) --- */}
-            <div className="hidden print:block mb-6 border p-4 rounded bg-gray-50">
-                <table className="w-full text-sm">
-                    <tbody>
-                        <tr>
-                            <td className="font-bold w-32">Patient Name:</td>
-                            <td>{patientName || 'N/A'}</td>
-                            <td className="font-bold w-32">Gender:</td>
-                            <td className="capitalize">{gender}</td>
-                        </tr>
-                        <tr>
-                            <td className="font-bold">Age:</td>
-                            <td>{ageYears} Years, {ageMonths} Months</td>
-                            <td className="font-bold">DOB:</td>
-                            <td>{dob || 'N/A'}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
             {/* --- SUMMARY TABLE --- */}
             {results.length > 0 && (
                 <div className="mb-8">
@@ -565,7 +613,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                                 <tr>
                                     <th className="p-3 text-left">Parameter</th>
                                     <th className="p-3 text-center">Value</th>
-                                    <th className="p-3 text-center">Percentile</th>
+                                    <th className="p-3 text-center">Calculated Percentile</th>
                                     <th className="p-3 text-left">Interpretation</th>
                                 </tr>
                             </thead>
@@ -574,7 +622,9 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                                     <tr key={res.datasetId} className={res.biv ? "bg-red-50" : ""}>
                                         <td className="p-3 font-medium">{res.label}</td>
                                         <td className="p-3 text-center font-bold">{res.value}</td>
-                                        <td className="p-3 text-center" style={{ color: res.color, fontWeight: 'bold' }}>{res.percentile}</td>
+                                        <td className="p-3 text-center" style={{ color: res.color, fontWeight: 'bold' }}>
+                                            {res.exactPercentile ? res.exactPercentile.toFixed(1) + 'th' : res.rangeLabel}
+                                        </td>
                                         <td className="p-3 text-gray-600">
                                             {res.interpretation}
                                             {/* Flag for extreme outliers */}
@@ -594,10 +644,10 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
 
             {/* Charts Grid */}
             <h3 className="font-bold text-gray-700 mb-4 uppercase text-sm border-b border-gray-200 pb-1 print:mb-2">Growth Charts</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 print:gap-8 print:block">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 print:gap-4 print:block">
                 {visibleCharts.length > 0 ? (
                     visibleCharts.map((chart) => (
-                        <div key={chart.dataset.id} className="h-80 print:h-96 print:mb-8 print:break-inside-avoid">
+                        <div key={chart.dataset.id} className="h-96 print:h-64 print:mb-4 print:break-inside-avoid">
                             <GrowthChartSVG dataset={chart.dataset} userVal={chart.userVal} />
                         </div>
                     ))
