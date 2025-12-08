@@ -35,7 +35,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavi
 
   return (
     <header className="bg-[var(--color-primary)] text-white shadow-md sticky top-0 z-50 no-print">
-      <div className="container mx-auto flex justify-between items-center p-4">
+      <div className="container mx-auto flex justify-between items-center px-4 py-2">
         <div className="flex items-center gap-3">
           {/* Hamburger Menu */}
           <button 
@@ -49,17 +49,17 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavi
           </button>
 
           <div className="flex items-center gap-2 cursor-pointer" onClick={onNavigateHome}>
-            <h1 className="text-2xl font-bold tracking-wide flex items-center">
+            <h1 className="text-xl font-bold tracking-wide flex items-center mb-0">
               Diet<span className="text-[var(--color-primary-light)]">Nova</span>
-              <span className="ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full hidden sm:inline-block">
-                v2.0.150
+              <span className="ml-2 text-[10px] bg-white/20 px-2 py-0.5 rounded-full hidden sm:inline-block font-normal">
+                v2.0.151
               </span>
             </h1>
           </div>
         </div>
 
         <nav>
-          <ul className="flex items-center space-x-4 rtl:space-x-reverse text-lg">
+          <ul className="flex items-center space-x-3 rtl:space-x-reverse text-sm">
              <li>
                   <button 
                     onClick={onNavigateHome}
@@ -79,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavi
             <li>
               <button 
                 onClick={toggleLanguage}
-                className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg transition text-sm font-medium"
+                className="flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg transition text-xs font-medium"
               >
                 <span>{lang === 'en' ? '🇺🇸' : '🇪🇬'}</span>
                 <span>{lang === 'en' ? 'AR' : 'EN'}</span>
@@ -89,13 +89,13 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavi
                 <li className="relative" ref={menuRef}>
                    <button 
                      onClick={() => setShowUserMenu(!showUserMenu)}
-                     className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
+                     className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition text-xs font-medium focus:outline-none focus:ring-2 focus:ring-white/50"
                    >
                      <span>👤</span>
                      <span className="hidden md:inline max-w-[100px] truncate">
                        {profile?.full_name || session.user.email?.split('@')[0]}
                      </span>
-                     <span className="text-xs opacity-75">▼</span>
+                     <span className="text-[10px] opacity-75">▼</span>
                    </button>
 
                    {/* User Dropdown Menu */}
@@ -131,7 +131,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavi
                 <li>
                    <button 
                     onClick={onLoginClick}
-                    className="bg-white text-[var(--color-primary)] hover:bg-gray-100 px-4 py-1 rounded-lg transition text-sm font-bold shadow-sm"
+                    className="bg-white text-[var(--color-primary)] hover:bg-gray-100 px-3 py-1 rounded-lg transition text-xs font-bold shadow-sm"
                    >
                      {t.header.login}
                    </button>

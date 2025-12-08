@@ -1,4 +1,6 @@
 
+
+
 import React, { useState } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { KcalResults } from '../hooks/useKcalCalculations';
@@ -9,6 +11,19 @@ interface MethodsCardProps {
   setDeficit: (v: number) => void;
 }
 
+// Tooltip Helper
+const EquationTooltip: React.FC<{ formula: string }> = ({ formula }) => (
+    <div className="group relative inline-block ml-1">
+        <span className="cursor-help text-gray-400 text-[10px] font-mono border border-gray-300 rounded px-1 hover:bg-gray-100 hover:text-blue-600 transition">
+            fx
+        </span>
+        <div className="hidden group-hover:block absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] bg-gray-800 text-white text-[10px] p-2 rounded shadow-lg break-words text-center leading-tight">
+            {formula}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+        </div>
+    </div>
+);
+
 const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDeficit }) => {
   const { t } = useLanguage();
   const [activeMethod, setActiveMethod] = useState<string>(r.pediatric ? 'pediatric' : 'method3');
@@ -17,183 +32,216 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-2">
          {isPediatric ? (
              <button
                 onClick={() => setActiveMethod('pediatric')}
-                className={`px-3 py-2 rounded-lg border transition-all text-center shadow-sm text-xs font-bold ${
+                className={`px-3 py-1.5 rounded-lg border transition-all text-center shadow-sm text-xs font-bold ${
                   activeMethod === 'pediatric' 
                   ? 'border-purple-600 bg-purple-50 text-purple-700 ring-1 ring-purple-500' 
                   : 'border-gray-200 text-gray-600 hover:border-purple-300'
                 }`}
              >
-                 👶 Pediatric Equations
+                 👶 Pediatric
              </button>
          ) : (
-             ['method1', 'method2', 'method3', 'method4', 'method5', 'method6'].map((m, idx) => (
+             ['method1', 'method2', 'method3', 'method6'].map((m, idx) => (
                <button
                 key={m}
                 onClick={() => setActiveMethod(m)}
-                className={`px-3 py-2 rounded-lg border transition-all text-center shadow-sm text-xs font-bold ${
+                className={`px-3 py-1.5 rounded-lg border transition-all text-center shadow-sm text-xs font-bold ${
                   activeMethod === m 
                   ? 'border-[var(--color-primary)] bg-[var(--color-bg-soft)] text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]' 
                   : 'border-gray-200 text-gray-600 hover:border-[var(--color-primary)] hover:shadow-md'
                 }`}
                >
-                 M{idx + 1}
+                 {m === 'method1' ? 'M1 (Wt)' : m === 'method2' ? 'M2 (Fac)' : m === 'method3' ? 'M3 (Eq)' : 'M6 (EER)'}
                </button>
              ))
          )}
       </div>
 
       {/* Render Active Method */}
-      <div className="bg-white rounded-xl overflow-hidden animate-fade-in">
+      <div className="bg-white rounded-xl overflow-hidden animate-fade-in border border-gray-100">
           
           {/* PEDIATRIC METHODS */}
           {activeMethod === 'pediatric' && r.pediatricMethods && r.pediatric && (
-              <div className="space-y-4 p-2">
-                  <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                      <h3 className="font-bold text-purple-800 text-sm uppercase mb-3 flex items-center gap-2">
-                          <span>⚡</span> Energy Requirements
-                      </h3>
-                      
-                      <div className="space-y-3">
-                          {/* EER (IOM) */}
-                          <div className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-purple-200">
-                              <div>
-                                  <div className="font-bold text-gray-700">DRI / IOM Equation</div>
-                                  <div className="text-xs text-gray-500">{r.pediatricMethods.driEER.label}</div>
-                              </div>
-                              <div className="text-xl font-bold text-purple-700">{r.pediatricMethods.driEER.val.toFixed(0)} <span className="text-xs">kcal</span></div>
+              <div className="p-3 space-y-3">
+                  <div className="flex justify-between items-center text-xs font-bold text-gray-500 uppercase px-2">
+                      <span>Method</span>
+                      <div className="flex gap-4">
+                          <span className="text-gray-800">Current</span>
+                          <span className="text-blue-600">Selected</span>
+                      </div>
+                  </div>
+                  
+                  {/* DRI/IOM */}
+                  <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex justify-between items-center">
+                      <div>
+                          <div className="text-xs font-bold text-gray-700 flex items-center">
+                              DRI / IOM
+                              <EquationTooltip formula={r.pediatricMethods.driEER.formula} />
                           </div>
+                          <div className="text-[10px] text-gray-500">{r.pediatricMethods.driEER.label}</div>
+                      </div>
+                      <div className="text-right flex gap-4">
+                          <div className="font-mono font-bold text-gray-800">{r.pediatricMethods.driEER.valDry.toFixed(0)}</div>
+                          <div className="font-mono font-bold text-blue-600">{r.pediatricMethods.driEER.valSel.toFixed(0)}</div>
+                      </div>
+                  </div>
 
-                          {/* Catch-Up Growth */}
-                          <div className="flex justify-between items-center bg-green-50 p-3 rounded-lg shadow-sm border border-green-200">
-                              <div>
-                                  <div className="font-bold text-green-800">Catch-Up Growth</div>
-                                  <div className="text-xs text-green-600">(120 × IBW) / Actual Wt</div>
-                              </div>
-                              <div className="text-right">
-                                  <div className="text-xl font-bold text-green-700">{r.pediatric.catchUpTotal} <span className="text-xs">kcal</span></div>
-                                  <div className="text-xs text-green-600 font-mono">{r.pediatric.catchUpKcal} kcal/kg</div>
-                              </div>
+                  {/* Catch-Up (Special Case) */}
+                  <div className="bg-green-50 p-2 rounded-lg border border-green-200 flex justify-between items-center">
+                      <div>
+                          <div className="text-xs font-bold text-green-800 flex items-center">
+                              Catch-Up
+                              <EquationTooltip formula="(120 * IBW) / Actual Wt" />
                           </div>
+                          <div className="text-[10px] text-green-600">{r.pediatric.catchUpKcal} kcal/kg</div>
+                      </div>
+                      <div className="font-mono font-bold text-green-700 text-lg">
+                          {r.pediatric.catchUpTotal}
+                      </div>
+                  </div>
 
-                          {/* Specific Conditions */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                              <div className="bg-orange-50 p-2 rounded border border-orange-100">
-                                  <div className="text-xs font-bold text-orange-800 uppercase mb-1">Obese BEE</div>
-                                  <div className="text-lg font-bold text-orange-700">{r.pediatricMethods.obeseBEE.val.toFixed(0)} kcal</div>
-                                  <div className="text-[9px] text-orange-600">Basal only</div>
-                              </div>
-                              <div className="bg-blue-50 p-2 rounded border border-blue-100">
-                                  <div className="text-xs font-bold text-blue-800 uppercase mb-1">Maint. TEE (Overwt)</div>
-                                  <div className="text-lg font-bold text-blue-700">{r.pediatricMethods.maintenanceTEE.val.toFixed(0)} kcal</div>
-                                  <div className="text-[9px] text-blue-600">Weight Maint.</div>
-                              </div>
-                          </div>
-                          
-                          {/* Ratio Method */}
-                          <div className="bg-gray-50 p-2 rounded border border-gray-200 flex justify-between items-center">
-                              <div className="text-xs text-gray-500">Ratio Rule ({r.pediatricMethods.ratio.label})</div>
-                              <div className="font-bold text-gray-700">{r.pediatricMethods.ratio.val.toFixed(0)} kcal</div>
-                          </div>
+                  {/* Obese BEE */}
+                  <div className="bg-white p-2 rounded border border-gray-100 flex justify-between items-center">
+                      <div className="text-xs font-bold text-gray-600 flex items-center">
+                          Obese BEE
+                          <EquationTooltip formula={r.pediatricMethods.obeseBEE.formula} />
+                      </div>
+                      <div className="flex gap-4">
+                          <div className="font-mono text-gray-800">{r.pediatricMethods.obeseBEE.valDry.toFixed(0)}</div>
+                          <div className="font-mono text-blue-600">{r.pediatricMethods.obeseBEE.valSel.toFixed(0)}</div>
+                      </div>
+                  </div>
+
+                  {/* Maintenance TEE */}
+                  <div className="bg-white p-2 rounded border border-gray-100 flex justify-between items-center">
+                      <div className="text-xs font-bold text-gray-600 flex items-center">
+                          Maint. TEE
+                          <EquationTooltip formula={r.pediatricMethods.maintenanceTEE.formula} />
+                      </div>
+                      <div className="flex gap-4">
+                          <div className="font-mono text-gray-800">{r.pediatricMethods.maintenanceTEE.valDry.toFixed(0)}</div>
+                          <div className="font-mono text-blue-600">{r.pediatricMethods.maintenanceTEE.valSel.toFixed(0)}</div>
                       </div>
                   </div>
               </div>
           )}
 
-          {/* ADULT METHODS (M1-M6) */}
+          {/* ADULT METHODS */}
+          
+          {/* M1: Simple Weight Based */}
           {activeMethod === 'method1' && r.m1 && (
-            <div className="grid grid-cols-2 gap-4">
-                <div className="bg-gray-50 p-3 rounded">
-                    <h4 className="font-bold text-gray-500 text-xs uppercase mb-2">Dry Weight</h4>
-                    <div className="text-xl font-bold text-gray-800">{r.m1.resultDry.toFixed(0)} kcal</div>
-                    <div className="text-xs text-gray-400 mt-1">Factor: {r.m1.factor}</div>
+            <div className="p-4 grid grid-cols-2 gap-4 text-center">
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <h4 className="text-[10px] font-bold text-gray-500 uppercase">Current Wt</h4>
+                    <div className="text-xl font-bold text-gray-800">{r.m1.resultDry.toFixed(0)}</div>
+                    <div className="text-[9px] text-gray-400 mt-1">Factor: 25-30</div>
                 </div>
-                <div className="bg-blue-50 p-3 rounded">
-                    <h4 className="font-bold text-blue-500 text-xs uppercase mb-2">Selected Weight</h4>
-                    <div className="text-xl font-bold text-blue-800">{r.m1.resultSel.toFixed(0)} kcal</div>
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <h4 className="text-[10px] font-bold text-blue-500 uppercase">Selected Wt</h4>
+                    <div className="text-xl font-bold text-blue-700">{r.m1.resultSel.toFixed(0)}</div>
                 </div>
             </div>
           )}
 
-          {/* METHOD 2 */}
+          {/* M2: Factors Table */}
            {activeMethod === 'method2' && r.m2 && (
-            <table className="w-full text-sm">
-              <caption className="text-left font-bold text-gray-700 mb-2 text-xs">Method 2: Weight * Factor</caption>
-              <thead>
-                <tr className="text-left border-b border-green-200 text-xs text-gray-500">
-                  <th className="pb-2 px-2">Weight</th>
-                  <th className="pb-2 px-2">25 Kcal</th>
-                  <th className="pb-2 px-2">30 Kcal</th>
-                  <th className="pb-2 px-2">35 Kcal</th>
-                  <th className="pb-2 px-2">40 Kcal</th>
-                </tr>
-              </thead>
-              <tbody className="font-mono text-[var(--color-primary-dark)]">
-                <tr className="border-b border-gray-100">
-                  <td className="py-2 px-2 font-sans font-bold text-gray-600">Dry (Actual)</td>
-                  {r.m2.actual.map((v: number, i: number) => <td key={i} className="px-2">{v.toFixed(0)}</td>)}
-                </tr>
-                <tr className="bg-blue-50/50">
-                  <td className="py-2 px-2 font-sans font-bold text-blue-700">Selected</td>
-                  {r.m2.selected.map((v: number, i: number) => <td key={i} className="px-2 text-blue-700">{v.toFixed(0)}</td>)}
-                </tr>
-              </tbody>
-            </table>
+            <div className="p-2">
+                <table className="w-full text-xs text-center border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100 text-gray-600">
+                      <th className="p-2 border border-gray-200">Basis</th>
+                      <th className="p-2 border border-gray-200">25 kcal</th>
+                      <th className="p-2 border border-gray-200">30 kcal</th>
+                      <th className="p-2 border border-gray-200">35 kcal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="p-2 border border-gray-200 font-bold text-gray-700">Current</td>
+                      {r.m2.actual.slice(0,3).map((v,i) => <td key={i} className="p-2 border border-gray-200 font-mono">{v.toFixed(0)}</td>)}
+                    </tr>
+                    <tr className="bg-blue-50">
+                      <td className="p-2 border border-blue-200 font-bold text-blue-700">Selected</td>
+                      {r.m2.selected.slice(0,3).map((v,i) => <td key={i} className="p-2 border border-blue-200 font-mono text-blue-800">{v.toFixed(0)}</td>)}
+                    </tr>
+                  </tbody>
+                </table>
+            </div>
           )}
 
-          {/* METHOD 3 */}
+          {/* M3: Equations */}
            {activeMethod === 'method3' && r.m3 && (
-             <div className="space-y-4">
-               <div className="flex items-center justify-between mb-2">
-                 <h3 className="font-bold text-gray-700 text-sm">M3: Equations (Mifflin/Harris)</h3>
+             <div className="p-3 space-y-3">
+               <div className="flex items-center justify-between mb-1">
+                 <h3 className="font-bold text-gray-700 text-xs uppercase">Metabolic Equations</h3>
                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold">{t.kcal.deficit}</span>
+                    <span className="text-[10px] font-semibold text-red-500 uppercase">Deficit:</span>
                     <input 
                         type="number" 
                         value={deficit} 
                         onChange={(e) => setDeficit(Number(e.target.value))}
-                        className="w-16 p-1 rounded border text-center text-xs"
-                        dir="ltr"
+                        className="w-12 h-6 p-1 rounded border text-center text-xs bg-red-50 border-red-200"
                     />
                  </div>
                </div>
                
-               <div className="overflow-x-auto">
-                   <table className="w-full text-sm text-left border-collapse">
-                     <thead className="bg-gray-50 border-b border-gray-200 text-[10px] text-gray-500 uppercase font-bold">
-                       <tr>
-                         <th className="p-2 border-r w-1/4">Equation</th>
-                         <th className="p-2 text-center border-r bg-gray-100/50">Dry TEE</th>
-                         <th className="p-2 text-center border-r bg-blue-50/50 text-blue-700">Sel TEE</th>
-                         <th className="p-2 text-center bg-green-50 text-green-700">Net (Sel - Def)</th>
-                       </tr>
-                     </thead>
-                     <tbody className="divide-y divide-gray-100 font-mono text-xs">
-                       <tr className="hover:bg-gray-50">
-                          <td className="p-2 border-r font-sans font-bold text-gray-700">
-                              Mifflin
-                          </td>
-                          <td className="p-2 text-center border-r">{r.m3.mifflin.tee[0].toFixed(0)}</td>
-                          <td className="p-2 text-center border-r bg-blue-50/30 text-blue-700 font-bold">{r.m3.mifflin.tee[1].toFixed(0)}</td>
-                          <td className="p-2 text-center bg-green-50/30 text-green-700 font-bold">{(r.m3.mifflin.tee[1] - deficit).toFixed(0)}</td>
-                       </tr>
-                       <tr className="hover:bg-gray-50">
-                          <td className="p-2 border-r font-sans">Harris</td>
-                          <td className="p-2 text-center border-r">{r.m3.harris.tee[0].toFixed(0)}</td>
-                          <td className="p-2 text-center border-r bg-blue-50/30 text-blue-700">{r.m3.harris.tee[1].toFixed(0)}</td>
-                          <td className="p-2 text-center bg-green-50/30 text-green-700">{(r.m3.harris.tee[1] - deficit).toFixed(0)}</td>
-                       </tr>
-                     </tbody>
-                   </table>
-               </div>
+               <table className="w-full text-xs border-collapse">
+                 <thead className="bg-gray-100 text-gray-600 text-[10px] uppercase">
+                   <tr>
+                     <th className="p-2 text-left border-b w-1/4">Equation</th>
+                     <th className="p-2 text-center border-b">BMR (Dry)</th>
+                     <th className="p-2 text-center border-b bg-gray-50 font-bold text-gray-800">TEE (Dry)</th>
+                     <th className="p-2 text-center border-b bg-blue-50 font-bold text-blue-800">TEE (Sel)</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-gray-100">
+                   <tr className="hover:bg-gray-50">
+                      <td className="p-2 font-bold text-gray-700 flex items-center gap-1">
+                          Mifflin <EquationTooltip formula="(10*W) + (6.25*H) - (5*A) + S" />
+                      </td>
+                      <td className="p-2 text-center text-gray-500">{r.m3.mifflin.bmrDry.toFixed(0)}</td>
+                      <td className="p-2 text-center font-mono font-bold">{r.m3.mifflin.teeDry.toFixed(0)}</td>
+                      <td className="p-2 text-center font-mono font-bold text-blue-600 bg-blue-50/30">{r.m3.mifflin.teeSel.toFixed(0)}</td>
+                   </tr>
+                   <tr className="hover:bg-gray-50">
+                      <td className="p-2 font-medium text-gray-600 flex items-center gap-1">
+                          Harris <EquationTooltip formula="66.5 + (13.75*W) + (5.003*H) - (6.75*A)" />
+                      </td>
+                      <td className="p-2 text-center text-gray-500">{r.m3.harris.bmrDry.toFixed(0)}</td>
+                      <td className="p-2 text-center font-mono">{r.m3.harris.teeDry.toFixed(0)}</td>
+                      <td className="p-2 text-center font-mono text-blue-600 bg-blue-50/30">{r.m3.harris.teeSel.toFixed(0)}</td>
+                   </tr>
+                 </tbody>
+               </table>
+               {deficit > 0 && (
+                   <div className="text-[10px] text-center text-red-500 mt-1 font-bold">
+                       Results shown are TEE. Subtract {deficit} manually or apply in Planner.
+                   </div>
+               )}
              </div>
           )}
 
-          {/* METHOD 4, 5, 6 etc... (Abbreviated for update clarity) */}
-          {/* ... */}
+          {/* M6: Adult EER */}
+          {activeMethod === 'method6' && r.m6 && (
+              <div className="p-4 grid grid-cols-2 gap-4 text-center">
+                <div className="col-span-2 text-xs text-gray-500 mb-2 flex justify-center items-center gap-1">
+                    IOM Estimated Energy Requirement
+                    <EquationTooltip formula={r.m6.proteinRef || "Standard EER Eq"} />
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                    <h4 className="text-[10px] font-bold text-gray-500 uppercase">Current Wt</h4>
+                    <div className="text-xl font-bold text-gray-800">{r.m6.resultDry.toFixed(0)}</div>
+                </div>
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <h4 className="text-[10px] font-bold text-blue-500 uppercase">Selected Wt</h4>
+                    <div className="text-xl font-bold text-blue-700">{r.m6.resultSel.toFixed(0)}</div>
+                </div>
+            </div>
+          )}
       </div>
     </div>
   );

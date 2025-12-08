@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -47,35 +48,35 @@ const Dashboard = ({
   return (
     <>
       {/* Hero Section */}
-      <section className="relative text-center py-20 md:py-24 overflow-hidden bg-gradient-to-b from-[var(--color-bg-soft)] to-white">
+      <section className="relative text-center py-16 md:py-20 overflow-hidden bg-gradient-to-b from-[var(--color-bg-soft)] to-white">
         <div className="relative z-10 container mx-auto px-4 animate-fade-in">
           {session && (
-              <div className="mb-4 inline-block px-4 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">
+              <div className="mb-4 inline-block px-4 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
                 {profile?.role === 'doctor' ? `👨‍⚕️ ${t.auth.doctor}` : `👤 ${t.auth.patient}`} : {profile?.full_name}
               </div>
           )}
           
-          <h2 className="text-4xl md:text-5xl font-extrabold text-[var(--color-heading)] mb-6 leading-tight">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-[var(--color-heading)] mb-4 leading-tight">
             {t.home.welcome}
           </h2>
-          <p className="text-lg md:text-xl text-[var(--color-text-light)] mb-10 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-md md:text-lg text-[var(--color-text-light)] mb-8 max-w-2xl mx-auto leading-relaxed">
             {t.home.subtitle}
           </p>
         </div>
       </section>
 
       {/* Professional Sector Grid - 4 Columns */}
-      <section id="sectors" className="container mx-auto px-4 -mt-16 relative z-20 mb-16">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section id="sectors" className="container mx-auto px-4 -mt-12 relative z-20 mb-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               
               {/* Sector 1: Clinical Workspace */}
-              <div className="bg-white rounded-2xl shadow-xl p-5 border-t-4 border-green-600 hover:transform hover:-translate-y-1 transition duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                      <span className="text-3xl bg-green-50 p-2 rounded-lg">🩺</span>
-                      <h3 className="text-lg font-bold text-gray-800">Clinical Suite</h3>
+              <div className="bg-white rounded-2xl shadow-xl p-4 border-t-4 border-green-600 hover:transform hover:-translate-y-1 transition duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                      <span className="text-2xl bg-green-50 p-2 rounded-lg">🩺</span>
+                      <h3 className="text-base font-bold text-gray-800">Clinical Suite</h3>
                   </div>
-                  <p className="text-gray-500 text-xs mb-4 min-h-[32px]">Patient management, risk screening, and physical assessment.</p>
-                  <div className="space-y-1.5">
+                  <p className="text-gray-500 text-xs mb-3 min-h-[32px]">Patient management, risk screening, and physical assessment.</p>
+                  <div className="space-y-1">
                       <button onClick={() => onToolClick('client-manager')} className="w-full text-left px-3 py-2 rounded hover:bg-green-50 text-green-700 font-bold text-xs flex items-center justify-between">
                           <span>Patient Manager</span> <span>→</span>
                       </button>
@@ -89,13 +90,13 @@ const Dashboard = ({
               </div>
 
               {/* Sector 2: Body & Energy */}
-              <div className="bg-white rounded-2xl shadow-xl p-5 border-t-4 border-blue-600 hover:transform hover:-translate-y-1 transition duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                      <span className="text-3xl bg-blue-50 p-2 rounded-lg">⚡</span>
-                      <h3 className="text-lg font-bold text-gray-800">Body & Energy</h3>
+              <div className="bg-white rounded-2xl shadow-xl p-4 border-t-4 border-blue-600 hover:transform hover:-translate-y-1 transition duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                      <span className="text-2xl bg-blue-50 p-2 rounded-lg">⚡</span>
+                      <h3 className="text-base font-bold text-gray-800">Body & Energy</h3>
                   </div>
-                  <p className="text-gray-500 text-xs mb-4 min-h-[32px]">Calculators for calories, BMR, BMI, and anthropometry.</p>
-                  <div className="space-y-1.5">
+                  <p className="text-gray-500 text-xs mb-3 min-h-[32px]">Calculators for calories, BMR, BMI, and anthropometry.</p>
+                  <div className="space-y-1">
                       <button onClick={() => onToolClick('kcal')} className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 text-blue-700 font-bold text-xs flex items-center justify-between">
                           <span>Kcal Calculator</span> <span>→</span>
                       </button>
@@ -112,13 +113,13 @@ const Dashboard = ({
               </div>
 
               {/* Sector 3: Diet & Planning */}
-              <div className="bg-white rounded-2xl shadow-xl p-5 border-t-4 border-orange-500 hover:transform hover:-translate-y-1 transition duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                      <span className="text-3xl bg-orange-50 p-2 rounded-lg">🥗</span>
-                      <h3 className="text-lg font-bold text-gray-800">Diet Planning</h3>
+              <div className="bg-white rounded-2xl shadow-xl p-4 border-t-4 border-orange-500 hover:transform hover:-translate-y-1 transition duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                      <span className="text-2xl bg-orange-50 p-2 rounded-lg">🥗</span>
+                      <h3 className="text-base font-bold text-gray-800">Diet Planning</h3>
                   </div>
-                  <p className="text-gray-500 text-xs mb-4 min-h-[32px]">Create meals, plan diets, and check food exchanges.</p>
-                  <div className="space-y-1.5">
+                  <p className="text-gray-500 text-xs mb-3 min-h-[32px]">Create meals, plan diets, and check food exchanges.</p>
+                  <div className="space-y-1">
                       <button onClick={() => onToolClick('meal-planner')} className="w-full text-left px-3 py-2 rounded hover:bg-orange-50 text-orange-700 font-bold text-xs flex items-center justify-between">
                           <span>Meal Planner</span> <span>→</span>
                       </button>
@@ -132,13 +133,13 @@ const Dashboard = ({
               </div>
 
               {/* Sector 4: Knowledge Base */}
-              <div className="bg-white rounded-2xl shadow-xl p-5 border-t-4 border-purple-600 hover:transform hover:-translate-y-1 transition duration-300">
-                  <div className="flex items-center gap-3 mb-4">
-                      <span className="text-3xl bg-purple-50 p-2 rounded-lg">📚</span>
-                      <h3 className="text-lg font-bold text-gray-800">Knowledge Hub</h3>
+              <div className="bg-white rounded-2xl shadow-xl p-4 border-t-4 border-purple-600 hover:transform hover:-translate-y-1 transition duration-300">
+                  <div className="flex items-center gap-3 mb-3">
+                      <span className="text-2xl bg-purple-50 p-2 rounded-lg">📚</span>
+                      <h3 className="text-base font-bold text-gray-800">Knowledge Hub</h3>
                   </div>
-                  <p className="text-gray-500 text-xs mb-4 min-h-[32px]">Reference data for labs, drugs, vitamins, and minerals.</p>
-                  <div className="space-y-1.5">
+                  <p className="text-gray-500 text-xs mb-3 min-h-[32px]">Reference data for labs, drugs, vitamins, and minerals.</p>
+                  <div className="space-y-1">
                       <button onClick={() => onToolClick('encyclopedia')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-bold text-xs flex items-center justify-between">
                           <span>Encyclopedia (Vits/Drugs)</span> <span>→</span>
                       </button>
@@ -333,13 +334,13 @@ const AppContent = () => {
 
       <main className="flex-grow">
         {activeTool ? (
-          <div className="container mx-auto px-4 py-8 pb-24 animate-fade-in">
-            <div className="flex items-center justify-between mb-6 no-print">
+          <div className="container mx-auto px-4 py-4 pb-20 animate-fade-in">
+            <div className="flex items-center justify-between mb-4 no-print">
                 <button 
                   onClick={handleNavHome}
-                  className="flex items-center gap-2 text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] font-medium transition group"
+                  className="flex items-center gap-1 text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] font-medium transition group text-sm"
                 >
-                  <span className={`text-xl transform transition-transform ${isRTL ? 'rotate-180 group-hover:translate-x-1' : 'group-hover:-translate-x-1'}`}>
+                  <span className={`text-lg transform transition-transform ${isRTL ? 'rotate-180 group-hover:translate-x-1' : 'group-hover:-translate-x-1'}`}>
                     ←
                   </span>
                   {t.common.backHome}
@@ -347,12 +348,12 @@ const AppContent = () => {
                 
                 {currentVisit && isComplexFlow && (
                     <div className="flex items-center gap-3">
-                         <div className="bg-green-100 text-green-800 px-4 py-2 rounded-full text-xs font-bold shadow-sm hidden sm:flex items-center gap-2">
+                         <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm hidden sm:flex items-center gap-2">
                              <span>👥 Client Mode: {currentVisit.client.full_name}</span>
                          </div>
                          <button 
                              onClick={handleBackToClientProfile}
-                             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm flex items-center gap-2"
+                             className="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow-sm flex items-center gap-1"
                          >
                              <span>👤</span> Back to Profile
                          </button>

@@ -15,15 +15,20 @@
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
+  font-size: 0.9rem; /* Slightly reduced base font size for compactness */
 }
 
 .card {
   background: white;
   border: 1px solid var(--color-border);
-  border-radius: 1rem;
-  padding: 1.5rem;
+  border-radius: 0.75rem; /* Reduced radius */
+  padding: 1rem; /* Reduced padding from 1.5rem */
   transition: all 0.3s ease;
 }
+
+h1 { font-size: 1.5rem; line-height: 1.2; margin-bottom: 0.5rem; }
+h2 { font-size: 1.25rem; line-height: 1.2; margin-bottom: 0.5rem; }
+h3 { font-size: 1.1rem; line-height: 1.2; margin-bottom: 0.5rem; }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
@@ -42,12 +47,14 @@ body {
   body {
     background: white !important;
     color: black !important;
+    font-size: 10pt;
   }
 
   .card {
     border: 1px solid #ddd !important;
     box-shadow: none !important;
     break-inside: avoid;
+    padding: 0.5rem !important;
   }
 
   /* Improve table readability in print */
@@ -59,6 +66,7 @@ body {
   th, td {
     border: 1px solid #eee !important;
     color: black !important;
+    padding: 4px !important;
   }
 
   /* Ensure inputs look like text in print */

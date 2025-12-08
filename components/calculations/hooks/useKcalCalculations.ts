@@ -1,4 +1,6 @@
 
+
+
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { growthDatasets, GrowthDataset } from '../../../data/growthChartData';
@@ -79,32 +81,16 @@ export interface KcalResults {
   };
   m3?: {
     harris: {
-      bmr: number[];
-      tee: number[];
+      bmrDry: number;
+      teeDry: number;
+      bmrSel: number;
+      teeSel: number;
     };
     mifflin: {
-      bmr: number[];
-      tee: number[];
-    };
-    katch?: {
-        bmr: number;
-        tee: number;
-    };
-    who?: {
-        bmr: number;
-        tee: number;
-    };
-    schofield?: {
-        bmr: number;
-        tee: number;
-    };
-    accp?: {
-        bmr: number;
-        tee: number;
-    };
-    iretonJones?: {
-        bmr: number;
-        tee: number;
+      bmrDry: number;
+      teeDry: number;
+      bmrSel: number;
+      teeSel: number;
     };
   };
   m4?: {
@@ -120,16 +106,17 @@ export interface KcalResults {
       notes: string[];
   };
   m6?: {
-      result: number;
+      resultDry: number;
+      resultSel: number;
       label: string;
       note: string;
       proteinRef?: string;
   };
   pediatricMethods?: {
-      driEER: { val: number, label: string };
-      obeseBEE: { val: number, label: string };
-      maintenanceTEE: { val: number, label: string };
-      ratio: { val: number, label: string };
+      driEER: { valDry: number, valSel: number, label: string, formula: string };
+      obeseBEE: { valDry: number, valSel: number, label: string, formula: string };
+      maintenanceTEE: { valDry: number, valSel: number, label: string, formula: string };
+      ratio: { valDry: number, valSel: number, label: string, formula: string };
   };
 }
 
@@ -375,7 +362,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const totalMonths = (pediatricAge?.years || age_years) * 12 + (pediatricAge?.months || 0);
     const ageForCalc = age_years + (pediatricAge ? pediatricAge.months/12 : 0);
 
-    // 1. Dry Weight
+    // 1. Dry Weight (Current)
     let dryWeightVal = 0;
     if (edemaCorrectionPercent > 0) {
         dryWeightVal = temp_weight * (1 - edemaCorrectionPercent);
@@ -383,6 +370,9 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         dryWeightVal = temp_weight - ascites - edema;
     }
     dryWeightVal = Math.max(0, dryWeightVal);
+
+    // Selected Weight Logic
+    const selWeightVal = selectedWeight > 0 ? selectedWeight : dryWeightVal;
     
     // Weight Loss
     let weightLoss = 0;
@@ -396,7 +386,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
 
     // 2. BMI
     const bmiVal = (height_m > 0 && dryWeightVal > 0) ? dryWeightVal / (height_m * height_m) : 0;
-    const bmiValSel = (height_m > 0 && selectedWeight > 0) ? selectedWeight / (height_m * height_m) : 0;
+    const bmiValSel = (height_m > 0 && selWeightVal > 0) ? selWeightVal / (height_m * height_m) : 0;
 
     let bmiRef = '', bmiColor = '';
     if (!isPediatric) {
@@ -476,148 +466,178 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
             catchUpTotal: Number((catchUpVal * dryWeightVal).toFixed(0))
         };
 
-        // --- B. Pediatric Energy Methods ---
+        // --- B. Pediatric Energy Methods (Calculate for Dry and Sel) ---
 
-        // 1. DRI / IOM Equations (EER)
-        let eer = 0;
-        let eerLabel = '';
-        const pa = physicalActivity_val > 0 ? physicalActivity_val : 1.0; 
-        
-        // IOM PA Coefficients (From Image)
-        const getPACoeff = (g: 'male'|'female', uPA: number) => {
-            if (uPA < 1.3) return 1.0; // Sedentary
-            if (uPA < 1.5) return g==='male'?1.13:1.18; // Low Active
-            if (uPA < 1.7) return g==='male'?1.26:1.35; // Active
-            return g==='male'?1.42:1.60; // Very Active
-        };
-        const paCoeff = getPACoeff(gender, pa);
+        // Helper to calc EER
+        const calcEER = (wt: number) => {
+            if (wt <= 0) return 0;
+            const pa = physicalActivity_val > 0 ? physicalActivity_val : 1.0;
+            // IOM PA Coefficients (From Image)
+            const getPACoeff = (g: 'male'|'female', uPA: number) => {
+                if (uPA < 1.3) return 1.0; // Sedentary
+                if (uPA < 1.5) return g==='male'?1.13:1.18; // Low Active
+                if (uPA < 1.7) return g==='male'?1.26:1.35; // Active
+                return g==='male'?1.42:1.60; // Very Active
+            };
+            const paCoeff = getPACoeff(gender, pa);
 
-        if (totalMonths <= 3) eer = (89 * dryWeightVal - 100) + 175;
-        else if (totalMonths <= 6) eer = (89 * dryWeightVal - 100) + 56;
-        else if (totalMonths <= 12) eer = (89 * dryWeightVal - 100) + 22;
-        else if (totalMonths <= 35) eer = (89 * dryWeightVal - 100) + 20;
-        else {
+            if (totalMonths <= 3) return (89 * wt - 100) + 175;
+            if (totalMonths <= 6) return (89 * wt - 100) + 56;
+            if (totalMonths <= 12) return (89 * wt - 100) + 22;
+            if (totalMonths <= 35) return (89 * wt - 100) + 20;
             // 3-18 years
             if (gender === 'male') {
-                if (age_years <= 8) eer = 88.5 - (61.9 * age_years) + paCoeff * (26.7 * dryWeightVal + 903 * height_m) + 20;
-                else eer = 88.5 - (61.9 * age_years) + paCoeff * (26.7 * dryWeightVal + 903 * height_m) + 25;
+                if (age_years <= 8) return 88.5 - (61.9 * age_years) + paCoeff * (26.7 * wt + 903 * height_m) + 20;
+                else return 88.5 - (61.9 * age_years) + paCoeff * (26.7 * wt + 903 * height_m) + 25;
             } else {
-                if (age_years <= 8) eer = 135.3 - (30.8 * age_years) + paCoeff * (10.0 * dryWeightVal + 934 * height_m) + 20;
-                else eer = 135.3 - (30.8 * age_years) + paCoeff * (10.0 * dryWeightVal + 934 * height_m) + 25;
+                if (age_years <= 8) return 135.3 - (30.8 * age_years) + paCoeff * (10.0 * wt + 934 * height_m) + 20;
+                else return 135.3 - (30.8 * age_years) + paCoeff * (10.0 * wt + 934 * height_m) + 25;
             }
-        }
-        eerLabel = `DRI/IOM (${totalMonths < 36 ? totalMonths + 'm' : age_years + 'y'})`;
+        };
+
+        const eerDry = calcEER(dryWeightVal);
+        const eerSel = calcEER(selWeightVal);
+        const eerLabel = `DRI/IOM (${totalMonths < 36 ? totalMonths + 'm' : age_years + 'y'})`;
+        const eerFormula = totalMonths <= 35 ? "(89 * Wt - 100) + [Age Factor]" : "Gender/Age Specific + PA Coeff";
 
         // 2. Obese Children Equations (BEE)
-        // Image 3: Equations for obese children
-        let beeObese = 0;
-        if (age_years >= 3 && age_years <= 18) {
-            if (gender === 'male') {
-                beeObese = 420 - (33.5 * age_years) + (418.9 * height_m) + (16.7 * dryWeightVal);
-            } else {
-                beeObese = 516 - (26.8 * age_years) + (347 * height_m) + (12.4 * dryWeightVal);
+        const calcBEEObese = (wt: number) => {
+            if (wt <= 0) return 0;
+            if (age_years >= 3 && age_years <= 18) {
+                if (gender === 'male') return 420 - (33.5 * age_years) + (418.9 * height_m) + (16.7 * wt);
+                else return 516 - (26.8 * age_years) + (347 * height_m) + (12.4 * wt);
             }
-        }
+            return 0;
+        };
         
+        const beeObeseDry = calcBEEObese(dryWeightVal);
+        const beeObeseSel = calcBEEObese(selWeightVal);
+        const beeObeseFormula = gender === 'male' ? "420 - (33.5*A) + (418.9*H) + (16.7*W)" : "516 - (26.8*A) + (347*H) + (12.4*W)";
+
         // 3. Weight Maintenance TEE (Overweight)
-        // Image 2: TEE = -114 (Boys) / 389 (Girls) ...
-        let teeMaint = 0;
-        if (age_years >= 3 && age_years <= 18) {
-            if (gender === 'male') {
-                // PA coeff specific to this eq: Sed 1.0, Low 1.12, Act 1.24, Very 1.45
-                let paMaint = 1.0;
-                if (pa >= 1.3) paMaint = 1.12;
-                if (pa >= 1.5) paMaint = 1.24;
-                if (pa >= 1.7) paMaint = 1.45;
-                
-                // TEE = -114 - [50.9 * age] + PA * (19.5 * weight + 161.4 * height)
-                teeMaint = -114 - (50.9 * age_years) + paMaint * (19.5 * dryWeightVal + 161.4 * height_m);
-            } else {
-                // Girls 3-18y TEE = 389 - [41.2 * age] + PA * (15.0 * weight + 701 * height)
-                // PA: Sed 1.0, Low 1.18, Act 1.35, Very 1.60
-                let paMaint = 1.0;
-                if (pa >= 1.3) paMaint = 1.18;
-                if (pa >= 1.5) paMaint = 1.35;
-                if (pa >= 1.7) paMaint = 1.60;
+        const calcTEEMaint = (wt: number) => {
+            if (wt <= 0) return 0;
+            const pa = physicalActivity_val > 0 ? physicalActivity_val : 1.0; 
+            if (age_years >= 3 && age_years <= 18) {
+                if (gender === 'male') {
+                    let paMaint = 1.0;
+                    if (pa >= 1.3) paMaint = 1.12;
+                    if (pa >= 1.5) paMaint = 1.24;
+                    if (pa >= 1.7) paMaint = 1.45;
+                    return -114 - (50.9 * age_years) + paMaint * (19.5 * wt + 161.4 * height_m);
+                } else {
+                    let paMaint = 1.0;
+                    if (pa >= 1.3) paMaint = 1.18;
+                    if (pa >= 1.5) paMaint = 1.35;
+                    if (pa >= 1.7) paMaint = 1.60;
+                    return 389 - (41.2 * age_years) + paMaint * (15.0 * wt + 701 * height_m);
+                }
+            }
+            return 0;
+        };
 
-                teeMaint = 389 - (41.2 * age_years) + paMaint * (15.0 * dryWeightVal + 701 * height_m);
-            }
-        }
+        const teeMaintDry = calcTEEMaint(dryWeightVal);
+        const teeMaintSel = calcTEEMaint(selWeightVal);
+        const teeMaintFormula = gender === 'male' ? "-114 - (50.9*A) + PA*(19.5*W + 161.4*H)" : "389 - (41.2*A) + PA*(15.0*W + 701*H)";
 
-        // 4. Ratio Method (Updated per new images)
-        // Image 3 (Bottom Table)
-        let ratioVal = 0;
-        let ratioLabel = '';
-        
-        if (age_years < 1) { 
-            // Infant (approx 100 kcal/kg or similar, but table says "1 yr: 1000 kcals")
-            // Let's use simple logic for <1y based on DRI if ratio undefined
-            ratioVal = 1000; 
-            ratioLabel = 'Infant (Base 1000)';
-        }
-        else if (age_years >= 1 && age_years <= 11) {
-            // "Add 100 kcals/yr to 1000 kcals up to 2000 kcals at age 10"
-            // Formula: 1000 + 100 * age_years.
-            ratioVal = 1000 + (100 * age_years);
-            ratioLabel = '1000 + 100/yr (Age 1-11)';
-        } 
-        else if (age_years >= 12 && age_years <= 15) {
-            if (gender === 'female') {
-                // Girls 12-15: 2000 kcals + 50-100 kcals/yr after age 10
-                // Use 75 avg
-                ratioVal = 2000 + (75 * (age_years - 10));
-                ratioLabel = '2000 + 75/yr >10 (Girls)';
-            } else {
-                // Boys 12-15: 2000 kcals + 200 kcal/yr after age 10
-                ratioVal = 2000 + (200 * (age_years - 10));
-                ratioLabel = '2000 + 200/yr >10 (Boys)';
+        // 4. Ratio Method
+        const calcRatio = (wt: number) => {
+            if (wt <= 0) return 0;
+            const pa = physicalActivity_val > 0 ? physicalActivity_val : 1.0;
+            if (age_years < 1) return 1000; 
+            else if (age_years >= 1 && age_years <= 11) return 1000 + (100 * age_years);
+            else if (age_years >= 12 && age_years <= 15) {
+                if (gender === 'female') return 2000 + (75 * (age_years - 10));
+                else return 2000 + (200 * (age_years - 10));
+            } 
+            else if (age_years > 15) {
+                if (gender === 'female') return wt * 30; 
+                else {
+                    let factor = 32.5;
+                    if (pa >= 1.3) factor = 35;
+                    if (pa >= 1.5) factor = 40;
+                    if (pa >= 1.7) factor = 50;
+                    return wt * factor;
+                }
             }
-        } 
-        else if (age_years > 15) {
-            if (gender === 'female') {
-                // "Calculate as for an adult" -> typically 30 kcal/kg
-                ratioVal = dryWeightVal * 30; 
-                ratioLabel = 'Girls >15 (Adult Rule 30kcal/kg)';
-            } else {
-                // Boys > 15
-                // Sedentary 16 kcal/lb (30-35 kcal/kg) -> Use 32.5
-                // Moderate 18 kcal/lb (40 kcal/kg)
-                // Very active 23 kcal/lb (50 kcal/kg)
-                let factor = 32.5;
-                if (pa >= 1.3) factor = 35;
-                if (pa >= 1.5) factor = 40;
-                if (pa >= 1.7) factor = 50;
-                
-                ratioVal = dryWeightVal * factor;
-                ratioLabel = `Boys >15 (${factor} kcal/kg)`;
-            }
-        }
+            return 0;
+        };
+
+        const ratioDry = calcRatio(dryWeightVal);
+        const ratioSel = calcRatio(selWeightVal);
+        let ratioLabel = 'Age-based';
+        let ratioFormula = '';
+        if (age_years < 1) { ratioLabel='Infant'; ratioFormula='1000 kcal base'; }
+        else if (age_years <= 11) { ratioLabel='1-11y'; ratioFormula='1000 + 100*Age'; }
+        else if (age_years > 15 && gender === 'male') { ratioLabel='Boys >15'; ratioFormula='Wt * ActivityFactor'; }
+        else { ratioLabel='Adolescent Rule'; ratioFormula='Base + Age Increment'; }
 
         pedMethods = {
-            driEER: { val: eer, label: eerLabel },
-            obeseBEE: { val: beeObese, label: 'BEE (Obese Eq)' },
-            maintenanceTEE: { val: teeMaint, label: 'TEE (Maint. Overweight)' },
-            ratio: { val: ratioVal, label: ratioLabel }
+            driEER: { valDry: eerDry, valSel: eerSel, label: eerLabel, formula: eerFormula },
+            obeseBEE: { valDry: beeObeseDry, valSel: beeObeseSel, label: 'BEE (Obese Eq)', formula: beeObeseFormula },
+            maintenanceTEE: { valDry: teeMaintDry, valSel: teeMaintSel, label: 'TEE (Maint. Overweight)', formula: teeMaintFormula },
+            ratio: { valDry: ratioDry, valSel: ratioSel, label: ratioLabel, formula: ratioFormula }
         };
     }
 
-    // --- ADULT METHODS (Legacy) ---
-    // (Existing M1-M6 logic remains here...)
-    // [Truncated for brevity in change block, assuming kept as is, just need to update return]
+    // --- ADULT METHODS ---
+    // M1: Weight Based
+    let m1Factor = 25; // Default logic can be refined
+    const m1Dry = dryWeightVal * 25; // Placeholder factor logic
+    const m1Sel = selWeightVal * 25;
+
+    // M2: Factor Table
+    const m2Actual = [dryWeightVal * 25, dryWeightVal * 30, dryWeightVal * 35, dryWeightVal * 40];
+    const m2Selected = [selWeightVal * 25, selWeightVal * 30, selWeightVal * 35, selWeightVal * 40];
+
+    // M3: Mifflin / Harris
+    // Harris (M): 66.5 + (13.75*W) + (5.003*H) - (6.75*A)
+    // Harris (F): 655.1 + (9.563*W) + (1.850*H) - (4.676*A)
+    // Mifflin (M): (10*W) + (6.25*H) - (5*A) + 5
+    // Mifflin (F): (10*W) + (6.25*H) - (5*A) - 161
     
-    // ... (Previous M1-M6 code) ...
-    // Re-implementing M5 & M6 to ensure they are available in results
-    // METHOD 5 (Adult)
+    const calcHarris = (wt: number) => {
+        if (wt <= 0) return 0;
+        if (gender === 'male') return 66.5 + (13.75 * wt) + (5.003 * height_cm) - (6.75 * age_years);
+        else return 655.1 + (9.563 * wt) + (1.850 * height_cm) - (4.676 * age_years);
+    };
+    
+    const calcMifflin = (wt: number) => {
+        if (wt <= 0) return 0;
+        if (gender === 'male') return (10 * wt) + (6.25 * height_cm) - (5 * age_years) + 5;
+        else return (10 * wt) + (6.25 * height_cm) - (5 * age_years) - 161;
+    };
+
+    const harrisDry = calcHarris(dryWeightVal);
+    const harrisSel = calcHarris(selWeightVal);
+    const mifflinDry = calcMifflin(dryWeightVal);
+    const mifflinSel = calcMifflin(selWeightVal);
+    
+    const actFactor = physicalActivity_val > 0 ? physicalActivity_val : 1.2;
+
+    // M5: Simple 30 kcal/kg
     let m5ResultDry = dryWeightVal * 30;
-    let m5ResultSel = selectedWeight * 30;
+    let m5ResultSel = selWeightVal * 30;
     
-    // METHOD 6 (Adult EER)
-    let m6Result = 0;
-    // ... (Simple Adult IOM calc) ...
-    if (!isPediatric) {
-        if (gender === 'male') m6Result = 662 - (9.53 * age_years) + 1.25 * (15.91 * dryWeightVal + 539.6 * height_m);
-        else m6Result = 354 - (6.91 * age_years) + 1.25 * (9.36 * dryWeightVal + 726 * height_m);
-    }
+    // M6: Adult EER (IOM)
+    // Male: 662 - (9.53*A) + PA*(15.91*W + 539.6*H_m)
+    // Female: 354 - (6.91*A) + PA*(9.36*W + 726*H_m)
+    const calcAdultEER = (wt: number) => {
+        if (wt <= 0) return 0;
+        let pa = 1.0;
+        if (actFactor >= 1.4) pa = 1.11; // Low Active
+        if (actFactor >= 1.6) pa = 1.25; // Active
+        if (actFactor >= 1.9) pa = 1.48; // Very Active
+        // Simplified mapping for PA from input
+        const paMap = actFactor >= 1.9 ? 1.48 : actFactor >= 1.7 ? 1.25 : actFactor >= 1.4 ? 1.11 : 1.0;
+
+        if (gender === 'male') return 662 - (9.53 * age_years) + paMap * (15.91 * wt + 539.6 * height_m);
+        else return 354 - (6.91 * age_years) + paMap * (9.36 * wt + 726 * height_m);
+    };
+
+    const m6ResultDry = calcAdultEER(dryWeightVal);
+    const m6ResultSel = calcAdultEER(selWeightVal);
+    const m6Formula = gender === 'male' ? "662 - 9.53A + PA(15.91W + 539.6H)" : "354 - 6.91A + PA(9.36W + 726H)";
 
     // Protocol
     const ibw30 = IBW_2 * 0.30;
@@ -639,9 +659,14 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         },
         pediatric: pediatricData,
         pediatricMethods: pedMethods,
+        m1: { bmiValue: bmiVal, factor: m1Factor, resultDry: m1Dry, resultSel: m1Sel },
+        m2: { actual: m2Actual, selected: m2Selected },
+        m3: {
+            harris: { bmrDry: harrisDry, teeDry: harrisDry * actFactor, bmrSel: harrisSel, teeSel: harrisSel * actFactor },
+            mifflin: { bmrDry: mifflinDry, teeDry: mifflinDry * actFactor, bmrSel: mifflinSel, teeSel: mifflinSel * actFactor }
+        },
         m5: { resultDry: m5ResultDry, resultSel: m5ResultSel, category: 'Adult', notes: [] },
-        m6: { result: m6Result, label: 'Adult EER', note: '', proteinRef: '' },
-        // ... (Other props empty for now to match interface)
+        m6: { resultDry: m6ResultDry, resultSel: m6ResultSel, label: 'Adult EER (IOM)', note: '', proteinRef: m6Formula },
     });
 
   }, [gender, age, height, waist, hip, mac, tsf, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, edemaCorrectionPercent, amputationPercent, bodyFatPercent, desiredBodyFat, pregnancyState, pediatricAge, deficit, t]);
