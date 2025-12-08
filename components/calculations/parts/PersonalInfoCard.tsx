@@ -59,8 +59,8 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
   const isPediatric = pediatricAge !== null || age < 20;
 
   return (
-    <div className="card bg-white p-3">
-      <div className="flex items-center gap-2 mb-3 pb-1 border-b border-gray-100">
+    <div className="card bg-white p-4">
+      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
         <span className="text-xl">👤</span>
         <h2 className="text-lg font-bold text-[var(--color-heading)]">{t.kcal.personalInfo}</h2>
         
@@ -68,7 +68,7 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
         {isPediatric && onOpenGrowthCharts && (
             <button 
                 onClick={onOpenGrowthCharts}
-                className="ml-auto bg-blue-100 hover:bg-blue-200 text-blue-800 text-[10px] font-bold px-2 py-1 rounded-full border border-blue-200 flex items-center gap-1 transition"
+                className="ml-auto bg-blue-100 hover:bg-blue-200 text-blue-800 text-[10px] font-bold px-3 py-1 rounded-full border border-blue-200 flex items-center gap-1 transition"
                 title="Open Growth Charts"
             >
                 <span>📈</span> Charts
@@ -76,23 +76,23 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
         )}
       </div>
       
-      <div className="space-y-4">
-          {/* Row 1: Demographics & Height (More relaxed grid) */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="space-y-5">
+          {/* Row 1: Demographics & Height (2 Column Grid) */}
+          <div className="grid grid-cols-2 gap-4">
             
             {/* Gender - Compact Toggle */}
             <div className="col-span-1">
-              <label className="block text-xs font-bold text-gray-500 mb-1">{t.kcal.gender}</label>
-              <div className="flex rounded overflow-hidden border border-[var(--color-primary)]/30 text-xs h-9">
+              <label className="block text-xs font-bold text-gray-500 mb-1.5">{t.kcal.gender}</label>
+              <div className="flex rounded overflow-hidden border border-[var(--color-primary)]/30 text-sm h-10 shadow-sm">
                 <button 
                   onClick={() => setGender('male')}
-                  className={`flex-1 transition ${gender === 'male' ? 'bg-[var(--color-primary)] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                  className={`flex-1 transition font-medium ${gender === 'male' ? 'bg-[var(--color-primary)] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                 >
                   {t.kcal.male}
                 </button>
                 <button 
                   onClick={() => setGender('female')}
-                  className={`flex-1 transition ${gender === 'female' ? 'bg-[var(--color-primary)] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                  className={`flex-1 transition font-medium ${gender === 'female' ? 'bg-[var(--color-primary)] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                 >
                   {t.kcal.female}
                 </button>
@@ -103,20 +103,20 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
             <div className="col-span-1 relative">
                 {setAgeMode && setDob && setReportDate ? (
                    <div>
-                       <div className="flex justify-between mb-1">
+                       <div className="flex justify-between mb-1.5">
                            <label className="block text-xs font-bold text-gray-500">{t.kcal.age}</label>
-                           <div className="flex bg-gray-100 rounded p-0.5 text-[9px]">
-                              <button onClick={() => setAgeMode('manual')} className={`px-1.5 rounded ${ageMode === 'manual' ? 'bg-white shadow text-blue-600' : 'text-gray-400'}`}>Man</button>
-                              <button onClick={() => setAgeMode('auto')} className={`px-1.5 rounded ${ageMode === 'auto' ? 'bg-white shadow text-blue-600' : 'text-gray-400'}`}>Auto</button>
+                           <div className="flex bg-gray-100 rounded p-0.5 text-[10px]">
+                              <button onClick={() => setAgeMode('manual')} className={`px-2 rounded ${ageMode === 'manual' ? 'bg-white shadow text-blue-600' : 'text-gray-400'}`}>Man</button>
+                              <button onClick={() => setAgeMode('auto')} className={`px-2 rounded ${ageMode === 'auto' ? 'bg-white shadow text-blue-600' : 'text-gray-400'}`}>Auto</button>
                            </div>
                        </div>
                        {ageMode === 'manual' ? (
-                           <input type="number" value={age} onChange={(e) => setAge(Number(e.target.value))} className="w-full h-9 border rounded px-2 text-sm" />
+                           <input type="number" value={age} onChange={(e) => setAge(Number(e.target.value))} className="w-full h-10 border rounded px-3 text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition" />
                        ) : (
-                           <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full h-9 border rounded px-1 text-xs" />
+                           <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full h-10 border rounded px-2 text-xs focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition" />
                        )}
                        {pediatricAge && ageMode === 'auto' && (
-                           <div className="absolute -bottom-3 right-0 text-[9px] text-gray-500 bg-white px-1">
+                           <div className="absolute -bottom-4 right-0 text-[10px] font-bold text-blue-600 bg-blue-50 px-1 rounded border border-blue-100">
                                {pediatricAge.years}y {pediatricAge.months}m
                            </div>
                        )}
@@ -128,20 +128,23 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
 
             {/* Height */}
             <div className="col-span-1 relative">
-                <label className="block text-xs font-bold text-gray-500 mb-1">{isInfant ? "Length" : t.kcal.height}</label>
-                <input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} className="w-full h-9 border rounded px-2 text-sm" />
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">{isInfant ? "Length" : t.kcal.height}</label>
+                <div className="relative">
+                    <input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} className="w-full h-10 border rounded px-3 text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition" />
+                    <span className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none">cm</span>
+                </div>
                 {onOpenHeightEstimator && (
-                    <button onClick={onOpenHeightEstimator} className="absolute top-0 right-0 text-[9px] text-blue-600 bg-blue-50 px-1 rounded border border-blue-100 hover:bg-blue-100">Est?</button>
+                    <button onClick={onOpenHeightEstimator} className="absolute -top-6 right-0 text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 hover:bg-blue-100 transition">Estimate?</button>
                 )}
             </div>
 
             {/* Activity */}
             <div className="col-span-1">
-                <label className="block text-xs font-bold text-gray-500 mb-1">{t.kcal.activity}</label>
+                <label className="block text-xs font-bold text-gray-500 mb-1.5">{t.kcal.activity}</label>
                 <select 
                     value={physicalActivity} 
                     onChange={(e) => setPhysicalActivity(Number(e.target.value))} 
-                    className="w-full h-9 border rounded px-1 text-xs bg-white"
+                    className="w-full h-10 border rounded px-2 text-xs bg-white focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition"
                 >
                     <option value={0}>Select...</option>
                     <option value={1.2}>{t.kcal.activityLevels.sedentary}</option>
@@ -153,47 +156,47 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
             </div>
           </div>
 
-          {/* Row 2: Anthropometry (Break to new line, 2 cols on mobile, 4 on desktop) */}
-          <div className="bg-gray-50 p-2.5 rounded-lg border border-gray-100">
-              <label className="block text-[10px] font-bold text-gray-400 mb-2 uppercase">Detailed Anthropometry</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Row 2: Anthropometry (2 Column Grid) */}
+          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+              <label className="block text-[10px] font-bold text-gray-400 mb-3 uppercase tracking-wider">Detailed Anthropometry</label>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-1">
                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">{t.kcal.waist}</label>
                     <div className="flex gap-1">
-                        <input type="number" value={waist} onChange={(e) => setWaist(Number(e.target.value))} className="w-full h-8 border rounded px-2 text-xs" />
+                        <input type="number" value={waist} onChange={(e) => setWaist(Number(e.target.value))} className="w-full h-9 border rounded px-2 text-xs focus:ring-1 focus:ring-blue-400" />
                         {onOpenPediatricWaist && age >= 2 && age <= 19 && (
-                            <button onClick={onOpenPediatricWaist} className="px-1 bg-white border rounded text-[10px]" title="Chart">📊</button>
+                            <button onClick={onOpenPediatricWaist} className="px-1.5 bg-white border rounded text-xs hover:bg-blue-50 text-blue-600" title="Percentile Chart">📊</button>
                         )}
                     </div>
                 </div>
                 <div className="col-span-1">
                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">{t.kcal.hip}</label>
-                    <input type="number" value={hip} onChange={(e) => setHip && setHip(Number(e.target.value))} className="w-full h-8 border rounded px-2 text-xs" />
+                    <input type="number" value={hip} onChange={(e) => setHip && setHip(Number(e.target.value))} className="w-full h-9 border rounded px-2 text-xs focus:ring-1 focus:ring-blue-400" />
                 </div>
                 <div className="col-span-1">
                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">{t.kcal.mac}</label>
                     <div className="flex gap-1">
-                        <input type="number" value={mac} onChange={(e) => setMac && setMac(Number(e.target.value))} className="w-full h-8 border rounded px-2 text-xs" />
+                        <input type="number" value={mac} onChange={(e) => setMac && setMac(Number(e.target.value))} className="w-full h-9 border rounded px-2 text-xs focus:ring-1 focus:ring-blue-400" />
                         {onOpenPediatricMAMC && age >= 2 && age <= 19 && (
-                            <button onClick={onOpenPediatricMAMC} className="px-1 bg-white border rounded text-[10px]" title="MAMC">💪</button>
+                            <button onClick={onOpenPediatricMAMC} className="px-1.5 bg-white border rounded text-xs hover:bg-blue-50 text-blue-600" title="MAMC Analysis">💪</button>
                         )}
                     </div>
                 </div>
                 <div className="col-span-1">
                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">{t.kcal.tsf}</label>
-                    <input type="number" value={tsf} onChange={(e) => setTsf && setTsf(Number(e.target.value))} className="w-full h-8 border rounded px-2 text-xs" />
+                    <input type="number" value={tsf} onChange={(e) => setTsf && setTsf(Number(e.target.value))} className="w-full h-9 border rounded px-2 text-xs focus:ring-1 focus:ring-blue-400" />
                 </div>
               </div>
           </div>
 
           {/* Row 3: Pregnancy (Conditional) */}
           {gender === 'female' && age > 10 && setPregnancyState && (
-              <div className="bg-pink-50 p-2 rounded border border-pink-100 flex items-center gap-2">
+              <div className="bg-pink-50 p-3 rounded-lg border border-pink-100 flex items-center gap-3">
                   <label className="text-xs font-bold text-pink-700 uppercase whitespace-nowrap">Status:</label>
                   <select 
                       value={pregnancyState || 'none'} 
                       onChange={(e) => setPregnancyState(e.target.value as PregnancyState)}
-                      className="flex-grow h-7 border border-pink-200 rounded text-xs focus:ring-pink-400 bg-white"
+                      className="flex-grow h-9 border border-pink-200 rounded text-xs focus:ring-pink-400 bg-white px-2"
                   >
                       <option value="none">None</option>
                       <option value="preg_1">Pregnancy (1st Trim)</option>

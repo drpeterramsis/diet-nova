@@ -70,33 +70,48 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
   const isPediatric = age !== undefined && age < 18;
 
   return (
-    <div className="card bg-white p-3">
-      <div className="flex items-center gap-2 mb-3 pb-1 border-b border-gray-100">
+    <div className="card bg-white p-4">
+      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
         <span className="text-xl">⚖️</span>
         <h2 className="text-lg font-bold text-[var(--color-heading)]">{t.kcal.weightInfo}</h2>
       </div>
 
-      {/* Condensed 3-Column Grid for Weights */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* 2-Column Grid for Weights */}
+      <div className="grid grid-cols-2 gap-4">
         <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">{t.kcal.currentWeight}</label>
-            <input type="number" value={currentWeight || ''} onChange={(e) => setCurrentWeight(Number(e.target.value))} className="w-full h-9 border rounded px-2 text-sm font-bold text-blue-700" />
+            <label className="block text-xs font-bold text-gray-500 mb-1.5">{t.kcal.currentWeight}</label>
+            <input 
+                type="number" 
+                value={currentWeight || ''} 
+                onChange={(e) => setCurrentWeight(Number(e.target.value))} 
+                className="w-full h-10 border rounded px-3 text-sm font-bold text-blue-700 focus:ring-2 focus:ring-blue-500 outline-none transition" 
+            />
         </div>
         <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">{t.kcal.selectedWeight}</label>
-            <input type="number" value={selectedWeight || ''} onChange={(e) => setSelectedWeight(Number(e.target.value))} className="w-full h-9 border rounded px-2 text-sm text-green-700" />
+            <label className="block text-xs font-bold text-gray-500 mb-1.5">{t.kcal.selectedWeight}</label>
+            <input 
+                type="number" 
+                value={selectedWeight || ''} 
+                onChange={(e) => setSelectedWeight(Number(e.target.value))} 
+                className="w-full h-10 border rounded px-3 text-sm font-bold text-green-700 focus:ring-2 focus:ring-green-500 outline-none transition" 
+            />
         </div>
-        <div>
-            <label className="block text-xs font-bold text-gray-500 mb-1">{t.kcal.usualWeight}</label>
-            <input type="number" value={usualWeight || ''} onChange={(e) => setUsualWeight(Number(e.target.value))} className="w-full h-9 border rounded px-2 text-sm" />
+        <div className="col-span-2">
+            <label className="block text-xs font-bold text-gray-500 mb-1.5">{t.kcal.usualWeight}</label>
+            <input 
+                type="number" 
+                value={usualWeight || ''} 
+                onChange={(e) => setUsualWeight(Number(e.target.value))} 
+                className="w-full h-10 border rounded px-3 text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition" 
+            />
         </div>
       </div>
 
       {/* Special Conditions Toggle */}
-      <div className="mt-3 pt-2 border-t border-gray-100">
+      <div className="mt-4 pt-3 border-t border-gray-100">
         <button 
           onClick={() => setShowSpecialCondition(!showSpecialCondition)}
-          className="flex items-center justify-between w-full py-1.5 px-3 rounded bg-gray-50 hover:bg-gray-100 transition text-[var(--color-heading)] text-xs"
+          className="flex items-center justify-between w-full py-2 px-3 rounded bg-gray-50 hover:bg-gray-100 transition text-[var(--color-heading)] text-xs border border-gray-200"
         >
           <span className="font-semibold flex items-center gap-2">
              🩺 Advanced / Clinical Conditions
@@ -107,13 +122,13 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
         </button>
 
         {showSpecialCondition && (
-           <div className="mt-3 space-y-3 animate-fade-in bg-gray-50/50 p-2 rounded">
+           <div className="mt-3 space-y-4 animate-fade-in bg-gray-50 p-3 rounded-lg border border-gray-100">
               
-              {/* Row 1: Duration, Body Fat, Fluid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {/* Row 1: 2-Col Grid */}
+              <div className="grid grid-cols-2 gap-4">
                   <div>
                       <label className="block text-[10px] font-bold text-gray-500 mb-1">{t.kcal.duration}</label>
-                      <select value={changeDuration} onChange={(e) => setChangeDuration(Number(e.target.value))} className="w-full h-8 border rounded px-1 text-xs bg-white">
+                      <select value={changeDuration} onChange={(e) => setChangeDuration(Number(e.target.value))} className="w-full h-9 border rounded px-1 text-xs bg-white">
                           <option value={0}>-</option>
                           <option value={2}>1 Wk</option>
                           <option value={5}>1 Mo</option>
@@ -125,12 +140,12 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
                   {setBodyFatPercent && (
                       <div>
                           <label className="block text-[10px] font-bold text-gray-500 mb-1">Body Fat %</label>
-                          <input type="number" value={bodyFatPercent || ''} onChange={(e) => setBodyFatPercent(e.target.value === '' ? '' : Number(e.target.value))} className="w-full h-8 border rounded px-2 text-xs" />
+                          <input type="number" value={bodyFatPercent || ''} onChange={(e) => setBodyFatPercent(e.target.value === '' ? '' : Number(e.target.value))} className="w-full h-9 border rounded px-2 text-xs" />
                       </div>
                   )}
                   <div>
                       <label className="block text-[10px] font-bold text-gray-500 mb-1">{t.kcal.ascites}</label>
-                      <select value={ascites} onChange={(e) => setAscites(Number(e.target.value))} className="w-full h-8 border rounded px-1 text-xs bg-white">
+                      <select value={ascites} onChange={(e) => setAscites(Number(e.target.value))} className="w-full h-9 border rounded px-1 text-xs bg-white">
                           <option value={0}>None</option>
                           <option value={2.2}>Min</option>
                           <option value={6}>Mod</option>
@@ -139,7 +154,7 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
                   </div>
                   <div>
                       <label className="block text-[10px] font-bold text-gray-500 mb-1">{t.kcal.edema}</label>
-                      <select value={edema} onChange={(e) => setEdema(Number(e.target.value))} className="w-full h-8 border rounded px-1 text-xs bg-white">
+                      <select value={edema} onChange={(e) => setEdema(Number(e.target.value))} className="w-full h-9 border rounded px-1 text-xs bg-white">
                           <option value={0}>None</option>
                           <option value={1}>Min</option>
                           <option value={5}>Mod</option>
@@ -150,14 +165,14 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
               
               {/* Edema Correction (Percentage) */}
               {setEdemaCorrectionPercent && (isPediatric || (edemaCorrectionPercent || 0) > 0) && (
-                  <div className="bg-red-50 p-2 rounded border border-red-100 flex items-center gap-2">
+                  <div className="bg-red-50 p-2.5 rounded border border-red-100 flex items-center gap-3">
                       <label className="text-[10px] font-bold text-red-600 uppercase whitespace-nowrap">Edema Corr %:</label>
-                      <div className="flex gap-1 text-[10px]">
+                      <div className="flex gap-1.5 text-[10px]">
                           {[0, 0.1, 0.2].map(v => (
                               <button 
                                 key={v}
                                 onClick={() => setEdemaCorrectionPercent(v)}
-                                className={`px-2 py-1 rounded border ${edemaCorrectionPercent === v ? 'bg-red-600 text-white' : 'bg-white text-red-600 border-red-200'}`}
+                                className={`px-2.5 py-1 rounded border transition ${edemaCorrectionPercent === v ? 'bg-red-600 text-white' : 'bg-white text-red-600 border-red-200'}`}
                               >
                                 {v === 0 ? 'None' : (v * 100) + '%'}
                               </button>
@@ -173,19 +188,19 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
 
               {/* Amputations */}
               {setAmputationPercent && (
-                  <div className="bg-white p-2 rounded border border-gray-200">
-                      <div className="flex justify-between items-center mb-1">
+                  <div className="bg-white p-3 rounded border border-gray-200">
+                      <div className="flex justify-between items-center mb-2">
                           <span className="text-[10px] font-bold text-gray-500 uppercase">{t.kcal.amputations}</span>
-                          {amputationPercent ? <span className="text-[10px] font-mono bg-red-100 text-red-600 px-1 rounded">-{amputationPercent.toFixed(1)}%</span> : null}
+                          {amputationPercent ? <span className="text-[10px] font-mono bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold">-{amputationPercent.toFixed(1)}%</span> : null}
                       </div>
-                      <div className="grid grid-cols-6 gap-1">
+                      <div className="grid grid-cols-6 gap-2">
                           {['hand', 'forearm', 'arm', 'foot', 'lowerLeg', 'leg'].map(part => (
                               <div key={part} className="text-center">
-                                  <label className="block text-[8px] text-gray-400 mb-0.5 capitalize">{part}</label>
+                                  <label className="block text-[8px] text-gray-400 mb-1 capitalize tracking-tight">{part}</label>
                                   <select 
                                     value={ampSelection[part]} 
                                     onChange={(e) => updateAmp(part, Number(e.target.value))} 
-                                    className="w-full text-[10px] p-0.5 border rounded bg-gray-50"
+                                    className="w-full text-[10px] p-1 border rounded bg-gray-50 focus:ring-1 focus:ring-red-200"
                                   >
                                       <option value={0}>0</option>
                                       <option value={1}>1</option>

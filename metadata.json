@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova CheckPoint 23_v2.0.155",
-  "description": "Updates: Kcal Calculator layout fixes, M3 deficit math application, and tooltip z-index fixes.",
+  "name": "Diet-Nova CheckPoint 25_v2.0.156",
+  "description": "Updates: Kcal Calculator layout optimized (2-column grids for Personal/Weight info), and M3 deficit math application.",
   "requestFramePermissions": []
 }
