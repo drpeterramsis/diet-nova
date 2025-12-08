@@ -56,216 +56,135 @@ const PersonalInfoCard: React.FC<PersonalInfoProps> = ({
   const isInfant = age < 2; // < 24 months
 
   return (
-    <div className="card bg-white">
-      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-        <span className="text-2xl">👤</span>
-        <h2 className="text-xl font-bold text-[var(--color-heading)]">{t.kcal.personalInfo}</h2>
+    <div className="card bg-white p-3">
+      <div className="flex items-center gap-2 mb-3 pb-1 border-b border-gray-100">
+        <span className="text-xl">👤</span>
+        <h2 className="text-lg font-bold text-[var(--color-heading)]">{t.kcal.personalInfo}</h2>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Gender Toggle */}
-        <div className="col-span-2">
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">{t.kcal.gender}</label>
-          <div className="flex rounded-lg overflow-hidden border border-[var(--color-primary)]/30">
+      {/* Condensed Grid: 2 cols on mobile, 4 on desktop */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        
+        {/* Gender - Compact Toggle */}
+        <div className="col-span-1">
+          <label className="block text-xs font-bold text-gray-500 mb-1">{t.kcal.gender}</label>
+          <div className="flex rounded overflow-hidden border border-[var(--color-primary)]/30 text-xs h-9">
             <button 
               onClick={() => setGender('male')}
-              className={`flex-1 py-2 transition ${gender === 'male' ? 'bg-[var(--color-primary)] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              className={`flex-1 transition ${gender === 'male' ? 'bg-[var(--color-primary)] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >
               {t.kcal.male}
             </button>
             <button 
               onClick={() => setGender('female')}
-              className={`flex-1 py-2 transition ${gender === 'female' ? 'bg-[var(--color-primary)] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+              className={`flex-1 transition ${gender === 'female' ? 'bg-[var(--color-primary)] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >
               {t.kcal.female}
             </button>
           </div>
         </div>
 
-        {/* Pregnancy/Lactation (Only for Female) */}
-        {gender === 'female' && age > 10 && setPregnancyState && (
-            <div className="col-span-2 bg-pink-50 p-3 rounded-lg border border-pink-100">
-                <label className="block text-xs font-bold text-pink-700 uppercase mb-2">Pregnancy / Lactation</label>
-                <select 
-                    value={pregnancyState || 'none'} 
-                    onChange={(e) => setPregnancyState(e.target.value as PregnancyState)}
-                    className="w-full p-2 border border-pink-200 rounded text-sm focus:ring-pink-400 focus:border-pink-400"
-                >
-                    <option value="none">None</option>
-                    <option value="preg_1">Pregnancy (1st Trimester)</option>
-                    <option value="preg_2">Pregnancy (2nd Trimester)</option>
-                    <option value="preg_3">Pregnancy (3rd Trimester)</option>
-                    <option value="lact_0_6">Lactation (0-6 Months)</option>
-                    <option value="lact_7_12">Lactation (7-12 Months)</option>
-                </select>
-            </div>
-        )}
-
-        {/* Age Section with Auto/Manual Toggle */}
-        <div className="col-span-2 md:col-span-1">
+        {/* Age - Compact */}
+        <div className="col-span-1 relative">
             {setAgeMode && setDob && setReportDate ? (
-               <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                   <div className="flex justify-between items-center mb-2">
-                      <label className="block text-xs font-bold text-gray-500 uppercase">{t.kcal.ageMode}</label>
-                      <div className="flex bg-white rounded border border-gray-300 overflow-hidden text-xs">
-                          <button 
-                            onClick={() => setAgeMode('manual')}
-                            className={`px-2 py-1 ${ageMode === 'manual' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-500 hover:bg-gray-50'}`}
-                          >
-                             {t.kcal.manual}
-                          </button>
-                          <button 
-                            onClick={() => setAgeMode('auto')}
-                            className={`px-2 py-1 ${ageMode === 'auto' ? 'bg-blue-100 text-blue-700 font-bold' : 'text-gray-500 hover:bg-gray-50'}`}
-                          >
-                             {t.kcal.auto}
-                          </button>
-                      </div>
+               <div>
+                   <div className="flex justify-between mb-1">
+                       <label className="block text-xs font-bold text-gray-500">{t.kcal.age}</label>
+                       <div className="flex bg-gray-100 rounded p-0.5 text-[9px]">
+                          <button onClick={() => setAgeMode('manual')} className={`px-1.5 rounded ${ageMode === 'manual' ? 'bg-white shadow text-blue-600' : 'text-gray-400'}`}>Man</button>
+                          <button onClick={() => setAgeMode('auto')} className={`px-1.5 rounded ${ageMode === 'auto' ? 'bg-white shadow text-blue-600' : 'text-gray-400'}`}>Auto</button>
+                       </div>
                    </div>
-                   
                    {ageMode === 'manual' ? (
-                       <InputGroup label={t.kcal.age} value={age} onChange={setAge} error={age === 0} />
+                       <input type="number" value={age} onChange={(e) => setAge(Number(e.target.value))} className="w-full h-9 border rounded px-2 text-sm" />
                    ) : (
-                       <div className="space-y-2">
-                           <div>
-                               <label className="block text-xs text-gray-600 mb-1">{t.kcal.dob}</label>
-                               <input 
-                                 type="date" 
-                                 className="w-full p-2 border rounded text-sm bg-white"
-                                 value={dob || ''}
-                                 onChange={(e) => setDob(e.target.value)}
-                               />
-                           </div>
-                           <div>
-                               <label className="block text-xs text-gray-600 mb-1">{t.kcal.reportDate}</label>
-                               <input 
-                                 type="date" 
-                                 className="w-full p-2 border rounded text-sm bg-white"
-                                 value={reportDate || ''}
-                                 onChange={(e) => setReportDate(e.target.value)}
-                               />
-                           </div>
-                           <div className="flex justify-between items-center pt-1">
-                               <span className="text-sm font-medium text-gray-600">{t.kcal.calcAge}:</span>
-                               <span className="text-lg font-bold text-[var(--color-primary)]">{age}</span>
-                           </div>
-                           {pediatricAge && (
-                               <div className="text-xs text-gray-500 font-mono bg-white p-1 rounded border border-gray-100 text-center">
-                                   {pediatricAge.years}Y {pediatricAge.months}M {pediatricAge.days}D
-                               </div>
-                           )}
+                       <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full h-9 border rounded px-1 text-xs" />
+                   )}
+                   {pediatricAge && ageMode === 'auto' && (
+                       <div className="absolute -bottom-3 right-0 text-[9px] text-gray-500 bg-white px-1">
+                           {pediatricAge.years}y {pediatricAge.months}m
                        </div>
                    )}
-
-                   <div className={`mt-2 text-xs font-bold px-2 py-1 rounded text-center ${age < 20 ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
-                       {age < 20 ? t.kcal.pediatricStatus : t.kcal.adultStatus}
-                   </div>
                </div>
             ) : (
-               /* Fallback if new props aren't passed yet */
-               <InputGroup label={t.kcal.age} value={age} onChange={setAge} error={age === 0} />
+               <InputGroup label={t.kcal.age} value={age} onChange={setAge} />
             )}
         </div>
 
-        <div className="col-span-2 md:col-span-1 space-y-5">
-            <div className="relative">
-                <InputGroup 
-                    label={isInfant ? "Length (cm)" : t.kcal.height} 
-                    value={height} 
-                    onChange={setHeight} 
-                    error={height === 0} 
-                />
-                {onOpenHeightEstimator && (
-                    <button 
-                        onClick={onOpenHeightEstimator}
-                        className="absolute top-0 right-0 text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 hover:bg-blue-100"
-                    >
-                        Estimate Ht?
-                    </button>
-                )}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-                <div className="relative">
-                    <InputGroup label={t.kcal.waist} value={waist} onChange={setWaist} error={waist === 0} />
-                    {onOpenPediatricWaist && age >= 2 && age <= 19 && (
-                        <button 
-                            onClick={onOpenPediatricWaist}
-                            className="absolute top-0 right-0 text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded border border-blue-100 hover:bg-blue-100"
-                            title="Pediatric Waist Analysis"
-                        >
-                            📊 Chart
-                        </button>
-                    )}
-                </div>
-                {hip !== undefined && setHip && (
-                    <InputGroup label={t.kcal.hip} value={hip} onChange={setHip} />
-                )}
-            </div>
-            <p className="text-[10px] text-gray-400 -mt-2 italic leading-tight">
-                ℹ️ Waist: Midpoint between iliac & rib. Hip: Widest part of buttocks.
-            </p>
+        {/* Height */}
+        <div className="col-span-1 relative">
+            <label className="block text-xs font-bold text-gray-500 mb-1">{isInfant ? "Length" : t.kcal.height}</label>
+            <input type="number" value={height} onChange={(e) => setHeight(Number(e.target.value))} className="w-full h-9 border rounded px-2 text-sm" />
+            {onOpenHeightEstimator && (
+                <button onClick={onOpenHeightEstimator} className="absolute top-0 right-0 text-[9px] text-blue-600 bg-blue-50 px-1 rounded border border-blue-100 hover:bg-blue-100">Est?</button>
+            )}
         </div>
-        
-        {/* Anthropometry Section */}
-        {mac !== undefined && setMac && tsf !== undefined && setTsf && (
-            <div className="col-span-2 bg-purple-50 p-4 rounded-lg border border-purple-100">
-                <div className="flex justify-between items-center mb-3 border-b border-purple-200 pb-1">
-                    <h3 className="font-bold text-xs text-purple-700 uppercase">
-                        Anthropometry (Detailed)
-                    </h3>
-                    {onOpenPediatricMAMC && age >= 2 && age <= 19 && (
-                        <button 
-                            onClick={onOpenPediatricMAMC}
-                            className="text-[10px] bg-white text-purple-600 px-2 py-1 rounded border border-purple-200 hover:bg-purple-100 font-bold"
-                        >
-                            💪 Pediatric MAMC Tool
-                        </button>
+
+        {/* Activity */}
+        <div className="col-span-1">
+            <label className="block text-xs font-bold text-gray-500 mb-1">{t.kcal.activity}</label>
+            <select 
+                value={physicalActivity} 
+                onChange={(e) => setPhysicalActivity(Number(e.target.value))} 
+                className="w-full h-9 border rounded px-1 text-xs bg-white"
+            >
+                <option value={0}>Select...</option>
+                <option value={1.2}>{t.kcal.activityLevels.sedentary}</option>
+                <option value={1.375}>{t.kcal.activityLevels.mild}</option>
+                <option value={1.55}>{t.kcal.activityLevels.moderate}</option>
+                <option value={1.725}>{t.kcal.activityLevels.heavy}</option>
+                <option value={1.9}>{t.kcal.activityLevels.veryActive}</option>
+            </select>
+        </div>
+
+        {/* Second Row: Anthropometry */}
+        <div className="col-span-2 md:col-span-4 grid grid-cols-4 gap-3 bg-gray-50 p-2 rounded-lg border border-gray-100">
+            <div className="col-span-1">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">{t.kcal.waist}</label>
+                <div className="flex gap-1">
+                    <input type="number" value={waist} onChange={(e) => setWaist(Number(e.target.value))} className="w-full h-8 border rounded px-2 text-xs" />
+                    {onOpenPediatricWaist && age >= 2 && age <= 19 && (
+                        <button onClick={onOpenPediatricWaist} className="px-1 bg-white border rounded text-[10px]" title="Chart">📊</button>
                     )}
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-                            {t.kcal.mac}
-                        </label>
-                        <input
-                            type="number"
-                            value={mac || ''}
-                            onChange={(e) => setMac(Number(e.target.value))}
-                            placeholder="cm"
-                            className="w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 border-gray-200 focus:ring-purple-500"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-                            {t.kcal.tsf}
-                        </label>
-                        <input
-                            type="number"
-                            value={tsf || ''}
-                            onChange={(e) => setTsf(Number(e.target.value))}
-                            placeholder="mm"
-                            className="w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 border-gray-200 focus:ring-purple-500"
-                        />
-                    </div>
+            </div>
+            <div className="col-span-1">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">{t.kcal.hip}</label>
+                <input type="number" value={hip} onChange={(e) => setHip && setHip(Number(e.target.value))} className="w-full h-8 border rounded px-2 text-xs" />
+            </div>
+            <div className="col-span-1">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">{t.kcal.mac}</label>
+                <div className="flex gap-1">
+                    <input type="number" value={mac} onChange={(e) => setMac && setMac(Number(e.target.value))} className="w-full h-8 border rounded px-2 text-xs" />
+                    {onOpenPediatricMAMC && age >= 2 && age <= 19 && (
+                        <button onClick={onOpenPediatricMAMC} className="px-1 bg-white border rounded text-[10px]" title="MAMC">💪</button>
+                    )}
                 </div>
+            </div>
+            <div className="col-span-1">
+                <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">{t.kcal.tsf}</label>
+                <input type="number" value={tsf} onChange={(e) => setTsf && setTsf(Number(e.target.value))} className="w-full h-8 border rounded px-2 text-xs" />
+            </div>
+        </div>
+
+        {/* Pregnancy/Lactation (Conditional Row) */}
+        {gender === 'female' && age > 10 && setPregnancyState && (
+            <div className="col-span-2 md:col-span-4 bg-pink-50 p-1.5 rounded border border-pink-100 flex items-center gap-2">
+                <label className="text-xs font-bold text-pink-700 uppercase whitespace-nowrap">Status:</label>
+                <select 
+                    value={pregnancyState || 'none'} 
+                    onChange={(e) => setPregnancyState(e.target.value as PregnancyState)}
+                    className="flex-grow h-7 border border-pink-200 rounded text-xs focus:ring-pink-400 bg-white"
+                >
+                    <option value="none">None</option>
+                    <option value="preg_1">Pregnancy (1st Trim)</option>
+                    <option value="preg_2">Pregnancy (2nd Trim)</option>
+                    <option value="preg_3">Pregnancy (3rd Trim)</option>
+                    <option value="lact_0_6">Lactation (0-6m)</option>
+                    <option value="lact_7_12">Lactation (7-12m)</option>
+                </select>
             </div>
         )}
-
-        <div className="col-span-2">
-            <SelectGroup 
-            label={t.kcal.activity}
-            value={physicalActivity}
-            onChange={setPhysicalActivity}
-            options={[
-                { value: 0, label: t.kcal.selectActivity },
-                { value: 1.2, label: t.kcal.activityLevels.sedentary },
-                { value: 1.375, label: t.kcal.activityLevels.mild },
-                { value: 1.55, label: t.kcal.activityLevels.moderate },
-                { value: 1.725, label: t.kcal.activityLevels.heavy },
-                { value: 1.9, label: t.kcal.activityLevels.veryActive },
-            ]}
-            />
-        </div>
       </div>
     </div>
   );

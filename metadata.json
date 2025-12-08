@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova CheckPoint 13_ v2.0.149",
-  "description": "Updates: Enhanced Pediatric Tools (IBW Methods: Moore, BMI 50%, Equations) and Specialized Energy Calculations (Obese, Catch-Up, DRI).",
+  "name": "Diet-Nova CheckPoint 15_ v2.0.150",
+  "description": "Updates: Condensed Kcal Calculator Form, Updated Pediatric DRI/BEE/TEE Equations per Protocol.",
   "requestFramePermissions": []
 }

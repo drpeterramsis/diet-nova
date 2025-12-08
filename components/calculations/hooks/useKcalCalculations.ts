@@ -482,10 +482,11 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         let eer = 0;
         let eerLabel = '';
         const pa = physicalActivity_val > 0 ? physicalActivity_val : 1.0; 
-        // Need to map user PA (1.2-1.9) to IOM coefficients (1.0-1.6)
+        
+        // IOM PA Coefficients (From Image)
         const getPACoeff = (g: 'male'|'female', uPA: number) => {
-            if (uPA < 1.3) return 1.0; // Sed
-            if (uPA < 1.5) return g==='male'?1.13:1.18; // Low
+            if (uPA < 1.3) return 1.0; // Sedentary
+            if (uPA < 1.5) return g==='male'?1.13:1.18; // Low Active
             if (uPA < 1.7) return g==='male'?1.26:1.35; // Active
             return g==='male'?1.42:1.60; // Very Active
         };
@@ -508,6 +509,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         eerLabel = `DRI/IOM (${totalMonths < 36 ? totalMonths + 'm' : age_years + 'y'})`;
 
         // 2. Obese Children Equations (BEE)
+        // Image 3: Equations for obese children
         let beeObese = 0;
         if (age_years >= 3 && age_years <= 18) {
             if (gender === 'male') {
@@ -518,19 +520,20 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         }
         
         // 3. Weight Maintenance TEE (Overweight)
+        // Image 2: TEE = -114 (Boys) / 389 (Girls) ...
         let teeMaint = 0;
         if (age_years >= 3 && age_years <= 18) {
             if (gender === 'male') {
-                // Boys 3-18y TEE = -114 - (50.9 x age) + PA x (19.5 x W + 161.4 x H)
                 // PA coeff specific to this eq: Sed 1.0, Low 1.12, Act 1.24, Very 1.45
                 let paMaint = 1.0;
                 if (pa >= 1.3) paMaint = 1.12;
                 if (pa >= 1.5) paMaint = 1.24;
                 if (pa >= 1.7) paMaint = 1.45;
                 
+                // TEE = -114 - [50.9 * age] + PA * (19.5 * weight + 161.4 * height)
                 teeMaint = -114 - (50.9 * age_years) + paMaint * (19.5 * dryWeightVal + 161.4 * height_m);
             } else {
-                // Girls 3-18y TEE = 389 - (41.2 x age) + PA x (15.0 x W + 701 x H)
+                // Girls 3-18y TEE = 389 - [41.2 * age] + PA * (15.0 * weight + 701 * height)
                 // PA: Sed 1.0, Low 1.18, Act 1.35, Very 1.60
                 let paMaint = 1.0;
                 if (pa >= 1.3) paMaint = 1.18;
@@ -541,40 +544,52 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
             }
         }
 
-        // 4. Ratio Method (Updated per request)
-        // Age 1: 1000
-        // Age 2-11: 1000 + 100 * (Age - 1) -> e.g. Age 2 = 1100. Age 10 = 1900? Wait, table says "up to 2000 at age 10". 
-        // If Age 1 = 1000. Age 10 = 2000. That is +1000 over 9 years? Approx 111/yr.
-        // Let's use simple rule: 1000 + 100 * Age (if age 2 is 1200). 
-        // User text: "1000+100 calories per year of age up to 12 years".
-        // Let's stick to 1000 + (100 * age_years).
+        // 4. Ratio Method (Updated per new images)
+        // Image 3 (Bottom Table)
         let ratioVal = 0;
         let ratioLabel = '';
-        if (age_years <= 1) { ratioVal = 1000; ratioLabel = 'Infant Rule'; }
-        else if (age_years <= 12) { 
-            ratioVal = 1000 + (100 * age_years); 
-            ratioLabel = '1000 + 100/yr';
-        } else if (age_years <= 15) {
-            // 12-15
-            if (gender === 'male') {
-                // 2000 + 200/yr after age 10
-                ratioVal = 2000 + (200 * (age_years - 10));
-                ratioLabel = 'Boys: 2000 + 200/yr >10';
-            } else {
-                // Girls: 2000 + 50-100/yr (Use 75 avg)
+        
+        if (age_years < 1) { 
+            // Infant (approx 100 kcal/kg or similar, but table says "1 yr: 1000 kcals")
+            // Let's use simple logic for <1y based on DRI if ratio undefined
+            ratioVal = 1000; 
+            ratioLabel = 'Infant (Base 1000)';
+        }
+        else if (age_years >= 1 && age_years <= 11) {
+            // "Add 100 kcals/yr to 1000 kcals up to 2000 kcals at age 10"
+            // Formula: 1000 + 100 * age_years.
+            ratioVal = 1000 + (100 * age_years);
+            ratioLabel = '1000 + 100/yr (Age 1-11)';
+        } 
+        else if (age_years >= 12 && age_years <= 15) {
+            if (gender === 'female') {
+                // Girls 12-15: 2000 kcals + 50-100 kcals/yr after age 10
+                // Use 75 avg
                 ratioVal = 2000 + (75 * (age_years - 10));
-                ratioLabel = 'Girls: 2000 + 75/yr >10';
-            }
-        } else {
-            // > 15
-            if (gender === 'male') {
-                const actFactor = pa >= 1.5 ? 50 : (pa >= 1.3 ? 40 : 32); // kcal/kg approx from lb logic
-                ratioVal = dryWeightVal * actFactor;
-                ratioLabel = `Boys >15 (${actFactor} kcal/kg)`;
+                ratioLabel = '2000 + 75/yr >10 (Girls)';
             } else {
-                // Girls > 15: Adult calculation
-                ratioVal = dryWeightVal * 30; // approx
-                ratioLabel = 'Girls >15 (Adult Rule)';
+                // Boys 12-15: 2000 kcals + 200 kcal/yr after age 10
+                ratioVal = 2000 + (200 * (age_years - 10));
+                ratioLabel = '2000 + 200/yr >10 (Boys)';
+            }
+        } 
+        else if (age_years > 15) {
+            if (gender === 'female') {
+                // "Calculate as for an adult" -> typically 30 kcal/kg
+                ratioVal = dryWeightVal * 30; 
+                ratioLabel = 'Girls >15 (Adult Rule 30kcal/kg)';
+            } else {
+                // Boys > 15
+                // Sedentary 16 kcal/lb (30-35 kcal/kg) -> Use 32.5
+                // Moderate 18 kcal/lb (40 kcal/kg)
+                // Very active 23 kcal/lb (50 kcal/kg)
+                let factor = 32.5;
+                if (pa >= 1.3) factor = 35;
+                if (pa >= 1.5) factor = 40;
+                if (pa >= 1.7) factor = 50;
+                
+                ratioVal = dryWeightVal * factor;
+                ratioLabel = `Boys >15 (${factor} kcal/kg)`;
             }
         }
 
