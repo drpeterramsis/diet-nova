@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova CheckPoint 03.9 _ v2.0.143",
-  "description": "Updates: Enhanced Growth Charts UI with calculated Age tag, updated CDC protocols, and BIV outlier thresholds.",
+  "name": "Diet-Nova CheckPoint 05 _ v2.0.144",
+  "description": "Updates: Added detailed CDC Weight-for-Stature and Weight-for-Length charts; revised BMI-for-Age data.",
   "requestFramePermissions": []
 }
