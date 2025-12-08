@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova CheckPoint 10 _ v2.0.147",
-  "description": "Updates: Enhanced Growth Charts with Z-score calculation and Obesity Protocol recommendations.",
+  "name": "Diet-Nova CheckPoint 12 _ v2.0.148",
+  "description": "Updates: Enhanced Growth Charts with specific clinical interpretation rules (Z-score/Percentile based) and equation recommendations.",
   "requestFramePermissions": []
 }

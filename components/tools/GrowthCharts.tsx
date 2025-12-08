@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { growthDatasets, GrowthPoint, GrowthDataset } from '../../data/growthChartData';
@@ -25,7 +26,8 @@ interface AssessmentResult {
     exactPercentile: number | null; // e.g. 65.4
     zScore: number | null; // e.g. +1.2
     color: string;
-    interpretation: string;
+    interpretation: string; // "May be abnormal", "Overweight", etc.
+    equationRecommendation: string; // "WHO or DRI equation", "IBW for age", etc.
     biv?: boolean; // Flag for Biologically Implausible Value
     recommendations?: {
         physical?: string;
@@ -152,6 +154,128 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         return null;
     };
 
+    // --- Logic based on specific "Interpretation of Curves" table provided ---
+    const getClinicalInterpretation = (
+        metricType: 'height' | 'weight' | 'bmi' | 'head', 
+        percentile: number,
+        standard: 'WHO' | 'CDC'
+    ) => {
+        // Interpretation Logic derived from User's Table
+        // Z > 3 (P > 99)
+        // Z > 2 (P > 97)
+        // Z > 1 (P > 85)
+        // Z 0 (P 50) - Normal
+        // Z < -1 (P < 15)
+        // Z < -2 (P < 3) - User table says < -2 is Stunted. P3 is ~-1.88 SD. We use P3 as cutoff.
+        // Z < -3 (P < 1)
+
+        let interpretation = '';
+        let color = '';
+        let recommendation = '';
+
+        // --- SEVERE LOW (< 1st Percentile / < -3 SD) ---
+        if (percentile < 1) {
+            color = '#ef4444'; // Red
+            recommendation = "IBW for age (zero z score or 50th percentile)";
+            if (metricType === 'height') interpretation = "Severely Stunted";
+            else if (metricType === 'weight') interpretation = "Severely Underweight";
+            else if (metricType === 'bmi') interpretation = "Severely Wasted";
+            else interpretation = "Very Low";
+        }
+        // --- LOW (< 3rd Percentile / < -2 SD) ---
+        else if (percentile < 3) {
+            color = '#f97316'; // Orange
+            recommendation = "IBW for age (zero z score or 50th percentile)";
+            if (metricType === 'height') interpretation = "Stunted";
+            else if (metricType === 'weight') interpretation = "Underweight";
+            else if (metricType === 'bmi') interpretation = "Wasted";
+            else interpretation = "Low";
+        }
+        // --- NORMAL / MILD LOW (3rd to 85th) ---
+        // Table says Z < -1 is Normal. Z 0 is Normal. Z > 1 is Risk.
+        else if (percentile <= 85) {
+            color = '#22c55e'; // Green
+            recommendation = "WHO or DRI equation";
+            if (metricType === 'height') interpretation = "Normal";
+            else if (metricType === 'weight') interpretation = "Normal (Use BMI)";
+            else if (metricType === 'bmi') interpretation = "Normal";
+            else interpretation = "Normal";
+        }
+        // --- RISK OF OVERWEIGHT / HIGH (85th to 97th) ---
+        // Table says Z > 1 (85th) is Risk of Overweight for BMI. Normal for Ht.
+        else if (percentile <= 97) {
+            color = '#eab308'; // Yellow/Orange
+            if (metricType === 'height') {
+                interpretation = "Normal";
+                recommendation = "WHO or DRI equation";
+            } else if (metricType === 'weight') {
+                interpretation = "Use BMI (High Wt)";
+                recommendation = "Use BMI";
+            } else if (metricType === 'bmi') {
+                interpretation = "Risk of Overweight";
+                recommendation = "WHO or DRI equation"; // Risk doesn't imply restriction yet usually
+            } else {
+                interpretation = "High Normal";
+                recommendation = "Monitor";
+            }
+        }
+        // --- OVERWEIGHT (97th to 99th) ---
+        // Table says Z > 2 (97th) is Overweight for BMI.
+        else if (percentile <= 99) {
+            color = '#f97316'; // Orange
+            if (metricType === 'height') {
+                interpretation = "Normal"; // Height usually normal even if high
+                recommendation = "WHO or DRI equation";
+            } else if (metricType === 'weight') {
+                interpretation = "Use BMI (High)";
+                recommendation = "Use BMI";
+            } else if (metricType === 'bmi') {
+                interpretation = "Overweight";
+                recommendation = "Equation for overweight and obese children";
+            } else {
+                interpretation = "High";
+                recommendation = "Monitor";
+            }
+        }
+        // --- OBESE / ABNORMAL (> 99th) ---
+        // Table says Z > 3 (99th) is Obese for BMI. "May be abnormal" for Ht/Wt.
+        else {
+            color = '#ef4444'; // Red
+            if (metricType === 'height') {
+                interpretation = "May be abnormal";
+                recommendation = "Check endocrine/genetic causes";
+            } else if (metricType === 'weight') {
+                interpretation = "May be abnormal (Use BMI)";
+                recommendation = "Use BMI";
+            } else if (metricType === 'bmi') {
+                interpretation = "Obese";
+                recommendation = "Equation for overweight and obese children";
+            } else {
+                interpretation = "Very High";
+                recommendation = "Referral";
+            }
+        }
+
+        // CDC Override for BMI (85-95 Overweight, >95 Obese)
+        // If Standard is CDC, we might want to stick to CDC terminology strictly, 
+        // BUT the user asked to follow the specific table. The table lists CDC columns too.
+        // The table says CDC Overweight is 85th-95th. The Logic above says 85-97 is Risk/Overweight.
+        // Let's refine for CDC standard specifically if needed.
+        if (standard === 'CDC' && metricType === 'bmi') {
+            if (percentile >= 95) {
+                interpretation = "Obese";
+                color = '#ef4444';
+                recommendation = "Equation for overweight and obese children";
+            } else if (percentile >= 85) {
+                interpretation = "Overweight";
+                color = '#f97316';
+                recommendation = "Equation for overweight and obese children"; // Or weight maintenance
+            }
+        }
+
+        return { interpretation, color, recommendation };
+    };
+
     // --- Calculation Helper ---
     const calculateInterpretation = (dataset: GrowthDataset, val: number): AssessmentResult => {
         const dataPoints = gender === 'male' ? dataset.male : dataset.female;
@@ -181,17 +305,15 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                  exactPercentile: null,
                  zScore: null,
                  color: '#9ca3af', 
-                 interpretation: 'Measurements outside chart range' 
+                 interpretation: 'Measurements outside chart range',
+                 equationRecommendation: '-'
              };
         }
 
         let pText = '';
-        let pColor = '';
-        let interp = '';
         let biv = false;
-        let recommendations = undefined;
-
-        // BIV Flagging Logic (Heuristic based on range width approximation)
+        
+        // BIV Flagging Logic
         const range = ref.p97 - ref.p3;
         const extremeLow = ref.p3 - (range * 0.6); 
         const extremeHigh = ref.p97 + (range * 0.6); 
@@ -204,45 +326,41 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         const exactP = interpolatePercentile(val, ref);
         const zScore = exactP ? percentileToZScore(exactP) : null;
 
-        if (val < ref.p3) { pText = '< 3rd'; pColor = '#ef4444'; interp = 'Underweight (< 5%)'; }
-        else if (ref.p5 && val < ref.p5) { pText = '3rd - 5th'; pColor = '#f97316'; interp = 'Risk of Underweight (< 5%)'; }
-        else if (ref.p15 && val < ref.p15) { pText = '5th - 15th'; pColor = '#22c55e'; interp = 'Normal (5-84%)'; }
-        else if (ref.p25 && val < ref.p25) { pText = '15th - 25th'; pColor = '#22c55e'; interp = 'Normal (5-84%)'; }
-        else if (val < ref.p50) { pText = '25th - 50th'; pColor = '#22c55e'; interp = 'Normal (5-84%)'; }
-        else if (ref.p75 && val < ref.p75) { pText = '50th - 75th'; pColor = '#22c55e'; interp = 'Normal (5-84%)'; }
-        else if (ref.p85 && val < ref.p85) { pText = '75th - 85th'; pColor = '#22c55e'; interp = 'Normal (5-84%)'; }
-        else if (ref.p90 && val < ref.p90) { 
-            pText = '85th - 90th'; 
-            pColor = '#f97316'; 
-            interp = 'Overweight (85-94%)'; 
-        }
-        else if (ref.p95 && val < ref.p95) { 
-            pText = '90th - 95th'; 
-            pColor = '#f97316'; 
-            interp = 'Overweight (85-94%)'; 
-        }
-        else if (val < ref.p97) { 
-            pText = '95th - 97th'; 
-            pColor = '#ef4444'; 
-            interp = 'Obese (95-99%)'; 
-        }
-        else { 
-            pText = '> 97th'; 
-            pColor = '#ef4444'; 
-            interp = 'Morbid Obesity (> 99%)'; 
-        }
+        // Basic Range Label
+        if (val < ref.p3) pText = '< 3rd'; 
+        else if (ref.p5 && val < ref.p5) pText = '3rd - 5th';
+        else if (ref.p15 && val < ref.p15) pText = '5th - 15th';
+        else if (ref.p25 && val < ref.p25) pText = '15th - 25th';
+        else if (val < ref.p50) pText = '25th - 50th';
+        else if (ref.p75 && val < ref.p75) pText = '50th - 75th';
+        else if (ref.p85 && val < ref.p85) pText = '75th - 85th';
+        else if (ref.p90 && val < ref.p90) pText = '85th - 90th';
+        else if (ref.p95 && val < ref.p95) pText = '90th - 95th';
+        else if (val < ref.p97) pText = '95th - 97th';
+        else pText = '> 97th';
 
-        // Recommendations Logic (Based on BMI Percentile for Children > 2y)
-        if (dataset.yLabel.includes('BMI') && exactP) {
+        // Determine Metric Type for Clinical Logic
+        let metricType: 'height' | 'weight' | 'bmi' | 'head' = 'weight';
+        if (dataset.yLabel.includes('Length') || dataset.yLabel.includes('Height') || dataset.yLabel.includes('Stature')) metricType = 'height';
+        else if (dataset.yLabel.includes('BMI')) metricType = 'bmi';
+        else if (dataset.yLabel.includes('Head')) metricType = 'head';
+
+        // Get Clinical Logic based on Percentile/Z-Score
+        // Use exactP if available, otherwise estimate from range (not ideal but fallback)
+        const pForLogic = exactP !== null ? exactP : (val > ref.p97 ? 99 : val < ref.p3 ? 1 : 50);
+        
+        const { interpretation, color, recommendation } = getClinicalInterpretation(metricType, pForLogic, standard);
+
+        // Additional Recommendations (from previous logic, kept for detail)
+        let detailedRecs = undefined;
+        if (metricType === 'bmi' && exactP) {
             if (exactP >= 85 && exactP < 95) {
-                // Overweight (85th-94th)
-                recommendations = {
+                detailedRecs = {
                     physical: "Blood pressure, full exam",
                     labs: "Fasting lipid profile. Conditional testing for abnormalities in blood glucose or liver function."
                 };
             } else if (exactP >= 95) {
-                // Obese (>= 95th)
-                recommendations = {
+                detailedRecs = {
                     physical: "Blood pressure, full exam",
                     labs: "Fasting lipid profile, fasting glucose level & post prandial (every 2 years), ALT and AST levels (every 2 years)."
                 };
@@ -256,10 +374,11 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             rangeLabel: pText,
             exactPercentile: exactP,
             zScore,
-            color: pColor, 
-            interpretation: interp,
+            color, 
+            interpretation,
+            equationRecommendation: recommendation,
             biv,
-            recommendations
+            recommendations: detailedRecs
         };
     };
 
@@ -289,10 +408,11 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
 
             if (include) {
                 // Map value to Y axis
-                if (d.yLabel.includes('Weight')) val = Number(weight);
+                if (d.yLabel.includes('Weight') && !d.yLabel.includes('Length') && !d.yLabel.includes('Stature')) val = Number(weight); // Wt for Age
                 else if (d.yLabel.includes('Length') || d.yLabel.includes('Stature') || d.yLabel.includes('Height')) val = Number(height);
                 else if (d.yLabel.includes('Head')) val = Number(headCirc);
                 else if (d.yLabel.includes('BMI')) val = Number(bmi);
+                else if (d.yLabel.includes('Weight') && (d.xLabel.includes('Length') || d.xLabel.includes('Stature'))) val = Number(weight); // Wt for Len/Stat
 
                 charts.push({ dataset: d, userVal: val });
                 
@@ -347,14 +467,15 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                 const pVal = r.exactPercentile ? r.exactPercentile.toFixed(1) + 'th' : r.rangeLabel;
                 const zVal = r.zScore !== null ? `(Z: ${r.zScore > 0 ? '+' : ''}${r.zScore} SD)` : '';
                 note += `- ${r.label}: ${r.value} → ${pVal} ${zVal} | ${r.interpretation}\n`;
+                if (r.equationRecommendation) note += `  [Eq]: ${r.equationRecommendation}\n`;
                 
                 if (r.recommendations) {
-                    note += `  [RECOMMENDATION] Physical: ${r.recommendations.physical}\n`;
-                    note += `  [RECOMMENDATION] Labs: ${r.recommendations.labs}\n`;
+                    note += `  [Rec] Physical: ${r.recommendations.physical}\n`;
+                    note += `  [Rec] Labs: ${r.recommendations.labs}\n`;
                 }
 
                 if (r.biv) {
-                    note += `  ⚠️ FLAG: BIV (Biologically Implausible Value) / Extreme Outlier. Please verify.\n`;
+                    note += `  ⚠️ FLAG: BIV (Biologically Implausible Value). Verify.\n`;
                 }
             });
         }
@@ -402,7 +523,6 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
         const getY = (val: number) => heightPx - pad.b - ((val - yMin) / (yMax - yMin)) * (heightPx - pad.b - pad.t);
 
         const createPath = (key: keyof GrowthPoint) => {
-            // Cubic Bezier smoothing could be added here, but polyline is standard for clinical
             return 'M ' + dataPoints.map(d => `${getX(d.age)},${getY(d[key] as number)}`).join(' L ');
         };
 
@@ -410,7 +530,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
 
         return (
             <div className={`bg-white border rounded-xl p-3 shadow-sm flex flex-col h-full break-inside-avoid print:shadow-none print:border-gray-300 ${result?.biv ? 'border-red-300 ring-1 ring-red-200' : 'border-gray-200'}`}>
-                {/* Chart Header with Integrated Result for Print */}
+                {/* Chart Header */}
                 <div className="flex justify-between items-start mb-2 border-b border-gray-100 pb-2 print:border-gray-200">
                     <div>
                         <h4 className="font-bold text-gray-800 text-sm">{dataset.label}</h4>
@@ -427,7 +547,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                                         Z: {result.zScore > 0 ? '+' : ''}{result.zScore} SD
                                     </span>
                                 )}
-                                <span className="text-[10px] text-gray-500">{result.interpretation}</span>
+                                <span className="text-[10px] text-gray-500 font-bold">{result.interpretation}</span>
                             </div>
                             {result.biv && <span className="block text-[9px] text-red-600 font-bold bg-red-50 px-1 rounded mt-1">⚠️ BIV</span>}
                         </div>
@@ -459,7 +579,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                             );
                         })}
 
-                        {/* Percentile Lines with Animation Class */}
+                        {/* Percentile Lines */}
                         {/* 97th & 3rd - RED */}
                         <path d={createPath('p97')} fill="none" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={isLoaded ? 'animate-draw' : 'opacity-0'} />
                         <path d={createPath('p3')} fill="none" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={isLoaded ? 'animate-draw' : 'opacity-0'} />
@@ -557,17 +677,18 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 no-print">
                 {/* Protocol Reminder */}
                 <div className="mb-4 bg-yellow-50 text-yellow-900 text-xs p-3 rounded-lg border border-yellow-200 shadow-sm space-y-2">
-                    <strong className="block text-sm">⚠️ Clinical Protocol (CDC/WHO)</strong>
+                    <strong className="block text-sm">⚠️ Clinical Protocol (WHO 0-5y Logic applied)</strong>
                     <ul className="list-disc list-inside space-y-1 ml-1">
-                        <li><strong>&lt; 2 Years:</strong> Use <span className="font-bold text-blue-700">WHO</span> standards (0-24m). (Zero +/- 2SD for Z-Score)</li>
-                        <li><strong>2 - 20 Years:</strong> Use <span className="font-bold text-blue-700">CDC</span> or WHO growth charts.</li>
-                        <li><strong>BMI Classification:</strong>
-                            <ul className="list-inside ml-4 text-[10px] text-yellow-800 mt-1 grid grid-cols-2 gap-x-4">
-                                <li>&lt; 5%: Underweight</li>
-                                <li>5-84%: Normal</li>
-                                <li>85-94%: Overweight</li>
-                                <li>95-99%: Obese</li>
-                                <li>&gt; 99%: Morbid Obesity</li>
+                        <li><strong>&lt; 2 Years:</strong> Use <span className="font-bold text-blue-700">WHO</span> (0-24m).</li>
+                        <li><strong>2 - 20 Years:</strong> Use <span className="font-bold text-blue-700">CDC</span> or WHO.</li>
+                        <li><strong>Z-Score Cutoffs (Approx):</strong>
+                            <ul className="list-inside ml-4 text-[10px] text-yellow-800 mt-1 grid grid-cols-3 gap-x-4">
+                                <li>&gt; 3 SD: Obese</li>
+                                <li>&gt; 2 SD: Overweight</li>
+                                <li>&gt; 1 SD: Risk of Overweight</li>
+                                <li>-2 to +1 SD: Normal</li>
+                                <li>&lt; -2 SD: Wasted/Stunted</li>
+                                <li>&lt; -3 SD: Severely Wasted</li>
                             </ul>
                         </li>
                     </ul>
@@ -691,9 +812,9 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                                 <tr>
                                     <th className="p-3 text-left">Parameter</th>
                                     <th className="p-3 text-center">Value</th>
-                                    <th className="p-3 text-center">Percentile</th>
-                                    <th className="p-3 text-center">Z-Score</th>
-                                    <th className="p-3 text-left">Interpretation</th>
+                                    <th className="p-3 text-center">Percentile / Z-Score</th>
+                                    <th className="p-3 text-left">Clinical Interpretation</th>
+                                    <th className="p-3 text-left">Equation Recommendation</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -702,22 +823,23 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
                                         <td className="p-3 font-medium">{res.label}</td>
                                         <td className="p-3 text-center font-bold">{res.value}</td>
                                         <td className="p-3 text-center" style={{ color: res.color, fontWeight: 'bold' }}>
-                                            {res.exactPercentile ? res.exactPercentile.toFixed(1) + 'th' : res.rangeLabel}
+                                            <div>{res.exactPercentile ? res.exactPercentile.toFixed(1) + 'th' : res.rangeLabel}</div>
+                                            {res.zScore !== null && (
+                                                <div className="text-[10px] font-mono text-gray-500 font-normal">
+                                                    Z: {res.zScore > 0 ? '+' : ''}{res.zScore} SD
+                                                </div>
+                                            )}
                                         </td>
-                                        <td className="p-3 text-center font-mono text-xs">
-                                            {res.zScore !== null ? (
-                                                <span className={`px-2 py-0.5 rounded ${Math.abs(res.zScore) > 2 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
-                                                    {res.zScore > 0 ? '+' : ''}{res.zScore} SD
-                                                </span>
-                                            ) : '-'}
-                                        </td>
-                                        <td className="p-3 text-gray-600">
+                                        <td className="p-3 font-bold" style={{ color: res.color }}>
                                             {res.interpretation}
                                             {res.biv && (
                                                 <span className="block text-[10px] text-red-600 font-bold mt-1 bg-red-100 px-2 py-0.5 rounded w-fit">
-                                                    ⚠️ Biologically Implausible (BIV)
+                                                    ⚠️ BIV
                                                 </span>
                                             )}
+                                        </td>
+                                        <td className="p-3 text-gray-600 italic text-xs">
+                                            {res.equationRecommendation}
                                         </td>
                                     </tr>
                                 ))}
@@ -731,7 +853,7 @@ const GrowthCharts: React.FC<GrowthChartsProps> = ({ initialData, onClose, onSav
             {results.some(r => r.recommendations) && (
                 <div className="mb-8 animate-fade-in break-inside-avoid">
                     <h3 className="font-bold text-blue-800 mb-2 uppercase text-sm border-b border-blue-200 pb-1 flex items-center gap-2">
-                        <span>📋</span> Clinical Recommendations
+                        <span>📋</span> Clinical Actions (High Risk)
                     </h3>
                     <div className="grid grid-cols-1 gap-4">
                         {results.filter(r => r.recommendations).map(res => (
