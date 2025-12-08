@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -35,7 +34,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavi
 
   return (
     <header className="bg-[var(--color-primary)] text-white shadow-md sticky top-0 z-50 no-print">
-      <div className="container mx-auto flex justify-between items-center px-4 py-2">
+      <div className="container mx-auto flex justify-between items-center px-3 py-1">
         <div className="flex items-center gap-3">
           {/* Hamburger Menu */}
           <button 
@@ -49,10 +48,10 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavi
           </button>
 
           <div className="flex items-center gap-2 cursor-pointer" onClick={onNavigateHome}>
-            <h1 className="text-xl font-bold tracking-wide flex items-center mb-0">
+            <h1 className="text-lg font-bold tracking-wide flex items-center mb-0">
               Diet<span className="text-[var(--color-primary-light)]">Nova</span>
               <span className="ml-2 text-[10px] bg-white/20 px-2 py-0.5 rounded-full hidden sm:inline-block font-normal">
-                v2.0.151
+                v2.0.152
               </span>
             </h1>
           </div>

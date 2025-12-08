@@ -1,6 +1,3 @@
-
-
-
 import { useState, useEffect } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { growthDatasets, GrowthDataset } from '../../../data/growthChartData';
@@ -10,6 +7,7 @@ export interface KcalResults {
   weightLossRef: string;
   weightLossColor: string;
   dryWeight: string;
+  selectedWeight: string; // Added selected weight value
   bmi: string;
   bmiRef: string;
   bmiColor: string;
@@ -20,6 +18,10 @@ export interface KcalResults {
   ABW: string;
   IBW_2: string;
   ABW_2: string;
+  formulas?: {
+      ibw: string;
+      abw: string;
+  };
   IBW_diff_val: number;
   IBW_sel_diff_val: number;
   adjustedWeightAmputation?: string;
@@ -403,6 +405,10 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     // 3. IBW & ABW (Adults)
     let IBW = height_cm - 100; 
     let IBW_2 = 0, ABW = 0, ABW_2 = 0;
+    
+    const hamwiFormula = gender === 'male' ? "((H - 154) * 0.9) + 50" : "((H - 154) * 0.9) + 45.5";
+    const abwFormula = "((Actual - IBW) * 0.38) + IBW";
+
     if (gender === 'male') {
       IBW_2 = ((height_cm - 154) * 0.9) + 50;
     } else {
@@ -649,10 +655,15 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
         weightLoss: weightLoss.toFixed(1),
         weightLossRef, weightLossColor,
         dryWeight: dryWeightVal.toFixed(1),
+        selectedWeight: selWeightVal.toFixed(1), // Populated
         bmi: bmiVal.toFixed(1), bmiRef, bmiColor,
         bmiSel: bmiValSel.toFixed(1), bmiSelRef: '', bmiSelColor: '',
         IBW: IBW.toFixed(1), ABW: ABW.toFixed(1),
         IBW_2: IBW_2.toFixed(1), ABW_2: ABW_2.toFixed(1),
+        formulas: {
+            ibw: hamwiFormula,
+            abw: abwFormula
+        },
         IBW_diff_val: 0, IBW_sel_diff_val: 0,
         protocol: {
             ibw30, threshold, isHighObesity, recommendedWeight, recommendationLabel: isHighObesity ? 'Adj' : 'Ideal'

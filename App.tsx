@@ -1,6 +1,3 @@
-
-
-
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -48,7 +45,7 @@ const Dashboard = ({
   return (
     <>
       {/* Hero Section */}
-      <section className="relative text-center py-16 md:py-20 overflow-hidden bg-gradient-to-b from-[var(--color-bg-soft)] to-white">
+      <section className="relative text-center py-8 overflow-hidden bg-gradient-to-b from-[var(--color-bg-soft)] to-white">
         <div className="relative z-10 container mx-auto px-4 animate-fade-in">
           {session && (
               <div className="mb-4 inline-block px-4 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
@@ -66,7 +63,7 @@ const Dashboard = ({
       </section>
 
       {/* Professional Sector Grid - 4 Columns */}
-      <section id="sectors" className="container mx-auto px-4 -mt-12 relative z-20 mb-16">
+      <section id="sectors" className="container mx-auto px-4 -mt-6 relative z-20 mb-16">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               
               {/* Sector 1: Clinical Workspace */}
@@ -334,7 +331,7 @@ const AppContent = () => {
 
       <main className="flex-grow">
         {activeTool ? (
-          <div className="container mx-auto px-4 py-4 pb-20 animate-fade-in">
+          <div className="container mx-auto px-4 py-2 pb-20 animate-fade-in">
             <div className="flex items-center justify-between mb-4 no-print">
                 <button 
                   onClick={handleNavHome}

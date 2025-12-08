@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -15,7 +14,7 @@ const ToolCard = ({ title, desc, onClick, icon, locked }: CardProps) => {
 
   return (
     <div 
-      className="card text-center hover:shadow-lg transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 bg-white relative overflow-hidden p-4"  
+      className="card text-center hover:shadow-lg transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 bg-white relative overflow-hidden p-3"  
       onClick={onClick} 
     >
       {locked && (
