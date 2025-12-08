@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova CheckPoint 05 _ v2.0.144",
-  "description": "Updates: Added detailed CDC Weight-for-Stature and Weight-for-Length charts; revised BMI-for-Age data.",
+  "name": "Diet-Nova CheckPoint 06 _ v2.0.145",
+  "description": "Updates: Revised WHO Growth Charts (0-24m) with high-precision data for accurate assessment.",
   "requestFramePermissions": []
 }
