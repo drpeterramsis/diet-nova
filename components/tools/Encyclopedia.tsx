@@ -1,11 +1,11 @@
 
 import React, { useState, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { encyclopediaData, EncyclopediaItem } from '../../data/encyclopediaData';
+import { encyclopediaData, miscTopicsData, EncyclopediaItem, MiscTopicItem } from '../../data/encyclopediaData';
 import { drugsData, DrugItem } from '../../data/drugsData';
 import LabReference from './LabReference';
 
-type Sector = 'menu' | 'nutrients' | 'drugs' | 'labs';
+type Sector = 'menu' | 'nutrients' | 'definitions' | 'drugs' | 'labs' | 'misc';
 
 const Encyclopedia: React.FC = () => {
   const { t, isRTL, lang } = useLanguage();
@@ -13,16 +13,19 @@ const Encyclopedia: React.FC = () => {
   // Navigation State
   const [currentSector, setCurrentSector] = useState<Sector>('menu');
 
-  // Logic for Vitamins & Minerals Sector
+  // Logic for Vitamins & Minerals & Definitions
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'All' | 'Vitamin' | 'Mineral' | 'Definition'>('All');
-  const [viewMode, setViewMode] = useState<'cards' | 'chart'>('cards'); // Default to cards
+  const [activeFilter, setActiveFilter] = useState<'All' | 'Vitamin' | 'Mineral'>('All');
+  const [viewMode, setViewMode] = useState<'cards' | 'chart'>('cards'); 
   
   // Logic for Drugs Sector
   const [drugSearchQuery, setDrugSearchQuery] = useState('');
 
-  const filteredItems = useMemo(() => {
-    let items = encyclopediaData;
+  // Logic for Misc Topics
+  const [miscSearchQuery, setMiscSearchQuery] = useState('');
+
+  const filteredNutrients = useMemo(() => {
+    let items = encyclopediaData.filter(i => i.category === 'Vitamin' || i.category === 'Mineral');
     
     // Filter by Category
     if (activeFilter !== 'All') {
@@ -43,6 +46,18 @@ const Encyclopedia: React.FC = () => {
     return items;
   }, [searchQuery, activeFilter, lang]);
 
+  const filteredDefinitions = useMemo(() => {
+      let items = encyclopediaData.filter(i => i.category === 'Definition');
+      if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          items = items.filter(item => 
+            item.name.toLowerCase().includes(q) || 
+            item.function.toLowerCase().includes(q)
+          );
+      }
+      return items;
+  }, [searchQuery]);
+
   const filteredDrugs = useMemo(() => {
       if (!drugSearchQuery) return drugsData;
       const q = drugSearchQuery.toLowerCase();
@@ -52,6 +67,16 @@ const Encyclopedia: React.FC = () => {
           d.examples.toLowerCase().includes(q)
       );
   }, [drugSearchQuery]);
+
+  const filteredMiscTopics = useMemo(() => {
+      if (!miscSearchQuery) return miscTopicsData;
+      const q = miscSearchQuery.toLowerCase();
+      return miscTopicsData.filter(t => 
+          t.title.toLowerCase().includes(q) ||
+          t.content.toLowerCase().includes(q) ||
+          t.category.toLowerCase().includes(q)
+      );
+  }, [miscSearchQuery]);
 
   // Group Drugs for Visual Grid
   const groupedDrugs = useMemo(() => {
@@ -66,10 +91,8 @@ const Encyclopedia: React.FC = () => {
 
   // Helper to format mechanism text with colors
   const formatMechanism = (text: string) => {
-      // Split by newlines first to handle list items
       const lines = text.split('\n');
       return lines.map((line, idx) => {
-          // Process arrows within the line
           const parts = line.split(/([↑↓→])/g);
           return (
               <div key={idx} className="mb-1 last:mb-0">
@@ -91,42 +114,42 @@ const Encyclopedia: React.FC = () => {
             <div className="text-center space-y-4 mb-8">
                 <h1 className="text-3xl font-bold text-[var(--color-heading)]">{t.tools.encyclopedia.title}</h1>
                 <p className="text-gray-600 max-w-2xl mx-auto">
-                    Select a knowledge sector to explore detailed nutritional information and charts.
+                    Select a knowledge sector to explore detailed nutritional information, charts, and guides.
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 {/* 1. Vitamins & Minerals */}
                 <div 
-                    onClick={() => { setCurrentSector('nutrients'); setActiveFilter('Vitamin'); }}
+                    onClick={() => { setCurrentSector('nutrients'); setActiveFilter('All'); setSearchQuery(''); }}
                     className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-orange-500"
                 >
-                    <div className="h-16 w-16 bg-orange-50 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:bg-orange-100 transition">
+                    <div className="h-14 w-14 bg-orange-50 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:bg-orange-100 transition">
                         💊
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Vitamins & Minerals</h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                        Comprehensive chart of essential vitamins and minerals, functions, and sources.
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">Vitamins & Minerals</h3>
+                    <p className="text-xs text-gray-500 mb-4 line-clamp-2">
+                        Comprehensive chart of essential vitamins and minerals.
                     </p>
-                    <button className="mt-auto text-orange-600 font-bold text-sm bg-orange-50 px-4 py-2 rounded-lg group-hover:bg-orange-600 group-hover:text-white transition w-full">
-                        Explore Nutrients
+                    <button className="mt-auto text-orange-600 font-bold text-xs bg-orange-50 px-3 py-1.5 rounded-lg group-hover:bg-orange-600 group-hover:text-white transition w-full">
+                        Explore
                     </button>
                 </div>
 
                 {/* 2. Definitions */}
                 <div 
-                    onClick={() => { setCurrentSector('nutrients'); setActiveFilter('Definition'); }}
+                    onClick={() => { setCurrentSector('definitions'); setSearchQuery(''); }}
                     className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-purple-500"
                 >
-                    <div className="h-16 w-16 bg-purple-50 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:bg-purple-100 transition">
+                    <div className="h-14 w-14 bg-purple-50 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:bg-purple-100 transition">
                         📖
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Nutritional Definitions</h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                        Key terms: Basal Metabolism, BMR, TEE, DRI, and other nutritional standards.
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">Nutritional Definitions</h3>
+                    <p className="text-xs text-gray-500 mb-4 line-clamp-2">
+                        Key terms: BMR, TEE, RDA, DRI, and standards.
                     </p>
-                    <button className="mt-auto text-purple-600 font-bold text-sm bg-purple-50 px-4 py-2 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition w-full">
-                        View Definitions
+                    <button className="mt-auto text-purple-600 font-bold text-xs bg-purple-50 px-3 py-1.5 rounded-lg group-hover:bg-purple-600 group-hover:text-white transition w-full">
+                        View Terms
                     </button>
                 </div>
 
@@ -135,15 +158,15 @@ const Encyclopedia: React.FC = () => {
                     onClick={() => setCurrentSector('labs')}
                     className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-green-500"
                 >
-                    <div className="h-16 w-16 bg-green-50 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:bg-green-100 transition">
+                    <div className="h-14 w-14 bg-green-50 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:bg-green-100 transition">
                         🧬
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">{t.tools.labs.title}</h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                        Reference ranges for blood tests, electrolytes, lipids, and suggested panels.
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">{t.tools.labs.title}</h3>
+                    <p className="text-xs text-gray-500 mb-4 line-clamp-2">
+                        Reference ranges for blood tests, electrolytes, lipids.
                     </p>
-                    <button className="mt-auto text-green-600 font-bold text-sm bg-green-50 px-4 py-2 rounded-lg group-hover:bg-green-600 group-hover:text-white transition w-full">
-                        View Encyclopedia
+                    <button className="mt-auto text-green-600 font-bold text-xs bg-green-50 px-3 py-1.5 rounded-lg group-hover:bg-green-600 group-hover:text-white transition w-full">
+                        View Labs
                     </button>
                 </div>
 
@@ -152,15 +175,32 @@ const Encyclopedia: React.FC = () => {
                     onClick={() => setCurrentSector('drugs')}
                     className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-red-500"
                 >
-                    <div className="h-16 w-16 bg-red-50 rounded-full flex items-center justify-center text-3xl mb-4 group-hover:bg-red-100 transition">
+                    <div className="h-14 w-14 bg-red-50 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:bg-red-100 transition">
                         🧪
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">Drugs & Weight</h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                        Visual guide for medications that affect body weight, with mechanisms and examples.
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">Drugs & Weight</h3>
+                    <p className="text-xs text-gray-500 mb-4 line-clamp-2">
+                        Medications affecting weight, mechanisms and examples.
                     </p>
-                    <button className="mt-auto text-red-600 font-bold text-sm bg-red-50 px-4 py-2 rounded-lg group-hover:bg-red-600 group-hover:text-white transition w-full">
-                        View Interactive Map
+                    <button className="mt-auto text-red-600 font-bold text-xs bg-red-50 px-3 py-1.5 rounded-lg group-hover:bg-red-600 group-hover:text-white transition w-full">
+                        View Map
+                    </button>
+                </div>
+
+                {/* 5. Misc Topics (NEW) */}
+                <div 
+                    onClick={() => { setCurrentSector('misc'); setMiscSearchQuery(''); }}
+                    className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-blue-500"
+                >
+                    <div className="h-14 w-14 bg-blue-50 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:bg-blue-100 transition">
+                        📚
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-800 mb-2">Misc Topics</h3>
+                    <p className="text-xs text-gray-500 mb-4 line-clamp-2">
+                        Obesity, Body Types, Counseling plans, etc.
+                    </p>
+                    <button className="mt-auto text-blue-600 font-bold text-xs bg-blue-50 px-3 py-1.5 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition w-full">
+                        Browse Topics
                     </button>
                 </div>
             </div>
@@ -237,7 +277,6 @@ const Encyclopedia: React.FC = () => {
                     const borderColor = `border-${info.color}-200`;
                     const bgColor = `bg-${info.color}-50`;
                     const textColor = `text-${info.color}-800`;
-                    const ringColor = `focus-within:ring-${info.color}-400`;
 
                     return (
                         <div key={groupKey} className={`rounded-2xl border-2 ${borderColor} ${bgColor} p-4 md:p-6 shadow-sm flex flex-col gap-4`}>
@@ -295,11 +334,139 @@ const Encyclopedia: React.FC = () => {
       );
   }
 
+  // --- MISC TOPICS VIEW ---
+  if (currentSector === 'misc') {
+      return (
+          <div className="max-w-6xl mx-auto animate-fade-in space-y-8 pb-12">
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                  <button 
+                      onClick={() => setCurrentSector('menu')}
+                      className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2 text-sm font-medium self-start md:self-auto"
+                  >
+                      <span>←</span> Back to Sectors
+                  </button>
+                  <h2 className="text-2xl font-bold text-gray-800">Miscellaneous Topics</h2>
+              </div>
+
+              {/* Search */}
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6">
+                  <div className="relative w-full max-w-lg mx-auto">
+                      <input
+                          type="text"
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                          placeholder="Search topics (Obesity, Fat types, Counseling...)"
+                          value={miscSearchQuery}
+                          onChange={(e) => setMiscSearchQuery(e.target.value)}
+                          dir={isRTL ? 'rtl' : 'ltr'}
+                      />
+                      <span className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${isRTL ? 'left-3' : 'right-3'}`}>🔍</span>
+                  </div>
+              </div>
+
+              {/* Topics Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {filteredMiscTopics.map(topic => (
+                      <div key={topic.id} className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-lg transition">
+                          <div className="bg-blue-50 px-6 py-4 border-b border-blue-100 flex justify-between items-center">
+                              <h3 className="font-bold text-lg text-blue-900">{topic.title}</h3>
+                              <span className="text-[10px] bg-white text-blue-600 px-2 py-1 rounded-full border border-blue-200 font-bold uppercase tracking-wider">{topic.category}</span>
+                          </div>
+                          <div className="p-6 text-sm text-gray-700 leading-loose whitespace-pre-wrap">
+                              {topic.content.split('\n').map((line, i) => {
+                                  // Bold basic markdown **text**
+                                  const parts = line.split(/(\*\*.*?\*\*)/g);
+                                  return (
+                                      <div key={i} className="mb-1">
+                                          {parts.map((part, j) => {
+                                              if (part.startsWith('**') && part.endsWith('**')) {
+                                                  return <strong key={j} className="text-gray-900">{part.slice(2, -2)}</strong>;
+                                              }
+                                              return part;
+                                          })}
+                                      </div>
+                                  )
+                              })}
+                          </div>
+                      </div>
+                  ))}
+                  {filteredMiscTopics.length === 0 && (
+                      <div className="col-span-full text-center py-20 text-gray-400 bg-white rounded-xl border border-dashed border-gray-200">
+                          <span className="text-4xl block mb-2">📚</span>
+                          No topics found.
+                      </div>
+                  )}
+              </div>
+          </div>
+      );
+  }
+
+  // --- DEFINITIONS VIEW ---
+  if (currentSector === 'definitions') {
+      return (
+          <div className="max-w-6xl mx-auto animate-fade-in space-y-8 pb-12">
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                  <button 
+                      onClick={() => setCurrentSector('menu')}
+                      className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2 text-sm font-medium self-start md:self-auto"
+                  >
+                      <span>←</span> Back to Sectors
+                  </button>
+                  <h2 className="text-2xl font-bold text-gray-800">Nutritional Definitions</h2>
+              </div>
+
+              {/* Search */}
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6">
+                  <div className="relative w-full max-w-lg mx-auto">
+                      <input
+                          type="text"
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-sm"
+                          placeholder="Search terms (BMR, RDA, etc...)"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          dir={isRTL ? 'rtl' : 'ltr'}
+                      />
+                      <span className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${isRTL ? 'left-3' : 'right-3'}`}>🔍</span>
+                  </div>
+              </div>
+
+              {/* Definitions Table */}
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                  <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                          <thead className="bg-purple-50 text-purple-900 uppercase text-xs font-bold">
+                              <tr>
+                                  <th className="p-4 border-b border-purple-100 w-1/4">Term</th>
+                                  <th className="p-4 border-b border-purple-100 w-3/4">Definition</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 text-sm">
+                              {filteredDefinitions.map((item) => (
+                                  <tr key={item.id} className="hover:bg-purple-50/30 transition">
+                                      <td className="p-4 align-top font-bold text-purple-700 bg-white sticky left-0 border-r border-gray-50">
+                                          {item.name}
+                                      </td>
+                                      <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">
+                                          {item.function}
+                                      </td>
+                                  </tr>
+                              ))}
+                              {filteredDefinitions.length === 0 && (
+                                  <tr>
+                                      <td colSpan={2} className="p-8 text-center text-gray-400">
+                                          No definitions found matching "{searchQuery}"
+                                      </td>
+                                  </tr>
+                              )}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
+      );
+  }
+
   // --- VITAMINS & MINERALS SECTOR VIEW ---
   
-  // Check if we are viewing Definitions only to hide nutrient columns
-  const isDefinitionsOnly = activeFilter === 'Definition';
-
   return (
     <div className="max-w-7xl mx-auto animate-fade-in space-y-8 pb-12">
       {/* Sector Header & Back Button */}
@@ -310,7 +477,7 @@ const Encyclopedia: React.FC = () => {
            >
                <span>←</span> Back to Sectors
            </button>
-           <h2 className="text-2xl font-bold text-gray-800">Nutrients & Definitions Guide</h2>
+           <h2 className="text-2xl font-bold text-gray-800">Nutrients Guide</h2>
       </div>
 
       {/* Controls */}
@@ -320,7 +487,7 @@ const Encyclopedia: React.FC = () => {
             <div className="relative flex-grow w-full md:w-auto max-w-lg">
                 <input
                     type="text"
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent outline-none text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-sm"
                     placeholder={t.encyclopedia.searchPlaceholder}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -333,7 +500,7 @@ const Encyclopedia: React.FC = () => {
             <div className="flex gap-4 items-center flex-wrap justify-center">
                 {/* Type Filter */}
                 <div className="flex bg-gray-100 p-1 rounded-lg flex-wrap justify-center gap-1">
-                    {(['All', 'Definition', 'Vitamin', 'Mineral'] as const).map(filter => (
+                    {(['All', 'Vitamin', 'Mineral'] as const).map(filter => (
                         <button
                             key={filter}
                             onClick={() => setActiveFilter(filter)}
@@ -341,8 +508,7 @@ const Encyclopedia: React.FC = () => {
                         >
                             {filter === 'All' ? t.encyclopedia.filterAll : 
                              filter === 'Vitamin' ? t.encyclopedia.filterVitamins : 
-                             filter === 'Mineral' ? t.encyclopedia.filterMinerals : 
-                             'Definitions'}
+                             t.encyclopedia.filterMinerals}
                         </button>
                     ))}
                 </div>
@@ -351,15 +517,15 @@ const Encyclopedia: React.FC = () => {
                 <div className="flex bg-gray-100 p-1 rounded-lg">
                     <button 
                         onClick={() => setViewMode('chart')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${viewMode === 'chart' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${viewMode === 'chart' ? 'bg-white shadow-sm text-orange-700' : 'text-gray-500 hover:text-gray-700'}`}
                     >
-                        📊 Chart View
+                        📊 Chart
                     </button>
                     <button 
                         onClick={() => setViewMode('cards')}
-                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${viewMode === 'cards' ? 'bg-white shadow-sm text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`px-3 py-1.5 rounded-md text-xs font-bold transition ${viewMode === 'cards' ? 'bg-white shadow-sm text-orange-700' : 'text-gray-500 hover:text-gray-700'}`}
                     >
-                        🃏 Card View
+                        🃏 Cards
                     </button>
                 </div>
             </div>
@@ -373,28 +539,26 @@ const Encyclopedia: React.FC = () => {
                   <table className="w-full text-left border-collapse">
                       <thead className="bg-gray-50 text-gray-700 uppercase text-xs">
                           <tr>
-                              <th className="p-4 border-b w-1/5 bg-gray-50 sticky left-0 z-10">{lang === 'ar' ? 'المغذيات' : 'Item Name'}</th>
-                              <th className={`p-4 border-b ${isDefinitionsOnly ? 'w-4/5' : 'w-1/4'}`}>{t.encyclopedia.function}</th>
-                              {!isDefinitionsOnly && <th className="p-4 border-b w-1/4">{t.encyclopedia.sources}</th>}
-                              {!isDefinitionsOnly && <th className="p-4 border-b w-1/4">{t.encyclopedia.deficiency}</th>}
+                              <th className="p-4 border-b w-1/5 bg-gray-50 sticky left-0 z-10">{lang === 'ar' ? 'المغذيات' : 'Nutrient'}</th>
+                              <th className="p-4 border-b w-1/4">{t.encyclopedia.function}</th>
+                              <th className="p-4 border-b w-1/4">{t.encyclopedia.sources}</th>
+                              <th className="p-4 border-b w-1/4">{t.encyclopedia.deficiency}</th>
                           </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 text-sm">
-                          {filteredItems.map((item) => (
-                              <tr key={item.id} className="hover:bg-blue-50/30 transition">
-                                  <td className="p-4 align-top font-medium bg-white sticky left-0 border-r border-gray-50 group-hover:bg-blue-50/10">
-                                      <div className="text-[var(--color-primary-dark)] text-base">{item.name}</div>
+                          {filteredNutrients.map((item) => (
+                              <tr key={item.id} className="hover:bg-orange-50/30 transition">
+                                  <td className="p-4 align-top font-medium bg-white sticky left-0 border-r border-gray-50 group-hover:bg-orange-50/10">
+                                      <div className="text-orange-900 text-base">{item.name}</div>
                                       <span className={`text-[10px] px-2 py-0.5 rounded-full mt-1 inline-block ${
-                                          item.category === 'Vitamin' ? 'bg-orange-100 text-orange-800' : 
-                                          item.category === 'Definition' ? 'bg-purple-100 text-purple-800' :
-                                          'bg-blue-100 text-blue-800'
+                                          item.category === 'Vitamin' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'
                                       }`}>
                                           {item.category}
                                       </span>
                                   </td>
                                   <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">{item.function}</td>
-                                  {!isDefinitionsOnly && <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">{item.sources}</td>}
-                                  {!isDefinitionsOnly && <td className="p-4 text-red-600 align-top leading-relaxed whitespace-pre-line">{item.deficiency}</td>}
+                                  <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">{item.sources}</td>
+                                  <td className="p-4 text-red-600 align-top leading-relaxed whitespace-pre-line">{item.deficiency}</td>
                               </tr>
                           ))}
                       </tbody>
@@ -406,25 +570,19 @@ const Encyclopedia: React.FC = () => {
       {/* CARD GRID VIEW */}
       {viewMode === 'cards' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-            {filteredItems.map(item => (
+            {filteredNutrients.map(item => (
                 <div key={item.id} className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 hover:shadow-xl transition duration-300 flex flex-col">
                     {/* Card Header */}
                     <div className={`p-4 border-b border-gray-100 flex justify-between items-start ${
-                        item.category === 'Vitamin' ? 'bg-orange-50' : 
-                        item.category === 'Definition' ? 'bg-purple-50' : 
-                        'bg-blue-50'
+                        item.category === 'Vitamin' ? 'bg-orange-50' : 'bg-blue-50'
                     }`}>
                         <h3 className={`font-bold text-xl ${
-                            item.category === 'Vitamin' ? 'text-orange-700' : 
-                            item.category === 'Definition' ? 'text-purple-700' : 
-                            'text-blue-700'
+                            item.category === 'Vitamin' ? 'text-orange-700' : 'text-blue-700'
                         }`}>
                             {item.name}
                         </h3>
                         <span className={`text-xs px-2 py-1 rounded-full font-bold uppercase tracking-wider ${
-                            item.category === 'Vitamin' ? 'bg-orange-200 text-orange-800' : 
-                            item.category === 'Definition' ? 'bg-purple-200 text-purple-800' : 
-                            'bg-blue-200 text-blue-800'
+                            item.category === 'Vitamin' ? 'bg-orange-200 text-orange-800' : 'bg-blue-200 text-blue-800'
                         }`}>
                             {item.category}
                         </span>
@@ -439,30 +597,26 @@ const Encyclopedia: React.FC = () => {
                             <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.function}</p>
                         </div>
                         
-                        {!isDefinitionsOnly && (
-                            <div>
-                                <h4 className="font-bold text-gray-700 flex items-center gap-2 mb-1">
-                                    <span className="text-lg">🥗</span> {t.encyclopedia.sources}
-                                </h4>
-                                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.sources}</p>
-                            </div>
-                        )}
+                        <div>
+                            <h4 className="font-bold text-gray-700 flex items-center gap-2 mb-1">
+                                <span className="text-lg">🥗</span> {t.encyclopedia.sources}
+                            </h4>
+                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.sources}</p>
+                        </div>
 
-                        {!isDefinitionsOnly && (
-                            <div>
-                                <h4 className="font-bold text-red-700 flex items-center gap-2 mb-1">
-                                    <span className="text-lg">⚠️</span> {t.encyclopedia.deficiency}
-                                </h4>
-                                <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.deficiency}</p>
-                            </div>
-                        )}
+                        <div>
+                            <h4 className="font-bold text-red-700 flex items-center gap-2 mb-1">
+                                <span className="text-lg">⚠️</span> {t.encyclopedia.deficiency}
+                            </h4>
+                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.deficiency}</p>
+                        </div>
                     </div>
                 </div>
             ))}
         </div>
       )}
 
-      {filteredItems.length === 0 && (
+      {filteredNutrients.length === 0 && (
           <div className="text-center py-20 text-gray-400 bg-white rounded-xl border border-dashed border-gray-200">
               <span className="text-4xl block mb-2">📚</span>
               No items found matching your search.

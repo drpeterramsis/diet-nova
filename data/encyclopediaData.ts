@@ -8,6 +8,117 @@ export interface EncyclopediaItem {
   deficiency: string;
 }
 
+export interface MiscTopicItem {
+  id: string;
+  title: string;
+  content: string;
+  category: string;
+}
+
+export const miscTopicsData: MiscTopicItem[] = [
+  {
+    id: 'misc_obesity_def',
+    title: 'Definition of Obesity',
+    category: 'Obesity',
+    content: `**Obesity** is a chronic, progressive, and relapsing disease characterized by an abnormal or excessive accumulation of body fat that impairs health. It arises from a complex interaction of genetic, metabolic, environmental, behavioral, and neurohormonal factors.
+
+• **General population:** Obesity is defined as BMI ≥30 kg/m².
+• **Ethnic-specific cut-offs:** In South Asian, Chinese, Middle Eastern, Black African, or African-Caribbean individuals → Obesity = BMI ≥27.5 kg/m².
+• **Central adiposity:** Waist-to-height ratio (WHtR ≥0.5) or waist circumference are strong indicators (>94cm Male, >80cm Female).
+• Or excessive accumulation of body fat more than 25% (Men) or 32% (Women).`
+  },
+  {
+    id: 'misc_fat_types',
+    title: 'Types of Fat (Adipose Tissue)',
+    category: 'Obesity',
+    content: `• **White Adipose Tissue (WAT):** Energy storage, endocrine signaling (leptin, adiponectin), insulation, protection.
+• **Brown Adipose Tissue (BAT):** Thermogenic, burns fat via UCP-1, abundant in newborns and present in adults (neck, supraclavicular, perirenal).
+• **Beige Fat:** Intermediate between white and brown, inducible thermogenic activity.`
+  },
+  {
+    id: 'misc_obesity_phenotypes',
+    title: 'Classical Obesity Phenotypes',
+    category: 'Obesity',
+    content: `**Classifications:**
+• Metabolically Healthy Obesity (MHO)
+• Metabolically Unhealthy Obesity (MUO)
+• Sarcopenic Obesity (Low muscle mass + High fat)
+• Normal Weight Obesity (NWO)
+
+**Behavioral/Metabolic Phenotypes:**
+1. **Hungry Brain:** Defective satiation → more calories per meal. (Prevalence: 40%)
+2. **Hungry Gut:** Defective satiety → appetite returns quickly. (Prevalence: 18%)
+3. **Emotional Hunger:** Eating to cope with emotions. (Prevalence: 30%)
+4. **Slow Burn:** Low energy expenditure / metabolic rate. (Prevalence: 12%)`
+  },
+  {
+    id: 'misc_pathophysiology',
+    title: 'Pathophysiology of Obesity',
+    category: 'Obesity',
+    content: `• **Adipose tissue dysfunction:** ↑ pro-inflammatory adipokines (TNF-α, IL-6), ↓ adiponectin.
+• **Insulin resistance & lipotoxicity:** Excess fatty acids → ectopic fat deposition in liver, pancreas, muscle.
+• **Neuroendocrine dysregulation:** Leptin resistance, ↑ Ghrelin, ↓ GLP-1/PYY/CCK, overactive dopamine reward pathways.
+• **Gut microbiota:** Dysbiosis influences energy harvest, bile acids, inflammation.
+• **Genetics & epigenetics:** MC4R mutations, leptin deficiency, maternal influences.
+• **Adaptive thermogenesis:** Metabolic rate reduction during weight loss → difficulty maintaining results.`
+  },
+  {
+    id: 'misc_body_types',
+    title: 'Three Body Types (Somatotypes)',
+    category: 'Anthropometry',
+    content: `**1. Ectomorph:**
+• Narrow hips and clavicles
+• Small joints (wrist/ankles)
+• Thin build
+• Stringy muscle bellies
+• Long limbs
+
+**2. Mesomorph:**
+• Wide clavicles
+• Narrow waist
+• Thinner joints
+• Long and round muscle bellies
+
+**3. Endomorph:**
+• Blocky
+• Thick rib cage
+• Wide/thicker joints
+• Hips as wide (or wider) than clavicles
+• Shorter limbs`
+  },
+  {
+    id: 'misc_counseling',
+    title: 'Plan Counseling & Education',
+    category: 'Management',
+    content: `Translate assessment data into strategies, activities, or interventions that will enable the patient or client to meet established objectives. (What... When... Where... How)
+
+**Counseling:**
+1. **Lifestyle Modification:**
+   • Weight reduction by **10-15%** in people without diabetes (1 to 2 pound per week).
+   • Weight reduction by **5-10%** in people with diabetes.
+   • Following dietary program as a lifestyle.
+   
+2. **Physical Activity:**
+   • **150 min/week** endurance exercise.
+   • Encourage adherence to resistance exercise as well (**150 min/week**).`
+  },
+  {
+    id: 'misc_nutrition_facts',
+    title: 'Reading Nutrition Facts',
+    category: 'Education',
+    content: `**Guide to reading labels:**
+1. **Serving Info:** Check "Servings per container" and "Serving size" first.
+2. **Calories:** Check total calories per serving.
+3. **Nutrients to Limit (Get Less):** Saturated Fat, Trans Fat, Sodium, Added Sugars.
+4. **Nutrients to Increase (Get More):** Dietary Fiber, Vitamin D, Calcium, Iron, Potassium.
+5. **% Daily Value (%DV):**
+   • **5% or less** is considered **LOW**.
+   • **20% or more** is considered **HIGH**.
+   
+*The % Daily Value tells you how much a nutrient in a serving of food contributes to a daily diet (based on 2000 calories).*`
+  }
+];
+
 export const encyclopediaData: EncyclopediaItem[] = [
   // DEFINITIONS
   {
