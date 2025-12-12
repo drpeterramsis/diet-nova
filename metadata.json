@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova CheckPoint 26_v2.0.161",
-  "description": "Updates: Fixed empty DOB bug in client profile, Verified Instructions Library content.",
+  "name": "Diet-Nova CheckPoint 28_v2.0.162",
+  "description": "Updates: Added InBody Instructions from photo, updated print defaults for instructions.",
   "requestFramePermissions": []
 }

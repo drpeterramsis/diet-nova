@@ -16,7 +16,7 @@ const InstructionsLibrary: React.FC<InstructionsLibraryProps> = ({ onClose }) =>
     const [selectedInstruction, setSelectedInstruction] = useState<InstructionItem | null>(null);
     
     // Print customization state
-    const [doctorName, setDoctorName] = useState(profile?.full_name || 'Dr. Name');
+    const [doctorName, setDoctorName] = useState(profile?.full_name || 'Dr. Peter Ramsis');
     const [clinicName, setClinicName] = useState('Diet-Nova Clinic');
     const [patientName, setPatientName] = useState('');
     const [printDate, setPrintDate] = useState(new Date().toISOString().split('T')[0]);
@@ -109,7 +109,7 @@ const InstructionsLibrary: React.FC<InstructionsLibraryProps> = ({ onClose }) =>
                                         <input type="text" value={clinicName} onChange={e => setClinicName(e.target.value)} className="w-full p-1.5 border rounded text-xs" />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Patient Name</label>
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Client Name</label>
                                         <input type="text" value={patientName} onChange={e => setPatientName(e.target.value)} className="w-full p-1.5 border rounded text-xs" placeholder="Optional" />
                                     </div>
                                     <div>
@@ -134,7 +134,7 @@ const InstructionsLibrary: React.FC<InstructionsLibraryProps> = ({ onClose }) =>
                                         <p className="text-sm text-gray-600 mt-1">{doctorName}</p>
                                     </div>
                                     <div className="text-right text-sm">
-                                        {patientName && <p><strong>Patient:</strong> {patientName}</p>}
+                                        {patientName && <p><strong>Client:</strong> {patientName}</p>}
                                         <p><strong>Date:</strong> {printDate}</p>
                                     </div>
                                 </div>
