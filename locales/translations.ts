@@ -1,5 +1,4 @@
 
-
 import { Translation } from "../types";
 
 export const en: Translation = {
@@ -115,6 +114,10 @@ export const en: Translation = {
     growthCharts: {
         title: "Growth Charts (WHO/CDC)",
         desc: "Comprehensive growth tracking for infants, children & adolescents."
+    },
+    instructions: {
+        title: "Client Instructions",
+        desc: "Library of printable instructions (e.g., InBody prep)."
     }
   },
   clients: {
@@ -475,6 +478,10 @@ export const ar: Translation = {
     growthCharts: {
         title: "منحنيات النمو (WHO/CDC)",
         desc: "تتبع النمو الشامل للرضع والأطفال والمراهقين."
+    },
+    instructions: {
+        title: "تعليمات العملاء",
+        desc: "مكتبة التعليمات المطبوعة (مثل تحضيرات InBody)."
     }
   },
   clients: {

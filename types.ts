@@ -189,6 +189,10 @@ export interface Translation {
         title: string;
         desc: string;
     };
+    instructions: {
+        title: string;
+        desc: string;
+    };
   };
   clients: {
     title: string;

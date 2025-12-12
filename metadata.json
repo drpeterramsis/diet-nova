@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova CheckPoint 26_v2.0.158",
-  "description": "Updates: Encyclopedia Separation (Nutrients vs Definitions), Added Misc Topics (Obesity, Counseling), Optimized display.",
+  "name": "Diet-Nova CheckPoint 26_v2.0.160",
+  "description": "Updates: Added Client Instructions Library (InBody), Added InBody Body Fat analysis to Client Profile.",
   "requestFramePermissions": []
 }

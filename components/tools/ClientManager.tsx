@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -13,6 +14,7 @@ import LabReference from './LabReference';
 import PediatricWaist from './PediatricWaist';
 import PediatricMAMC from './PediatricMAMC';
 import GrowthCharts from './GrowthCharts';
+import InstructionsLibrary from './InstructionsLibrary';
 
 // Helper for Plan Stats (Copied from MealPlanner logic for display)
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
@@ -43,6 +45,56 @@ const calculatePlanStats = (servings: Record<string, number>) => {
         }
     });
     return { cho, pro, fat, kcal };
+};
+
+// InBody Logic
+const getBodyFatAnalysis = (fat: number, age: number, gender: 'male' | 'female') => {
+    if (!fat || !age) return null;
+    let status = '';
+    let color = '';
+
+    if (age >= 20 && age <= 40) {
+        if (gender === 'female') {
+            if (fat < 21) { status = 'Underfat'; color = 'text-blue-600'; }
+            else if (fat <= 33) { status = 'Healthy'; color = 'text-green-600'; }
+            else if (fat <= 39) { status = 'Overweight'; color = 'text-orange-500'; }
+            else { status = 'Obese'; color = 'text-red-600'; }
+        } else {
+            if (fat < 8) { status = 'Underfat'; color = 'text-blue-600'; }
+            else if (fat <= 19) { status = 'Healthy'; color = 'text-green-600'; }
+            else if (fat <= 25) { status = 'Overweight'; color = 'text-orange-500'; }
+            else { status = 'Obese'; color = 'text-red-600'; }
+        }
+    } else if (age >= 41 && age <= 60) {
+        if (gender === 'female') {
+            if (fat < 23) { status = 'Underfat'; color = 'text-blue-600'; }
+            else if (fat <= 35) { status = 'Healthy'; color = 'text-green-600'; }
+            else if (fat <= 40) { status = 'Overweight'; color = 'text-orange-500'; }
+            else { status = 'Obese'; color = 'text-red-600'; }
+        } else {
+            if (fat < 11) { status = 'Underfat'; color = 'text-blue-600'; }
+            else if (fat <= 22) { status = 'Healthy'; color = 'text-green-600'; }
+            else if (fat <= 27) { status = 'Overweight'; color = 'text-orange-500'; }
+            else { status = 'Obese'; color = 'text-red-600'; }
+        }
+    } else if (age >= 61) {
+        if (gender === 'female') {
+            if (fat < 24) { status = 'Underfat'; color = 'text-blue-600'; }
+            else if (fat <= 36) { status = 'Healthy'; color = 'text-green-600'; }
+            else if (fat <= 42) { status = 'Overweight'; color = 'text-orange-500'; }
+            else { status = 'Obese'; color = 'text-red-600'; }
+        } else {
+            if (fat < 13) { status = 'Underfat'; color = 'text-blue-600'; }
+            else if (fat <= 25) { status = 'Healthy'; color = 'text-green-600'; }
+            else if (fat <= 30) { status = 'Overweight'; color = 'text-orange-500'; }
+            else { status = 'Obese'; color = 'text-red-600'; }
+        }
+    } else {
+        // Under 20 fallback (Adult references often don't apply, simplified here)
+        status = 'Use Growth Charts'; color = 'text-gray-500';
+    }
+
+    return { status, color };
 };
 
 interface ClientManagerProps {
@@ -155,6 +207,7 @@ const ClientPrintView: React.FC<{ client: Client, visits: ClientVisit[] }> = ({ 
                             <th className="border p-1 text-left">Date</th>
                             <th className="border p-1 text-center">Wt (kg)</th>
                             <th className="border p-1 text-center">BMI</th>
+                            <th className="border p-1 text-center">Fat %</th>
                             <th className="border p-1 text-left">Notes / Plan</th>
                         </tr>
                     </thead>
@@ -164,6 +217,7 @@ const ClientPrintView: React.FC<{ client: Client, visits: ClientVisit[] }> = ({ 
                                 <td className="border p-1">{formatDateUK(v.visit_date)}</td>
                                 <td className="border p-1 text-center font-bold">{v.weight}</td>
                                 <td className="border p-1 text-center">{v.bmi}</td>
+                                <td className="border p-1 text-center">{v.kcal_data?.inputs?.bodyFatPercent || '-'}</td>
                                 <td className="border p-1 text-xs">
                                     {v.kcal_data?.inputs?.reqKcal && `Target: ${v.kcal_data.inputs.reqKcal} kcal. `}
                                     {v.notes}
@@ -183,7 +237,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const { session } = useAuth();
   
   // View State
-  const [viewMode, setViewMode] = useState<'list' | 'details' | 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist' | 'pediatric-mamc' | 'growth-charts'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'details' | 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist' | 'pediatric-mamc' | 'growth-charts' | 'instructions'>('list');
 
   // Data State
   const [clients, setClients] = useState<Client[]>([]);
@@ -237,7 +291,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     waist: number | '';
     hip: number | '';
     miac: number | '';
-    head_circumference: number | ''; // New Field
+    head_circumference: number | ''; 
   }>({
     client_code: '',
     full_name: '',
@@ -274,7 +328,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       waist: number | '';
       hip: number | '';
       miac: number | '';
-      head_circumference: number | ''; // New Field
+      head_circumference: number | '';
+      body_fat: number | ''; // New Field
       notes: string;
   }>({
       visit_date: new Date().toISOString().split('T')[0],
@@ -284,6 +339,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       hip: '',
       miac: '',
       head_circumference: '',
+      body_fat: '',
       notes: ''
   });
 
@@ -291,6 +347,12 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   const [saveSuccess, setSaveSuccess] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [summaryText, setSummaryText] = useState('');
+
+  // Body Fat Analysis for New Visit Form
+  const bodyFatAnalysis = useMemo(() => {
+      if (!newVisitData.body_fat || formData.age === '') return null;
+      return getBodyFatAnalysis(Number(newVisitData.body_fat), Number(formData.age), formData.gender);
+  }, [newVisitData.body_fat, formData.age, formData.gender]);
 
   // Refs for tracking initial load
   const processedInitialIdRef = useRef<string | null>(null);
@@ -385,6 +447,12 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   useEffect(() => {
       if (activeTab === 'visits' && editingClient) {
           const lastVisit = visits.length > 0 ? visits[0] : null;
+          // Try to extract body fat from kcal_data if available
+          let lastBF = '';
+          if (lastVisit?.kcal_data?.inputs?.bodyFatPercent) {
+              lastBF = lastVisit.kcal_data.inputs.bodyFatPercent;
+          }
+
           setNewVisitData(prev => ({
               ...prev,
               weight: lastVisit?.weight || editingClient.weight || '',
@@ -393,6 +461,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
               hip: lastVisit?.hip || editingClient.hip || '',
               miac: lastVisit?.miac || editingClient.miac || '',
               head_circumference: lastVisit?.head_circumference || editingClient.head_circumference || '',
+              body_fat: lastBF || '',
               notes: ''
           }));
       }
@@ -526,6 +595,14 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
               }));
       };
 
+      // Handle custom extraction for Body Fat
+      const bodyFatData = sortedVisits
+        .filter(v => v.kcal_data?.inputs?.bodyFatPercent)
+        .map(v => ({
+            label: new Date(v.visit_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }),
+            value: Number(v.kcal_data.inputs.bodyFatPercent)
+        }));
+
       return {
           weight: mapData('weight'),
           bmi: mapData('bmi'),
@@ -533,7 +610,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
           hip: mapData('hip'),
           miac: mapData('miac'),
           height: mapData('height'),
-          head: mapData('head_circumference')
+          head: mapData('head_circumference'),
+          bodyFat: bodyFatData
       };
 
   }, [visits, editingClient]);
@@ -713,6 +791,13 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
               bmi = Number((weight / ((height/100) * (height/100))).toFixed(1));
           }
 
+          // Construct KCAL DATA to store body fat (using inputs structure for compatibility)
+          const kcalDataPayload = {
+              inputs: {
+                  bodyFatPercent: newVisitData.body_fat
+              }
+          };
+
           const { data, error } = await supabase.from('client_visits').insert({
               client_id: editingClient.id,
               visit_date: newVisitData.visit_date,
@@ -723,7 +808,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
               miac: newVisitData.miac === '' ? null : Number(newVisitData.miac),
               head_circumference: newVisitData.head_circumference === '' ? null : Number(newVisitData.head_circumference),
               bmi: bmi,
-              notes: newVisitData.notes
+              notes: newVisitData.notes,
+              kcal_data: newVisitData.body_fat ? kcalDataPayload : undefined
           }).select().single();
 
           if (error) throw error;
@@ -922,7 +1008,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
   };
 
   // --- Tool Handlers ---
-  const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist' | 'pediatric-mamc' | 'growth-charts', type: 'client' | 'visit', id: string, initialData?: any) => {
+  const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist' | 'pediatric-mamc' | 'growth-charts' | 'instructions', type: 'client' | 'visit', id: string, initialData?: any) => {
     window.scrollTo({ top: 0, behavior: 'smooth' }); // Auto-scroll to top
     if (view === 'lab-checklist') {
         // Lab Checklist is a special view acting on the profile notes
@@ -945,6 +1031,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         if (type === 'client') {
             setToolTarget({ type, id, initialData });
         }
+    } else if (view === 'instructions') {
+        setViewMode('instructions');
     } else {
         setToolTarget({ type, id, initialData });
         setViewMode(view);
@@ -1004,6 +1092,15 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       setIsSavingTool(false);
     }
   };
+
+  // --- RENDER: INSTRUCTIONS VIEW ---
+  if (viewMode === 'instructions') {
+      return (
+          <div className="animate-fade-in">
+              <InstructionsLibrary onClose={() => setViewMode('details')} />
+          </div>
+      );
+  }
 
   // --- RENDER: STRONG KIDS VIEW ---
   if (viewMode === 'strong-kids') {
@@ -1747,6 +1844,13 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                 >
                                                     🥗 Food Q.
                                                 </button>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => handleOpenTool('instructions', 'client', editingClient.id)}
+                                                    className="text-xs bg-gray-100 px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-200 text-gray-800 font-bold flex items-center gap-1"
+                                                >
+                                                    📋 Instructions
+                                                </button>
                                                 </>
                                             )}
                                          </div>
@@ -1876,6 +1980,26 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.hip} onChange={e => setNewVisitData({...newVisitData, hip: e.target.value === '' ? '' : Number(e.target.value)})} />
                                     </div>
                             </div>
+                            
+                            {/* InBody Section */}
+                            <div className="bg-white p-3 rounded border border-blue-100 flex items-center gap-4">
+                                <div>
+                                    <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Body Fat % (InBody)</label>
+                                    <input 
+                                        type="number" 
+                                        className="w-24 p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" 
+                                        value={newVisitData.body_fat} 
+                                        onChange={e => setNewVisitData({...newVisitData, body_fat: e.target.value === '' ? '' : Number(e.target.value)})} 
+                                        placeholder="%"
+                                    />
+                                </div>
+                                {bodyFatAnalysis && (
+                                    <div className={`mt-4 px-3 py-1 rounded text-sm font-bold bg-gray-50 border ${bodyFatAnalysis.color.replace('text-', 'border-')}`}>
+                                        <span className={bodyFatAnalysis.color}>{bodyFatAnalysis.status}</span>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex gap-3">
                                 <div className="flex-grow">
                                     <textarea 
@@ -1912,6 +2036,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                  pro: (planStats.pro * 4 / planTotalKcal * 100).toFixed(0),
                                  fat: (planStats.fat * 9 / planTotalKcal * 100).toFixed(0)
                              } : { cho: 0, pro: 0, fat: 0 };
+                             
+                             // Get fat % from kcal_data if stored
+                             const bodyFat = visit.kcal_data?.inputs?.bodyFatPercent;
 
                              return (
                                 <div key={visit.id} className="relative pl-8">
@@ -1925,6 +2052,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                  <div className="flex gap-2 text-xs font-mono">
                                                      {visit.weight && <span className="bg-blue-50 border border-blue-100 px-2 py-0.5 rounded text-blue-700 font-bold">Wt: {visit.weight}</span>}
                                                      {visit.bmi && <span className="bg-orange-50 border border-orange-100 px-2 py-0.5 rounded text-orange-700 font-bold">BMI: {visit.bmi}</span>}
+                                                     {bodyFat && <span className="bg-purple-50 border border-purple-100 px-2 py-0.5 rounded text-purple-700 font-bold">Fat: {bodyFat}%</span>}
                                                  </div>
                                              </div>
                                              <div className="flex gap-2">
@@ -2094,6 +2222,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                             )}
                             {chartData.head && chartData.head.length > 1 && (
                                 <SimpleLineChart data={chartData.head} title="Head Circumference" unit="cm" color="#8b5cf6" />
+                            )}
+                            {chartData.bodyFat && chartData.bodyFat.length > 1 && (
+                                <SimpleLineChart data={chartData.bodyFat} title="Body Fat %" unit="%" color="#8b5cf6" />
                             )}
                          </div>
                          
