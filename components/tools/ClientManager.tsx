@@ -721,6 +721,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       const payload = {
         doctor_id: session?.user.id,
         ...formData,
+        dob: formData.dob === '' ? null : formData.dob,
         age: formData.age === '' ? null : Number(formData.age),
         kids_count: formData.kids_count === '' ? null : Number(formData.kids_count),
         client_code: formData.client_code || generateCode(formData.full_name),
