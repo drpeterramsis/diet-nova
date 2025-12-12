@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova CheckPoint 28_v2.0.162",
-  "description": "Updates: Added InBody Instructions from photo, updated print defaults for instructions.",
+  "name": "Diet-Nova CheckPoint 30_v2.0.163",
+  "description": "Updates: Fixed Instructions Library route in Dashboard, verified InBody content.",
   "requestFramePermissions": []
 }

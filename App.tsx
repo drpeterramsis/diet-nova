@@ -18,6 +18,7 @@ import STRONGKids from "./components/tools/STRONGKids"; // Import STRONGKids
 import PediatricWaist from "./components/tools/PediatricWaist"; // Import PediatricWaist
 import PediatricMAMC from "./components/tools/PediatricMAMC"; // Import PediatricMAMC
 import GrowthCharts from "./components/tools/GrowthCharts"; // Import GrowthCharts
+import InstructionsLibrary from "./components/tools/InstructionsLibrary"; // Import InstructionsLibrary
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -424,6 +425,11 @@ const AppContent = () => {
             )}
             {activeTool === 'growth-charts' && (
                 <GrowthCharts 
+                    onClose={handleNavHome} 
+                />
+            )}
+            {activeTool === 'instructions' && (
+                <InstructionsLibrary 
                     onClose={handleNavHome} 
                 />
             )}
