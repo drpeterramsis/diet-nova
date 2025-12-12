@@ -116,6 +116,32 @@ export const miscTopicsData: MiscTopicItem[] = [
    • **20% or more** is considered **HIGH**.
    
 *The % Daily Value tells you how much a nutrient in a serving of food contributes to a daily diet (based on 2000 calories).*`
+  },
+  {
+    id: 'misc_energy_balance',
+    title: 'Energy Balance',
+    category: 'Metabolism',
+    content: `**Energy Balance Equation:**
+Relationship between Energy In (calories consumed) vs Energy Out (calories burned).
+
+**1. Isocaloric Balance (Weight Maintained):**
+• Energy In = Energy Out
+• Intake matches expenditure. Weight remains stable.
+
+**2. Negative Caloric Balance (Weight Loss):**
+• Energy In < Energy Out
+• Deficit created. Body uses stored energy (fat/muscle).
+
+**3. Positive Caloric Balance (Weight Gain):**
+• Energy In > Energy Out
+• Surplus created. Excess energy stored as fat.
+
+**Components:**
+• **Energy In:** Alcohol (7 kcal/g), Fat (9 kcal/g), Protein (4 kcal/g), Carbohydrates (4 kcal/g).
+• **Energy Out:**
+  - **BMR (Basal Metabolic Rate):** Energy for basic life functions (breathing, circulation). Largest component (~60-75%).
+  - **TEF (Thermic Effect of Food):** Energy used to digest/absorb food (~10%).
+  - **TEE (Thermic Effect of Exercise):** Energy burned during physical activity (Variable).`
   }
 ];
 

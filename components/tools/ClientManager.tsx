@@ -320,7 +320,8 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       return '';
   }, [formData.weight, formData.height]);
 
-  // Form State (New Visit)
+  // Form State (New/Edit Visit)
+  const [editingVisitId, setEditingVisitId] = useState<string | null>(null);
   const [newVisitData, setNewVisitData] = useState<{
       visit_date: string;
       weight: number | '';
@@ -444,8 +445,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       }
   }, [noJob]);
 
+  // Auto-fill new visit form if not editing
   useEffect(() => {
-      if (activeTab === 'visits' && editingClient) {
+      if (activeTab === 'visits' && editingClient && !editingVisitId) {
           const lastVisit = visits.length > 0 ? visits[0] : null;
           // Try to extract body fat from kcal_data if available
           let lastBF = '';
@@ -465,7 +467,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
               notes: ''
           }));
       }
-  }, [activeTab, visits, editingClient]);
+  }, [activeTab, visits, editingClient, editingVisitId]);
 
   const generateCode = (name: string) => {
       if (!name) return '';
@@ -626,6 +628,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     setSummaryText('');
     setExpandedPediatricCategory(null);
     setAgeDetail(null);
+    setEditingVisitId(null);
 
     if (client) {
       setEditingClient(client);
@@ -780,7 +783,52 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
     }
   };
 
-  const handleAddVisit = async (e: React.FormEvent) => {
+  const handleEditVisit = (visit: ClientVisit) => {
+      setEditingVisitId(visit.id);
+      
+      // Extract body fat from kcal_data
+      let bf = '';
+      if (visit.kcal_data?.inputs?.bodyFatPercent) {
+          bf = visit.kcal_data.inputs.bodyFatPercent;
+      }
+
+      setNewVisitData({
+          visit_date: visit.visit_date,
+          weight: visit.weight || '',
+          height: visit.height || '',
+          waist: visit.waist || '',
+          hip: visit.hip || '',
+          miac: visit.miac || '',
+          head_circumference: visit.head_circumference || '',
+          body_fat: bf,
+          notes: visit.notes || ''
+      });
+      // Scroll to form
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEditVisit = () => {
+      setEditingVisitId(null);
+      // Reset form to last visit defaults or blank
+      const lastVisit = visits.length > 0 ? visits[0] : null;
+      let lastBF = '';
+      if (lastVisit?.kcal_data?.inputs?.bodyFatPercent) {
+          lastBF = lastVisit.kcal_data.inputs.bodyFatPercent;
+      }
+      setNewVisitData({
+          visit_date: new Date().toISOString().split('T')[0],
+          weight: lastVisit?.weight || '',
+          height: lastVisit?.height || '',
+          waist: lastVisit?.waist || '',
+          hip: lastVisit?.hip || '',
+          miac: lastVisit?.miac || '',
+          head_circumference: lastVisit?.head_circumference || '',
+          body_fat: lastBF || '',
+          notes: ''
+      });
+  };
+
+  const handleSaveVisit = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!editingClient) return;
       setSubmitting(true);
@@ -792,14 +840,13 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
               bmi = Number((weight / ((height/100) * (height/100))).toFixed(1));
           }
 
-          // Construct KCAL DATA to store body fat (using inputs structure for compatibility)
           const kcalDataPayload = {
               inputs: {
                   bodyFatPercent: newVisitData.body_fat
               }
           };
 
-          const { data, error } = await supabase.from('client_visits').insert({
+          const payload = {
               client_id: editingClient.id,
               visit_date: newVisitData.visit_date,
               weight: weight,
@@ -811,12 +858,32 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
               bmi: bmi,
               notes: newVisitData.notes,
               kcal_data: newVisitData.body_fat ? kcalDataPayload : undefined
-          }).select().single();
+          };
 
-          if (error) throw error;
+          let data;
+          if (editingVisitId) {
+              // UPDATE
+              const { data: updated, error } = await supabase.from('client_visits')
+                  .update(payload)
+                  .eq('id', editingVisitId)
+                  .select().single();
+              if (error) throw error;
+              data = updated;
+              // Update local state
+              setVisits(prev => prev.map(v => v.id === editingVisitId ? data : v));
+              setEditingVisitId(null);
+          } else {
+              // INSERT
+              const { data: inserted, error } = await supabase.from('client_visits')
+                  .insert(payload)
+                  .select().single();
+              if (error) throw error;
+              data = inserted;
+              setVisits(prev => [data, ...prev]);
+          }
 
           if (data) {
-              setVisits(prev => [data, ...prev]);
+              // Update Client Profile if this is the most recent visit
               if (new Date(data.visit_date) >= new Date(editingClient.visit_date)) {
                    const { data: updatedClient } = await supabase.from('clients').update({
                        visit_date: data.visit_date,
@@ -834,10 +901,12 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                        setEditingClient(updatedClient);
                    }
               }
-              setNewVisitData(prev => ({ ...prev, notes: '' }));
+              if (!editingVisitId) {
+                  setNewVisitData(prev => ({ ...prev, notes: '' }));
+              }
           }
       } catch (err: any) {
-          alert("Failed to add visit: " + err.message);
+          alert("Failed to save visit: " + err.message);
       } finally {
           setSubmitting(false);
       }
@@ -1935,30 +2004,44 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
             {/* TAB: VISITS */}
             {activeTab === 'visits' && editingClient && (
                 <div className="p-6 space-y-8 animate-fade-in">
-                    {/* New Visit Form */}
-                    <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 shadow-sm">
-                        <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase">Record New Follow-up</h4>
-                         <div className="text-xs text-blue-600 mb-3 opacity-80">
-                            * Data auto-filled from previous visit ({visits.length > 0 ? formatDateUK(visits[0].visit_date) : 'Profile'}). Adjust as needed.
+                    {/* New/Edit Visit Form */}
+                    <div className={`p-5 rounded-xl border shadow-sm ${editingVisitId ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-100'}`}>
+                        <div className="flex justify-between items-center mb-3">
+                            <h4 className={`font-bold text-sm uppercase ${editingVisitId ? 'text-yellow-800' : 'text-blue-800'}`}>
+                                {editingVisitId ? `Edit Visit Record` : 'Record New Follow-up'}
+                            </h4>
+                            {editingVisitId && (
+                                <button 
+                                    onClick={handleCancelEditVisit}
+                                    className="text-xs bg-white border border-red-200 text-red-600 px-3 py-1 rounded hover:bg-red-50"
+                                >
+                                    Cancel Edit
+                                </button>
+                            )}
                         </div>
-                        <form onSubmit={handleAddVisit} className="space-y-4">
+                        {!editingVisitId && (
+                             <div className="text-xs text-blue-600 mb-3 opacity-80">
+                                * Data auto-filled from previous visit. Adjust as needed.
+                            </div>
+                        )}
+                        <form onSubmit={handleSaveVisit} className="space-y-4">
                             <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                                     <div className="md:col-span-2">
-                                        <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Date</label>
+                                        <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>Date</label>
                                         <input 
                                         type="date" 
                                         required
-                                        className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400"
+                                        className={`w-full p-2 rounded border text-sm ${editingVisitId ? 'border-yellow-300 focus:ring-yellow-400' : 'border-blue-200 focus:ring-blue-400'} focus:ring-1`}
                                         value={newVisitData.visit_date}
                                         onChange={e => setNewVisitData({...newVisitData, visit_date: e.target.value})}
                                     />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Wt (kg)</label>
+                                        <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>Wt (kg)</label>
                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.weight} onChange={e => setNewVisitData({...newVisitData, weight: e.target.value === '' ? '' : Number(e.target.value)})} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">
+                                        <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>
                                             {ageDetail && (ageDetail.y * 12 + ageDetail.m) < 24 ? 'Length (cm)' : 'Ht (cm)'}
                                         </label>
                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.height} onChange={e => setNewVisitData({...newVisitData, height: e.target.value === '' ? '' : Number(e.target.value)})} />
@@ -1967,17 +2050,17 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                     {/* Head Circ for Visits? If infant */}
                                     {ageDetail && (ageDetail.y * 12 + ageDetail.m) <= 36 && (
                                         <div>
-                                            <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Head (cm)</label>
+                                            <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>Head (cm)</label>
                                             <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.head_circumference} onChange={e => setNewVisitData({...newVisitData, head_circumference: e.target.value === '' ? '' : Number(e.target.value)})} />
                                         </div>
                                     )}
 
                                     <div>
-                                        <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Waist</label>
+                                        <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>Waist</label>
                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.waist} onChange={e => setNewVisitData({...newVisitData, waist: e.target.value === '' ? '' : Number(e.target.value)})} />
                                     </div>
                                     <div>
-                                        <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Hip</label>
+                                        <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>Hip</label>
                                         <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.hip} onChange={e => setNewVisitData({...newVisitData, hip: e.target.value === '' ? '' : Number(e.target.value)})} />
                                     </div>
                             </div>
@@ -1985,7 +2068,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                             {/* InBody Section */}
                             <div className="bg-white p-3 rounded border border-blue-100 flex items-center gap-4">
                                 <div>
-                                    <label className="block text-[10px] text-blue-600 uppercase font-bold mb-1">Body Fat % (InBody)</label>
+                                    <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>Body Fat % (InBody)</label>
                                     <input 
                                         type="number" 
                                         className="w-24 p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" 
@@ -2014,9 +2097,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                 <button 
                                     type="submit"
                                     disabled={submitting}
-                                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 text-sm font-bold disabled:opacity-50 self-start shadow-md"
+                                    className={`${editingVisitId ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-6 py-2 rounded-lg text-sm font-bold disabled:opacity-50 self-start shadow-md transition`}
                                 >
-                                    Add Visit
+                                    {editingVisitId ? 'Update Visit' : 'Add Visit'}
                                 </button>
                             </div>
                         </form>
@@ -2040,11 +2123,12 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                              
                              // Get fat % from kcal_data if stored
                              const bodyFat = visit.kcal_data?.inputs?.bodyFatPercent;
+                             const isEditingThis = editingVisitId === visit.id;
 
                              return (
                                 <div key={visit.id} className="relative pl-8">
-                                    <div className="absolute -left-[9px] top-0 w-4 h-4 bg-white border-2 border-[var(--color-primary)] rounded-full z-10"></div>
-                                    <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:shadow-md transition group">
+                                    <div className={`absolute -left-[9px] top-0 w-4 h-4 bg-white border-2 ${isEditingThis ? 'border-yellow-500 scale-125' : 'border-[var(--color-primary)]'} rounded-full z-10 transition-all`}></div>
+                                    <div className={`bg-white rounded-xl p-5 border ${isEditingThis ? 'border-yellow-300 ring-2 ring-yellow-100' : 'border-gray-200'} shadow-sm hover:shadow-md transition group`}>
                                          <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-3">
                                              <div className="flex items-center gap-4">
                                                  <span className="font-bold text-gray-800 text-lg">
@@ -2057,7 +2141,20 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                  </div>
                                              </div>
                                              <div className="flex gap-2">
-                                                 <button onClick={() => handleDeleteVisit(visit.id)} className="text-red-400 hover:text-red-600 px-2 font-bold text-lg">×</button>
+                                                 <button 
+                                                    onClick={() => handleEditVisit(visit)} 
+                                                    className="text-gray-400 hover:text-blue-600 px-2 font-bold text-sm"
+                                                    title="Edit Visit"
+                                                 >
+                                                     ✏️
+                                                 </button>
+                                                 <button 
+                                                    onClick={() => handleDeleteVisit(visit.id)} 
+                                                    className="text-red-400 hover:text-red-600 px-2 font-bold text-lg"
+                                                    title="Delete Visit"
+                                                 >
+                                                     ×
+                                                 </button>
                                              </div>
                                          </div>
                                          

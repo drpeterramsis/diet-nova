@@ -89,18 +89,33 @@ const Encyclopedia: React.FC = () => {
       return groups;
   }, [filteredDrugs]);
 
-  // Helper to format mechanism text with colors
-  const formatMechanism = (text: string) => {
+  // Helper to format text with colors for arrows
+  const renderFormattedText = (text: string) => {
       const lines = text.split('\n');
       return lines.map((line, idx) => {
-          const parts = line.split(/([↑↓→])/g);
+          // 1. Split by arrows to color them
+          // 2. Handle bold **text** within parts
+          const arrowParts = line.split(/([↑↓→])/g);
+          
           return (
               <div key={idx} className="mb-1 last:mb-0">
-                  {parts.map((part, pIdx) => {
+                  {arrowParts.map((part, pIdx) => {
                       if (part === '↑') return <span key={pIdx} className="text-green-600 font-extrabold text-lg mx-0.5">↑</span>;
                       if (part === '↓') return <span key={pIdx} className="text-red-600 font-extrabold text-lg mx-0.5">↓</span>;
                       if (part === '→') return <span key={pIdx} className="text-gray-400 font-bold mx-1">→</span>;
-                      return <span key={pIdx}>{part}</span>;
+                      
+                      // Handle Bold Markdown **text**
+                      const boldParts = part.split(/(\*\*.*?\*\*)/g);
+                      return (
+                          <span key={pIdx}>
+                              {boldParts.map((bp, bIdx) => {
+                                  if (bp.startsWith('**') && bp.endsWith('**')) {
+                                      return <strong key={bIdx} className="text-gray-900 font-bold">{bp.slice(2, -2)}</strong>;
+                                  }
+                                  return bp;
+                              })}
+                          </span>
+                      );
                   })}
               </div>
           );
@@ -301,7 +316,7 @@ const Encyclopedia: React.FC = () => {
                                         </div>
                                         
                                         <div className="text-sm text-gray-600 mb-3 pl-1 border-l-2 border-gray-100 leading-relaxed">
-                                            {formatMechanism(item.mechanism)}
+                                            {renderFormattedText(item.mechanism)}
                                         </div>
 
                                         {item.notes && (
@@ -372,20 +387,7 @@ const Encyclopedia: React.FC = () => {
                               <span className="text-[10px] bg-white text-blue-600 px-2 py-1 rounded-full border border-blue-200 font-bold uppercase tracking-wider">{topic.category}</span>
                           </div>
                           <div className="p-6 text-sm text-gray-700 leading-loose whitespace-pre-wrap">
-                              {topic.content.split('\n').map((line, i) => {
-                                  // Bold basic markdown **text**
-                                  const parts = line.split(/(\*\*.*?\*\*)/g);
-                                  return (
-                                      <div key={i} className="mb-1">
-                                          {parts.map((part, j) => {
-                                              if (part.startsWith('**') && part.endsWith('**')) {
-                                                  return <strong key={j} className="text-gray-900">{part.slice(2, -2)}</strong>;
-                                              }
-                                              return part;
-                                          })}
-                                      </div>
-                                  )
-                              })}
+                              {renderFormattedText(topic.content)}
                           </div>
                       </div>
                   ))}
