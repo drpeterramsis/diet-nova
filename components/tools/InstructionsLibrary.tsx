@@ -39,6 +39,12 @@ const InstructionsLibrary: React.FC<InstructionsLibraryProps> = ({ onClose }) =>
         window.print();
     };
 
+    // Helper to detect Arabic content for RTL alignment
+    const isArabicText = (text: string) => {
+        const arabicPattern = /[\u0600-\u06FF]/;
+        return arabicPattern.test(text);
+    };
+
     return (
         <div className="max-w-6xl mx-auto animate-fade-in pb-12">
             
@@ -141,34 +147,44 @@ const InstructionsLibrary: React.FC<InstructionsLibraryProps> = ({ onClose }) =>
 
                                 {/* Content */}
                                 <div className="prose max-w-none">
-                                    <h2 className="text-xl font-bold text-center mb-2">{selectedInstruction.title}</h2>
-                                    <h3 className="text-lg font-bold text-center mb-8 font-arabic text-gray-600">{selectedInstruction.titleAr}</h3>
-                                    
                                     <div className="whitespace-pre-wrap leading-relaxed text-gray-800 text-sm md:text-base">
                                         {selectedInstruction.content.split('\n').map((line, i) => {
-                                            // Simple Markdown Parsing
-                                            if (line.startsWith('**') && line.endsWith('**')) {
-                                                // Header line
-                                                return <h4 key={i} className="font-bold text-lg mt-4 mb-2">{line.replace(/\*\*/g, '')}</h4>
+                                            const isAr = isArabicText(line);
+                                            const dir = isAr ? 'rtl' : 'ltr';
+                                            const alignClass = isAr ? 'text-right font-arabic' : 'text-left';
+                                            const headerColor = isAr ? 'text-green-700' : 'text-blue-700';
+
+                                            // Header Detection (Starts and ends with **)
+                                            if (line.trim().startsWith('**') && line.trim().endsWith('**')) {
+                                                return (
+                                                    <h4 key={i} className={`font-bold text-lg mt-6 mb-3 ${alignClass} ${headerColor}`} dir={dir}>
+                                                        {line.replace(/\*\*/g, '')}
+                                                    </h4>
+                                                );
                                             }
+                                            
+                                            // Bold parts logic
                                             if (line.includes('**')) {
-                                                // Bold inside line
                                                 const parts = line.split(/(\*\*.*?\*\*)/g);
                                                 return (
-                                                    <div key={i} className="mb-2">
+                                                    <div key={i} className={`mb-2 ${alignClass}`} dir={dir}>
                                                         {parts.map((part, j) => {
                                                             if (part.startsWith('**') && part.endsWith('**')) {
-                                                                return <strong key={j}>{part.replace(/\*\*/g, '')}</strong>;
+                                                                return <strong key={j} className="text-gray-900">{part.replace(/\*\*/g, '')}</strong>;
                                                             }
                                                             return part;
                                                         })}
                                                     </div>
                                                 )
                                             }
+                                            
+                                            // Separator
                                             if (line.trim() === '---') {
-                                                return <hr key={i} className="my-6 border-gray-300" />;
+                                                return <hr key={i} className="my-8 border-gray-200 border-t-2 border-dashed" />;
                                             }
-                                            return <div key={i} className="mb-2">{line}</div>;
+                                            
+                                            // Normal line
+                                            return <div key={i} className={`mb-2 ${alignClass}`} dir={dir}>{line}</div>;
                                         })}
                                     </div>
                                 </div>
