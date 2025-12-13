@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova CheckPoint_FoodAnalysis_20_v2.0.193",
-  "description": "Enhanced Food Composition tool with advanced multi-criteria nutrient search (Composition Search). Bumped version to 2.0.193.",
+  "name": "Diet-Nova CheckPoint_PredataFoodAnalysis_23_v2.0.194",
+  "description": "Updated Food Composition database with new items (120-142) including legumes and nuts. Bumped version to 2.0.194.",
   "requestFramePermissions": []
 }
