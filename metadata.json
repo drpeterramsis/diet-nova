@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova CheckPoint_FoodAnalysis_18_v2.0.191",
-  "description": "Fix Food Composition search and increase Nutrition Label size. Bumped version to 2.0.191.",
+  "name": "Diet-Nova CheckPoint_FoodAnalysis_19_v2.0.192",
+  "description": "Enhanced Food Composition tool with list selection, auto-100g default, and dynamic label toggle. Bumped version to 2.0.192.",
   "requestFramePermissions": []
 }

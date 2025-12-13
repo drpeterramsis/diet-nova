@@ -12,6 +12,25 @@ interface MealItem {
     weight: number; // grams
 }
 
+// Helper to calculate nutrition for any item/weight
+const calculateNutrition = (item: FoodCompositionItem, weight: number) => {
+    const factor = weight / 100;
+    return {
+        energy: item.energy * factor,
+        protein: item.protein * factor,
+        fat: item.fat * factor,
+        carb: item.carb * factor,
+        fiber: item.fiber * factor,
+        calcium: item.calcium * factor,
+        iron: item.iron * factor,
+        sodium: item.sodium * factor,
+        potassium: item.potassium * factor,
+        phosphorus: item.phosphorus * factor,
+        vitC: item.vitC * factor,
+        zinc: (item.zinc || 0) * factor
+    };
+};
+
 // Nutrition Label Component
 const NutritionLabel: React.FC<{ data: any; weight: number; title?: string }> = ({ data, weight, title }) => {
     // DV baselines (approximate based on 2000 kcal diet)
@@ -33,7 +52,7 @@ const NutritionLabel: React.FC<{ data: any; weight: number; title?: string }> = 
             {/* Decorative background logo opacity */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10rem] opacity-[0.03] pointer-events-none">🥗</div>
 
-            {title && <h3 className="text-center font-black text-sm mb-2 border-b-2 border-black pb-1 uppercase tracking-widest">{title}</h3>}
+            {title && <h3 className="text-center font-black text-sm mb-2 border-b-2 border-black pb-1 uppercase tracking-widest truncate">{title}</h3>}
             
             <h2 className="font-black text-4xl leading-none mb-1">Nutrition Facts</h2>
             <p className="text-base font-bold mb-1 flex justify-between items-end border-b-[8px] border-black pb-1">
@@ -118,10 +137,16 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
     const { t } = useLanguage();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
-    const [selectedItem, setSelectedItem] = useState<FoodCompositionItem | null>(null);
-    const [mealItems, setMealItems] = useState<MealItem[]>([]);
-    const [inputWeight, setInputWeight] = useState<number>(100);
     const [showSearchGuide, setShowSearchGuide] = useState(false);
+
+    // Editor / Analysis State
+    const [selectedItem, setSelectedItem] = useState<FoodCompositionItem | null>(null);
+    const [inputWeight, setInputWeight] = useState<number>(100);
+    const [mealItems, setMealItems] = useState<MealItem[]>([]);
+    
+    // Label View State (Total vs Single Item)
+    const [viewMode, setViewMode] = useState<'total' | 'item'>('total');
+    const [viewingItemIndex, setViewingItemIndex] = useState<number | null>(null);
 
     const categories = useMemo(() => {
         const cats = new Set(foodCompositionData.map(d => d.category));
@@ -186,40 +211,61 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
         return data;
     }, [searchQuery, selectedCategory]);
 
+    const handleDatabaseSelect = (item: FoodCompositionItem) => {
+        setSelectedItem(item);
+        setInputWeight(100); // Default to 100g
+        setViewMode('total'); // Reset to total view when picking new item
+        setViewingItemIndex(null);
+    };
+
     const addToMeal = () => {
         if (selectedItem && inputWeight > 0) {
             setMealItems(prev => [...prev, { item: selectedItem, weight: inputWeight }]);
         }
     };
 
+    const updateMealItem = () => {
+        if (viewingItemIndex !== null && selectedItem && inputWeight > 0) {
+            const newItems = [...mealItems];
+            newItems[viewingItemIndex] = { item: selectedItem, weight: inputWeight };
+            setMealItems(newItems);
+        }
+    };
+
     const removeFromMeal = (index: number) => {
         setMealItems(prev => prev.filter((_, i) => i !== index));
+        if (viewingItemIndex === index) {
+            setViewMode('total');
+            setViewingItemIndex(null);
+        } else if (viewingItemIndex !== null && viewingItemIndex > index) {
+            setViewingItemIndex(viewingItemIndex - 1);
+        }
     };
 
-    const updateMealItemWeight = (index: number, newWeight: number) => {
+    const handleMealItemClick = (index: number) => {
+        const mealItem = mealItems[index];
+        setSelectedItem(mealItem.item);
+        setInputWeight(mealItem.weight);
+        setViewingItemIndex(index);
+        setViewMode('item');
+        // Scroll to top of Item Analysis Card (optional if needed)
+    };
+
+    const updateInlineWeight = (index: number, newWeight: number) => {
         setMealItems(prev => prev.map((item, i) => i === index ? { ...item, weight: Math.max(0, newWeight) } : item));
+        // If currently editing this item in Card 2, update that input too to stay in sync
+        if (viewingItemIndex === index) {
+            setInputWeight(newWeight);
+        }
     };
 
-    // Calculate details for the currently selected item based on weight
+    // Calculate details for the currently selected item (Card 2)
     const selectedItemCalculated = useMemo(() => {
         if (!selectedItem) return null;
-        const factor = inputWeight / 100;
-        return {
-            energy: selectedItem.energy * factor,
-            protein: selectedItem.protein * factor,
-            fat: selectedItem.fat * factor,
-            carb: selectedItem.carb * factor,
-            fiber: selectedItem.fiber * factor,
-            calcium: selectedItem.calcium * factor,
-            iron: selectedItem.iron * factor,
-            sodium: selectedItem.sodium * factor,
-            potassium: selectedItem.potassium * factor,
-            phosphorus: selectedItem.phosphorus * factor,
-            vitC: selectedItem.vitC * factor,
-            zinc: (selectedItem.zinc || 0) * factor
-        };
+        return calculateNutrition(selectedItem, inputWeight);
     }, [selectedItem, inputWeight]);
 
+    // Calculate totals for Meal Summary (Card 4 Default)
     const mealTotals = useMemo(() => {
         const totals = {
             energy: 0, protein: 0, fat: 0, carb: 0, fiber: 0,
@@ -228,23 +274,40 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
         let totalWeight = 0;
 
         mealItems.forEach(({ item, weight }) => {
-            const factor = weight / 100;
+            const nut = calculateNutrition(item, weight);
             totalWeight += weight;
-            totals.energy += item.energy * factor;
-            totals.protein += item.protein * factor;
-            totals.fat += item.fat * factor;
-            totals.carb += item.carb * factor;
-            totals.fiber += item.fiber * factor;
-            totals.calcium += item.calcium * factor;
-            totals.iron += item.iron * factor;
-            totals.sodium += item.sodium * factor;
-            totals.potassium += item.potassium * factor;
-            totals.phosphorus += item.phosphorus * factor;
-            totals.vitC += item.vitC * factor;
-            totals.zinc += (item.zinc || 0) * factor;
+            totals.energy += nut.energy;
+            totals.protein += nut.protein;
+            totals.fat += nut.fat;
+            totals.carb += nut.carb;
+            totals.fiber += nut.fiber;
+            totals.calcium += nut.calcium;
+            totals.iron += nut.iron;
+            totals.sodium += nut.sodium;
+            totals.potassium += nut.potassium;
+            totals.phosphorus += nut.phosphorus;
+            totals.vitC += nut.vitC;
+            totals.zinc += nut.zinc;
         });
         return { totals, totalWeight };
     }, [mealItems]);
+
+    // Data for Label Card (Card 4)
+    const labelData = useMemo(() => {
+        if (viewMode === 'item' && viewingItemIndex !== null && mealItems[viewingItemIndex]) {
+            const item = mealItems[viewingItemIndex];
+            return {
+                data: calculateNutrition(item.item, item.weight),
+                weight: item.weight,
+                title: `Item: ${item.item.food}`
+            };
+        }
+        return {
+            data: mealTotals.totals,
+            weight: mealTotals.totalWeight,
+            title: "Meal Summary (Total)"
+        };
+    }, [viewMode, viewingItemIndex, mealItems, mealTotals]);
 
     return (
         <div className="max-w-[1920px] mx-auto animate-fade-in pb-12">
@@ -324,8 +387,8 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                         {filteredData.map(item => (
                             <div 
                                 key={item.id}
-                                onClick={() => setSelectedItem(item)}
-                                className={`p-3 border rounded-lg cursor-pointer transition hover:shadow-md flex flex-col gap-1 ${selectedItem?.id === item.id ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-400' : 'bg-white border-gray-200 hover:border-blue-300'}`}
+                                onClick={() => handleDatabaseSelect(item)}
+                                className={`p-3 border rounded-lg cursor-pointer transition hover:shadow-md flex flex-col gap-1 ${selectedItem?.id === item.id && viewingItemIndex === null ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-400' : 'bg-white border-gray-200 hover:border-blue-300'}`}
                             >
                                 <div className="flex justify-between items-start">
                                     <h4 className="font-bold text-gray-800 text-sm leading-tight">{item.food}</h4>
@@ -346,11 +409,12 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                 </div>
 
                 {/* CARD 2: SELECTED ITEM ANALYSIS (Auto Height) */}
-                <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden relative">
-                    <div className="p-4 border-b border-gray-100 bg-blue-50">
-                        <h3 className="font-bold text-blue-900 mb-1 flex items-center gap-2">
-                            <span>🥗</span> Item Analysis
+                <div className={`bg-white rounded-xl shadow-lg border flex flex-col overflow-hidden relative transition-colors ${viewingItemIndex !== null ? 'border-yellow-300 ring-2 ring-yellow-100' : 'border-gray-200'}`}>
+                    <div className={`p-4 border-b flex justify-between items-center ${viewingItemIndex !== null ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-100'}`}>
+                        <h3 className={`font-bold mb-1 flex items-center gap-2 ${viewingItemIndex !== null ? 'text-yellow-800' : 'text-blue-900'}`}>
+                            <span>🥗</span> {viewingItemIndex !== null ? 'Edit Item' : 'Item Analysis'}
                         </h3>
+                        {viewingItemIndex !== null && <span className="text-[10px] font-bold bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded">EDITING</span>}
                     </div>
                     
                     {selectedItem && selectedItemCalculated ? (
@@ -370,13 +434,23 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                                         className="w-24 p-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold text-xl"
                                     />
                                 </div>
-                                <button 
-                                    onClick={addToMeal}
-                                    className="h-12 w-14 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-md flex items-center justify-center text-2xl"
-                                    title="Add to Meal"
-                                >
-                                    +
-                                </button>
+                                {viewingItemIndex !== null ? (
+                                    <button 
+                                        onClick={updateMealItem}
+                                        className="h-12 w-16 bg-yellow-500 text-white rounded-lg font-bold hover:bg-yellow-600 transition shadow-md flex items-center justify-center text-sm"
+                                        title="Update Item"
+                                    >
+                                        Update
+                                    </button>
+                                ) : (
+                                    <button 
+                                        onClick={addToMeal}
+                                        className="h-12 w-14 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-md flex items-center justify-center text-2xl"
+                                        title="Add to Meal"
+                                    >
+                                        +
+                                    </button>
+                                )}
                             </div>
 
                             {/* NUTRITION LABEL WRAPPER */}
@@ -409,14 +483,23 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                     <div className="flex-grow overflow-y-auto p-2 space-y-2 bg-gray-50/50">
                         {mealItems.map((item, idx) => {
                             const factor = item.weight / 100;
+                            const isViewing = viewingItemIndex === idx;
                             return (
-                                <div key={idx} className="flex flex-col gap-1 p-2 bg-white rounded border border-gray-200 shadow-sm hover:border-green-300 transition-colors">
+                                <div 
+                                    key={idx} 
+                                    onClick={() => handleMealItemClick(idx)}
+                                    className={`flex flex-col gap-1 p-2 rounded border shadow-sm transition-all cursor-pointer ${
+                                        isViewing 
+                                        ? 'bg-yellow-50 border-yellow-300 ring-1 ring-yellow-200' 
+                                        : 'bg-white border-gray-200 hover:border-green-300'
+                                    }`}
+                                >
                                     <div className="flex justify-between items-start">
                                         <div className="font-bold text-gray-800 text-sm truncate flex-grow pr-2" title={item.item.food}>
                                             {item.item.food}
                                         </div>
                                         <button 
-                                            onClick={() => removeFromMeal(idx)}
+                                            onClick={(e) => { e.stopPropagation(); removeFromMeal(idx); }}
                                             className="text-red-400 hover:text-red-600 hover:bg-red-50 p-0.5 rounded transition text-lg leading-none"
                                             title="Remove"
                                         >
@@ -425,11 +508,11 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                                     </div>
                                     
                                     <div className="flex items-center justify-between mt-1">
-                                        <div className="flex items-center gap-1 bg-gray-100 rounded px-2 py-0.5">
+                                        <div className="flex items-center gap-1 bg-white/50 rounded px-2 py-0.5 border border-transparent hover:border-gray-300" onClick={e => e.stopPropagation()}>
                                             <input 
                                                 type="number" 
                                                 value={item.weight} 
-                                                onChange={(e) => updateMealItemWeight(idx, Number(e.target.value))}
+                                                onChange={(e) => updateInlineWeight(idx, Number(e.target.value))}
                                                 className="w-12 text-sm text-center bg-transparent border-b border-gray-400 focus:border-green-500 outline-none font-bold text-gray-700"
                                             />
                                             <span className="text-xs text-gray-500">g</span>
@@ -456,27 +539,32 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                     )}
                 </div>
 
-                {/* CARD 4: MEAL TOTALS (LABEL) - Auto Height */}
-                <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden relative">
-                    <div className="p-4 border-b border-gray-100 bg-purple-50 flex justify-between items-center">
-                        <h3 className="font-bold text-purple-900 flex items-center gap-2">
-                            <span>📊</span> Total Nutrition
+                {/* CARD 4: MEAL TOTALS / ITEM LABEL - Auto Height */}
+                <div className={`bg-white rounded-xl shadow-lg border flex flex-col overflow-hidden relative transition-colors ${viewMode === 'item' ? 'border-yellow-200' : 'border-gray-200'}`}>
+                    <div 
+                        className={`p-4 border-b flex justify-between items-center cursor-pointer hover:opacity-80 transition ${viewMode === 'item' ? 'bg-yellow-100 border-yellow-200' : 'bg-purple-50 border-gray-100'}`}
+                        onClick={() => { setViewMode('total'); setViewingItemIndex(null); }}
+                        title="Click to reset to Meal Summary"
+                    >
+                        <h3 className={`font-bold flex items-center gap-2 ${viewMode === 'item' ? 'text-yellow-900' : 'text-purple-900'}`}>
+                            <span>{viewMode === 'item' ? '🏷️' : '📊'}</span> {viewMode === 'item' ? 'Selected Item Label' : 'Total Nutrition'}
                         </h3>
+                        {viewMode === 'item' && <span className="text-[10px] bg-white text-yellow-800 px-2 py-0.5 rounded font-bold border border-yellow-200">Reset</span>}
                     </div>
 
                     <div className="p-4 bg-white flex flex-col min-h-[400px]">
                         {mealItems.length > 0 ? (
                             <div className="w-full flex-grow">
                                 <NutritionLabel 
-                                    data={mealTotals.totals} 
-                                    weight={mealTotals.totalWeight} 
-                                    title="Meal Summary"
+                                    data={labelData.data} 
+                                    weight={labelData.weight} 
+                                    title={labelData.title}
                                 />
                             </div>
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-gray-300">
                                 <span className="text-4xl mb-2 opacity-20">🧾</span>
-                                <p className="text-sm text-center px-4">Add items to the Meal List to generate the aggregate Nutrition Facts label.</p>
+                                <p className="text-sm text-center px-4">Add items to generate the Nutrition Facts label.</p>
                             </div>
                         )}
                     </div>
