@@ -29,88 +29,86 @@ const NutritionLabel: React.FC<{ data: any; weight: number; title?: string }> = 
     };
 
     return (
-        <div className="border border-black bg-white text-black font-sans p-2 shadow-sm w-full rounded-sm relative overflow-hidden text-[10px] leading-tight">
+        <div className="border-2 border-black bg-white text-black font-sans p-4 shadow-md w-full rounded-sm relative overflow-hidden text-sm leading-normal">
             {/* Decorative background logo opacity */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[6rem] opacity-[0.03] pointer-events-none">🥗</div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10rem] opacity-[0.03] pointer-events-none">🥗</div>
 
-            {title && <h3 className="text-center font-black text-xs mb-1 border-b-2 border-black pb-0.5 uppercase tracking-wider">{title}</h3>}
+            {title && <h3 className="text-center font-black text-sm mb-2 border-b-2 border-black pb-1 uppercase tracking-widest">{title}</h3>}
             
-            <h2 className="font-black text-lg leading-none mb-0.5">Nutrition Facts</h2>
-            <p className="text-[10px] font-bold mb-1 flex justify-between items-end">
+            <h2 className="font-black text-4xl leading-none mb-1">Nutrition Facts</h2>
+            <p className="text-base font-bold mb-1 flex justify-between items-end border-b-[8px] border-black pb-1">
                 <span>Serving Size</span>
-                <span className="font-black text-sm">{weight}g</span>
+                <span className="font-black text-2xl">{weight}g</span>
             </p>
             
-            <div className="h-1 bg-black my-0.5"></div>
-            
-            <div className="flex justify-between items-end border-b-2 border-black pb-0.5 mb-0.5">
+            <div className="flex justify-between items-end border-b-4 border-black pb-1 mb-1">
                 <div>
-                    <div className="font-bold text-[10px]">Amount per serving</div>
-                    <div className="font-black text-sm">Calories</div>
+                    <div className="font-bold text-sm">Amount per serving</div>
+                    <div className="font-black text-2xl">Calories</div>
                 </div>
-                <div className="font-black text-2xl">{data.energy.toFixed(0)}</div>
+                <div className="font-black text-5xl">{data.energy.toFixed(0)}</div>
             </div>
 
-            <div className="text-[10px] font-medium">
-                <div className="text-right text-[9px] font-bold border-b border-gray-400 mb-0.5">% Daily Value*</div>
+            <div className="text-sm font-medium">
+                <div className="text-right text-xs font-bold border-b border-black mb-1 pt-1">% Daily Value*</div>
 
                 {/* Macros Section */}
-                <div className="border-b border-gray-300 py-0.5 flex justify-between items-center group hover:bg-gray-50 transition">
-                    <span className="flex items-center gap-1"><span className="text-xs">🛢️</span> <span className="font-black">Total Fat</span></span>
-                    <span className="font-bold text-red-600">{data.fat.toFixed(1)}g <span className="text-black text-[9px] font-normal ml-0.5">({getDV(data.fat, dv.fat)}%)</span></span>
+                <div className="border-b border-gray-300 py-1.5 flex justify-between items-center group hover:bg-gray-50 transition">
+                    <span className="flex items-center gap-2"><span className="text-base">🛢️</span> <span className="font-black text-base">Total Fat</span></span>
+                    <span className="font-bold text-red-600 text-base">{data.fat.toFixed(1)}g <span className="text-black text-xs font-normal ml-1">({getDV(data.fat, dv.fat)}%)</span></span>
                 </div>
 
-                <div className="border-b border-gray-300 py-0.5 flex justify-between items-center group hover:bg-gray-50 transition">
-                    <span className="flex items-center gap-1"><span className="text-xs">🧂</span> <span className="font-black">Sodium</span></span>
-                    <span className="font-bold text-gray-600">{data.sodium.toFixed(0)}mg <span className="text-black text-[9px] font-normal ml-0.5">({getDV(data.sodium, dv.sodium)}%)</span></span>
+                <div className="border-b border-gray-300 py-1.5 flex justify-between items-center group hover:bg-gray-50 transition">
+                    <span className="flex items-center gap-2"><span className="text-base">🧂</span> <span className="font-black text-base">Sodium</span></span>
+                    <span className="font-bold text-gray-600 text-base">{data.sodium.toFixed(0)}mg <span className="text-black text-xs font-normal ml-1">({getDV(data.sodium, dv.sodium)}%)</span></span>
                 </div>
 
-                <div className="border-b border-gray-300 py-0.5 flex justify-between items-center group hover:bg-gray-50 transition">
-                    <span className="flex items-center gap-1"><span className="text-xs">🍞</span> <span className="font-black">Total Carb</span></span>
-                    <span className="font-bold text-blue-600">{data.carb.toFixed(1)}g <span className="text-black text-[9px] font-normal ml-0.5">({getDV(data.carb, dv.carb)}%)</span></span>
+                <div className="border-b border-gray-300 py-1.5 flex justify-between items-center group hover:bg-gray-50 transition">
+                    <span className="flex items-center gap-2"><span className="text-base">🍞</span> <span className="font-black text-base">Total Carb</span></span>
+                    <span className="font-bold text-blue-600 text-base">{data.carb.toFixed(1)}g <span className="text-black text-xs font-normal ml-1">({getDV(data.carb, dv.carb)}%)</span></span>
                 </div>
 
-                <div className="border-b border-gray-300 py-0.5 pl-4 flex justify-between items-center text-gray-700 bg-gray-50/50">
-                    <span className="flex items-center gap-1 text-[9px]">🥦 Dietary Fiber</span>
-                    <span className="font-bold">{data.fiber.toFixed(1)}g <span className="text-[9px] font-normal">({getDV(data.fiber, dv.fiber)}%)</span></span>
+                <div className="border-b border-gray-300 py-1.5 pl-6 flex justify-between items-center text-gray-700 bg-gray-50/50">
+                    <span className="flex items-center gap-1 text-sm">🥦 Dietary Fiber</span>
+                    <span className="font-bold text-sm">{data.fiber.toFixed(1)}g <span className="text-xs font-normal">({getDV(data.fiber, dv.fiber)}%)</span></span>
                 </div>
 
-                <div className="border-b-4 border-black py-0.5 flex justify-between items-center group hover:bg-gray-50 transition">
-                    <span className="flex items-center gap-1"><span className="text-xs">🥩</span> <span className="font-black">Protein</span></span>
-                    <span className="font-bold text-green-700">{data.protein.toFixed(1)}g</span>
+                <div className="border-b-[8px] border-black py-1.5 flex justify-between items-center group hover:bg-gray-50 transition">
+                    <span className="flex items-center gap-2"><span className="text-base">🥩</span> <span className="font-black text-base">Protein</span></span>
+                    <span className="font-bold text-green-700 text-base">{data.protein.toFixed(1)}g</span>
                 </div>
 
-                {/* Micronutrients - Compact Grid */}
-                <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 py-1 text-[9px] font-medium">
-                    <div className="flex justify-between border-b border-gray-200 py-0.5">
-                        <span>🍊 Vit C</span>
+                {/* Micronutrients - Grid */}
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 py-2 text-xs font-medium">
+                    <div className="flex justify-between border-b border-gray-300 py-1">
+                        <span className="flex items-center gap-1">🍊 Vit C</span>
                         <span className="font-bold text-orange-600">{data.vitC.toFixed(1)} mg</span>
                     </div>
-                    <div className="flex justify-between border-b border-gray-200 py-0.5">
-                        <span>🦴 Calc</span>
+                    <div className="flex justify-between border-b border-gray-300 py-1">
+                        <span className="flex items-center gap-1">🦴 Calcium</span>
                         <span className="font-bold text-blue-800">{data.calcium.toFixed(0)} mg</span>
                     </div>
-                    <div className="flex justify-between border-b border-gray-200 py-0.5">
-                        <span>🩸 Iron</span>
+                    <div className="flex justify-between border-b border-gray-300 py-1">
+                        <span className="flex items-center gap-1">🩸 Iron</span>
                         <span className="font-bold text-red-800">{data.iron.toFixed(2)} mg</span>
                     </div>
-                    <div className="flex justify-between border-b border-gray-200 py-0.5">
-                        <span>🍌 Potas</span>
+                    <div className="flex justify-between border-b border-gray-300 py-1">
+                        <span className="flex items-center gap-1">🍌 Potassium</span>
                         <span className="font-bold text-purple-700">{data.potassium.toFixed(0)} mg</span>
                     </div>
-                    <div className="flex justify-between border-b border-gray-200 py-0.5">
-                        <span>⚙️ Zinc</span>
+                    <div className="flex justify-between border-b border-gray-300 py-1">
+                        <span className="flex items-center gap-1">⚙️ Zinc</span>
                         <span className="font-bold text-gray-700">{data.zinc ? data.zinc.toFixed(2) : '-'} mg</span>
                     </div>
-                    <div className="flex justify-between border-b border-gray-200 py-0.5">
-                        <span>✨ Phos</span>
+                    <div className="flex justify-between border-b border-gray-300 py-1">
+                        <span className="flex items-center gap-1">✨ Phos</span>
                         <span className="font-bold text-teal-700">{data.phosphorus.toFixed(0)} mg</span>
                     </div>
                 </div>
             </div>
             
-            <div className="text-[8px] leading-tight text-gray-500 pt-0.5">
-                * %DV based on 2000 kcal diet.
+            <div className="text-[10px] leading-tight text-gray-500 pt-2 font-medium">
+                * The % Daily Value (DV) tells you how much a nutrient in a serving of food contributes to a daily diet. 2,000 calories a day is used for general nutrition advice.
             </div>
         </div>
     );
@@ -142,8 +140,8 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
         if (searchQuery) {
             const q = searchQuery.toLowerCase().trim();
 
-            // Check for nutrient search syntax: e.g. "p:20" or "p:>20"
-            const nutrientMatch = q.match(/^([pfcenak]+|na|ph):([<>]?)(\d+(\.\d+)?)$/);
+            // Check for nutrient search syntax: e.g. "p:20" or "p : > 20"
+            const nutrientMatch = q.match(/^([a-zA-Z]+)\s*:\s*([<>]?)\s*(\d+(\.\d+)?)$/);
 
             if (nutrientMatch) {
                 const key = nutrientMatch[1]; // key
@@ -156,10 +154,15 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                         case 'p': itemVal = item.protein; break;
                         case 'c': itemVal = item.carb; break;
                         case 'f': itemVal = item.fat; break;
-                        case 'e': itemVal = item.energy; break;
+                        case 'e': 
+                        case 'kcal': itemVal = item.energy; break;
                         case 'na': itemVal = item.sodium; break;
                         case 'k': itemVal = item.potassium; break;
                         case 'ph': itemVal = item.phosphorus; break;
+                        case 'ca': itemVal = item.calcium; break;
+                        case 'fe': itemVal = item.iron; break;
+                        case 'zn': itemVal = item.zinc || 0; break;
+                        case 'vitc': itemVal = item.vitC; break;
                         default: return false;
                     }
 
@@ -175,8 +178,8 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                 data = data.filter(item => {
                     if (item.food.toLowerCase().includes(q)) return true;
                     if (String(item.code).includes(q)) return true;
-                    const allValues = Object.values(item).join(' ').toLowerCase();
-                    return allValues.includes(q);
+                    // Extended search in values
+                    return false; 
                 });
             }
         }
@@ -262,10 +265,10 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
             </div>
 
             {/* 4 Cards Layout (Responsive Grid) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 h-[calc(100vh-200px)] min-h-[600px]">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
                 
-                {/* CARD 1: DATABASE SEARCH */}
-                <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden">
+                {/* CARD 1: DATABASE SEARCH (Scrollable fixed height list) */}
+                <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden h-[650px]">
                     <div className="p-4 border-b border-gray-100 bg-gray-50">
                         <div className="flex justify-between items-center mb-3">
                             <h3 className="font-bold text-gray-800 flex items-center gap-2">
@@ -282,12 +285,12 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                             <div className="bg-blue-50 border border-blue-100 p-2 rounded text-[10px] text-blue-800 mb-2 leading-tight animate-fade-in">
                                 <p className="mb-1"><strong>Nutrient Search:</strong> Key:Value</p>
                                 <ul className="grid grid-cols-2 gap-1 mb-1">
-                                    <li><code>P:20</code> (Prot ~20g)</li>
-                                    <li><code>C:&gt;50</code> (Carb &gt;50g)</li>
-                                    <li><code>F:&lt;5</code> (Fat &lt;5g)</li>
-                                    <li><code>E:100</code> (Kcal ~100)</li>
-                                    <li><code>Na:0</code> (Sodium ~0)</li>
-                                    <li><code>K:&gt;300</code> (Potas &gt;300)</li>
+                                    <li><code>p:20</code> (Prot ~20g)</li>
+                                    <li><code>c:&gt;50</code> (Carb &gt;50g)</li>
+                                    <li><code>f:&lt;5</code> (Fat &lt;5g)</li>
+                                    <li><code>e:100</code> (Kcal ~100)</li>
+                                    <li><code>ca:&gt;100</code> (Calc &gt;100)</li>
+                                    <li><code>fe:5</code> (Iron ~5)</li>
                                 </ul>
                                 <p className="text-gray-500">Or just search by Name/Code as usual.</p>
                             </div>
@@ -295,7 +298,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                         <div className="relative">
                             <input 
                                 type="text" 
-                                placeholder="Search (e.g. 'Rice', 'P:>10', 'Na:0')" 
+                                placeholder="Search (e.g. 'Rice', 'p:>10', 'fe:5')" 
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-sm mb-3 pr-8 font-mono"
@@ -342,7 +345,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                     </div>
                 </div>
 
-                {/* CARD 2: SELECTED ITEM ANALYSIS */}
+                {/* CARD 2: SELECTED ITEM ANALYSIS (Auto Height) */}
                 <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden relative">
                     <div className="p-4 border-b border-gray-100 bg-blue-50">
                         <h3 className="font-bold text-blue-900 mb-1 flex items-center gap-2">
@@ -351,25 +354,25 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                     </div>
                     
                     {selectedItem && selectedItemCalculated ? (
-                        <div className="flex-grow overflow-y-auto p-4 flex flex-col gap-4">
+                        <div className="p-4 flex flex-col gap-4">
                             <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-sm text-center">
-                                <h4 className="font-bold text-gray-800 text-base mb-1 truncate" title={selectedItem.food}>{selectedItem.food}</h4>
-                                <span className="text-[10px] text-blue-600 font-bold uppercase tracking-wider block">{selectedItem.category}</span>
+                                <h4 className="font-bold text-gray-800 text-lg mb-1 truncate" title={selectedItem.food}>{selectedItem.food}</h4>
+                                <span className="text-xs text-blue-600 font-bold uppercase tracking-wider block">{selectedItem.category}</span>
                             </div>
 
-                            <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg border border-gray-200 justify-between">
-                                <div className="flex items-center gap-2">
-                                    <label className="text-xs font-bold text-gray-600 whitespace-nowrap uppercase">Weight (g)</label>
+                            <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg border border-gray-200 justify-between">
+                                <div className="flex items-center gap-3">
+                                    <label className="text-sm font-bold text-gray-600 whitespace-nowrap uppercase">Weight (g)</label>
                                     <input 
                                         type="number" 
                                         value={inputWeight}
                                         onChange={(e) => setInputWeight(Math.max(0, Number(e.target.value)))}
-                                        className="w-20 p-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold text-lg"
+                                        className="w-24 p-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-center font-bold text-xl"
                                     />
                                 </div>
                                 <button 
                                     onClick={addToMeal}
-                                    className="h-10 w-12 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-md flex items-center justify-center text-xl"
+                                    className="h-12 w-14 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-md flex items-center justify-center text-2xl"
                                     title="Add to Meal"
                                 >
                                     +
@@ -377,7 +380,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                             </div>
 
                             {/* NUTRITION LABEL WRAPPER */}
-                            <div className="flex-grow border border-gray-100 rounded bg-white overflow-hidden">
+                            <div className="w-full">
                                 <NutritionLabel 
                                     data={selectedItemCalculated} 
                                     weight={inputWeight} 
@@ -385,15 +388,15 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex-grow flex flex-col items-center justify-center text-gray-400 p-8 text-center bg-gray-50/30">
+                        <div className="flex-grow flex flex-col items-center justify-center text-gray-400 p-8 text-center bg-gray-50/30 min-h-[400px]">
                             <span className="text-6xl mb-4 opacity-20">👈</span>
                             <p>Select a food item to view analysis.</p>
                         </div>
                     )}
                 </div>
 
-                {/* CARD 3: MEAL LIST (CALCULATION) */}
-                <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden relative">
+                {/* CARD 3: MEAL LIST (CALCULATION) - Fixed height list */}
+                <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden relative h-[650px]">
                     <div className="p-4 border-b border-gray-100 bg-green-50 flex justify-between items-center">
                         <h3 className="font-bold text-green-900 flex items-center gap-2">
                             <span>🍽️</span> Meal List
@@ -409,7 +412,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                             return (
                                 <div key={idx} className="flex flex-col gap-1 p-2 bg-white rounded border border-gray-200 shadow-sm hover:border-green-300 transition-colors">
                                     <div className="flex justify-between items-start">
-                                        <div className="font-bold text-gray-800 text-xs sm:text-sm truncate flex-grow pr-2" title={item.item.food}>
+                                        <div className="font-bold text-gray-800 text-sm truncate flex-grow pr-2" title={item.item.food}>
                                             {item.item.food}
                                         </div>
                                         <button 
@@ -427,11 +430,11 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                                                 type="number" 
                                                 value={item.weight} 
                                                 onChange={(e) => updateMealItemWeight(idx, Number(e.target.value))}
-                                                className="w-10 text-xs text-center bg-transparent border-b border-gray-400 focus:border-green-500 outline-none font-bold text-gray-700"
+                                                className="w-12 text-sm text-center bg-transparent border-b border-gray-400 focus:border-green-500 outline-none font-bold text-gray-700"
                                             />
-                                            <span className="text-[9px] text-gray-500">g</span>
+                                            <span className="text-xs text-gray-500">g</span>
                                         </div>
-                                        <div className="text-xs font-mono font-bold text-green-700">
+                                        <div className="text-sm font-mono font-bold text-green-700">
                                             {(item.item.energy * factor).toFixed(0)} kcal
                                         </div>
                                     </div>
@@ -453,7 +456,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                     )}
                 </div>
 
-                {/* CARD 4: MEAL TOTALS (LABEL) */}
+                {/* CARD 4: MEAL TOTALS (LABEL) - Auto Height */}
                 <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden relative">
                     <div className="p-4 border-b border-gray-100 bg-purple-50 flex justify-between items-center">
                         <h3 className="font-bold text-purple-900 flex items-center gap-2">
@@ -461,7 +464,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                         </h3>
                     </div>
 
-                    <div className="flex-grow overflow-y-auto p-4 bg-white flex flex-col">
+                    <div className="p-4 bg-white flex flex-col min-h-[400px]">
                         {mealItems.length > 0 ? (
                             <div className="w-full flex-grow">
                                 <NutritionLabel 

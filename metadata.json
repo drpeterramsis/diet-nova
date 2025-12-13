@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova CheckPoint_FoodAnalysis_16_v2.0.190",
-  "description": "Bug fix for SyntaxError in FoodComposition. Bumped version to 2.0.190.",
+  "name": "Diet-Nova CheckPoint_FoodAnalysis_18_v2.0.191",
+  "description": "Fix Food Composition search and increase Nutrition Label size. Bumped version to 2.0.191.",
   "requestFramePermissions": []
 }
