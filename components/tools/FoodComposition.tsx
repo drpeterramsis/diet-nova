@@ -133,11 +133,32 @@ const NutritionLabel: React.FC<{ data: any; weight: number; title?: string }> = 
     );
 };
 
+// Nutrient Options for Composition Filter
+const NUTRIENT_OPTS: Array<{label: string, value: keyof FoodCompositionItem}> = [
+    { label: 'Energy (kcal)', value: 'energy' },
+    { label: 'Protein (g)', value: 'protein' },
+    { label: 'Fat (g)', value: 'fat' },
+    { label: 'Carbs (g)', value: 'carb' },
+    { label: 'Fiber (g)', value: 'fiber' },
+    { label: 'Calcium (mg)', value: 'calcium' },
+    { label: 'Iron (mg)', value: 'iron' },
+    { label: 'Sodium (mg)', value: 'sodium' },
+    { label: 'Potassium (mg)', value: 'potassium' },
+    { label: 'Phosphorus (mg)', value: 'phosphorus' },
+    { label: 'Vit C (mg)', value: 'vitC' },
+    { label: 'Zinc (mg)', value: 'zinc' },
+];
+
 const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
     const { t } = useLanguage();
+    
+    // --- States ---
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
-    const [showSearchGuide, setShowSearchGuide] = useState(false);
+    
+    // Advanced Filters State
+    const [showFilters, setShowFilters] = useState(false);
+    const [compositionFilters, setCompositionFilters] = useState<Array<{ id: number; key: keyof FoodCompositionItem; op: '>' | '<' | '='; val: number }>>([]);
 
     // Editor / Analysis State
     const [selectedItem, setSelectedItem] = useState<FoodCompositionItem | null>(null);
@@ -161,56 +182,54 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
             data = data.filter(d => d.category === selectedCategory);
         }
 
-        // 2. Filter by Deep Search / Advanced Nutrient Search
+        // 2. Filter by Name/Code Search
         if (searchQuery) {
             const q = searchQuery.toLowerCase().trim();
-
-            // Check for nutrient search syntax: e.g. "p:20" or "p : > 20"
-            const nutrientMatch = q.match(/^([a-zA-Z]+)\s*:\s*([<>]?)\s*(\d+(\.\d+)?)$/);
-
-            if (nutrientMatch) {
-                const key = nutrientMatch[1]; // key
-                const op = nutrientMatch[2];  // operator
-                const val = parseFloat(nutrientMatch[3]); // value
-
-                data = data.filter(item => {
-                    let itemVal = 0;
-                    switch(key) {
-                        case 'p': itemVal = item.protein; break;
-                        case 'c': itemVal = item.carb; break;
-                        case 'f': itemVal = item.fat; break;
-                        case 'e': 
-                        case 'kcal': itemVal = item.energy; break;
-                        case 'na': itemVal = item.sodium; break;
-                        case 'k': itemVal = item.potassium; break;
-                        case 'ph': itemVal = item.phosphorus; break;
-                        case 'ca': itemVal = item.calcium; break;
-                        case 'fe': itemVal = item.iron; break;
-                        case 'zn': itemVal = item.zinc || 0; break;
-                        case 'vitc': itemVal = item.vitC; break;
-                        default: return false;
-                    }
-
-                    if (op === '>') return itemVal >= val;
-                    if (op === '<') return itemVal <= val;
-                    
-                    // Fuzzy match (+/- 10% or 1 unit) if no operator
-                    const margin = val < 10 ? 1 : val * 0.1;
-                    return itemVal >= (val - margin) && itemVal <= (val + margin);
-                });
-            } else {
-                // Standard Text Search
-                data = data.filter(item => {
-                    if (item.food.toLowerCase().includes(q)) return true;
-                    if (String(item.code).includes(q)) return true;
-                    // Extended search in values
-                    return false; 
-                });
-            }
+            data = data.filter(item => 
+                item.food.toLowerCase().includes(q) || 
+                String(item.code).includes(q)
+            );
         }
-        return data;
-    }, [searchQuery, selectedCategory]);
 
+        // 3. Filter by Composition (Advanced) - All filters must pass (AND logic)
+        if (compositionFilters.length > 0) {
+            data = data.filter(item => {
+                return compositionFilters.every(filter => {
+                    const itemVal = Number(item[filter.key] || 0);
+                    const targetVal = filter.val;
+                    
+                    if (filter.op === '>') return itemVal > targetVal;
+                    if (filter.op === '<') return itemVal < targetVal;
+                    if (filter.op === '=') {
+                        // Exact match with small tolerance for floats
+                        return Math.abs(itemVal - targetVal) < 0.1;
+                    }
+                    return true;
+                });
+            });
+        }
+
+        return data;
+    }, [searchQuery, selectedCategory, compositionFilters]);
+
+    // --- Filter Handlers ---
+    const addFilter = () => {
+        setCompositionFilters(prev => [
+            ...prev, 
+            { id: Date.now(), key: 'protein', op: '>', val: 10 } // Default new filter
+        ]);
+        setShowFilters(true);
+    };
+
+    const removeFilter = (id: number) => {
+        setCompositionFilters(prev => prev.filter(f => f.id !== id));
+    };
+
+    const updateFilter = (id: number, field: 'key' | 'op' | 'val', value: any) => {
+        setCompositionFilters(prev => prev.map(f => f.id === id ? { ...f, [field]: value } : f));
+    };
+
+    // --- Meal Handlers ---
     const handleDatabaseSelect = (item: FoodCompositionItem) => {
         setSelectedItem(item);
         setInputWeight(100); // Default to 100g
@@ -248,7 +267,6 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
         setInputWeight(mealItem.weight);
         setViewingItemIndex(index);
         setViewMode('item');
-        // Scroll to top of Item Analysis Card (optional if needed)
     };
 
     const updateInlineWeight = (index: number, newWeight: number) => {
@@ -338,38 +356,78 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                                 <span>🔍</span> Database
                             </h3>
                             <button 
-                                className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
-                                onClick={() => setShowSearchGuide(!showSearchGuide)}
+                                className={`text-xs px-2 py-1 rounded transition border ${showFilters ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'}`}
+                                onClick={() => setShowFilters(!showFilters)}
                             >
-                                Search Tips 💡
+                                {showFilters ? 'Hide Filters' : 'Composition Search'}
                             </button>
                         </div>
-                        {showSearchGuide && (
-                            <div className="bg-blue-50 border border-blue-100 p-2 rounded text-[10px] text-blue-800 mb-2 leading-tight animate-fade-in">
-                                <p className="mb-1"><strong>Nutrient Search:</strong> Key:Value</p>
-                                <ul className="grid grid-cols-2 gap-1 mb-1">
-                                    <li><code>p:20</code> (Prot ~20g)</li>
-                                    <li><code>c:&gt;50</code> (Carb &gt;50g)</li>
-                                    <li><code>f:&lt;5</code> (Fat &lt;5g)</li>
-                                    <li><code>e:100</code> (Kcal ~100)</li>
-                                    <li><code>ca:&gt;100</code> (Calc &gt;100)</li>
-                                    <li><code>fe:5</code> (Iron ~5)</li>
-                                </ul>
-                                <p className="text-gray-500">Or just search by Name/Code as usual.</p>
-                            </div>
-                        )}
-                        <div className="relative">
+
+                        {/* Search Bar */}
+                        <div className="relative mb-3">
                             <input 
                                 type="text" 
-                                placeholder="Search (e.g. 'Rice', 'p:>10', 'fe:5')" 
+                                placeholder="Search by name or code..." 
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-sm mb-3 pr-8 font-mono"
+                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-sm pr-8 font-mono"
                                 dir="ltr"
                             />
                             <span className="absolute right-2 top-2.5 text-gray-400">🔍</span>
                         </div>
+
+                        {/* ADVANCED FILTERS PANEL */}
+                        {showFilters && (
+                            <div className="mb-3 bg-blue-50 p-2 rounded-lg border border-blue-100 animate-fade-in">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-[10px] font-bold text-blue-800 uppercase tracking-wider">Active Filters ({compositionFilters.length})</span>
+                                    <button onClick={addFilter} className="text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700">+ Add Rule</button>
+                                </div>
+                                <div className="space-y-2 max-h-32 overflow-y-auto pr-1 scrollbar-thin">
+                                    {compositionFilters.map(f => (
+                                        <div key={f.id} className="flex gap-1 items-center">
+                                            {/* Nutrient Select */}
+                                            <select 
+                                                className="w-24 text-[10px] p-1 border rounded"
+                                                value={f.key}
+                                                onChange={(e) => updateFilter(f.id, 'key', e.target.value)}
+                                            >
+                                                {NUTRIENT_OPTS.map(opt => (
+                                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                                ))}
+                                            </select>
+                                            
+                                            {/* Operator Select */}
+                                            <select 
+                                                className="w-10 text-[10px] p-1 border rounded text-center font-bold"
+                                                value={f.op}
+                                                onChange={(e) => updateFilter(f.id, 'op', e.target.value)}
+                                            >
+                                                <option value=">">&gt;</option>
+                                                <option value="<">&lt;</option>
+                                                <option value="=">=</option>
+                                            </select>
+
+                                            {/* Value Input */}
+                                            <input 
+                                                type="number" 
+                                                className="w-12 text-[10px] p-1 border rounded"
+                                                value={f.val}
+                                                onChange={(e) => updateFilter(f.id, 'val', Number(e.target.value))}
+                                            />
+
+                                            {/* Remove Button */}
+                                            <button onClick={() => removeFilter(f.id)} className="text-red-500 hover:text-red-700 text-xs px-1">✕</button>
+                                        </div>
+                                    ))}
+                                    {compositionFilters.length === 0 && (
+                                        <div className="text-[10px] text-gray-400 text-center py-2 italic">No active filters. Click + Add Rule.</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                         
+                        {/* Category Tabs */}
                         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
                             {categories.map(cat => (
                                 <button

@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova CheckPoint_FoodAnalysis_19_v2.0.192",
-  "description": "Enhanced Food Composition tool with list selection, auto-100g default, and dynamic label toggle. Bumped version to 2.0.192.",
+  "name": "Diet-Nova CheckPoint_FoodAnalysis_20_v2.0.193",
+  "description": "Enhanced Food Composition tool with advanced multi-criteria nutrient search (Composition Search). Bumped version to 2.0.193.",
   "requestFramePermissions": []
 }
