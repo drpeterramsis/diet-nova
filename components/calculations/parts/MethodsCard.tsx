@@ -145,7 +145,10 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
           {activeMethod === 'method1' && r.m1 && (
             <div className="p-4 grid grid-cols-2 gap-4 text-center">
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <h4 className="text-[10px] font-bold text-gray-500 uppercase">Current Wt</h4>
+                    <h4 className="text-[10px] font-bold text-gray-500 uppercase flex justify-center items-center gap-1">
+                        Current Wt
+                        <EquationTooltip formula="Weight * Factor (25)" details={r.detailedFormulas?.m1} />
+                    </h4>
                     <div className="text-xl font-bold text-gray-800">{r.m1.resultDry.toFixed(0)}</div>
                     <div className="text-[9px] text-gray-400 mt-1">Factor: 25-30</div>
                 </div>
@@ -162,7 +165,10 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
                 <table className="w-full text-xs text-center border-collapse">
                   <thead>
                     <tr className="bg-gray-100 text-gray-600">
-                      <th className="p-2 border border-gray-200">Basis</th>
+                      <th className="p-2 border border-gray-200 flex justify-center items-center gap-1">
+                          Basis
+                          <EquationTooltip formula="Weight * Factor" details={r.detailedFormulas?.m2} />
+                      </th>
                       <th className="p-2 border border-gray-200">25 kcal</th>
                       <th className="p-2 border border-gray-200">30 kcal</th>
                       <th className="p-2 border border-gray-200">35 kcal</th>

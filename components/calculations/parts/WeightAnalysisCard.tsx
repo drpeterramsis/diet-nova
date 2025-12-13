@@ -65,7 +65,10 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
                   </div>
               </div>
               <div className="text-center pl-2">
-                  <div className="text-[10px] font-bold text-blue-400 uppercase">Selected</div>
+                  <div className="text-[10px] font-bold text-blue-400 uppercase flex items-center justify-center gap-1">
+                      Selected
+                      <EquationTooltip formula="User Selected / Default Dry" details="Used for calculations." />
+                  </div>
                   <div className="font-mono font-bold text-lg text-blue-800">
                       {r.selectedWeight !== '0.0' ? `${r.selectedWeight} kg` : '-'}
                   </div>
@@ -114,7 +117,10 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
           {!r.pediatric && r.protocol && (
               <div>
                   <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded text-center">
-                      <div className="text-xs font-bold text-green-700 uppercase">✅ Recommendation</div>
+                      <div className="text-xs font-bold text-green-700 uppercase flex items-center justify-center gap-1">
+                          ✅ Recommendation
+                          <EquationTooltip formula="30% Rule Protocol" details={r.detailedFormulas?.protocol} />
+                      </div>
                       <div className="font-mono text-xl font-extrabold text-green-800">
                           {r.protocol.recommendedWeight.toFixed(1)} <span className="text-sm">kg</span>
                       </div>

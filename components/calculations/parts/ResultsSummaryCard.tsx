@@ -12,6 +12,30 @@ interface ResultsSummaryProps {
   setNotes?: (val: string) => void;
 }
 
+interface TooltipProps {
+    formula: string;
+    details?: string;
+}
+
+const EquationTooltip: React.FC<TooltipProps> = ({ formula, details }) => (
+    <div className="group relative inline-block ml-1 z-50">
+        <span className="cursor-help text-blue-300 text-[9px] font-bold border border-blue-500/30 rounded-full w-3.5 h-3.5 inline-flex items-center justify-center bg-blue-500/10 hover:bg-blue-500 hover:text-white transition">
+            i
+        </span>
+        <div className="hidden group-hover:block absolute z-[999] bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[280px] bg-gray-900 text-white text-[10px] p-3 rounded-lg shadow-xl break-words text-left leading-relaxed border border-gray-700">
+            {formula && <div className="font-bold text-blue-300 mb-1 border-b border-gray-700 pb-1">Equation:</div>}
+            {formula && <div className="font-mono mb-2">{formula}</div>}
+            {details && (
+                <>
+                    <div className="font-bold text-green-300 mb-1 border-b border-gray-700 pb-1">Calculation:</div>
+                    <div className="font-mono text-gray-300 whitespace-pre-wrap">{details}</div>
+                </>
+            )}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+        </div>
+    </div>
+);
+
 const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanMeals, reqKcal, setReqKcal, notes, setNotes }) => {
   const { t } = useLanguage();
 
@@ -23,7 +47,10 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
               📊 {t.kcal.summary}
           </h2>
           <div className="text-right">
-              <div className="text-[10px] uppercase opacity-60 font-bold tracking-wider">{t.kcal.dryWeight}</div>
+              <div className="text-[10px] uppercase opacity-60 font-bold tracking-wider flex items-center justify-end gap-1">
+                  {t.kcal.dryWeight}
+                  <EquationTooltip formula="Current Wt - (Ascites + Edema)" details={r.detailedFormulas?.dryWeight} />
+              </div>
               <div className="font-mono font-bold text-xl leading-none text-green-400">{r.dryWeight} <span className="text-sm opacity-70">kg</span></div>
           </div>
       </div>
@@ -33,7 +60,10 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
           <div className="grid grid-cols-2 gap-4">
               {/* BMI (Dry) */}
               <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 flex flex-col justify-center min-h-[100px]">
-                  <div className="text-[10px] text-gray-400 uppercase tracking-wide font-bold mb-1">BMI (Dry)</div>
+                  <div className="text-[10px] text-gray-400 uppercase tracking-wide font-bold mb-1 flex items-center justify-center gap-1">
+                      BMI (Dry)
+                      <EquationTooltip formula="Dry Weight / Height²" details={r.detailedFormulas?.bmi} />
+                  </div>
                   <div className={`text-3xl font-extrabold ${r.bmiColor ? r.bmiColor.replace('text-', 'text-') : 'text-white'}`}>{r.bmi}</div>
                   <div className="text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-2 self-center bg-white/20 text-white">
                       {r.bmiRef || '-'}
@@ -42,7 +72,10 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
 
               {/* Weight Loss */}
               <div className="text-center p-3 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 flex flex-col justify-center min-h-[100px]">
-                  <div className="text-[10px] text-gray-400 uppercase tracking-wide font-bold mb-1">{t.kcal.weightLoss}</div>
+                  <div className="text-[10px] text-gray-400 uppercase tracking-wide font-bold mb-1 flex items-center justify-center gap-1">
+                      {t.kcal.weightLoss}
+                      <EquationTooltip formula="((Usual - Dry) / Usual) * 100" details={r.detailedFormulas?.weightLoss} />
+                  </div>
                   <div className={`text-3xl font-extrabold ${r.weightLossColor ? r.weightLossColor.replace('text-', 'text-') : 'text-white'}`}>{r.weightLoss}%</div>
                   {r.weightLossRef ? (
                       <div className="text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-2 self-center bg-white/20 text-white">
@@ -70,7 +103,7 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
                )}
 
                <div>
-                   <label className="block text-[10px] font-bold text-gray-400 uppercase mb-2 tracking-wider">{t.kcal.kcalRequired}</label>
+                   <label className="block text-sm font-bold text-gray-400 uppercase mb-2 tracking-wider">{t.kcal.kcalRequired}</label>
                    <input 
                      type="number" 
                      className="w-full p-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-bold text-2xl text-center text-white transition shadow-inner placeholder-gray-600"

@@ -32,6 +32,11 @@ export interface KcalResults {
       harrisDry: string;
       harrisSel: string;
       eer: string;
+      m1?: string;
+      m2?: string;
+      dryWeight?: string;
+      weightLoss?: string;
+      protocol?: string;
   };
   IBW_diff_val: number;
   IBW_sel_diff_val: number;
@@ -645,6 +650,22 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const threshold = IBW_2 + ibw30;
     const isHighObesity = dryWeightVal > threshold;
     const recommendedWeight = isHighObesity ? ABW_2 : IBW_2;
+
+    // --- NEW: Detailed Tooltip Data ---
+    detailedFormulas.m1 = `${dryWeightVal.toFixed(1)} (Dry Wt) * 25`;
+    detailedFormulas.m2 = `${dryWeightVal.toFixed(1)} (Dry Wt) * Factor`;
+    
+    detailedFormulas.dryWeight = edemaCorrectionPercent > 0 
+        ? `${temp_weight} (Current) * (1 - ${edemaCorrectionPercent} (Edema %))`
+        : `${temp_weight} (Current) - ${ascites} (Ascites) - ${edema} (Edema)`;
+
+    detailedFormulas.weightLoss = usual_weight > 0 
+        ? `((${usual_weight} (Usual) - ${dryWeightVal.toFixed(1)} (Dry)) / ${usual_weight}) * 100` 
+        : 'Usual weight not provided';
+
+    detailedFormulas.protocol = isHighObesity 
+        ? `Patient > 30% of IBW.\nUsing Adjusted Body Weight (ABW).\nFormula: ((Actual - IBW) * 0.38) + IBW`
+        : `Patient < 30% of IBW.\nUsing Ideal Body Weight (IBW).\nFormula: Hamwi Equation`;
 
     setResults({
         weightLoss: weightLoss.toFixed(1),
