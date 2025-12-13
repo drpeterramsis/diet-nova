@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova CheckPoint_FoodAnalysis_v2.0.184",
-  "description": "Update Meal Planner table formatting to use gm/kcal units. Added new Food Analysis Table tool with search, detailed view, and meal calculation. Bumped version to 2.0.184.",
+  "name": "Diet-Nova CheckPoint_FoodAnalysis_v2.0.185",
+  "description": "Overhauled Food Analysis Table with 3-column layout, Nutrition Facts Label display, and auto-calculation logic. Bumped version to 2.0.185.",
   "requestFramePermissions": []
 }
