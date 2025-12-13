@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova CheckPoint_FoodAnalysis_13_v2.0.188",
-  "description": "Refactored Food Composition layout to 4 cards, improved search, fixed scrolling issues. Bumped version to 2.0.188.",
+  "name": "Diet-Nova CheckPoint_FoodAnalysis_16_v2.0.190",
+  "description": "Bug fix for SyntaxError in FoodComposition. Bumped version to 2.0.190.",
   "requestFramePermissions": []
 }
