@@ -17,15 +17,55 @@ export interface MiscTopicItem {
 
 export const miscTopicsData: MiscTopicItem[] = [
   {
+    id: 'misc_assessment_macros',
+    title: 'Assessment of Macronutrients',
+    category: 'Guidelines',
+    content: `The fat, protein, carbohydrate, fiber, and water content of the diet can be assessed by analyzing multiple days of food records or 24-hour recalls.
+
+**Standards:**
+• **DRIs (Dietary Reference Intakes):** Standards for healthy individuals.
+• **AI (Adequate Intake):** Used when research is limited (e.g., Total Fiber, Linoleic acid, Water).
+• **RDA (Recommended Dietary Allowance):** Meets needs of **97-98%** of population (e.g., Carbohydrates, Protein). Lower boundary to prevent deficiency.
+• **AMDR (Acceptable Macronutrient Distribution Ranges):** Percentages of total calories associated with reduced risk of chronic disease.
+
+**Specific Limits (AHA/Dietary Guidelines):**
+• **Saturated Fat:** **<10%** (Dietary Guidelines) or **<5-6%** (AHA).
+• **Trans Fat:** As low as possible.
+• **Added Sugars:** **<25 g/d** (Females), **<38 g/d** (Males) or **<10%** of kcal.
+
+**Note:** DRIs are for healthy people. In trauma, surgery, or malnutrition, specific standards based on health status should be used.`
+  },
+  {
+    id: 'misc_usda_dist',
+    title: 'USDA Balanced Diet Distribution',
+    category: 'Guidelines',
+    content: `**Macronutrient Distribution (AMDR):**
+
+**1. Carbohydrates:** **45 - 65 %**
+
+**2. Fats:** **20 - 25 %**
+   • Saturated Fatty Acids (SFA): **< 10%**
+   • Polyunsaturated (PUFA): Up to **10%**
+   • Monounsaturated (MUFA): Up to **20%**
+
+**3. Protein:** **15 - 20 %**
+   • Range: **0.8 - 1.2 g/kg**
+   • High Biological Value (HBV): **50%**
+   • Low Biological Value (LBV): **50%**
+
+**⚠️ Clinical Note:**
+In pathological conditions or Obesity (Grade 1, 2, 3), protein should be calculated based on **Ideal Body Weight (IBW)**.`
+  },
+  {
     id: 'misc_obesity_def',
     title: 'Definition of Obesity',
     category: 'Obesity',
     content: `**Obesity** is a chronic, progressive, and relapsing disease characterized by an abnormal or excessive accumulation of body fat that impairs health. It arises from a complex interaction of genetic, metabolic, environmental, behavioral, and neurohormonal factors.
 
-• **General population:** Obesity is defined as BMI ≥30 kg/m².
-• **Ethnic-specific cut-offs:** In South Asian, Chinese, Middle Eastern, Black African, or African-Caribbean individuals → Obesity = BMI ≥27.5 kg/m².
-• **Central adiposity:** Waist-to-height ratio (WHtR ≥0.5) or waist circumference are strong indicators (>94cm Male, >80cm Female).
-• Or excessive accumulation of body fat more than 25% (Men) or 32% (Women).`
+• **General population:** Obesity is defined as BMI ≥ **30 kg/m²**.
+• **Ethnic-specific cut-offs:** In South Asian, Chinese, Middle Eastern, Black African, or African-Caribbean individuals → Obesity = BMI ≥ **27.5 kg/m²**.
+• **Central adiposity:** Waist-to-height ratio (WHtR ≥ **0.5**) or waist circumference are strong indicators (> **94cm** Male, > **80cm** Female).
+• Or excessive accumulation of body fat more than **25%** (Men) or **32%** (Women).`
   },
   {
     id: 'misc_fat_types',

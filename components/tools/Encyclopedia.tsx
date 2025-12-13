@@ -23,6 +23,13 @@ const Encyclopedia: React.FC = () => {
 
   // Logic for Misc Topics
   const [miscSearchQuery, setMiscSearchQuery] = useState('');
+  const [miscCategoryFilter, setMiscCategoryFilter] = useState<string>('All');
+
+  // Extract Unique Misc Categories
+  const miscCategories = useMemo(() => {
+      const cats = new Set(miscTopicsData.map(t => t.category));
+      return ['All', ...Array.from(cats)];
+  }, []);
 
   const filteredNutrients = useMemo(() => {
     let items = encyclopediaData.filter(i => i.category === 'Vitamin' || i.category === 'Mineral');
@@ -69,14 +76,22 @@ const Encyclopedia: React.FC = () => {
   }, [drugSearchQuery]);
 
   const filteredMiscTopics = useMemo(() => {
-      if (!miscSearchQuery) return miscTopicsData;
-      const q = miscSearchQuery.toLowerCase();
-      return miscTopicsData.filter(t => 
-          t.title.toLowerCase().includes(q) ||
-          t.content.toLowerCase().includes(q) ||
-          t.category.toLowerCase().includes(q)
-      );
-  }, [miscSearchQuery]);
+      let items = miscTopicsData;
+      
+      if (miscCategoryFilter !== 'All') {
+          items = items.filter(t => t.category === miscCategoryFilter);
+      }
+
+      if (miscSearchQuery) {
+          const q = miscSearchQuery.toLowerCase();
+          items = items.filter(t => 
+              t.title.toLowerCase().includes(q) ||
+              t.content.toLowerCase().includes(q) ||
+              t.category.toLowerCase().includes(q)
+          );
+      }
+      return items;
+  }, [miscSearchQuery, miscCategoryFilter]);
 
   // Group Drugs for Visual Grid
   const groupedDrugs = useMemo(() => {
@@ -89,12 +104,13 @@ const Encyclopedia: React.FC = () => {
       return groups;
   }, [filteredDrugs]);
 
-  // Helper to format text with colors for arrows
+  // Helper to format text with colors for arrows and numbers
   const renderFormattedText = (text: string) => {
       const lines = text.split('\n');
       return lines.map((line, idx) => {
           // 1. Split by arrows to color them
           // 2. Handle bold **text** within parts
+          // 3. Highlight numbers/units
           const arrowParts = line.split(/([↑↓→])/g);
           
           return (
@@ -110,9 +126,29 @@ const Encyclopedia: React.FC = () => {
                           <span key={pIdx}>
                               {boldParts.map((bp, bIdx) => {
                                   if (bp.startsWith('**') && bp.endsWith('**')) {
-                                      return <strong key={bIdx} className="text-gray-900 font-bold">{bp.slice(2, -2)}</strong>;
+                                      // Inside bold part, also highlight numbers if any
+                                      const content = bp.slice(2, -2);
+                                      const numParts = content.split(/(\d+(?:\.\d+)?(?:%|g|mg|kcal|kg|cm|ml|L|\s?g\/d|\s?g\/kg)?)/g);
+                                      return (
+                                          <strong key={bIdx} className="text-gray-900 font-bold">
+                                              {numParts.map((np, nIdx) => {
+                                                  if (/^\d/.test(np)) return <span key={nIdx} className="text-blue-800">{np}</span>;
+                                                  return np;
+                                              })}
+                                          </strong>
+                                      );
                                   }
-                                  return bp;
+                                  
+                                  // Regular text - highlight numbers
+                                  const numParts = bp.split(/(\d+(?:\.\d+)?(?:%|g|mg|kcal|kg|cm|ml|L|\s?g\/d|\s?g\/kg)?)/g);
+                                  return (
+                                      <span key={bIdx}>
+                                          {numParts.map((np, nIdx) => {
+                                              if (/^\d/.test(np)) return <span key={nIdx} className="text-blue-600 font-bold">{np}</span>;
+                                              return np;
+                                          })}
+                                      </span>
+                                  );
                               })}
                           </span>
                       );
@@ -204,7 +240,7 @@ const Encyclopedia: React.FC = () => {
 
                 {/* 5. Misc Topics (NEW) */}
                 <div 
-                    onClick={() => { setCurrentSector('misc'); setMiscSearchQuery(''); }}
+                    onClick={() => { setCurrentSector('misc'); setMiscSearchQuery(''); setMiscCategoryFilter('All'); }}
                     className="card bg-white hover:shadow-xl transition-all duration-300 cursor-pointer group transform hover:-translate-y-1 p-6 flex flex-col items-center text-center border-t-4 border-t-blue-500"
                 >
                     <div className="h-14 w-14 bg-blue-50 rounded-full flex items-center justify-center text-2xl mb-4 group-hover:bg-blue-100 transition">
@@ -363,19 +399,34 @@ const Encyclopedia: React.FC = () => {
                   <h2 className="text-2xl font-bold text-gray-800">Miscellaneous Topics</h2>
               </div>
 
+              {/* Tag Filters */}
+              <div className="flex flex-wrap gap-2 justify-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                  {miscCategories.map(cat => (
+                      <button
+                          key={cat}
+                          onClick={() => setMiscCategoryFilter(cat)}
+                          className={`px-4 py-1.5 rounded-full text-xs font-bold transition border ${
+                              miscCategoryFilter === cat 
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-md' 
+                              : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                          }`}
+                      >
+                          {cat}
+                      </button>
+                  ))}
+              </div>
+
               {/* Search */}
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6">
-                  <div className="relative w-full max-w-lg mx-auto">
-                      <input
-                          type="text"
-                          className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
-                          placeholder="Search topics (Obesity, Fat types, Counseling...)"
-                          value={miscSearchQuery}
-                          onChange={(e) => setMiscSearchQuery(e.target.value)}
-                          dir={isRTL ? 'rtl' : 'ltr'}
-                      />
-                      <span className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${isRTL ? 'left-3' : 'right-3'}`}>🔍</span>
-                  </div>
+              <div className="relative w-full max-w-lg mx-auto">
+                  <input
+                      type="text"
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm bg-white shadow-sm"
+                      placeholder="Search topics (Obesity, Fat types, Counseling...)"
+                      value={miscSearchQuery}
+                      onChange={(e) => setMiscSearchQuery(e.target.value)}
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                  />
+                  <span className={`absolute top-1/2 -translate-y-1/2 text-gray-400 ${isRTL ? 'left-3' : 'right-3'}`}>🔍</span>
               </div>
 
               {/* Topics Grid */}

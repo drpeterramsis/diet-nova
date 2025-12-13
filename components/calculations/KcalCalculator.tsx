@@ -153,8 +153,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
       setShowGrowthCharts(false);
   };
 
-  // Check if current mode is pediatric
-  const isPediatric = inputs.pediatricAge !== null || inputs.age < 20;
+  // Logic to show/hide methods
+  const showMethods = inputs.age > 0 && inputs.height > 0 && inputs.currentWeight > 0;
 
   return (
     <div className="max-w-[1920px] mx-auto animate-fade-in relative">
@@ -250,17 +250,27 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
 
         {/* Column 2: Methods */}
         <div className="space-y-6">
-            <CollapsibleCard title={t.kcal.methods} defaultOpen={true}>
-                <MethodsCard 
-                results={results}
-                deficit={inputs.deficit}
-                setDeficit={inputs.setDeficit}
-                goal={inputs.goal}
-                setGoal={inputs.setGoal}
-                customFactor={inputs.customFactor}
-                setCustomFactor={inputs.setCustomFactor}
-                />
-            </CollapsibleCard>
+            {showMethods ? (
+                <div className="animate-fade-in">
+                    <CollapsibleCard title={t.kcal.methods} defaultOpen={true}>
+                        <MethodsCard 
+                        results={results}
+                        deficit={inputs.deficit}
+                        setDeficit={inputs.setDeficit}
+                        goal={inputs.goal}
+                        setGoal={inputs.setGoal}
+                        customFactor={inputs.customFactor}
+                        setCustomFactor={inputs.setCustomFactor}
+                        />
+                    </CollapsibleCard>
+                </div>
+            ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center text-blue-700 animate-fade-in">
+                    <div className="text-4xl mb-3">🔢</div>
+                    <p className="font-bold">Inputs Required</p>
+                    <p className="text-sm mt-1">Please enter Age, Height, and Weight to see calculation methods.</p>
+                </div>
+            )}
         </div>
 
         {/* Column 3: Results (Sticky on large screens) */}

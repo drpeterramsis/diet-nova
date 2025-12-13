@@ -37,21 +37,15 @@ const EquationTooltip: React.FC<TooltipProps> = ({ formula, details }) => (
 
 const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanMeals, reqKcal, setReqKcal, notes, setNotes }) => {
   const { t } = useLanguage();
-  const [showSelectModal, setShowSelectModal] = useState(false);
-
-  const handleSelect = (val: number) => {
-      if(setReqKcal) setReqKcal(Number(val.toFixed(0)));
-      setShowSelectModal(false);
-  };
 
   // Prepare Selection Data with Notes
-  const options = [];
+  const options: { label: string, val: number, note: string }[] = [];
   
   if (r.pediatric) {
       if(r.pediatricMethods) {
           options.push({ label: 'DRI/IOM (Dry)', val: r.pediatricMethods.driEER.valDry, note: '' });
           options.push({ label: 'DRI/IOM (Sel)', val: r.pediatricMethods.driEER.valSel, note: '' });
-          options.push({ label: 'Catch-Up Total', val: r.pediatric.catchUpTotal, note: 'Catch-up Growth' });
+          options.push({ label: 'Catch-Up Total', val: r.pediatric.catchUpTotal || 0, note: 'Catch-up Growth' });
           options.push({ label: 'Maintenance TEE (Dry)', val: r.pediatricMethods.maintenanceTEE.valDry, note: '' });
       }
   } else {
@@ -77,6 +71,14 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
           options.push({ label: 'EER (IOM) - Sel', val: r.m6.resultSel, note: '' });
       }
   }
+
+  const handleDropdownChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      if (!setReqKcal) return;
+      const val = Number(e.target.value);
+      if (!isNaN(val) && val > 0) {
+          setReqKcal(Number(val.toFixed(0)));
+      }
+  };
 
   return (
     <div className="card shadow-lg overflow-visible border-0 ring-1 ring-black/5 bg-gradient-to-br from-gray-800 to-gray-900 text-white relative z-20">
@@ -143,22 +145,27 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
 
                <div>
                    <label className="block text-sm font-bold text-gray-400 uppercase mb-2 tracking-wider">{t.kcal.kcalRequired}</label>
-                   <div className="flex gap-2">
+                   <div className="flex gap-2 items-center">
                        <input 
                          type="number" 
-                         className="w-full p-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-bold text-2xl text-center text-white transition shadow-inner placeholder-gray-600"
-                         placeholder="Enter Target Kcal"
+                         className="w-24 p-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-bold text-xl text-center text-white transition shadow-inner placeholder-gray-600"
+                         placeholder="0"
                          value={reqKcal}
                          onChange={(e) => setReqKcal(Number(e.target.value))}
                          dir="ltr"
                        />
-                       <button 
-                           onClick={() => setShowSelectModal(true)}
-                           className="bg-blue-600 hover:bg-blue-700 text-white w-12 h-full rounded-xl font-bold transition shadow-lg flex items-center justify-center flex-shrink-0"
-                           title="Select from calculated results"
+                       <select 
+                           className="flex-grow p-3 bg-white/10 border border-white/10 rounded-xl text-xs text-white focus:ring-2 focus:ring-green-500 outline-none cursor-pointer"
+                           onChange={handleDropdownChange}
+                           value="" // Always show placeholder behavior
                        >
-                           <span className="text-xl">📝</span>
-                       </button>
+                           <option value="" disabled className="text-gray-500">▼ Select from Results...</option>
+                           {options.map((opt, idx) => (
+                               <option key={idx} value={opt.val} className="text-gray-900">
+                                   {opt.label} ({opt.val.toFixed(0)}) {opt.note}
+                               </option>
+                           ))}
+                       </select>
                    </div>
                </div>
                <button 
@@ -171,37 +178,6 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
             </div>
           )}
       </div>
-
-      {/* Select Modal */}
-      {showSelectModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4 text-gray-800">
-              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-                  <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                      <h3 className="font-bold text-gray-800">Select Target Calorie</h3>
-                      <button onClick={() => setShowSelectModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
-                  </div>
-                  <div className="p-2 max-h-[60vh] overflow-y-auto">
-                      <table className="w-full text-sm">
-                          <tbody>
-                              {options.map((opt, idx) => (
-                                  <tr 
-                                    key={idx} 
-                                    onClick={() => handleSelect(opt.val)}
-                                    className="hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 transition"
-                                  >
-                                      <td className="p-3">
-                                          <div className="text-gray-700 font-medium">{opt.label}</div>
-                                          {opt.note && <div className="text-[10px] text-gray-500">{opt.note}</div>}
-                                      </td>
-                                      <td className="p-3 text-right font-bold text-blue-600 font-mono text-lg">{opt.val?.toFixed(0)}</td>
-                                  </tr>
-                              ))}
-                          </tbody>
-                      </table>
-                  </div>
-              </div>
-          </div>
-      )}
     </div>
   );
 };
