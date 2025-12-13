@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova CheckPoint_FoodAnalysis_v2.0.185",
-  "description": "Overhauled Food Analysis Table with 3-column layout, Nutrition Facts Label display, and auto-calculation logic. Bumped version to 2.0.185.",
+  "name": "Diet-Nova CheckPoint_FoodData_11_v2.0.186",
+  "description": "Updated Food Composition Database with comprehensive dataset (119 items). Bumped version to 2.0.186.",
   "requestFramePermissions": []
 }
