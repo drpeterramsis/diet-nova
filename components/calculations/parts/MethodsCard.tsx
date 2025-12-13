@@ -7,6 +7,8 @@ interface MethodsCardProps {
   results: KcalResults;
   deficit: number;
   setDeficit: (v: number) => void;
+  goal?: 'loss' | 'gain';
+  setGoal?: (v: 'loss' | 'gain') => void;
   customFactor?: number;
   setCustomFactor?: (v: number) => void;
 }
@@ -35,7 +37,7 @@ const EquationTooltip: React.FC<TooltipProps> = ({ formula, details }) => (
     </div>
 );
 
-const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDeficit, customFactor, setCustomFactor }) => {
+const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDeficit, goal, setGoal, customFactor, setCustomFactor }) => {
   const { t } = useLanguage();
   const [activeMethod, setActiveMethod] = useState<string>(r.pediatric ? 'pediatric' : 'method3');
 
@@ -239,15 +241,33 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
              <div className="p-3 space-y-3">
                <div className="flex items-center justify-between mb-1">
                  <h3 className="font-bold text-gray-700 text-xs uppercase">Metabolic Equations</h3>
-                 <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-semibold text-red-500 uppercase">Deficit:</span>
-                    <input 
-                        type="number" 
-                        value={deficit} 
-                        onChange={(e) => setDeficit(Number(e.target.value))}
-                        className="w-12 h-6 p-1 rounded border text-center text-xs bg-red-50 border-red-200 font-bold text-red-700"
-                    />
-                 </div>
+                 
+                 {/* Goal Toggle & Input */}
+                 {setGoal && (
+                     <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+                         <div className="flex rounded overflow-hidden text-[10px] font-bold shadow-sm">
+                             <button 
+                                onClick={() => setGoal('loss')}
+                                className={`px-2 py-1 ${goal === 'loss' ? 'bg-red-500 text-white' : 'bg-white text-gray-600'}`}
+                             >
+                                 Loss (-)
+                             </button>
+                             <button 
+                                onClick={() => setGoal('gain')}
+                                className={`px-2 py-1 ${goal === 'gain' ? 'bg-green-500 text-white' : 'bg-white text-gray-600'}`}
+                             >
+                                 Gain (+)
+                             </button>
+                         </div>
+                         <input 
+                            type="number" 
+                            value={deficit} 
+                            onChange={(e) => setDeficit(Number(e.target.value))}
+                            className="w-12 h-6 p-1 rounded border text-center text-xs bg-white border-gray-300 font-bold text-gray-700 focus:ring-1 focus:ring-blue-400"
+                            placeholder="Kcal"
+                        />
+                     </div>
+                 )}
                </div>
                
                <table className="w-full text-xs border-collapse">
@@ -278,9 +298,11 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
                    </tr>
                  </tbody>
                </table>
+               
+               {/* Adjustment Note */}
                {deficit > 0 && (
-                   <div className="text-[10px] text-center text-green-600 mt-1 font-bold bg-green-50 p-1 rounded">
-                       Note: TEE targets include -{deficit} kcal deficit applied after activity factor.
+                   <div className={`text-[10px] text-center mt-1 font-bold p-1 rounded ${goal === 'loss' ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
+                       Note: TEE targets include {goal === 'loss' ? 'deficit' : 'surplus'} of {goal === 'loss' ? '-' : '+'}{deficit} kcal for weight {goal === 'loss' ? 'loss' : 'gain'}.
                    </div>
                )}
              </div>

@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova CheckPoint 42_v2.0.175",
-  "description": "Updates: Added Manual Factor Adjustment to Kcal Calculator (M1/M2). Added Select Target Kcal from results modal. Updated version to v2.0.175.",
+  "name": "Diet-Nova CheckPoint 43_v2.0.176",
+  "description": "Updates: M3 Kcal adjustment options (Deficit/Surplus). Select Result UI improvements. Tooltip Z-index fixes. Updated version to v2.0.176.",
   "requestFramePermissions": []
 }

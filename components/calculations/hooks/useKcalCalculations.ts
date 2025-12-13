@@ -100,6 +100,7 @@ export interface KcalResults {
     selected: number[];
   };
   m3?: {
+    adjustmentNote: string;
     harris: {
       bmrDry: number;
       teeDry: number;
@@ -265,7 +266,9 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
 
   const [pregnancyState, setPregnancyState] = useState<PregnancyState>('none');
 
-  const [deficit, setDeficit] = useState<number>(0);
+  const [deficit, setDeficit] = useState<number>(0); // This represents the magnitude
+  const [goal, setGoal] = useState<'loss' | 'gain'>('loss'); // This represents the direction
+
   const [notes, setNotes] = useState<string>('');
   
   const [customFactor, setCustomFactor] = useState<number>(30); // Default Factor for M1/M2 Manual
@@ -347,6 +350,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       setDesiredBodyFat('');
       setPregnancyState('none');
       setDeficit(0);
+      setGoal('loss');
       setReqKcal('');
       setNotes('');
       setCustomFactor(30);
@@ -637,10 +641,14 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     
     const actFactor = physicalActivity_val > 0 ? physicalActivity_val : 1.2;
 
-    const harrisDryTEE = (harrisDry * actFactor) - deficit;
-    const harrisSelTEE = (harrisSel * actFactor) - deficit;
-    const mifflinDryTEE = (mifflinDry * actFactor) - deficit;
-    const mifflinSelTEE = (mifflinSel * actFactor) - deficit;
+    // Adjusted TEE Calculation (Surplus or Deficit)
+    const adjustmentVal = goal === 'loss' ? -deficit : deficit;
+    const adjustmentNote = deficit > 0 ? (goal === 'loss' ? `(-${deficit} kcal)` : `(+${deficit} kcal)`) : '';
+
+    const harrisDryTEE = (harrisDry * actFactor) + adjustmentVal;
+    const harrisSelTEE = (harrisSel * actFactor) + adjustmentVal;
+    const mifflinDryTEE = (mifflinDry * actFactor) + adjustmentVal;
+    const mifflinSelTEE = (mifflinSel * actFactor) + adjustmentVal;
 
     // Detailed Formulas for Mifflin & Harris
     const s_mifflin = gender === 'male' ? 5 : -161;
@@ -736,6 +744,7 @@ Quick Methods (Guidelines):
         },
         m2: { actual: m2Actual, selected: m2Selected },
         m3: {
+            adjustmentNote,
             harris: { bmrDry: harrisDry, teeDry: harrisDryTEE, bmrSel: harrisSel, teeSel: harrisSelTEE },
             mifflin: { bmrDry: mifflinDry, teeDry: mifflinDryTEE, bmrSel: mifflinSel, teeSel: mifflinSelTEE }
         },
@@ -743,7 +752,7 @@ Quick Methods (Guidelines):
         m6: { resultDry: m6ResultDry, resultSel: m6ResultSel, label: 'Adult EER (IOM)', note: '', proteinRef: m6Formula },
     });
 
-  }, [gender, age, height, waist, hip, mac, tsf, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, edemaCorrectionPercent, amputationPercent, bodyFatPercent, desiredBodyFat, pregnancyState, pediatricAge, deficit, customFactor, t]);
+  }, [gender, age, height, waist, hip, mac, tsf, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, edemaCorrectionPercent, amputationPercent, bodyFatPercent, desiredBodyFat, pregnancyState, pediatricAge, deficit, goal, customFactor, t]);
 
   return {
     inputs: {
@@ -771,6 +780,7 @@ Quick Methods (Guidelines):
       desiredBodyFat, setDesiredBodyFat,
       pregnancyState, setPregnancyState,
       deficit, setDeficit,
+      goal, setGoal,
       customFactor, setCustomFactor,
       reqKcal, setReqKcal,
       notes, setNotes

@@ -22,7 +22,7 @@ const EquationTooltip: React.FC<TooltipProps> = ({ formula, details }) => (
         <span className="cursor-help text-blue-300 text-[9px] font-bold border border-blue-500/30 rounded-full w-3.5 h-3.5 inline-flex items-center justify-center bg-blue-500/10 hover:bg-blue-500 hover:text-white transition">
             i
         </span>
-        <div className="hidden group-hover:block absolute right-0 top-full mt-2 w-max max-w-[280px] bg-gray-900 text-white text-[10px] p-3 rounded-lg shadow-xl break-words text-left leading-relaxed border border-gray-700 z-[1000]">
+        <div className="hidden group-hover:block absolute right-0 top-full mt-2 w-max max-w-[280px] bg-gray-900 text-white text-[10px] p-3 rounded-lg shadow-xl break-words text-left leading-relaxed border border-gray-700 z-[9999]">
             {formula && <div className="font-bold text-blue-300 mb-1 border-b border-gray-700 pb-1">Equation:</div>}
             {formula && <div className="font-mono mb-2 whitespace-pre-wrap">{formula}</div>}
             {details && (
@@ -44,33 +44,37 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
       setShowSelectModal(false);
   };
 
-  // Prepare Selection Data
+  // Prepare Selection Data with Notes
   const options = [];
   
   if (r.pediatric) {
       if(r.pediatricMethods) {
-          options.push({ label: 'DRI/IOM (Dry)', val: r.pediatricMethods.driEER.valDry });
-          options.push({ label: 'DRI/IOM (Sel)', val: r.pediatricMethods.driEER.valSel });
-          options.push({ label: 'Catch-Up Total', val: r.pediatric.catchUpTotal });
-          options.push({ label: 'Maintenance TEE (Dry)', val: r.pediatricMethods.maintenanceTEE.valDry });
+          options.push({ label: 'DRI/IOM (Dry)', val: r.pediatricMethods.driEER.valDry, note: '' });
+          options.push({ label: 'DRI/IOM (Sel)', val: r.pediatricMethods.driEER.valSel, note: '' });
+          options.push({ label: 'Catch-Up Total', val: r.pediatric.catchUpTotal, note: 'Catch-up Growth' });
+          options.push({ label: 'Maintenance TEE (Dry)', val: r.pediatricMethods.maintenanceTEE.valDry, note: '' });
       }
   } else {
       // Adult Options
       if (r.m1) {
-          options.push({ label: `M1 Auto (Factor ${r.m1.factor}) - Dry`, val: r.m1.resultDry });
-          options.push({ label: `M1 Auto (Factor ${r.m1.factor}) - Sel`, val: r.m1.resultSel });
-          options.push({ label: `M1 Manual - Dry`, val: r.m1.customResultDry });
-          options.push({ label: `M1 Manual - Sel`, val: r.m1.customResultSel });
+          const manualNote = ' (Manual Factor)';
+          const autoNote = ` (Auto Factor: ${r.m1.factor})`;
+          
+          options.push({ label: `M1 Auto - Dry`, val: r.m1.resultDry, note: autoNote });
+          options.push({ label: `M1 Auto - Sel`, val: r.m1.resultSel, note: autoNote });
+          options.push({ label: `M1 Manual - Dry`, val: r.m1.customResultDry, note: manualNote });
+          options.push({ label: `M1 Manual - Sel`, val: r.m1.customResultSel, note: manualNote });
       }
       if (r.m3) {
-          options.push({ label: 'Mifflin TEE (Dry)', val: r.m3.mifflin.teeDry });
-          options.push({ label: 'Mifflin TEE (Sel)', val: r.m3.mifflin.teeSel });
-          options.push({ label: 'Harris TEE (Dry)', val: r.m3.harris.teeDry });
-          options.push({ label: 'Harris TEE (Sel)', val: r.m3.harris.teeSel });
+          const adjNote = r.m3.adjustmentNote ? ` ${r.m3.adjustmentNote}` : '';
+          options.push({ label: 'Mifflin TEE (Dry)', val: r.m3.mifflin.teeDry, note: adjNote });
+          options.push({ label: 'Mifflin TEE (Sel)', val: r.m3.mifflin.teeSel, note: adjNote });
+          options.push({ label: 'Harris TEE (Dry)', val: r.m3.harris.teeDry, note: adjNote });
+          options.push({ label: 'Harris TEE (Sel)', val: r.m3.harris.teeSel, note: adjNote });
       }
       if (r.m6) {
-          options.push({ label: 'EER (IOM) - Dry', val: r.m6.resultDry });
-          options.push({ label: 'EER (IOM) - Sel', val: r.m6.resultSel });
+          options.push({ label: 'EER (IOM) - Dry', val: r.m6.resultDry, note: '' });
+          options.push({ label: 'EER (IOM) - Sel', val: r.m6.resultSel, note: '' });
       }
   }
 
@@ -150,10 +154,10 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
                        />
                        <button 
                            onClick={() => setShowSelectModal(true)}
-                           className="bg-blue-600 hover:bg-blue-700 text-white px-3 rounded-xl font-bold transition shadow-lg text-xs flex-shrink-0"
+                           className="bg-blue-600 hover:bg-blue-700 text-white w-12 h-full rounded-xl font-bold transition shadow-lg flex items-center justify-center flex-shrink-0"
                            title="Select from calculated results"
                        >
-                           Select<br/>Result
+                           <span className="text-xl">📝</span>
                        </button>
                    </div>
                </div>
@@ -185,7 +189,10 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
                                     onClick={() => handleSelect(opt.val)}
                                     className="hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 transition"
                                   >
-                                      <td className="p-3 text-gray-700 font-medium">{opt.label}</td>
+                                      <td className="p-3">
+                                          <div className="text-gray-700 font-medium">{opt.label}</div>
+                                          {opt.note && <div className="text-[10px] text-gray-500">{opt.note}</div>}
+                                      </td>
                                       <td className="p-3 text-right font-bold text-blue-600 font-mono text-lg">{opt.val?.toFixed(0)}</td>
                                   </tr>
                               ))}
