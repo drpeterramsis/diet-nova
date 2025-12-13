@@ -74,10 +74,12 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
          )}
       </div>
 
-      {/* Warning Note */}
-      <div className="bg-orange-50 border-l-4 border-orange-400 p-2 text-[10px] text-orange-800">
-          <strong>Note:</strong> M1, M2, and M6 provide direct total energy estimates. Use <strong>M3 (Equations)</strong> if you specifically need to calculate deficit or surplus from BMR.
-      </div>
+      {/* Warning Note - Only visible for Adults */}
+      {!isPediatric && (
+          <div className="bg-orange-50 border-l-4 border-orange-400 p-2 text-[10px] text-orange-800">
+              <strong>Note:</strong> M1, M2, and M6 provide direct total energy estimates. Use <strong>M3 (Equations)</strong> if you specifically need to calculate deficit or surplus from BMR.
+          </div>
+      )}
 
       {/* Render Active Method */}
       <div className="bg-white rounded-xl overflow-visible animate-fade-in border border-gray-100 relative z-10">
@@ -143,6 +145,18 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
                       <div className="flex gap-4">
                           <div className="font-mono text-gray-800">{r.pediatricMethods.maintenanceTEE.valDry.toFixed(0)}</div>
                           <div className="font-mono text-blue-600">{r.pediatricMethods.maintenanceTEE.valSel.toFixed(0)}</div>
+                      </div>
+                  </div>
+
+                  {/* Ratio */}
+                  <div className="bg-white p-2 rounded border border-gray-100 flex justify-between items-center">
+                      <div className="text-xs font-bold text-gray-600 flex items-center">
+                          Ratio (Age/Wt)
+                          <EquationTooltip formula={r.pediatricMethods.ratio.formula} />
+                      </div>
+                      <div className="flex gap-4">
+                          <div className="font-mono text-gray-800">{r.pediatricMethods.ratio.valDry.toFixed(0)}</div>
+                          <div className="font-mono text-blue-600">{r.pediatricMethods.ratio.valSel.toFixed(0)}</div>
                       </div>
                   </div>
               </div>

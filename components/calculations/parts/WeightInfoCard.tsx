@@ -23,6 +23,12 @@ interface WeightInfoProps {
   bodyFatPercent?: number | '';
   setBodyFatPercent?: (v: number | '') => void;
   age?: number;
+  calculatedWeights?: {
+      dry?: string;
+      ibw?: string;
+      abw?: string;
+      rec?: number;
+  };
 }
 
 const WeightInfoCard: React.FC<WeightInfoProps> = ({
@@ -32,7 +38,8 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
   edemaCorrectionPercent, setEdemaCorrectionPercent,
   amputationPercent, setAmputationPercent,
   bodyFatPercent, setBodyFatPercent,
-  age
+  age,
+  calculatedWeights
 }) => {
   const { t } = useLanguage();
   const [showSpecialCondition, setShowSpecialCondition] = useState(false);
@@ -69,6 +76,15 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
 
   const isPediatric = age !== undefined && age < 18;
 
+  const handleWeightSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const val = Number(e.target.value);
+      if (!isNaN(val) && val > 0) {
+          setSelectedWeight(val);
+      }
+      // Reset select to default
+      e.target.value = "";
+  };
+
   return (
     <div className="card bg-white p-4">
       <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
@@ -89,12 +105,31 @@ const WeightInfoCard: React.FC<WeightInfoProps> = ({
         </div>
         <div>
             <label className="block text-xs font-bold text-gray-500 mb-1.5">{t.kcal.selectedWeight}</label>
-            <input 
-                type="number" 
-                value={selectedWeight || ''} 
-                onChange={(e) => setSelectedWeight(Number(e.target.value))} 
-                className="w-full h-10 border rounded px-3 text-sm font-bold text-green-700 focus:ring-2 focus:ring-green-500 outline-none transition" 
-            />
+            <div className="flex gap-1">
+                <input 
+                    type="number" 
+                    value={selectedWeight || ''} 
+                    onChange={(e) => setSelectedWeight(Number(e.target.value))} 
+                    className="w-full h-10 border rounded px-3 text-sm font-bold text-green-700 focus:ring-2 focus:ring-green-500 outline-none transition" 
+                />
+                {calculatedWeights && (
+                    <div className="relative">
+                        <select 
+                            className="h-10 w-8 border bg-gray-50 rounded text-center text-xs focus:ring-2 focus:ring-green-500 outline-none cursor-pointer appearance-none px-0"
+                            onChange={handleWeightSelect}
+                            value=""
+                            title="Auto-fill from results"
+                        >
+                            <option value="" disabled>▼</option>
+                            {calculatedWeights.rec && <option value={calculatedWeights.rec}>Rec. ({calculatedWeights.rec.toFixed(1)})</option>}
+                            {calculatedWeights.ibw && <option value={calculatedWeights.ibw}>IBW ({calculatedWeights.ibw})</option>}
+                            {calculatedWeights.abw && <option value={calculatedWeights.abw}>ABW ({calculatedWeights.abw})</option>}
+                            {calculatedWeights.dry && <option value={calculatedWeights.dry}>Dry ({calculatedWeights.dry})</option>}
+                        </select>
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-gray-500 text-[10px]">▼</div>
+                    </div>
+                )}
+            </div>
         </div>
         <div className="col-span-2">
             <label className="block text-xs font-bold text-gray-500 mb-1.5">{t.kcal.usualWeight}</label>

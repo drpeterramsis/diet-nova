@@ -244,6 +244,12 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                 amputationPercent={inputs.amputationPercent} setAmputationPercent={inputs.setAmputationPercent}
                 bodyFatPercent={inputs.bodyFatPercent} setBodyFatPercent={inputs.setBodyFatPercent}
                 age={inputs.age}
+                calculatedWeights={{
+                    dry: results.dryWeight,
+                    ibw: results.IBW_2,
+                    abw: results.ABW_2,
+                    rec: results.protocol?.recommendedWeight
+                }}
                 />
             </CollapsibleCard>
         </div>
