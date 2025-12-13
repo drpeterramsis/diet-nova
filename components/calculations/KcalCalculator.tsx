@@ -255,6 +255,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                 results={results}
                 deficit={inputs.deficit}
                 setDeficit={inputs.setDeficit}
+                goal={inputs.goal}
+                setGoal={inputs.setGoal}
                 customFactor={inputs.customFactor}
                 setCustomFactor={inputs.setCustomFactor}
                 />

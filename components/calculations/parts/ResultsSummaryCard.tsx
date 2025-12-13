@@ -80,8 +80,8 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
 
   return (
     <div className="card shadow-lg overflow-visible border-0 ring-1 ring-black/5 bg-gradient-to-br from-gray-800 to-gray-900 text-white relative z-20">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-700/50 flex justify-between items-center rounded-t-xl">
+      {/* Header - Added explicit higher z-index to allow tooltip overlap */}
+      <div className="p-4 border-b border-gray-700/50 flex justify-between items-center rounded-t-xl relative z-30">
           <h2 className="text-lg font-bold flex items-center gap-2 text-white">
               📊 {t.kcal.summary}
           </h2>
@@ -94,7 +94,7 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
           </div>
       </div>
       
-      <div className="p-5 space-y-5 rounded-b-xl">
+      <div className="p-5 space-y-5 rounded-b-xl relative z-10">
           {/* Status Indicators Grid */}
           <div className="grid grid-cols-2 gap-4">
               {/* BMI (Dry) */}
