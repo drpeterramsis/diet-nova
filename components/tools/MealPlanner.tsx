@@ -394,6 +394,20 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       setLastSavedName('');
   };
 
+  const RenderCell = ({ val, factor, label }: { val: number, factor: number, label: string }) => {
+      const isZero = val === 0;
+      return (
+          <td className="p-3 text-center">
+              <div className={`font-mono text-base ${isZero ? 'text-red-300' : 'text-gray-700 font-bold'}`}>
+                  {val.toFixed(1)}
+              </div>
+              <div className="text-[10px] text-gray-400 font-medium">
+                  (x{factor})
+              </div>
+          </td>
+      );
+  };
+
   return (
     <div className="max-w-[1920px] mx-auto animate-fade-in">
       
@@ -527,17 +541,14 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                     const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
                                     
                                     return (
-                                        <tr key={group} className={`hover:bg-gray-50 border-b border-gray-100`}>
-                                            <td className={`p-3 font-medium border-l-4 ${style.bg} ${style.border} ${style.text} transition-colors`}>
-                                                <div className="flex items-center gap-2 text-base">
-                                                    <span>{style.icon}</span>
+                                        <tr key={group} className={`${style.bg} border-b ${style.border} bg-opacity-30`}>
+                                            <td className={`p-3 font-medium transition-colors`}>
+                                                <div className={`flex items-center gap-2 text-base ${style.text}`}>
+                                                    {/* Fixed: Remove double icon rendering. Translation has icon. */}
                                                     {t.mealPlannerTool.groups[group as keyof typeof t.mealPlannerTool.groups]}
                                                 </div>
-                                                <div className="text-[10px] opacity-70 mt-0.5 ml-6 font-mono">
-                                                    {f.cho}c • {f.pro}p • {f.fat}f • {f.kcal}kcal
-                                                </div>
                                             </td>
-                                            <td className="p-3 text-center bg-gray-50/50">
+                                            <td className="p-3 text-center bg-white/50">
                                                 <input 
                                                     type="number"
                                                     min="0" step="0.5"
@@ -549,10 +560,10 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                                     onChange={(e) => updateServing(group, parseFloat(e.target.value) || 0)}
                                                 />
                                             </td>
-                                            <td className="p-3 text-center text-gray-600 font-mono">{(s * f.cho).toFixed(1)}</td>
-                                            <td className="p-3 text-center text-gray-600 font-mono">{(s * f.pro).toFixed(1)}</td>
-                                            <td className="p-3 text-center text-gray-600 font-mono">{(s * f.fat).toFixed(1)}</td>
-                                            <td className={`p-3 text-center font-mono font-bold ${s > 0 ? 'text-[var(--color-primary)]' : 'text-gray-300'}`}>{(s * f.kcal).toFixed(0)}</td>
+                                            <RenderCell val={s * f.cho} factor={f.cho} label="CHO" />
+                                            <RenderCell val={s * f.pro} factor={f.pro} label="PRO" />
+                                            <RenderCell val={s * f.fat} factor={f.fat} label="FAT" />
+                                            <RenderCell val={s * f.kcal} factor={f.kcal} label="Kcal" />
                                         </tr>
                                     );
                                 })}
@@ -589,14 +600,10 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                         const f = GROUP_FACTORS[group];
 
                                         return (
-                                            <tr key={group} className="hover:bg-gray-50">
-                                                <td className={`p-2 font-medium border-r border-gray-200 ${style.bg} ${style.text} sticky left-0 z-10`}>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span>{style.icon}</span>
+                                            <tr key={group} className={`${style.bg} bg-opacity-30 border-b border-gray-100`}>
+                                                <td className={`p-2 font-medium border-r border-gray-200 sticky left-0 z-10 bg-white`}>
+                                                    <div className={`flex items-center gap-1.5 ${style.text}`}>
                                                         {t.mealPlannerTool.groups[group as keyof typeof t.mealPlannerTool.groups]}
-                                                    </div>
-                                                    <div className="text-[9px] opacity-60 ml-5 font-mono">
-                                                        {f.cho}c {f.pro}p {f.fat}f {f.kcal}k
                                                     </div>
                                                     <div className="text-[10px] text-gray-500 font-normal no-print mt-1 ml-5 border-t border-black/10 pt-0.5">
                                                         Total: <span className="font-bold">{servings[group]}</span>

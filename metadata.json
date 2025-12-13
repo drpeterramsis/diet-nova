@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova CheckPoint_MealPlanner_v2.0.182",
-  "description": "Updates: Redesigned Meal Planner table with color-coded groups, reference exchange values as subtitles, and distinct zero-value styling. Version bump to 2.0.182.",
+  "name": "Diet-Nova CheckPoint_MealPlanner_v2.0.183",
+  "description": "Update Meal Planner design: Removed duplicate emojis, applied row-wide light background colors, added subtitles for exchange factors in cells, and styled zero values in pale red. Bumped version to 2.0.183.",
   "requestFramePermissions": []
 }
