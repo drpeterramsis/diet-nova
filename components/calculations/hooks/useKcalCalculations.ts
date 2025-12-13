@@ -582,19 +582,29 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     // --- ADULT METHODS ---
     
     // Updated Logic for Method 1 based on Image (Status-based Factor)
-    // Default 30 for normal, 25 for overweight/obese, 40 for underweight.
+    // Range logic applied as per request.
     let m1Factor = 30; 
-    if (bmiVal < 18.5) m1Factor = 40;
-    else if (bmiVal >= 25) m1Factor = 25;
+    let m1LogicText = 'Normal';
+
+    if (bmiVal < 18.5) {
+        m1Factor = 35; // Range 35-40 (Underweight)
+        m1LogicText = 'Underweight (35-40 kcal/kg)';
+    } else if (bmiVal >= 18.5 && bmiVal < 25) {
+        m1Factor = 30; // Range 30 (Normal)
+        m1LogicText = 'Normal (30 kcal/kg)';
+    } else if (bmiVal >= 25 && bmiVal < 30) {
+        m1Factor = 25; // Range 25+ (Overweight)
+        m1LogicText = 'Overweight (25 kcal/kg)';
+    } else if (bmiVal >= 30 && bmiVal < 40) {
+        m1Factor = 20; // Range 20-25 (Obese)
+        m1LogicText = 'Obese (20-25 kcal/kg)';
+    } else if (bmiVal >= 40) {
+        m1Factor = 15; // Range 15-20 (Morbid Obese)
+        m1LogicText = 'Morbid Obese (15-20 kcal/kg)';
+    }
     
     const m1Dry = dryWeightVal * m1Factor;
     const m1Sel = selWeightVal * m1Factor;
-
-    // Quick Method Logic from Image (For Tooltip)
-    // BMI > 40 -> Wt * 15
-    // BMI < 40 -> Wt * 20
-    const quickBMI_Factor = bmiVal > 40 ? 15 : 20;
-    const quickBMI_Res = dryWeightVal * quickBMI_Factor;
 
     const m2Actual = [dryWeightVal * 25, dryWeightVal * 30, dryWeightVal * 35, dryWeightVal * 40];
     const m2Selected = [selWeightVal * 25, selWeightVal * 30, selWeightVal * 35, selWeightVal * 40];
@@ -663,18 +673,15 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const isHighObesity = dryWeightVal > threshold;
     const recommendedWeight = isHighObesity ? ABW_2 : IBW_2;
 
-    // --- NEW: Detailed Tooltip Data for Quick Methods ---
-    detailedFormulas.m1 = `Used Factor: ${m1Factor} kcal/kg (Status Based)
+    // --- Detailed Tooltip Data for Quick Methods ---
+    detailedFormulas.m1 = `Used Factor: ${m1Factor} kcal/kg (${m1LogicText})
 
 Quick Methods (Guidelines):
-1. BMI Method:
-   • BMI > 40: Wt × 15 = ${(dryWeightVal * 15).toFixed(0)} kcal
-   • BMI < 40: Wt × 20 = ${(dryWeightVal * 20).toFixed(0)} kcal
-
-2. Status Method (Current):
-   • Underweight: Wt × 40
-   • Normal: Wt × 30
-   • Obese/Overweight: Wt × 25`;
+• BMI < 18.5 (Underweight): 35-40 kcal/kg
+• BMI 18.5-25 (Normal): 30 kcal/kg
+• BMI 25-30 (Overweight): 25 kcal/kg
+• BMI 30-40 (Obese): 20-25 kcal/kg
+• BMI > 40 (Morbid): 15-20 kcal/kg`;
 
     detailedFormulas.m2 = `${dryWeightVal.toFixed(1)} (Dry Wt) * Factor`;
     

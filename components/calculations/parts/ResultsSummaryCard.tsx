@@ -18,20 +18,19 @@ interface TooltipProps {
 }
 
 const EquationTooltip: React.FC<TooltipProps> = ({ formula, details }) => (
-    <div className="group relative inline-block ml-1 z-50">
+    <div className="group relative inline-block ml-1 z-[999]">
         <span className="cursor-help text-blue-300 text-[9px] font-bold border border-blue-500/30 rounded-full w-3.5 h-3.5 inline-flex items-center justify-center bg-blue-500/10 hover:bg-blue-500 hover:text-white transition">
             i
         </span>
-        <div className="hidden group-hover:block absolute z-[999] bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[280px] bg-gray-900 text-white text-[10px] p-3 rounded-lg shadow-xl break-words text-left leading-relaxed border border-gray-700">
+        <div className="hidden group-hover:block absolute right-0 top-full mt-2 w-max max-w-[280px] bg-gray-900 text-white text-[10px] p-3 rounded-lg shadow-xl break-words text-left leading-relaxed border border-gray-700 z-[1000]">
             {formula && <div className="font-bold text-blue-300 mb-1 border-b border-gray-700 pb-1">Equation:</div>}
-            {formula && <div className="font-mono mb-2">{formula}</div>}
+            {formula && <div className="font-mono mb-2 whitespace-pre-wrap">{formula}</div>}
             {details && (
                 <>
                     <div className="font-bold text-green-300 mb-1 border-b border-gray-700 pb-1">Calculation:</div>
                     <div className="font-mono text-gray-300 whitespace-pre-wrap">{details}</div>
                 </>
             )}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
         </div>
     </div>
 );
@@ -40,9 +39,9 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
   const { t } = useLanguage();
 
   return (
-    <div className="card shadow-lg overflow-hidden border-0 ring-1 ring-black/5 bg-gradient-to-br from-gray-800 to-gray-900 text-white">
+    <div className="card shadow-lg overflow-visible border-0 ring-1 ring-black/5 bg-gradient-to-br from-gray-800 to-gray-900 text-white relative z-20">
       {/* Header */}
-      <div className="p-4 border-b border-gray-700/50 flex justify-between items-center">
+      <div className="p-4 border-b border-gray-700/50 flex justify-between items-center rounded-t-xl">
           <h2 className="text-lg font-bold flex items-center gap-2 text-white">
               📊 {t.kcal.summary}
           </h2>
@@ -55,7 +54,7 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
           </div>
       </div>
       
-      <div className="p-5 space-y-5">
+      <div className="p-5 space-y-5 rounded-b-xl">
           {/* Status Indicators Grid */}
           <div className="grid grid-cols-2 gap-4">
               {/* BMI (Dry) */}

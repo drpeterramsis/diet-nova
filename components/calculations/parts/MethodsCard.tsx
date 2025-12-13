@@ -15,11 +15,11 @@ interface TooltipProps {
 }
 
 const EquationTooltip: React.FC<TooltipProps> = ({ formula, details }) => (
-    <div className="group relative inline-block ml-1">
+    <div className="group relative inline-block ml-1 z-[999]">
         <span className="cursor-help text-blue-500 text-[10px] font-bold border border-blue-200 rounded-full w-4 h-4 inline-flex items-center justify-center bg-blue-50 hover:bg-blue-600 hover:text-white transition">
             i
         </span>
-        <div className="hidden group-hover:block absolute z-[999] bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[320px] bg-gray-900 text-white text-[10px] p-3 rounded-lg shadow-xl break-words text-left leading-relaxed">
+        <div className="hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[320px] bg-gray-900 text-white text-[10px] p-3 rounded-lg shadow-xl break-words text-left leading-relaxed z-[1000]">
             <div className="font-bold text-blue-300 mb-1 border-b border-gray-700 pb-1">Equation:</div>
             <div className="font-mono mb-2 whitespace-pre-wrap">{formula}</div>
             {details && (
@@ -71,7 +71,7 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
       </div>
 
       {/* Render Active Method */}
-      <div className="bg-white rounded-xl overflow-visible animate-fade-in border border-gray-100">
+      <div className="bg-white rounded-xl overflow-visible animate-fade-in border border-gray-100 relative z-10">
           
           {/* PEDIATRIC METHODS */}
           {activeMethod === 'pediatric' && r.pediatricMethods && r.pediatric && (
@@ -150,7 +150,7 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
                         <EquationTooltip formula="Wt * Factor (Status Based)" details={r.detailedFormulas?.m1} />
                     </h4>
                     <div className="text-xl font-bold text-gray-800">{r.m1.resultDry.toFixed(0)}</div>
-                    <div className="text-[9px] text-gray-400 mt-1">Factor: {r.m1.factor}</div>
+                    <div className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded mt-1 inline-block font-bold">Factor Used: {r.m1.factor}</div>
                 </div>
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                     <h4 className="text-[10px] font-bold text-blue-500 uppercase">Selected Wt</h4>

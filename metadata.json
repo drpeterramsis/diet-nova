@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova CheckPoint 39_v2.0.167",
-  "description": "Updates: Added detailed 'Quick Methods' logic (15/20/30/40 kcal/kg) to Method 1 calculations and tooltips.",
+  "name": "Diet-Nova CheckPoint 41_v2.0.167",
+  "description": "Updates: Fixed hidden tooltips in Health Summary. Updated Kcal Method 1 to use specific factor ranges based on BMI status (15-40 kcal/kg). Added factor display to Methods Card.",
   "requestFramePermissions": []
 }
