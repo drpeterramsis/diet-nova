@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova CheckPoint_Kcal 52_v2.0.181",
-  "description": "Updates: Added Selected Weight card to Health Summary in Kcal calculator. Updated version to v2.0.181.",
+  "name": "Diet-Nova CheckPoint_MealPlanner_v2.0.182",
+  "description": "Updates: Redesigned Meal Planner table with color-coded groups, reference exchange values as subtitles, and distinct zero-value styling. Version bump to 2.0.182.",
   "requestFramePermissions": []
 }

@@ -21,6 +21,21 @@ const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kca
   sugar: { cho: 5, pro: 0, fat: 0, kcal: 20 },
 };
 
+const GROUP_STYLES: Record<string, { bg: string, text: string, border: string, icon: string }> = {
+  starch: { bg: 'bg-orange-50', text: 'text-orange-900', border: 'border-orange-200', icon: '🍞' },
+  veg: { bg: 'bg-green-50', text: 'text-green-900', border: 'border-green-200', icon: '🥦' },
+  fruit: { bg: 'bg-pink-50', text: 'text-pink-900', border: 'border-pink-200', icon: '🍓' },
+  meatLean: { bg: 'bg-red-50', text: 'text-red-900', border: 'border-red-200', icon: '🍖' },
+  meatMed: { bg: 'bg-red-100', text: 'text-red-900', border: 'border-red-300', icon: '🍖' },
+  meatHigh: { bg: 'bg-red-200', text: 'text-red-900', border: 'border-red-400', icon: '🍖' },
+  milkSkim: { bg: 'bg-blue-50', text: 'text-blue-900', border: 'border-blue-200', icon: '🥛' },
+  milkLow: { bg: 'bg-blue-100', text: 'text-blue-900', border: 'border-blue-300', icon: '🥛' },
+  milkWhole: { bg: 'bg-blue-200', text: 'text-blue-900', border: 'border-blue-400', icon: '🥛' },
+  legumes: { bg: 'bg-amber-100', text: 'text-amber-900', border: 'border-amber-300', icon: '🥒' },
+  fats: { bg: 'bg-yellow-50', text: 'text-yellow-900', border: 'border-yellow-200', icon: '🧈' },
+  sugar: { bg: 'bg-gray-100', text: 'text-gray-900', border: 'border-gray-300', icon: '🍬' },
+};
+
 const GROUPS = Object.keys(GROUP_FACTORS);
 const MEALS = ['snack1', 'breakfast', 'snack2', 'lunch', 'snack3', 'dinner', 'snack4'];
 
@@ -416,7 +431,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
            )}
            <h1 className="text-2xl font-bold text-[var(--color-heading)] hidden xl:block whitespace-nowrap">{t.tools.mealPlanner.title}</h1>
            
-           {/* Plan Name Input - Disable in Visit Mode if preferred, but keeping enabled allows template saving */}
+           {/* Plan Name Input */}
            <div className="relative flex-grow md:flex-grow-0">
                 <input 
                     type="text"
@@ -494,10 +509,10 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
             {viewMode === 'calculator' && (
                  <div className="card bg-white shadow-lg overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-sm border-collapse">
                             <thead className="bg-[var(--color-primary)] text-white">
                                 <tr>
-                                    <th className="p-3 text-left w-1/4">{t.mealPlannerTool.foodGroup}</th>
+                                    <th className="p-3 text-left w-1/3">{t.mealPlannerTool.foodGroup}</th>
                                     <th className="p-3 text-center w-24">{t.mealPlannerTool.serves}</th>
                                     <th className="p-3 text-center">{t.mealPlannerTool.cho}</th>
                                     <th className="p-3 text-center">{t.mealPlannerTool.pro}</th>
@@ -509,24 +524,35 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                 {GROUPS.map(group => {
                                     const s = servings[group] || 0;
                                     const f = GROUP_FACTORS[group];
+                                    const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
+                                    
                                     return (
-                                        <tr key={group} className="hover:bg-gray-50">
-                                            <td className="p-3 font-medium text-gray-700 flex items-center gap-2">
-                                                {t.mealPlannerTool.groups[group as keyof typeof t.mealPlannerTool.groups]}
+                                        <tr key={group} className={`hover:bg-gray-50 border-b border-gray-100`}>
+                                            <td className={`p-3 font-medium border-l-4 ${style.bg} ${style.border} ${style.text} transition-colors`}>
+                                                <div className="flex items-center gap-2 text-base">
+                                                    <span>{style.icon}</span>
+                                                    {t.mealPlannerTool.groups[group as keyof typeof t.mealPlannerTool.groups]}
+                                                </div>
+                                                <div className="text-[10px] opacity-70 mt-0.5 ml-6 font-mono">
+                                                    {f.cho}c • {f.pro}p • {f.fat}f • {f.kcal}kcal
+                                                </div>
                                             </td>
-                                            <td className="p-3 text-center">
+                                            <td className="p-3 text-center bg-gray-50/50">
                                                 <input 
                                                     type="number"
                                                     min="0" step="0.5"
-                                                    className="w-20 p-1.5 border border-gray-300 rounded text-center font-bold focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                                                    className={`w-20 p-2 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all ${
+                                                        s === 0 ? 'text-red-300 bg-white' : 'font-bold text-lg text-gray-800 bg-white shadow-sm'
+                                                    }`}
                                                     value={s || ''}
+                                                    placeholder="0"
                                                     onChange={(e) => updateServing(group, parseFloat(e.target.value) || 0)}
                                                 />
                                             </td>
-                                            <td className="p-3 text-center text-gray-500">{(s * f.cho).toFixed(1)}</td>
-                                            <td className="p-3 text-center text-gray-500">{(s * f.pro).toFixed(1)}</td>
-                                            <td className="p-3 text-center text-gray-500">{(s * f.fat).toFixed(1)}</td>
-                                            <td className="p-3 text-center font-mono font-bold text-[var(--color-primary)]">{(s * f.kcal).toFixed(0)}</td>
+                                            <td className="p-3 text-center text-gray-600 font-mono">{(s * f.cho).toFixed(1)}</td>
+                                            <td className="p-3 text-center text-gray-600 font-mono">{(s * f.pro).toFixed(1)}</td>
+                                            <td className="p-3 text-center text-gray-600 font-mono">{(s * f.fat).toFixed(1)}</td>
+                                            <td className={`p-3 text-center font-mono font-bold ${s > 0 ? 'text-[var(--color-primary)]' : 'text-gray-300'}`}>{(s * f.kcal).toFixed(0)}</td>
                                         </tr>
                                     );
                                 })}
@@ -542,10 +568,10 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                     {/* Planner Main Table */}
                     <div className="flex-grow card bg-white shadow-lg overflow-hidden">
                         <div className="overflow-x-auto">
-                            <table className="w-full text-xs sm:text-sm">
+                            <table className="w-full text-xs sm:text-sm border-collapse">
                                 <thead className="bg-gray-800 text-white sticky top-0 z-10">
                                     <tr>
-                                        <th className="p-2 text-left min-w-[120px]">{t.mealPlannerTool.foodGroup}</th>
+                                        <th className="p-2 text-left min-w-[140px]">{t.mealPlannerTool.foodGroup}</th>
                                         {MEALS.map(m => (
                                             <th key={m} className="p-2 text-center min-w-[60px]">
                                                 {t.mealPlannerTool.meals[m as keyof typeof t.mealPlannerTool.meals]}
@@ -559,18 +585,30 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                         const rem = rowRemains[group];
                                         const isOver = rem < 0;
                                         const isComplete = rem === 0 && servings[group] > 0;
+                                        const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
+                                        const f = GROUP_FACTORS[group];
 
                                         return (
                                             <tr key={group} className="hover:bg-gray-50">
-                                                <td className="p-2 font-medium text-gray-700 border-r border-gray-100 bg-gray-50 sticky left-0 z-10">
-                                                    {t.mealPlannerTool.groups[group as keyof typeof t.mealPlannerTool.groups]}
-                                                    <div className="text-[10px] text-gray-400 font-normal no-print">Total: {servings[group]}</div>
+                                                <td className={`p-2 font-medium border-r border-gray-200 ${style.bg} ${style.text} sticky left-0 z-10`}>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span>{style.icon}</span>
+                                                        {t.mealPlannerTool.groups[group as keyof typeof t.mealPlannerTool.groups]}
+                                                    </div>
+                                                    <div className="text-[9px] opacity-60 ml-5 font-mono">
+                                                        {f.cho}c {f.pro}p {f.fat}f {f.kcal}k
+                                                    </div>
+                                                    <div className="text-[10px] text-gray-500 font-normal no-print mt-1 ml-5 border-t border-black/10 pt-0.5">
+                                                        Total: <span className="font-bold">{servings[group]}</span>
+                                                    </div>
                                                 </td>
                                                 {MEALS.map(meal => (
                                                     <td key={meal} className="p-1 text-center border-r border-gray-100">
                                                         <input 
                                                             type="number"
-                                                            className="w-full h-8 text-center bg-transparent focus:bg-blue-50 outline-none rounded hover:bg-gray-100 transition"
+                                                            className={`w-full h-8 text-center bg-transparent focus:bg-blue-50 outline-none rounded hover:bg-gray-100 transition ${
+                                                                (distribution[group][meal] || 0) === 0 ? 'text-red-300' : 'text-black font-bold'
+                                                            }`}
                                                             placeholder="-"
                                                             value={distribution[group][meal] || ''}
                                                             onChange={(e) => updateDistribution(group, meal, parseFloat(e.target.value) || 0)}
