@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova CheckPoint 37_v2.0.166",
-  "description": "Updates: Added detailed equation display tooltips for Kcal calculations.",
+  "name": "Diet-Nova CheckPoint 39_v2.0.167",
+  "description": "Updates: Added detailed 'Quick Methods' logic (15/20/30/40 kcal/kg) to Method 1 calculations and tooltips.",
   "requestFramePermissions": []
 }

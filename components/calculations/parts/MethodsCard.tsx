@@ -21,7 +21,7 @@ const EquationTooltip: React.FC<TooltipProps> = ({ formula, details }) => (
         </span>
         <div className="hidden group-hover:block absolute z-[999] bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[320px] bg-gray-900 text-white text-[10px] p-3 rounded-lg shadow-xl break-words text-left leading-relaxed">
             <div className="font-bold text-blue-300 mb-1 border-b border-gray-700 pb-1">Equation:</div>
-            <div className="font-mono mb-2">{formula}</div>
+            <div className="font-mono mb-2 whitespace-pre-wrap">{formula}</div>
             {details && (
                 <>
                     <div className="font-bold text-green-300 mb-1 border-b border-gray-700 pb-1">Calculation:</div>
@@ -147,10 +147,10 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <h4 className="text-[10px] font-bold text-gray-500 uppercase flex justify-center items-center gap-1">
                         Current Wt
-                        <EquationTooltip formula="Weight * Factor (25)" details={r.detailedFormulas?.m1} />
+                        <EquationTooltip formula="Wt * Factor (Status Based)" details={r.detailedFormulas?.m1} />
                     </h4>
                     <div className="text-xl font-bold text-gray-800">{r.m1.resultDry.toFixed(0)}</div>
-                    <div className="text-[9px] text-gray-400 mt-1">Factor: 25-30</div>
+                    <div className="text-[9px] text-gray-400 mt-1">Factor: {r.m1.factor}</div>
                 </div>
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                     <h4 className="text-[10px] font-bold text-blue-500 uppercase">Selected Wt</h4>
