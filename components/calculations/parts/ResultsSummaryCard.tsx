@@ -87,12 +87,26 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
           <h2 className="text-lg font-bold flex items-center gap-2 text-white">
               📊 {t.kcal.summary}
           </h2>
-          <div className="text-right">
-              <div className="text-[10px] uppercase opacity-60 font-bold tracking-wider flex items-center justify-end gap-1">
-                  {t.kcal.dryWeight}
-                  <EquationTooltip formula="Current Wt - (Ascites + Edema)" details={r.detailedFormulas?.dryWeight} />
+          
+          <div className="flex gap-4">
+              {/* Selected Weight Display */}
+              <div className="text-right border-r border-gray-600/50 pr-4">
+                  <div className="text-[10px] uppercase opacity-60 font-bold tracking-wider flex items-center justify-end gap-1 text-blue-200">
+                      {t.kcal.selectedWeight.replace(/\s*\(.*?\)/, '')}
+                  </div>
+                  <div className="font-mono font-bold text-xl leading-none text-blue-400">
+                      {r.selectedWeight} <span className="text-sm opacity-70">kg</span>
+                  </div>
               </div>
-              <div className="font-mono font-bold text-xl leading-none text-green-400">{r.dryWeight} <span className="text-sm opacity-70">kg</span></div>
+
+              {/* Dry Weight Display */}
+              <div className="text-right">
+                  <div className="text-[10px] uppercase opacity-60 font-bold tracking-wider flex items-center justify-end gap-1">
+                      {t.kcal.dryWeight}
+                      <EquationTooltip formula="Current Wt - (Ascites + Edema)" details={r.detailedFormulas?.dryWeight} />
+                  </div>
+                  <div className="font-mono font-bold text-xl leading-none text-green-400">{r.dryWeight} <span className="text-sm opacity-70">kg</span></div>
+              </div>
           </div>
       </div>
       

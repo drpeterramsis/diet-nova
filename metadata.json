@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova CheckPoint_Kcal 50_v2.0.180",
-  "description": "Updates: Added quick-select dropdown for weight inputs (IBW, ABW, Rec) in Kcal calculator. Disabled adult method warning for pediatrics. Updated version to v2.0.180.",
+  "name": "Diet-Nova CheckPoint_Kcal 52_v2.0.181",
+  "description": "Updates: Added Selected Weight card to Health Summary in Kcal calculator. Updated version to v2.0.181.",
   "requestFramePermissions": []
 }
