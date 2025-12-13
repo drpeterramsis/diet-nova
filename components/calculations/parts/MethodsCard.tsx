@@ -74,6 +74,11 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
          )}
       </div>
 
+      {/* Warning Note */}
+      <div className="bg-orange-50 border-l-4 border-orange-400 p-2 text-[10px] text-orange-800">
+          <strong>Note:</strong> M1, M2, and M6 provide direct total energy estimates. Use <strong>M3 (Equations)</strong> if you specifically need to calculate deficit or surplus from BMR.
+      </div>
+
       {/* Render Active Method */}
       <div className="bg-white rounded-xl overflow-visible animate-fade-in border border-gray-100 relative z-10">
           

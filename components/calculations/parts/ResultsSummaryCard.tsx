@@ -148,14 +148,14 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
                    <div className="flex gap-2 items-center">
                        <input 
                          type="number" 
-                         className="w-24 p-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-bold text-xl text-center text-white transition shadow-inner placeholder-gray-600"
+                         className="flex-grow p-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-bold text-xl text-center text-white transition shadow-inner placeholder-gray-600"
                          placeholder="0"
                          value={reqKcal}
                          onChange={(e) => setReqKcal(Number(e.target.value))}
                          dir="ltr"
                        />
                        <select 
-                           className="flex-grow p-3 bg-white/10 border border-white/10 rounded-xl text-xs text-white focus:ring-2 focus:ring-green-500 outline-none cursor-pointer"
+                           className="w-48 p-3 bg-white/10 border border-white/10 rounded-xl text-xs text-white focus:ring-2 focus:ring-green-500 outline-none cursor-pointer"
                            onChange={handleDropdownChange}
                            value="" // Always show placeholder behavior
                        >

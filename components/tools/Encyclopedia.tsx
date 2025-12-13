@@ -85,7 +85,7 @@ const Encyclopedia: React.FC = () => {
       if (miscSearchQuery) {
           const q = miscSearchQuery.toLowerCase();
           items = items.filter(t => 
-              t.title.toLowerCase().includes(q) ||
+              t.title.toLowerCase().includes(q) || 
               t.content.toLowerCase().includes(q) ||
               t.category.toLowerCase().includes(q)
           );
@@ -126,13 +126,14 @@ const Encyclopedia: React.FC = () => {
                           <span key={pIdx}>
                               {boldParts.map((bp, bIdx) => {
                                   if (bp.startsWith('**') && bp.endsWith('**')) {
-                                      // Inside bold part, also highlight numbers if any
+                                      // Inside bold part (Markdown)
                                       const content = bp.slice(2, -2);
+                                      // Also highlight numbers within bold
                                       const numParts = content.split(/(\d+(?:\.\d+)?(?:%|g|mg|kcal|kg|cm|ml|L|\s?g\/d|\s?g\/kg)?)/g);
                                       return (
-                                          <strong key={bIdx} className="text-gray-900 font-bold">
+                                          <strong key={bIdx} className="text-gray-900 font-extrabold">
                                               {numParts.map((np, nIdx) => {
-                                                  if (/^\d/.test(np)) return <span key={nIdx} className="text-blue-800">{np}</span>;
+                                                  if (/^\d/.test(np)) return <span key={nIdx} className="text-blue-700">{np}</span>;
                                                   return np;
                                               })}
                                           </strong>
@@ -144,6 +145,7 @@ const Encyclopedia: React.FC = () => {
                                   return (
                                       <span key={bIdx}>
                                           {numParts.map((np, nIdx) => {
+                                              // Detect numbers starting with digit
                                               if (/^\d/.test(np)) return <span key={nIdx} className="text-blue-600 font-bold">{np}</span>;
                                               return np;
                                           })}
@@ -499,7 +501,7 @@ const Encyclopedia: React.FC = () => {
                                           {item.name}
                                       </td>
                                       <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">
-                                          {item.function}
+                                          {renderFormattedText(item.function)}
                                       </td>
                                   </tr>
                               ))}
@@ -609,9 +611,9 @@ const Encyclopedia: React.FC = () => {
                                           {item.category}
                                       </span>
                                   </td>
-                                  <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">{item.function}</td>
-                                  <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">{item.sources}</td>
-                                  <td className="p-4 text-red-600 align-top leading-relaxed whitespace-pre-line">{item.deficiency}</td>
+                                  <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">{renderFormattedText(item.function)}</td>
+                                  <td className="p-4 text-gray-700 align-top leading-relaxed whitespace-pre-line">{renderFormattedText(item.sources)}</td>
+                                  <td className="p-4 text-red-600 align-top leading-relaxed whitespace-pre-line">{renderFormattedText(item.deficiency)}</td>
                               </tr>
                           ))}
                       </tbody>
@@ -647,21 +649,21 @@ const Encyclopedia: React.FC = () => {
                             <h4 className="font-bold text-gray-700 flex items-center gap-2 mb-1">
                                 <span className="text-lg">⚡</span> {t.encyclopedia.function}
                             </h4>
-                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.function}</p>
+                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">{renderFormattedText(item.function)}</p>
                         </div>
                         
                         <div>
                             <h4 className="font-bold text-gray-700 flex items-center gap-2 mb-1">
                                 <span className="text-lg">🥗</span> {t.encyclopedia.sources}
                             </h4>
-                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.sources}</p>
+                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">{renderFormattedText(item.sources)}</p>
                         </div>
 
                         <div>
                             <h4 className="font-bold text-red-700 flex items-center gap-2 mb-1">
                                 <span className="text-lg">⚠️</span> {t.encyclopedia.deficiency}
                             </h4>
-                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">{item.deficiency}</p>
+                            <p className="text-gray-600 leading-relaxed whitespace-pre-line">{renderFormattedText(item.deficiency)}</p>
                         </div>
                     </div>
                 </div>

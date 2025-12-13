@@ -310,8 +310,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
 
           if (days < 0) {
               months--;
-              const prevMonth = new Date(report.getFullYear(), report.getMonth(), 0);
-              days += prevMonth.getDate();
+              const prevMonthDate = new Date(report.getFullYear(), report.getMonth(), 0);
+              days += prevMonthDate.getDate();
           }
           if (months < 0) {
               years--;
@@ -413,7 +413,12 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     let IBW_2 = 0, ABW = 0, ABW_2 = 0;
     
     const hamwiFormula = gender === 'male' ? "((H - 154) * 0.9) + 50" : "((H - 154) * 0.9) + 45.5";
-    const abwFormula = "((Actual - IBW) * 0.38) + IBW";
+    
+    // UPDATED ABW Logic based on Gender from User Table
+    const abwFactor = gender === 'male' ? 0.38 : 0.32;
+    const abwFormula = gender === 'male'
+        ? "((Actual - IBW) * 0.38) + IBW"
+        : "((Actual - IBW) * 0.32) + IBW";
 
     if (gender === 'male') {
       IBW_2 = ((height_cm - 154) * 0.9) + 50;
@@ -421,7 +426,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       IBW_2 = ((height_cm - 154) * 0.9) + 45.5;
     }
     
-    ABW_2 = ((dryWeightVal - IBW_2) * 0.38) + IBW_2; 
+    ABW_2 = ((dryWeightVal - IBW_2) * abwFactor) + IBW_2; 
 
     // Detailed Formulas Generation
     const detailedFormulas: any = {};
@@ -433,8 +438,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const ibwBase = gender === 'male' ? 50 : 45.5;
     detailedFormulas.ibw = `((${height_cm} - 154) * 0.9) + ${ibwBase}`;
 
-    // 3. ABW
-    detailedFormulas.abw = `((${dryWeightVal.toFixed(1)} - ${IBW_2.toFixed(1)}) * 0.38) + ${IBW_2.toFixed(1)}`;
+    // 3. ABW (Updated Tooltip)
+    detailedFormulas.abw = `((${dryWeightVal.toFixed(1)} - ${IBW_2.toFixed(1)}) * ${abwFactor}) + ${IBW_2.toFixed(1)}`;
 
     // --- PEDIATRIC SPECIFIC LOGIC ---
     let pediatricData: KcalResults['pediatric'] = undefined;
@@ -713,7 +718,7 @@ Quick Methods (Guidelines):
         : 'Usual weight not provided';
 
     detailedFormulas.protocol = isHighObesity 
-        ? `Patient > 30% of IBW.\nUsing Adjusted Body Weight (ABW).\nFormula: ((Actual - IBW) * 0.38) + IBW`
+        ? `Patient > 30% of IBW.\nUsing Adjusted Body Weight (ABW).\nFormula: ((Actual - IBW) * ${abwFactor}) + IBW`
         : `Patient < 30% of IBW.\nUsing Ideal Body Weight (IBW).\nFormula: Hamwi Equation`;
 
     setResults({
