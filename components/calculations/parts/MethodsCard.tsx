@@ -7,6 +7,8 @@ interface MethodsCardProps {
   results: KcalResults;
   deficit: number;
   setDeficit: (v: number) => void;
+  customFactor?: number;
+  setCustomFactor?: (v: number) => void;
 }
 
 interface TooltipProps {
@@ -33,7 +35,7 @@ const EquationTooltip: React.FC<TooltipProps> = ({ formula, details }) => (
     </div>
 );
 
-const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDeficit }) => {
+const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDeficit, customFactor, setCustomFactor }) => {
   const { t } = useLanguage();
   const [activeMethod, setActiveMethod] = useState<string>(r.pediatric ? 'pediatric' : 'method3');
 
@@ -143,25 +145,69 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
           
           {/* M1: Simple Weight Based */}
           {activeMethod === 'method1' && r.m1 && (
-            <div className="p-4 grid grid-cols-2 gap-4 text-center">
-                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <h4 className="text-[10px] font-bold text-gray-500 uppercase flex justify-center items-center gap-1">
-                        Current Wt
-                        <EquationTooltip formula="Wt * Factor (Status Based)" details={r.detailedFormulas?.m1} />
-                    </h4>
-                    <div className="text-xl font-bold text-gray-800">{r.m1.resultDry.toFixed(0)}</div>
-                    <div className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded mt-1 inline-block font-bold">Factor Used: {r.m1.factor}</div>
+            <div className="p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-center">
+                    <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <h4 className="text-[10px] font-bold text-gray-500 uppercase flex justify-center items-center gap-1">
+                            Current Wt (Auto)
+                            <EquationTooltip formula="Wt * Factor (Status Based)" details={r.detailedFormulas?.m1} />
+                        </h4>
+                        <div className="text-xl font-bold text-gray-800">{r.m1.resultDry.toFixed(0)}</div>
+                        <div className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded mt-1 inline-block font-bold">Factor: {r.m1.factor}</div>
+                    </div>
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                        <h4 className="text-[10px] font-bold text-blue-500 uppercase">Selected Wt (Auto)</h4>
+                        <div className="text-xl font-bold text-blue-700">{r.m1.resultSel.toFixed(0)}</div>
+                    </div>
                 </div>
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <h4 className="text-[10px] font-bold text-blue-500 uppercase">Selected Wt</h4>
-                    <div className="text-xl font-bold text-blue-700">{r.m1.resultSel.toFixed(0)}</div>
-                </div>
+
+                {setCustomFactor && (
+                    <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                        <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs font-bold text-yellow-800 uppercase">Manual Factor Adjustment</span>
+                            <input 
+                                type="number" 
+                                value={customFactor} 
+                                onChange={(e) => setCustomFactor(Number(e.target.value))}
+                                className="w-16 h-7 p-1 text-center text-sm font-bold border border-yellow-300 rounded bg-white focus:ring-1 focus:ring-yellow-500"
+                            />
+                        </div>
+                        <div className="flex justify-between text-xs">
+                            <div className="text-center">
+                                <span className="block text-gray-500 mb-1">Current Wt</span>
+                                <span className="font-mono font-bold text-gray-800 text-sm">{r.m1.customResultDry.toFixed(0)}</span>
+                            </div>
+                            <div className="text-center">
+                                <span className="block text-blue-500 mb-1">Selected Wt</span>
+                                <span className="font-mono font-bold text-blue-700 text-sm">{r.m1.customResultSel.toFixed(0)}</span>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
           )}
 
           {/* M2: Factors Table */}
            {activeMethod === 'method2' && r.m2 && (
-            <div className="p-2">
+            <div className="p-2 space-y-3">
+                {setCustomFactor && r.m1 && (
+                    <div className="bg-yellow-50 p-2 mx-1 rounded border border-yellow-100 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                            <span className="font-bold text-yellow-800">Custom Factor:</span>
+                            <input 
+                                type="number" 
+                                value={customFactor} 
+                                onChange={(e) => setCustomFactor && setCustomFactor(Number(e.target.value))}
+                                className="w-12 h-6 p-1 text-center font-bold border border-yellow-300 rounded bg-white"
+                            />
+                        </div>
+                        <div className="flex gap-4">
+                            <span>Dry: <b className="text-gray-800">{r.m1.customResultDry.toFixed(0)}</b></span>
+                            <span>Sel: <b className="text-blue-700">{r.m1.customResultSel.toFixed(0)}</b></span>
+                        </div>
+                    </div>
+                )}
+
                 <table className="w-full text-xs text-center border-collapse">
                   <thead>
                     <tr className="bg-gray-100 text-gray-600">

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { KcalResults } from '../hooks/useKcalCalculations';
 
@@ -37,6 +37,42 @@ const EquationTooltip: React.FC<TooltipProps> = ({ formula, details }) => (
 
 const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanMeals, reqKcal, setReqKcal, notes, setNotes }) => {
   const { t } = useLanguage();
+  const [showSelectModal, setShowSelectModal] = useState(false);
+
+  const handleSelect = (val: number) => {
+      if(setReqKcal) setReqKcal(Number(val.toFixed(0)));
+      setShowSelectModal(false);
+  };
+
+  // Prepare Selection Data
+  const options = [];
+  
+  if (r.pediatric) {
+      if(r.pediatricMethods) {
+          options.push({ label: 'DRI/IOM (Dry)', val: r.pediatricMethods.driEER.valDry });
+          options.push({ label: 'DRI/IOM (Sel)', val: r.pediatricMethods.driEER.valSel });
+          options.push({ label: 'Catch-Up Total', val: r.pediatric.catchUpTotal });
+          options.push({ label: 'Maintenance TEE (Dry)', val: r.pediatricMethods.maintenanceTEE.valDry });
+      }
+  } else {
+      // Adult Options
+      if (r.m1) {
+          options.push({ label: `M1 Auto (Factor ${r.m1.factor}) - Dry`, val: r.m1.resultDry });
+          options.push({ label: `M1 Auto (Factor ${r.m1.factor}) - Sel`, val: r.m1.resultSel });
+          options.push({ label: `M1 Manual - Dry`, val: r.m1.customResultDry });
+          options.push({ label: `M1 Manual - Sel`, val: r.m1.customResultSel });
+      }
+      if (r.m3) {
+          options.push({ label: 'Mifflin TEE (Dry)', val: r.m3.mifflin.teeDry });
+          options.push({ label: 'Mifflin TEE (Sel)', val: r.m3.mifflin.teeSel });
+          options.push({ label: 'Harris TEE (Dry)', val: r.m3.harris.teeDry });
+          options.push({ label: 'Harris TEE (Sel)', val: r.m3.harris.teeSel });
+      }
+      if (r.m6) {
+          options.push({ label: 'EER (IOM) - Dry', val: r.m6.resultDry });
+          options.push({ label: 'EER (IOM) - Sel', val: r.m6.resultSel });
+      }
+  }
 
   return (
     <div className="card shadow-lg overflow-visible border-0 ring-1 ring-black/5 bg-gradient-to-br from-gray-800 to-gray-900 text-white relative z-20">
@@ -103,14 +139,23 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
 
                <div>
                    <label className="block text-sm font-bold text-gray-400 uppercase mb-2 tracking-wider">{t.kcal.kcalRequired}</label>
-                   <input 
-                     type="number" 
-                     className="w-full p-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-bold text-2xl text-center text-white transition shadow-inner placeholder-gray-600"
-                     placeholder="Enter Target Kcal"
-                     value={reqKcal}
-                     onChange={(e) => setReqKcal(Number(e.target.value))}
-                     dir="ltr"
-                   />
+                   <div className="flex gap-2">
+                       <input 
+                         type="number" 
+                         className="w-full p-3 bg-white/5 border border-white/10 rounded-xl focus:ring-2 focus:ring-green-500 outline-none font-bold text-2xl text-center text-white transition shadow-inner placeholder-gray-600"
+                         placeholder="Enter Target Kcal"
+                         value={reqKcal}
+                         onChange={(e) => setReqKcal(Number(e.target.value))}
+                         dir="ltr"
+                       />
+                       <button 
+                           onClick={() => setShowSelectModal(true)}
+                           className="bg-blue-600 hover:bg-blue-700 text-white px-3 rounded-xl font-bold transition shadow-lg text-xs flex-shrink-0"
+                           title="Select from calculated results"
+                       >
+                           Select<br/>Result
+                       </button>
+                   </div>
                </div>
                <button 
                  onClick={() => reqKcal && onPlanMeals(Number(reqKcal))}
@@ -122,6 +167,34 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
             </div>
           )}
       </div>
+
+      {/* Select Modal */}
+      {showSelectModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-[100] p-4 text-gray-800">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+                  <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-bold text-gray-800">Select Target Calorie</h3>
+                      <button onClick={() => setShowSelectModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                  </div>
+                  <div className="p-2 max-h-[60vh] overflow-y-auto">
+                      <table className="w-full text-sm">
+                          <tbody>
+                              {options.map((opt, idx) => (
+                                  <tr 
+                                    key={idx} 
+                                    onClick={() => handleSelect(opt.val)}
+                                    className="hover:bg-blue-50 cursor-pointer border-b border-gray-50 last:border-0 transition"
+                                  >
+                                      <td className="p-3 text-gray-700 font-medium">{opt.label}</td>
+                                      <td className="p-3 text-right font-bold text-blue-600 font-mono text-lg">{opt.val?.toFixed(0)}</td>
+                                  </tr>
+                              ))}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 };

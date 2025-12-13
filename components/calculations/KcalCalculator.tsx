@@ -77,6 +77,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
 
               if (data.inputs.reqKcal) inputs.setReqKcal(data.inputs.reqKcal);
               if (data.inputs.notes) inputs.setNotes(data.inputs.notes);
+              
+              if (data.inputs.customFactor && inputs.setCustomFactor) inputs.setCustomFactor(data.inputs.customFactor);
           }
       } else if (activeVisit) {
           if (activeVisit.visit.hip && inputs.setHip) inputs.setHip(activeVisit.visit.hip);
@@ -110,7 +112,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
               bodyFatPercent: inputs.bodyFatPercent,
               desiredBodyFat: inputs.desiredBodyFat,
               reqKcal: inputs.reqKcal,
-              notes: inputs.notes
+              notes: inputs.notes,
+              customFactor: inputs.customFactor
           },
           results: results
       };
@@ -252,6 +255,8 @@ const KcalCalculator: React.FC<KcalCalculatorProps> = ({ onPlanMeals, initialDat
                 results={results}
                 deficit={inputs.deficit}
                 setDeficit={inputs.setDeficit}
+                customFactor={inputs.customFactor}
+                setCustomFactor={inputs.setCustomFactor}
                 />
             </CollapsibleCard>
         </div>

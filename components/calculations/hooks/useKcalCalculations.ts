@@ -92,6 +92,8 @@ export interface KcalResults {
     factor: number;
     resultDry: number;
     resultSel: number;
+    customResultDry: number;
+    customResultSel: number;
   };
   m2?: {
     actual: number[];
@@ -266,6 +268,8 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
   const [deficit, setDeficit] = useState<number>(0);
   const [notes, setNotes] = useState<string>('');
   
+  const [customFactor, setCustomFactor] = useState<number>(30); // Default Factor for M1/M2 Manual
+
   const [reqKcal, setReqKcal] = useState<number | ''>('');
   const [results, setResults] = useState<KcalResults>({} as KcalResults);
 
@@ -345,6 +349,7 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
       setDeficit(0);
       setReqKcal('');
       setNotes('');
+      setCustomFactor(30);
   };
 
   useEffect(() => {
@@ -606,6 +611,10 @@ export const useKcalCalculations = (initialData?: KcalInitialData | null) => {
     const m1Dry = dryWeightVal * m1Factor;
     const m1Sel = selWeightVal * m1Factor;
 
+    // Custom Factor Calculation
+    const m1CustomDry = dryWeightVal * customFactor;
+    const m1CustomSel = selWeightVal * customFactor;
+
     const m2Actual = [dryWeightVal * 25, dryWeightVal * 30, dryWeightVal * 35, dryWeightVal * 40];
     const m2Selected = [selWeightVal * 25, selWeightVal * 30, selWeightVal * 35, selWeightVal * 40];
 
@@ -717,7 +726,14 @@ Quick Methods (Guidelines):
         },
         pediatric: pediatricData,
         pediatricMethods: pedMethods,
-        m1: { bmiValue: bmiVal, factor: m1Factor, resultDry: m1Dry, resultSel: m1Sel },
+        m1: { 
+            bmiValue: bmiVal, 
+            factor: m1Factor, 
+            resultDry: m1Dry, 
+            resultSel: m1Sel,
+            customResultDry: m1CustomDry,
+            customResultSel: m1CustomSel
+        },
         m2: { actual: m2Actual, selected: m2Selected },
         m3: {
             harris: { bmrDry: harrisDry, teeDry: harrisDryTEE, bmrSel: harrisSel, teeSel: harrisSelTEE },
@@ -727,7 +743,7 @@ Quick Methods (Guidelines):
         m6: { resultDry: m6ResultDry, resultSel: m6ResultSel, label: 'Adult EER (IOM)', note: '', proteinRef: m6Formula },
     });
 
-  }, [gender, age, height, waist, hip, mac, tsf, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, edemaCorrectionPercent, amputationPercent, bodyFatPercent, desiredBodyFat, pregnancyState, pediatricAge, deficit, t]);
+  }, [gender, age, height, waist, hip, mac, tsf, physicalActivity, currentWeight, selectedWeight, usualWeight, changeDuration, ascites, edema, edemaCorrectionPercent, amputationPercent, bodyFatPercent, desiredBodyFat, pregnancyState, pediatricAge, deficit, customFactor, t]);
 
   return {
     inputs: {
@@ -755,6 +771,7 @@ Quick Methods (Guidelines):
       desiredBodyFat, setDesiredBodyFat,
       pregnancyState, setPregnancyState,
       deficit, setDeficit,
+      customFactor, setCustomFactor,
       reqKcal, setReqKcal,
       notes, setNotes
     },
