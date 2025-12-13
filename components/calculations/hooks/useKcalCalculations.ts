@@ -90,6 +90,7 @@ export interface KcalResults {
   m1?: {
     bmiValue: number;
     factor: number;
+    customFactor: number; // Added to expose manual factor
     resultDry: number;
     resultSel: number;
     customResultDry: number;
@@ -101,6 +102,7 @@ export interface KcalResults {
   };
   m3?: {
     adjustmentNote: string;
+    actFactor: number; // Added to expose PA factor
     harris: {
       bmrDry: number;
       teeDry: number;
@@ -737,6 +739,7 @@ Quick Methods (Guidelines):
         m1: { 
             bmiValue: bmiVal, 
             factor: m1Factor, 
+            customFactor: customFactor, // Expose manually for UI
             resultDry: m1Dry, 
             resultSel: m1Sel,
             customResultDry: m1CustomDry,
@@ -745,6 +748,7 @@ Quick Methods (Guidelines):
         m2: { actual: m2Actual, selected: m2Selected },
         m3: {
             adjustmentNote,
+            actFactor: actFactor, // Expose PA Factor
             harris: { bmrDry: harrisDry, teeDry: harrisDryTEE, bmrSel: harrisSel, teeSel: harrisSelTEE },
             mifflin: { bmrDry: mifflinDry, teeDry: mifflinDryTEE, bmrSel: mifflinSel, teeSel: mifflinSelTEE }
         },

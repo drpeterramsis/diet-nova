@@ -240,7 +240,14 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
            {activeMethod === 'method3' && r.m3 && (
              <div className="p-3 space-y-3">
                <div className="flex items-center justify-between mb-1">
-                 <h3 className="font-bold text-gray-700 text-xs uppercase">Metabolic Equations</h3>
+                 <h3 className="font-bold text-gray-700 text-xs uppercase flex items-center gap-1">
+                     Metabolic Equations
+                     {r.m3.actFactor && (
+                         <span className="text-[10px] font-normal text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-100">
+                             PA: {r.m3.actFactor}
+                         </span>
+                     )}
+                 </h3>
                  
                  {/* Goal Toggle & Input */}
                  {setGoal && (

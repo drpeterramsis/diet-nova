@@ -57,7 +57,7 @@ const ResultsSummaryCard: React.FC<ResultsSummaryProps> = ({ results: r, onPlanM
   } else {
       // Adult Options
       if (r.m1) {
-          const manualNote = ' (Manual Factor)';
+          const manualNote = r.m1.customFactor ? ` (Factor: ${r.m1.customFactor})` : ' (Manual Factor)';
           const autoNote = ` (Auto Factor: ${r.m1.factor})`;
           
           options.push({ label: `M1 Auto - Dry`, val: r.m1.resultDry, note: autoNote });
