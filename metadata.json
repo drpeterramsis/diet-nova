@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova CheckPoint_MealPlanner_v2.0.183",
-  "description": "Update Meal Planner design: Removed duplicate emojis, applied row-wide light background colors, added subtitles for exchange factors in cells, and styled zero values in pale red. Bumped version to 2.0.183.",
+  "name": "Diet-Nova CheckPoint_FoodAnalysis_v2.0.184",
+  "description": "Update Meal Planner table formatting to use gm/kcal units. Added new Food Analysis Table tool with search, detailed view, and meal calculation. Bumped version to 2.0.184.",
   "requestFramePermissions": []
 }

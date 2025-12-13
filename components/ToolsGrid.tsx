@@ -139,6 +139,12 @@ const ToolsGrid: React.FC<ToolsGridProps> = ({ onToolClick, setBmiOpen, isAuthen
         {renderSector("Knowledge Hub", "bg-purple-100", (
             <>
                 <ToolCard
+                    title={t.tools.foodComposition.title}
+                    desc={t.tools.foodComposition.desc}
+                    onClick={() => onToolClick('food-composition')}
+                    icon={<span className="text-2xl">🧪</span>}
+                />
+                <ToolCard
                     title={t.tools.encyclopedia.title}
                     desc={t.tools.encyclopedia.desc}
                     onClick={() => onToolClick('encyclopedia')}

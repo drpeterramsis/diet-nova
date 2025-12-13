@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -19,6 +20,7 @@ import PediatricWaist from "./components/tools/PediatricWaist"; // Import Pediat
 import PediatricMAMC from "./components/tools/PediatricMAMC"; // Import PediatricMAMC
 import GrowthCharts from "./components/tools/GrowthCharts"; // Import GrowthCharts
 import InstructionsLibrary from "./components/tools/InstructionsLibrary"; // Import InstructionsLibrary
+import FoodComposition from "./components/tools/FoodComposition"; // Import FoodComposition
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -138,6 +140,9 @@ const Dashboard = ({
                   </div>
                   <p className="text-gray-500 text-xs mb-3 min-h-[32px]">Reference data for labs, drugs, vitamins, and minerals.</p>
                   <div className="space-y-1">
+                      <button onClick={() => onToolClick('food-composition')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-bold text-xs flex items-center justify-between">
+                          <span>Food Analysis</span> <span>→</span>
+                      </button>
                       <button onClick={() => onToolClick('encyclopedia')} className="w-full text-left px-3 py-2 rounded hover:bg-purple-50 text-purple-700 font-bold text-xs flex items-center justify-between">
                           <span>Encyclopedia (Vits/Drugs)</span> <span>→</span>
                       </button>
@@ -430,6 +435,11 @@ const AppContent = () => {
             )}
             {activeTool === 'instructions' && (
                 <InstructionsLibrary 
+                    onClose={handleNavHome} 
+                />
+            )}
+            {activeTool === 'food-composition' && (
+                <FoodComposition 
                     onClose={handleNavHome} 
                 />
             )}

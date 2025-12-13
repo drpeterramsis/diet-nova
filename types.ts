@@ -193,6 +193,10 @@ export interface Translation {
         title: string;
         desc: string;
     };
+    foodComposition: {
+        title: string;
+        desc: string;
+    };
   };
   clients: {
     title: string;

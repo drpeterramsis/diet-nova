@@ -396,13 +396,14 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
   const RenderCell = ({ val, factor, label }: { val: number, factor: number, label: string }) => {
       const isZero = val === 0;
+      const unit = label === 'Kcal' ? 'kcal' : 'g';
       return (
           <td className="p-3 text-center">
               <div className={`font-mono text-base ${isZero ? 'text-red-300' : 'text-gray-700 font-bold'}`}>
                   {val.toFixed(1)}
               </div>
               <div className="text-[10px] text-gray-400 font-medium">
-                  (x{factor})
+                  {factor}{unit}
               </div>
           </td>
       );
@@ -544,7 +545,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                         <tr key={group} className={`${style.bg} border-b ${style.border} bg-opacity-30`}>
                                             <td className={`p-3 font-medium transition-colors`}>
                                                 <div className={`flex items-center gap-2 text-base ${style.text}`}>
-                                                    {/* Fixed: Remove double icon rendering. Translation has icon. */}
                                                     {t.mealPlannerTool.groups[group as keyof typeof t.mealPlannerTool.groups]}
                                                 </div>
                                             </td>

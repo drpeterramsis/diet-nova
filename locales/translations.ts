@@ -118,6 +118,10 @@ export const en: Translation = {
     instructions: {
         title: "Client Instructions",
         desc: "Library of printable instructions (e.g., InBody prep)."
+    },
+    foodComposition: {
+        title: "Food Analysis Table",
+        desc: "Detailed nutrient analysis for common foods."
     }
   },
   clients: {
@@ -482,6 +486,10 @@ export const ar: Translation = {
     instructions: {
         title: "تعليمات العملاء",
         desc: "مكتبة التعليمات المطبوعة (مثل تحضيرات InBody)."
+    },
+    foodComposition: {
+        title: "جدول تحليل الأغذية",
+        desc: "تحليل مفصل للعناصر الغذائية للأطعمة الشائعة."
     }
   },
   clients: {
