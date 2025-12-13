@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { KcalResults } from '../hooks/useKcalCalculations';
@@ -6,14 +7,26 @@ interface WeightAnalysisProps {
   results: KcalResults;
 }
 
-const EquationTooltip: React.FC<{ formula: string }> = ({ formula }) => (
+interface TooltipProps {
+    formula: string;
+    details?: string;
+}
+
+const EquationTooltip: React.FC<TooltipProps> = ({ formula, details }) => (
     <div className="group relative inline-block ml-1">
-        <span className="cursor-help text-gray-400 text-[10px] font-mono border border-gray-300 rounded px-1 hover:bg-gray-100 hover:text-blue-600 transition">
-            fx
+        <span className="cursor-help text-blue-500 text-[10px] font-bold border border-blue-200 rounded-full w-4 h-4 inline-flex items-center justify-center bg-blue-50 hover:bg-blue-600 hover:text-white transition">
+            i
         </span>
-        <div className="hidden group-hover:block absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] bg-gray-800 text-white text-[10px] p-2 rounded shadow-lg break-words text-center leading-tight">
-            {formula}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+        <div className="hidden group-hover:block absolute z-[999] bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[320px] bg-gray-900 text-white text-[10px] p-3 rounded-lg shadow-xl break-words text-left leading-relaxed">
+            <div className="font-bold text-blue-300 mb-1 border-b border-gray-700 pb-1">Equation:</div>
+            <div className="font-mono mb-2">{formula}</div>
+            {details && (
+                <>
+                    <div className="font-bold text-green-300 mb-1 border-b border-gray-700 pb-1">Calculation:</div>
+                    <div className="font-mono text-gray-300 whitespace-pre-wrap">{details}</div>
+                </>
+            )}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
         </div>
     </div>
 );
@@ -22,7 +35,7 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
   const { t } = useLanguage();
 
   return (
-    <div className="card bg-white shadow-md border border-blue-100 overflow-hidden">
+    <div className="card bg-white shadow-md border border-blue-100 overflow-visible">
       <div className="p-3 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
           <h2 className="text-sm font-bold text-blue-900 uppercase tracking-wider">
               {t.kcal.weightAnalysis}
@@ -46,7 +59,10 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
               <div className="text-center border-r border-gray-200 pr-2">
                   <div className="text-[10px] font-bold text-gray-400 uppercase">Dry (Actual)</div>
                   <div className="font-mono font-bold text-lg text-gray-800">{r.dryWeight} kg</div>
-                  <div className={`text-xs font-bold ${r.bmiColor}`}>{r.bmi} BMI</div>
+                  <div className={`text-xs font-bold ${r.bmiColor} flex items-center justify-center`}>
+                      {r.bmi} BMI
+                      <EquationTooltip formula="Wt / Ht²" details={r.detailedFormulas?.bmi} />
+                  </div>
               </div>
               <div className="text-center pl-2">
                   <div className="text-[10px] font-bold text-blue-400 uppercase">Selected</div>
@@ -107,14 +123,14 @@ const WeightAnalysisCard: React.FC<WeightAnalysisProps> = ({ results: r }) => {
                       <div className="p-2 bg-white border border-gray-200 rounded">
                           <div className="text-gray-500 font-bold flex items-center gap-1">
                               IBW (Hamwi)
-                              {r.formulas?.ibw && <EquationTooltip formula={r.formulas.ibw} />}
+                              {r.formulas?.ibw && <EquationTooltip formula={r.formulas.ibw} details={r.detailedFormulas?.ibw} />}
                           </div>
                           <div className="font-mono text-gray-800 font-bold">{r.IBW_2} kg</div>
                       </div>
                       <div className="p-2 bg-white border border-gray-200 rounded">
                           <div className="text-gray-500 font-bold flex items-center gap-1">
                               Adj. BW
-                              {r.formulas?.abw && <EquationTooltip formula={r.formulas.abw} />}
+                              {r.formulas?.abw && <EquationTooltip formula={r.formulas.abw} details={r.detailedFormulas?.abw} />}
                           </div>
                           <div className="font-mono text-gray-800 font-bold">{r.ABW_2} kg</div>
                       </div>

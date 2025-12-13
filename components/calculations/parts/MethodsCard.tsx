@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { KcalResults } from '../hooks/useKcalCalculations';
@@ -8,15 +9,26 @@ interface MethodsCardProps {
   setDeficit: (v: number) => void;
 }
 
-// Tooltip Helper - Fixed Z-Index
-const EquationTooltip: React.FC<{ formula: string }> = ({ formula }) => (
+interface TooltipProps {
+    formula: string;
+    details?: string;
+}
+
+const EquationTooltip: React.FC<TooltipProps> = ({ formula, details }) => (
     <div className="group relative inline-block ml-1">
-        <span className="cursor-help text-gray-400 text-[10px] font-mono border border-gray-300 rounded px-1 hover:bg-gray-100 hover:text-blue-600 transition">
-            fx
+        <span className="cursor-help text-blue-500 text-[10px] font-bold border border-blue-200 rounded-full w-4 h-4 inline-flex items-center justify-center bg-blue-50 hover:bg-blue-600 hover:text-white transition">
+            i
         </span>
-        <div className="hidden group-hover:block absolute z-[999] bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[200px] bg-gray-800 text-white text-[10px] p-2 rounded shadow-lg break-words text-center leading-tight">
-            {formula}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
+        <div className="hidden group-hover:block absolute z-[999] bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[320px] bg-gray-900 text-white text-[10px] p-3 rounded-lg shadow-xl break-words text-left leading-relaxed">
+            <div className="font-bold text-blue-300 mb-1 border-b border-gray-700 pb-1">Equation:</div>
+            <div className="font-mono mb-2">{formula}</div>
+            {details && (
+                <>
+                    <div className="font-bold text-green-300 mb-1 border-b border-gray-700 pb-1">Calculation:</div>
+                    <div className="font-mono text-gray-300 whitespace-pre-wrap">{details}</div>
+                </>
+            )}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
         </div>
     </div>
 );
@@ -198,7 +210,7 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
                  <tbody className="divide-y divide-gray-100">
                    <tr className="hover:bg-gray-50">
                       <td className="p-2 font-bold text-gray-700 flex items-center gap-1">
-                          Mifflin <EquationTooltip formula="(10*W) + (6.25*H) - (5*A) + S" />
+                          Mifflin <EquationTooltip formula="(10*W) + (6.25*H) - (5*A) + S" details={r.detailedFormulas?.mifflinDry} />
                       </td>
                       <td className="p-2 text-center text-gray-500">{r.m3.mifflin.bmrDry.toFixed(0)}</td>
                       <td className="p-2 text-center font-mono font-bold">{r.m3.mifflin.teeDry.toFixed(0)}</td>
@@ -206,7 +218,7 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
                    </tr>
                    <tr className="hover:bg-gray-50">
                       <td className="p-2 font-medium text-gray-600 flex items-center gap-1">
-                          Harris <EquationTooltip formula="66.5 + (13.75*W) + (5.003*H) - (6.75*A)" />
+                          Harris <EquationTooltip formula="66.5 + (13.75*W) + (5.003*H) - (6.75*A)" details={r.detailedFormulas?.harrisDry} />
                       </td>
                       <td className="p-2 text-center text-gray-500">{r.m3.harris.bmrDry.toFixed(0)}</td>
                       <td className="p-2 text-center font-mono">{r.m3.harris.teeDry.toFixed(0)}</td>
@@ -216,7 +228,7 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
                </table>
                {deficit > 0 && (
                    <div className="text-[10px] text-center text-green-600 mt-1 font-bold bg-green-50 p-1 rounded">
-                       Note: Results include -{deficit} kcal deficit applied to TEE.
+                       Note: TEE targets include -{deficit} kcal deficit applied after activity factor.
                    </div>
                )}
              </div>
@@ -227,7 +239,7 @@ const MethodsCard: React.FC<MethodsCardProps> = ({ results: r, deficit, setDefic
               <div className="p-4 grid grid-cols-2 gap-4 text-center">
                 <div className="col-span-2 text-xs text-gray-500 mb-2 flex justify-center items-center gap-1">
                     IOM Estimated Energy Requirement
-                    <EquationTooltip formula={r.m6.proteinRef || "Standard EER Eq"} />
+                    <EquationTooltip formula={r.m6.proteinRef || "Standard EER Eq"} details={r.detailedFormulas?.eer} />
                 </div>
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <h4 className="text-[10px] font-bold text-gray-500 uppercase">Current Wt</h4>
