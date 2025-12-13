@@ -29,71 +29,87 @@ const NutritionLabel: React.FC<{ data: any, weight: number, title?: string }> = 
     };
 
     return (
-        <div className="border border-black bg-white text-black font-sans p-3 shadow-md max-w-sm mx-auto w-full">
-            {title && <h3 className="text-center font-bold mb-2 border-b border-black pb-1">{title}</h3>}
-            <h2 className="font-black text-4xl leading-none">Nutrition Facts</h2>
-            <div className="border-b-[8px] border-black my-1"></div>
-            <div className="flex justify-between items-baseline font-bold text-lg">
+        <div className="border-2 border-black bg-white text-black font-sans p-4 shadow-xl max-w-sm mx-auto w-full rounded-sm relative overflow-hidden">
+            {/* Decorative background logo opacity */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10rem] opacity-[0.03] pointer-events-none">🥗</div>
+
+            {title && <h3 className="text-center font-black text-lg mb-2 border-b-4 border-black pb-1 uppercase tracking-wider">{title}</h3>}
+            
+            <h2 className="font-black text-5xl leading-none mb-1">Nutrition Facts</h2>
+            <p className="text-sm font-bold mb-1 flex justify-between items-end">
                 <span>Serving Size</span>
-                <span>{weight}g</span>
+                <span className="font-black text-2xl">{weight}g</span>
+            </p>
+            
+            <div className="h-3 bg-black my-1"></div>
+            
+            <div className="flex justify-between items-end border-b-4 border-black pb-2">
+                <div>
+                    <div className="font-bold text-lg">Amount per serving</div>
+                    <div className="font-black text-3xl">Calories</div>
+                </div>
+                <div className="font-black text-6xl">{data.energy.toFixed(0)}</div>
             </div>
-            <div className="border-b-[4px] border-black my-1"></div>
-            <div className="text-sm font-bold">Amount per serving</div>
-            <div className="flex justify-between items-center border-b-[4px] border-black pb-1">
-                <span className="font-black text-2xl">Calories</span>
-                <span className="font-black text-4xl">{data.energy.toFixed(0)}</span>
-            </div>
-            <div className="text-sm">
-                <div className="text-right text-xs font-bold pt-1 border-b border-gray-400">% Daily Value*</div>
-                
-                <div className="border-b border-gray-400 py-1 flex justify-between">
-                    <span><span className="font-bold">Total Fat</span> {data.fat.toFixed(1)}g</span>
-                    <span className="font-bold">{getDV(data.fat, dv.fat)}%</span>
+
+            <div className="text-sm font-medium">
+                <div className="text-right text-xs font-bold pt-1 border-b border-gray-400 mb-1">% Daily Value*</div>
+
+                {/* Macros Section */}
+                <div className="border-b border-gray-300 py-1.5 flex justify-between items-center group hover:bg-gray-50 transition">
+                    <span className="flex items-center gap-2"><span className="text-xl">🛢️</span> <span className="font-black">Total Fat</span></span>
+                    <span className="font-bold text-red-600 text-xl">{data.fat.toFixed(1)}g <span className="text-black text-xs font-normal ml-1">({getDV(data.fat, dv.fat)}%)</span></span>
                 </div>
-                
-                <div className="border-b border-gray-400 py-1 flex justify-between">
-                    <span><span className="font-bold">Sodium</span> {data.sodium.toFixed(0)}mg</span>
-                    <span className="font-bold">{getDV(data.sodium, dv.sodium)}%</span>
+
+                <div className="border-b border-gray-300 py-1.5 flex justify-between items-center group hover:bg-gray-50 transition">
+                    <span className="flex items-center gap-2"><span className="text-xl">🧂</span> <span className="font-black">Sodium</span></span>
+                    <span className="font-bold text-gray-600 text-lg">{data.sodium.toFixed(0)}mg <span className="text-black text-xs font-normal ml-1">({getDV(data.sodium, dv.sodium)}%)</span></span>
                 </div>
-                
-                <div className="border-b border-gray-400 py-1 flex justify-between">
-                    <span><span className="font-bold">Total Carbohydrate</span> {data.carb.toFixed(1)}g</span>
-                    <span className="font-bold">{getDV(data.carb, dv.carb)}%</span>
+
+                <div className="border-b border-gray-300 py-1.5 flex justify-between items-center group hover:bg-gray-50 transition">
+                    <span className="flex items-center gap-2"><span className="text-xl">🍞</span> <span className="font-black">Total Carb</span></span>
+                    <span className="font-bold text-blue-600 text-xl">{data.carb.toFixed(1)}g <span className="text-black text-xs font-normal ml-1">({getDV(data.carb, dv.carb)}%)</span></span>
                 </div>
-                
-                <div className="border-b border-gray-400 py-1 pl-4 flex justify-between">
-                    <span>Dietary Fiber {data.fiber.toFixed(1)}g</span>
-                    <span className="font-bold">{getDV(data.fiber, dv.fiber)}%</span>
+
+                <div className="border-b border-gray-300 py-1 pl-9 flex justify-between items-center text-gray-700 bg-gray-50/50">
+                    <span className="flex items-center gap-1 text-sm">🥦 Dietary Fiber</span>
+                    <span className="font-bold">{data.fiber.toFixed(1)}g <span className="text-xs font-normal">({getDV(data.fiber, dv.fiber)}%)</span></span>
                 </div>
-                
-                <div className="border-b-[8px] border-black py-1 flex justify-between">
-                    <span><span className="font-bold">Protein</span> {data.protein.toFixed(1)}g</span>
-                    <span className="font-bold hidden">{getDV(data.protein, dv.protein)}%</span>
+
+                <div className="border-b-[8px] border-black py-1.5 flex justify-between items-center group hover:bg-gray-50 transition">
+                    <span className="flex items-center gap-2"><span className="text-xl">🥩</span> <span className="font-black">Protein</span></span>
+                    <span className="font-bold text-green-700 text-xl">{data.protein.toFixed(1)}g</span>
                 </div>
 
                 {/* Micronutrients */}
-                <div className="border-b border-gray-400 py-1 flex justify-between">
-                    <span>Vitamin C</span>
-                    <span>{data.vitC.toFixed(1)} mg</span>
-                </div>
-                <div className="border-b border-gray-400 py-1 flex justify-between">
-                    <span>Calcium</span>
-                    <span>{data.calcium.toFixed(0)} mg</span>
-                </div>
-                <div className="border-b border-gray-400 py-1 flex justify-between">
-                    <span>Iron</span>
-                    <span>{data.iron.toFixed(2)} mg</span>
-                </div>
-                <div className="border-b border-gray-400 py-1 flex justify-between">
-                    <span>Potassium</span>
-                    <span>{data.potassium.toFixed(0)} mg</span>
-                </div>
-                <div className="py-1 flex justify-between">
-                    <span>Phosphorus</span>
-                    <span>{data.phosphorus.toFixed(0)} mg</span>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1 py-3 text-xs font-medium">
+                    <div className="flex justify-between border-b border-gray-200 py-1">
+                        <span>🍊 Vitamin C</span>
+                        <span className="font-bold text-orange-600">{data.vitC.toFixed(1)} mg</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-200 py-1">
+                        <span>🦴 Calcium</span>
+                        <span className="font-bold text-blue-800">{data.calcium.toFixed(0)} mg</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-200 py-1">
+                        <span>🩸 Iron</span>
+                        <span className="font-bold text-red-800">{data.iron.toFixed(2)} mg</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-200 py-1">
+                        <span>🍌 Potassium</span>
+                        <span className="font-bold text-purple-700">{data.potassium.toFixed(0)} mg</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-200 py-1">
+                        <span>⚙️ Zinc</span>
+                        <span className="font-bold text-gray-700">{data.zinc?.toFixed(2) || '-'} mg</span>
+                    </div>
+                    <div className="flex justify-between border-b border-gray-200 py-1">
+                        <span>✨ Phos</span>
+                        <span className="font-bold text-teal-700">{data.phosphorus.toFixed(0)} mg</span>
+                    </div>
                 </div>
             </div>
-            <div className="border-t-[4px] border-black mt-1 pt-1 text-[9px] leading-tight text-gray-600">
+            
+            <div className="text-[10px] leading-tight text-gray-500 pt-2 border-t border-gray-200">
                 * The % Daily Value (DV) tells you how much a nutrient in a serving of food contributes to a daily diet. 2,000 calories a day is used for general nutrition advice.
             </div>
         </div>
@@ -130,6 +146,8 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
 
     const addToMeal = () => {
         if (selectedItem && inputWeight > 0) {
+            // Check if item already exists to update it or add new
+            // For simplicity, just append. If strict uniqueness needed, we can check IDs.
             setMealItems(prev => [...prev, { item: selectedItem, weight: inputWeight }]);
             setInputWeight(100); // Reset to default
         }
@@ -137,6 +155,10 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
 
     const removeFromMeal = (index: number) => {
         setMealItems(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const updateMealItemWeight = (index: number, newWeight: number) => {
+        setMealItems(prev => prev.map((item, i) => i === index ? { ...item, weight: Math.max(0, newWeight) } : item));
     };
 
     // Calculate details for the currently selected item based on weight
@@ -154,14 +176,15 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
             sodium: selectedItem.sodium * factor,
             potassium: selectedItem.potassium * factor,
             phosphorus: selectedItem.phosphorus * factor,
-            vitC: selectedItem.vitC * factor
+            vitC: selectedItem.vitC * factor,
+            zinc: (selectedItem.zinc || 0) * factor
         };
     }, [selectedItem, inputWeight]);
 
     const mealTotals = useMemo(() => {
         const totals = {
             energy: 0, protein: 0, fat: 0, carb: 0, fiber: 0,
-            calcium: 0, iron: 0, sodium: 0, potassium: 0, phosphorus: 0, vitC: 0
+            calcium: 0, iron: 0, sodium: 0, potassium: 0, phosphorus: 0, vitC: 0, zinc: 0
         };
         let totalWeight = 0;
 
@@ -179,6 +202,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
             totals.potassium += item.potassium * factor;
             totals.phosphorus += item.phosphorus * factor;
             totals.vitC += item.vitC * factor;
+            totals.zinc += (item.zinc || 0) * factor;
         });
         return { totals, totalWeight };
     }, [mealItems]);
@@ -322,19 +346,34 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                             {mealItems.map((item, idx) => {
                                 const factor = item.weight / 100;
                                 return (
-                                    <div key={idx} className="flex justify-between items-center p-2 bg-white rounded border border-gray-200 shadow-sm">
-                                        <div className="flex-grow min-w-0 mr-2">
-                                            <div className="font-bold text-gray-800 text-sm truncate" title={item.item.food}>{item.item.food}</div>
-                                            <div className="text-xs text-gray-500 font-mono">
-                                                {item.weight}g <span className="mx-1">|</span> {(item.item.energy * factor).toFixed(0)} kcal
+                                    <div key={idx} className="flex flex-col gap-1 p-2 bg-white rounded border border-gray-200 shadow-sm hover:border-green-300 transition-colors">
+                                        <div className="flex justify-between items-start">
+                                            <div className="font-bold text-gray-800 text-sm truncate flex-grow pr-2" title={item.item.food}>
+                                                {item.item.food}
+                                            </div>
+                                            <button 
+                                                onClick={() => removeFromMeal(idx)}
+                                                className="text-red-400 hover:text-red-600 hover:bg-red-50 p-0.5 rounded transition text-lg leading-none"
+                                                title="Remove"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                        
+                                        <div className="flex items-center justify-between mt-1">
+                                            <div className="flex items-center gap-1 bg-gray-100 rounded px-2 py-0.5">
+                                                <input 
+                                                    type="number" 
+                                                    value={item.weight} 
+                                                    onChange={(e) => updateMealItemWeight(idx, Number(e.target.value))}
+                                                    className="w-12 text-xs text-center bg-transparent border-b border-gray-400 focus:border-green-500 outline-none font-bold text-gray-700"
+                                                />
+                                                <span className="text-[10px] text-gray-500">g</span>
+                                            </div>
+                                            <div className="text-xs font-mono font-bold text-green-700">
+                                                {(item.item.energy * factor).toFixed(0)} kcal
                                             </div>
                                         </div>
-                                        <button 
-                                            onClick={() => removeFromMeal(idx)}
-                                            className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded transition"
-                                        >
-                                            ×
-                                        </button>
                                     </div>
                                 );
                             })}
@@ -354,6 +393,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                                     <NutritionLabel 
                                         data={mealTotals.totals} 
                                         weight={mealTotals.totalWeight} 
+                                        title="Meal Summary"
                                     />
                                 </>
                             ) : (
