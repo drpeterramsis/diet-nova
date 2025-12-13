@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova CheckPoint_FoodAnalysis_Update_v2.0.187",
-  "description": "Updated Food Composition tool with editable quantities, colored labels, and icons. Bumped version to 2.0.187.",
+  "name": "Diet-Nova CheckPoint_FoodAnalysis_13_v2.0.188",
+  "description": "Refactored Food Composition layout to 4 cards, improved search, fixed scrolling issues. Bumped version to 2.0.188.",
   "requestFramePermissions": []
 }
