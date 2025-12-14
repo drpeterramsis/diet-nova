@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova CheckPoint_PredataFoodAnalysis_28_v2.0.197",
-  "description": "Extended Food Composition Label to include all nutrients. Bumped version to 2.0.197.",
+  "name": "Diet-Nova CheckPoint_PredataFoodAnalysis_29_v2.0.198",
+  "description": "Added Save/Load features to Food Composition and improved search/filter UI. Bumped version to 2.0.198.",
   "requestFramePermissions": []
 }

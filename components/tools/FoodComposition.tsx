@@ -4,6 +4,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { foodCompositionData, FoodCompositionItem } from '../../data/foodCompositionData';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { SavedMeal } from '../../types';
 
 interface FoodCompositionProps {
     onClose?: () => void;
@@ -268,6 +269,16 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
     const [viewMode, setViewMode] = useState<'total' | 'item'>('total');
     const [viewingItemIndex, setViewingItemIndex] = useState<number | null>(null);
 
+    // --- SAVE / LOAD STATE ---
+    const [showLoadModal, setShowLoadModal] = useState(false);
+    const [planName, setPlanName] = useState('');
+    const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
+    const [lastSavedName, setLastSavedName] = useState<string>('');
+    const [savedPlans, setSavedPlans] = useState<SavedMeal[]>([]);
+    const [statusMsg, setStatusMsg] = useState('');
+    const [isLoadingPlans, setIsLoadingPlans] = useState(false);
+    const [loadSearchQuery, setLoadSearchQuery] = useState('');
+
     // --- DB Integration ---
     const mapDBToItem = (row: FoodDBRow): FoodCompositionItem => ({
         id: String(row.id),
@@ -368,6 +379,114 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
             setSyncMsg('Error: ' + err.message);
         }
     };
+
+    // --- Save/Load Logic ---
+    const fetchPlans = async () => {
+        if (!session) return;
+        setIsLoadingPlans(true);
+        setLoadSearchQuery('');
+        try {
+            const { data, error } = await supabase
+              .from('saved_meals')
+              .select('*')
+              .eq('tool_type', 'food-composition')
+              .eq('user_id', session.user.id)
+              .order('created_at', { ascending: false });
+            
+            if (error) throw error;
+            if (data) setSavedPlans(data);
+        } catch (err) {
+            console.error('Error fetching plans:', err);
+            setStatusMsg("Error loading lists.");
+        } finally {
+            setIsLoadingPlans(false);
+        }
+    };
+
+    const savePlan = async () => {
+        if (!planName.trim()) {
+            alert("Please enter a label for this food list.");
+            return;
+        }
+        if (!session) return;
+        
+        const planData = { mealItems };
+        const timestamp = new Date().toISOString();
+        const isUpdate = loadedPlanId && (planName === lastSavedName);
+
+        try {
+            let data;
+            if (isUpdate) {
+                const { data: updated, error } = await supabase
+                    .from('saved_meals')
+                    .update({ name: planName, data: planData })
+                    .eq('id', loadedPlanId)
+                    .eq('user_id', session.user.id)
+                    .select()
+                    .single();
+                if (error) throw error;
+                data = updated;
+            } else {
+                const { data: inserted, error } = await supabase
+                    .from('saved_meals')
+                    .insert({
+                        user_id: session.user.id,
+                        name: planName,
+                        tool_type: 'food-composition',
+                        data: planData,
+                        created_at: timestamp
+                    })
+                    .select()
+                    .single();
+                if (error) throw error;
+                data = inserted;
+            }
+            
+            if (data) {
+                setLoadedPlanId(data.id);
+                setLastSavedName(data.name);
+                setStatusMsg(isUpdate ? "List Updated Successfully!" : "List Saved Successfully!");
+                fetchPlans();
+                setTimeout(() => setStatusMsg(''), 3000);
+            }
+        } catch (err: any) {
+            console.error(err);
+            setStatusMsg("Failed to save: " + err.message);
+        }
+    };
+
+    const loadPlan = (plan: SavedMeal) => {
+        if (!plan.data || !plan.data.mealItems) return;
+        setMealItems([...plan.data.mealItems]);
+        setPlanName(plan.name);
+        setLoadedPlanId(plan.id);
+        setLastSavedName(plan.name);
+        setShowLoadModal(false);
+        setStatusMsg("List loaded successfully.");
+        setTimeout(() => setStatusMsg(''), 3000);
+    };
+
+    const deletePlan = async (id: string) => {
+        if (!window.confirm("Delete this saved list?")) return;
+        try {
+            const { error } = await supabase.from('saved_meals').delete().eq('id', id).eq('user_id', session?.user.id);
+            if (error) throw error;
+            setSavedPlans(prev => prev.filter(p => p.id !== id));
+            if (loadedPlanId === id) {
+                setLoadedPlanId(null);
+                setPlanName('');
+                setLastSavedName('');
+            }
+        } catch (err) {
+            console.error("Error deleting:", err);
+        }
+    };
+
+    const filteredSavedPlans = useMemo(() => {
+        if (!loadSearchQuery) return savedPlans;
+        const q = loadSearchQuery.toLowerCase();
+        return savedPlans.filter(plan => plan.name.toLowerCase().includes(q));
+    }, [savedPlans, loadSearchQuery]);
 
     // --- Memos ---
     const categories = useMemo(() => {
@@ -537,35 +656,64 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
         <div className="max-w-[1920px] mx-auto animate-fade-in pb-12">
             
             {/* Header */}
-            <div className="flex justify-between items-center mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="flex flex-col xl:flex-row justify-between items-center mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100 gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-[var(--color-heading)] flex items-center gap-2">
                         <span>🧪</span> {t.tools.foodComposition.title}
                     </h1>
-                    <p className="text-sm text-gray-500 flex items-center gap-2">
+                    <p className="text-sm text-gray-500 flex items-center gap-2 flex-wrap">
                         Analyze food composition, check nutrition facts, and build meals.
                         <span className={`text-[10px] px-2 py-0.5 rounded-full border ${dataSource === 'cloud' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
                             {dataSource === 'cloud' ? '☁️ Cloud DB' : '💾 Local Data'}
                         </span>
                     </p>
                 </div>
-                <div className="flex gap-2">
+                
+                {/* Global Controls: Save / Load / Sync */}
+                <div className="flex gap-2 items-center flex-wrap justify-center">
+                    {session && (
+                        <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-200">
+                            <input 
+                                type="text"
+                                placeholder="Label for Saved List"
+                                value={planName}
+                                onChange={(e) => setPlanName(e.target.value)}
+                                className="p-2 text-xs border rounded w-40 outline-none focus:ring-1 focus:ring-blue-400"
+                            />
+                            <button 
+                                onClick={savePlan} 
+                                className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition"
+                                title="Save Food List"
+                            >
+                                💾
+                            </button>
+                            <button 
+                                onClick={() => { fetchPlans(); setShowLoadModal(true); }}
+                                className="bg-purple-600 text-white p-2 rounded hover:bg-purple-700 transition"
+                                title="Load Saved List"
+                            >
+                                📂
+                            </button>
+                        </div>
+                    )}
+
                     {session && dataSource === 'local' && (
                         <button 
                             onClick={handleSyncToCloud}
-                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg transition text-xs font-bold border border-blue-200"
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg transition text-xs font-bold border border-blue-200 whitespace-nowrap"
                         >
-                            ☁️ Sync to Cloud
+                            ☁️ Sync
                         </button>
                     )}
                     {onClose && (
-                        <button onClick={onClose} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition text-sm font-medium">
-                            Close Tool
+                        <button onClick={onClose} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition text-sm font-medium whitespace-nowrap">
+                            Close
                         </button>
                     )}
                 </div>
             </div>
             
+            {statusMsg && <div className="mb-4 p-2 bg-green-100 text-green-800 text-xs rounded text-center font-bold animate-pulse">{statusMsg}</div>}
             {syncMsg && <div className="mb-4 p-2 bg-blue-100 text-blue-800 text-xs rounded text-center">{syncMsg}</div>}
 
             {/* 4 Cards Layout (Responsive Grid) */}
@@ -586,7 +734,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                             </button>
                         </div>
 
-                        {/* Search Bar */}
+                        {/* Search Bar with Clear Button */}
                         <div className="relative mb-3">
                             <input 
                                 type="text" 
@@ -596,7 +744,17 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-sm pr-8 font-mono"
                                 dir="ltr"
                             />
-                            <span className="absolute right-2 top-2.5 text-gray-400">🔍</span>
+                            {searchQuery ? (
+                                <button 
+                                    onClick={() => setSearchQuery('')}
+                                    className="absolute right-2 top-2.5 text-gray-400 hover:text-red-500 font-bold"
+                                    title="Clear Search"
+                                >
+                                    ✕
+                                </button>
+                            ) : (
+                                <span className="absolute right-2 top-2.5 text-gray-400">🔍</span>
+                            )}
                         </div>
 
                         {/* ADVANCED FILTERS PANEL */}
@@ -646,17 +804,18 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                             </div>
                         )}
                         
-                        {/* Category Tabs */}
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
-                            {categories.map(cat => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setSelectedCategory(cat)}
-                                    className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition ${selectedCategory === cat ? 'bg-[var(--color-primary)] text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-100'}`}
-                                >
-                                    {cat}
-                                </button>
-                            ))}
+                        {/* Category Dropdown (Replaces horizontal scroll) */}
+                        <div className="mb-1">
+                            <label className="text-[10px] text-gray-500 uppercase font-bold mb-1 block">Filter Category</label>
+                            <select 
+                                value={selectedCategory}
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg text-xs font-bold bg-white focus:ring-1 focus:ring-blue-400 outline-none"
+                            >
+                                {categories.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
@@ -851,6 +1010,49 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                 </div>
 
             </div>
+
+            {/* Load Modal */}
+            {showLoadModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 backdrop-blur-sm no-print">
+                    <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-2xl h-[80vh] flex flex-col animate-fade-in">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold">Load Saved List</h3>
+                            <button onClick={() => setShowLoadModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                        </div>
+                        
+                        <div className="mb-4">
+                            <input 
+                                type="text" 
+                                placeholder="Search saved lists..."
+                                value={loadSearchQuery}
+                                onChange={(e) => setLoadSearchQuery(e.target.value)}
+                                className="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                            />
+                        </div>
+
+                        <div className="flex-grow overflow-y-auto space-y-2 pr-2">
+                            {isLoadingPlans ? (
+                                <div className="text-center py-10 text-gray-400">Loading...</div>
+                            ) : filteredSavedPlans.length === 0 ? (
+                                <div className="text-center py-10 text-gray-400">No saved lists found.</div>
+                            ) : (
+                                filteredSavedPlans.map(plan => (
+                                    <div key={plan.id} className="flex justify-between items-center p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-100 group">
+                                        <div>
+                                            <div className="font-bold text-gray-800">{plan.name}</div>
+                                            <div className="text-xs text-gray-500">{new Date(plan.created_at).toLocaleDateString()}</div>
+                                        </div>
+                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                                            <button onClick={() => loadPlan(plan)} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Load</button>
+                                            <button onClick={() => deletePlan(plan.id)} className="px-3 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200">Del</button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
