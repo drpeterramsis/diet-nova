@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova CheckPoint_PredataFoodAnalysis_30_v2.0.198",
-  "description": "Added Save/Load features to Food Composition and improved search/filter UI. Bumped version to 2.0.198.",
+  "name": "Diet-Nova CheckPoint_ToastUpgrade_v2.0.199",
+  "description": "Updated notification style to top-right popup card. Bumped version to 2.0.199.",
   "requestFramePermissions": []
 }
