@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ToastProps {
   message: string;
@@ -62,7 +63,10 @@ const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
       if (onClose) onClose();
   };
 
-  return (
+  // We use createPortal to render the Toast into document.body.
+  // This ensures 'fixed' positioning is relative to the viewport window,
+  // preventing it from being trapped by parent elements with transforms (like animate-fade-in).
+  return createPortal(
     <div className={`fixed top-20 right-4 z-[9999] flex w-full max-w-sm overflow-hidden bg-white rounded-md shadow-xl animate-fade-in ${styles.border}`}>
       <div className={`flex items-center justify-center w-12 ${styles.bg} ${styles.iconColor}`}>
         {styles.icon}
@@ -80,7 +84,8 @@ const Toast: React.FC<ToastProps> = ({ message, onClose }) => {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
          </button>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

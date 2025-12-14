@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova CheckPoint_ToastUpgrade_v2.0.199",
-  "description": "Updated notification style to top-right popup card. Bumped version to 2.0.199.",
+  "name": "Diet-Nova CheckPoint_ToastPortal_v2.0.200",
+  "description": "Updated notification to use React Portals for fixed viewport positioning. Bumped version to 2.0.200.",
   "requestFramePermissions": []
 }
