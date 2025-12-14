@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
@@ -5,6 +6,7 @@ import { MacroDonut } from "../Visuals";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { SavedMeal } from "../../types";
+import { useNotification } from "../../contexts/NotificationContext";
 
 interface MealCreatorProps {
     initialLoadId?: string | null;
@@ -15,6 +17,7 @@ interface MealCreatorProps {
 const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, autoOpenNew }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
+  const { notify } = useNotification();
   const [searchQuery, setSearchQuery] = useState("");
   const [addedFoods, setAddedFoods] = useState<FoodItem[]>([]);
 
@@ -24,7 +27,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
   const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
   const [lastSavedName, setLastSavedName] = useState<string>(''); // Track name to detect changes
   const [savedPlans, setSavedPlans] = useState<SavedMeal[]>([]);
-  const [statusMsg, setStatusMsg] = useState('');
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [loadSearchQuery, setLoadSearchQuery] = useState('');
 
@@ -160,7 +162,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
         if (data) setSavedPlans(data);
     } catch (err) {
         console.error('Error fetching plans:', err);
-        setStatusMsg("Error loading plans.");
+        notify("Error loading plans.", 'error');
     } finally {
         setIsLoadingPlans(false);
     }
@@ -173,6 +175,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
     }
     if (!session) return;
     
+    notify("Saving...", 'loading');
     const planData = { addedFoods };
     const timestamp = new Date().toISOString();
 
@@ -225,17 +228,16 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
             setLoadedPlanId(data.id);
             setLastSavedName(data.name);
             if (isUpdate) {
-                setStatusMsg("Meal Updated Successfully!");
+                notify("Meal Updated Successfully!", 'success');
             } else {
-                setStatusMsg("Meal Saved as New Entry!");
+                notify("Meal Saved as New Entry!", 'success');
             }
         }
         
         fetchPlans(); 
-        setTimeout(() => setStatusMsg(''), 3000);
     } catch (err: any) {
         console.error('Error saving plan:', err);
-        setStatusMsg("Failed to save: " + err.message);
+        notify("Failed to save: " + err.message, 'error');
     }
   };
 
@@ -246,8 +248,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
     setLoadedPlanId(plan.id); 
     setLastSavedName(plan.name); 
     setShowLoadModal(false);
-    setStatusMsg(t.common.loadSuccess);
-    setTimeout(() => setStatusMsg(''), 3000);
+    notify(t.common.loadSuccess, 'success');
   };
 
   const deletePlan = async (id: string) => {
@@ -256,6 +257,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
         const { error } = await supabase.from('saved_meals').delete().eq('id', id).eq('user_id', session?.user.id);
         if (error) throw error;
         setSavedPlans(prev => prev.filter(p => p.id !== id));
+        notify("Meal deleted.", 'info');
         if (loadedPlanId === id) {
             setLoadedPlanId(null);
             setLastSavedName("");
@@ -263,6 +265,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
         }
     } catch (err) {
         console.error("Error deleting:", err);
+        notify("Error deleting meal.", 'error');
     }
   };
 
@@ -341,7 +344,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
             </ul>
           )}
         </div>
-        {statusMsg && <div className="text-sm text-green-600 bg-green-50 inline-block px-4 py-1 rounded-full">{statusMsg}</div>}
       </div>
 
       {/* Main Content */}

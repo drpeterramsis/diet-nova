@@ -15,6 +15,7 @@ import PediatricWaist from './PediatricWaist';
 import PediatricMAMC from './PediatricMAMC';
 import GrowthCharts from './GrowthCharts';
 import InstructionsLibrary from './InstructionsLibrary';
+import { useNotification } from '../../contexts/NotificationContext';
 
 // Helper for Plan Stats (Copied from MealPlanner logic for display)
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
@@ -154,7 +155,7 @@ const NoteDisplay: React.FC<{ text: string }> = ({ text }) => {
                 // Check for Lab Results (e.g., "Hemoglobin: 12") - basic heuristic
                 if (trimmed.includes(':') && /\d/.test(trimmed)) {
                      // Could be a lab result, make it standout slightly
-                     return <div key={i} className="ml-1 text-blue-800 font-medium">{line}</div>;
+                     return <div key={i} className="font-mono text-xs text-blue-800 bg-blue-50 px-1 rounded my-0.5 inline-block w-full">{line}</div>;
                 }
                 return <div key={i}>{line}</div>;
             })}
@@ -162,344 +163,69 @@ const NoteDisplay: React.FC<{ text: string }> = ({ text }) => {
     );
 };
 
-// --- Full Profile Print Component ---
-const ClientPrintView: React.FC<{ client: Client, visits: ClientVisit[] }> = ({ client, visits }) => {
-    return (
-        <div className="hidden print:block p-8 font-serif">
-            <h1 className="text-3xl font-bold mb-2 border-b-2 border-black pb-2">{client.full_name}</h1>
-            <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
-                <div>
-                    <p><strong>Code:</strong> {client.client_code}</p>
-                    <p><strong>DOB:</strong> {formatDateUK(client.dob)} ({client.age}y)</p>
-                    <p><strong>Gender:</strong> {client.gender}</p>
-                    <p><strong>Phone:</strong> {client.phone}</p>
-                </div>
-                <div>
-                    <p><strong>Clinic:</strong> {client.clinic}</p>
-                    <p><strong>Job:</strong> {client.job || 'N/A'}</p>
-                    <p><strong>Last Visit:</strong> {formatDateUK(client.visit_date)}</p>
-                </div>
-            </div>
-
-            <div className="mb-6">
-                <h2 className="text-xl font-bold mb-2 uppercase bg-gray-100 p-1">Current Status</h2>
-                <div className="grid grid-cols-4 gap-4 text-sm border p-2">
-                    <div><strong>Weight:</strong> {client.weight} kg</div>
-                    <div><strong>Height:</strong> {client.height} cm</div>
-                    <div><strong>BMI:</strong> {client.bmi}</div>
-                    <div><strong>Waist:</strong> {client.waist} cm</div>
-                    {client.head_circumference && <div><strong>Head Circ:</strong> {client.head_circumference} cm</div>}
-                </div>
-            </div>
-
-            {client.notes && (
-                <div className="mb-6">
-                    <h2 className="text-xl font-bold mb-2 uppercase bg-gray-100 p-1">Clinical Notes & History</h2>
-                    <div className="whitespace-pre-wrap text-sm border p-2">{client.notes}</div>
-                </div>
-            )}
-
-            <div className="mb-6">
-                <h2 className="text-xl font-bold mb-2 uppercase bg-gray-100 p-1">Visit History</h2>
-                <table className="w-full text-sm border-collapse border border-gray-300">
-                    <thead>
-                        <tr className="bg-gray-50">
-                            <th className="border p-1 text-left">Date</th>
-                            <th className="border p-1 text-center">Wt (kg)</th>
-                            <th className="border p-1 text-center">BMI</th>
-                            <th className="border p-1 text-center">Fat %</th>
-                            <th className="border p-1 text-left">Notes / Plan</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {visits.map(v => (
-                            <tr key={v.id}>
-                                <td className="border p-1">{formatDateUK(v.visit_date)}</td>
-                                <td className="border p-1 text-center font-bold">{v.weight}</td>
-                                <td className="border p-1 text-center">{v.bmi}</td>
-                                <td className="border p-1 text-center">{v.kcal_data?.inputs?.bodyFatPercent || '-'}</td>
-                                <td className="border p-1 text-xs">
-                                    {v.kcal_data?.inputs?.reqKcal && `Target: ${v.kcal_data.inputs.reqKcal} kcal. `}
-                                    {v.notes}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-            <div className="text-center text-xs mt-10 border-t pt-2">Generated by Diet-Nova System</div>
-        </div>
-    );
-};
-
 const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal, onPlanMeals, onRunNFPE, autoOpenNew }) => {
   const { t, isRTL } = useLanguage();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
+  const { notify } = useNotification();
   
-  // View State
-  const [viewMode, setViewMode] = useState<'list' | 'details' | 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist' | 'pediatric-mamc' | 'growth-charts' | 'instructions'>('list');
-
-  // Data State
   const [clients, setClients] = useState<Client[]>([]);
-  const [visits, setVisits] = useState<ClientVisit[]>([]); 
   const [loading, setLoading] = useState(true);
-  const [loadingVisits, setLoadingVisits] = useState(false);
-  const [tableError, setTableError] = useState(false);
+  const [activeClient, setActiveClient] = useState<Client | null>(null);
+  const [activeVisit, setActiveVisit] = useState<ClientVisit | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showVisitModal, setShowVisitModal] = useState(false);
   
-  // UI State
+  // Search & Sort State
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>('date_desc');
-  const [groupBy, setGroupBy] = useState<GroupOption>('none');
+  const [sortOption, setSortOption] = useState<SortOption>('date_desc');
+  const [groupOption, setGroupOption] = useState<GroupOption>('none');
+
+  // Form State (Client)
+  const [formData, setFormData] = useState<Partial<Client>>({});
   
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [activeTab, setActiveTab] = useState<'profile' | 'visits' | 'report'>('profile');
-  const [noJob, setNoJob] = useState(false);
+  // Form State (Visit)
+  const [visitFormData, setVisitFormData] = useState<Partial<ClientVisit>>({});
+
+  // Sub-Tool States
+  const [showDietaryAssessment, setShowDietaryAssessment] = useState(false);
+  const [showFoodQuestionnaire, setShowFoodQuestionnaire] = useState(false);
   
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const [allTagsExpanded, setAllTagsExpanded] = useState(false);
-  
-  // Pediatric Accordion State
-  const [expandedPediatricCategory, setExpandedPediatricCategory] = useState<string | null>(null);
-  
-  // Age Detail State
-  const [ageDetail, setAgeDetail] = useState<{y: number, m: number, d: number} | null>(null);
+  // Lab Selection State
+  const [showLabSelector, setShowLabSelector] = useState(false);
+  const [selectedLabItems, setSelectedLabItems] = useState<string[]>([]);
+  const [labSearchQuery, setLabSearchQuery] = useState('');
 
-  // Tool Targets (For Dietary/Food Q)
-  const [toolTarget, setToolTarget] = useState<{type: 'client' | 'visit', id: string, initialData?: any} | null>(null);
-  const [isSavingTool, setIsSavingTool] = useState(false);
-
-  // Lab Checklist State (Page View)
-  const [labChecklistSelection, setLabChecklistSelection] = useState<Set<string>>(new Set());
-  const [labSearch, setLabSearch] = useState('');
-
-  // Form State (Client Profile)
-  const [formData, setFormData] = useState<{
-    client_code: string;
-    full_name: string;
-    visit_date: string;
-    dob: string;
-    clinic: string;
-    phone: string;
-    notes: string;
-    age: number | '';
-    gender: 'male' | 'female';
-    marital_status: string;
-    kids_count: number | '';
-    job: string;
-    weight: number | '';
-    height: number | '';
-    waist: number | '';
-    hip: number | '';
-    miac: number | '';
-    head_circumference: number | ''; 
-  }>({
-    client_code: '',
-    full_name: '',
-    visit_date: new Date().toISOString().split('T')[0],
-    dob: '',
-    clinic: '',
-    phone: '',
-    notes: '',
-    age: '',
-    gender: 'male',
-    marital_status: 'single',
-    kids_count: '',
-    job: '',
-    weight: '',
-    height: '',
-    waist: '',
-    hip: '',
-    miac: '',
-    head_circumference: ''
-  });
-  
-  const profileBMI = useMemo(() => {
-      const w = Number(formData.weight);
-      const h = Number(formData.height) / 100;
-      if (w > 0 && h > 0) return (w / (h * h)).toFixed(1);
-      return '';
-  }, [formData.weight, formData.height]);
-
-  // Form State (New/Edit Visit)
-  const [editingVisitId, setEditingVisitId] = useState<string | null>(null);
-  const [newVisitData, setNewVisitData] = useState<{
-      visit_date: string;
-      weight: number | '';
-      height: number | '';
-      waist: number | '';
-      hip: number | '';
-      miac: number | '';
-      head_circumference: number | '';
-      body_fat: number | ''; // New Field
-      notes: string;
-  }>({
-      visit_date: new Date().toISOString().split('T')[0],
-      weight: '',
-      height: '',
-      waist: '',
-      hip: '',
-      miac: '',
-      head_circumference: '',
-      body_fat: '',
-      notes: ''
-  });
-
-  const [formError, setFormError] = useState('');
-  const [saveSuccess, setSaveSuccess] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [summaryText, setSummaryText] = useState('');
-
-  // Body Fat Analysis for New Visit Form
-  const bodyFatAnalysis = useMemo(() => {
-      if (!newVisitData.body_fat || formData.age === '') return null;
-      return getBodyFatAnalysis(Number(newVisitData.body_fat), Number(formData.age), formData.gender);
-  }, [newVisitData.body_fat, formData.age, formData.gender]);
-
-  // Refs for tracking initial load
-  const processedInitialIdRef = useRef<string | null>(null);
-
-  // Derived state for Lab Search
-  const fullLabCategories = useMemo(() => {
-    const cats: Record<string, LabTestItem[]> = {};
-    const q = labSearch.toLowerCase();
-    labTestsEncyclopedia.forEach(item => {
-        if (item.test.toLowerCase().includes(q) || 
-            item.category.toLowerCase().includes(q)) {
-            if (!cats[item.category]) cats[item.category] = [];
-            cats[item.category].push(item);
-        }
-    });
-    return cats;
-  }, [labSearch]);
+  // Tools Modal States
+  const [showStrongKids, setShowStrongKids] = useState(false);
+  const [showPediatricWaist, setShowPediatricWaist] = useState(false);
+  const [showPediatricMAMC, setShowPediatricMAMC] = useState(false);
+  const [showGrowthCharts, setShowGrowthCharts] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   useEffect(() => {
     fetchClients();
   }, [session]);
 
   useEffect(() => {
-      if (autoOpenNew && viewMode === 'list' && !initialClientId) {
-          handleOpenProfile();
-      }
-  }, [autoOpenNew]);
-
-  // Handle Initial Client ID Load
-  useEffect(() => {
       if (initialClientId && clients.length > 0) {
-          if (processedInitialIdRef.current !== initialClientId) {
-              const target = clients.find(c => c.id === initialClientId);
-              if (target) {
-                  if (!editingClient || editingClient.id !== target.id) {
-                      handleOpenProfile(target);
-                  }
-                  processedInitialIdRef.current = initialClientId;
-              }
+          const client = clients.find(c => c.id === initialClientId);
+          if (client) {
+              handleClientClick(client);
           }
       }
   }, [initialClientId, clients]);
 
-  // Age Calculation Function
-  const calculateAge = () => {
-      if (formData.dob) {
-          const birth = new Date(formData.dob);
-          const visit = new Date(formData.visit_date);
-          
-          if (!isNaN(birth.getTime()) && !isNaN(visit.getTime())) {
-              let years = visit.getFullYear() - birth.getFullYear();
-              let months = visit.getMonth() - birth.getMonth();
-              let days = visit.getDate() - birth.getDate();
-
-              if (days < 0) {
-                  months--;
-                  const prevMonthDate = new Date(visit.getFullYear(), visit.getMonth(), 0);
-                  days += prevMonthDate.getDate();
-              }
-              if (months < 0) {
-                  years--;
-                  months += 12;
-              }
-
-              const calculatedAge = Math.max(0, years);
-              
-              if (formData.age !== calculatedAge) {
-                 setFormData(prev => ({ ...prev, age: calculatedAge }));
-              }
-              setAgeDetail({ y: years, m: months, d: days });
-          } else {
-              setAgeDetail(null);
-          }
-      } else {
-          setAgeDetail(null);
-      }
-  };
-
-  // Run calc on load or when dates change
   useEffect(() => {
-      calculateAge();
-  }, [formData.dob, formData.visit_date]);
-  
-  useEffect(() => {
-      if (noJob) {
-          setFormData(prev => ({ ...prev, job: 'Unemployed / No Job' }));
-      } else if (formData.job === 'Unemployed / No Job') {
-          setFormData(prev => ({ ...prev, job: '' }));
+      if (autoOpenNew) {
+          resetFormData();
+          setShowAddModal(true);
       }
-  }, [noJob]);
-
-  // Auto-fill new visit form if not editing
-  useEffect(() => {
-      if (activeTab === 'visits' && editingClient && !editingVisitId) {
-          const lastVisit = visits.length > 0 ? visits[0] : null;
-          // Try to extract body fat from kcal_data if available
-          let lastBF = '';
-          if (lastVisit?.kcal_data?.inputs?.bodyFatPercent) {
-              lastBF = lastVisit.kcal_data.inputs.bodyFatPercent;
-          }
-
-          setNewVisitData(prev => ({
-              ...prev,
-              weight: lastVisit?.weight || editingClient.weight || '',
-              height: lastVisit?.height || editingClient.height || '',
-              waist: lastVisit?.waist || editingClient.waist || '',
-              hip: lastVisit?.hip || editingClient.hip || '',
-              miac: lastVisit?.miac || editingClient.miac || '',
-              head_circumference: lastVisit?.head_circumference || editingClient.head_circumference || '',
-              body_fat: lastBF || '',
-              notes: ''
-          }));
-      }
-  }, [activeTab, visits, editingClient, editingVisitId]);
-
-  const generateCode = (name: string) => {
-      if (!name) return '';
-      const initials = name.trim().split(/\s+/).map(n => n[0]).join('').toUpperCase().slice(0, 3);
-      const random = Math.floor(1000 + Math.random() * 9000);
-      const year = new Date().getFullYear().toString().slice(-2);
-      return `${initials}-${year}-${random}`;
-  };
-
-  const getDefaultNotes = (gender: 'male' | 'female') => {
-      let notes = "";
-      Object.keys(TAG_CATEGORIES).forEach(category => {
-          if (category === "🌸 Female Only" && gender === "male") return;
-          notes += `[${category}]\n-\n\n`;
-      });
-      notes += `[📝 Other Notes]\n-`;
-      return notes;
-  };
-
-  const insertTemplate = () => {
-      if (!confirm("This will append the default notes template to your existing notes. Continue?")) return;
-      const template = getDefaultNotes(formData.gender);
-      setFormData(prev => ({
-          ...prev,
-          notes: prev.notes ? prev.notes + "\n\n" + template : template
-      }));
-  };
+  }, [autoOpenNew]);
 
   const fetchClients = async () => {
-    if (!session) return;
+    if (!session?.user.id) return;
     setLoading(true);
-    setTableError(false);
     try {
       const { data, error } = await supabase
         .from('clients')
@@ -507,1832 +233,969 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
         .eq('doctor_id', session.user.id)
         .order('visit_date', { ascending: false });
 
-      if (error) {
-          if (error.code === '42P01' || error.message.includes('does not exist')) {
-              setTableError(true);
-          } else {
-              throw error;
-          }
-      } else if (data) {
-          setClients(data);
-      }
-    } catch (err: any) {
-      console.error("Error fetching clients:", err);
+      if (error) throw error;
+      setClients(data || []);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+      notify(t.auth.errorGeneric, 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchVisits = async (clientId: string) => {
-      setLoadingVisits(true);
-      try {
-          const { data, error } = await supabase
-            .from('client_visits')
-            .select('*')
-            .eq('client_id', clientId)
-            .order('visit_date', { ascending: false });
-          
-          if (data) {
-              setVisits(data);
-          }
-      } catch (err) {
-          console.error("Error fetching visits:", err);
-          setVisits([]);
-      } finally {
-          setLoadingVisits(false);
-      }
-  };
-
-  const processedClients = useMemo(() => {
-      let list = [...clients];
+  // --- Filtering & Sorting Logic ---
+  const filteredClients = useMemo(() => {
+      let filtered = clients;
+      
+      // Search
       if (searchQuery) {
           const q = searchQuery.toLowerCase();
-          list = list.filter(c => 
+          filtered = filtered.filter(c => 
               c.full_name.toLowerCase().includes(q) || 
-              c.clinic?.toLowerCase().includes(q) ||
-              c.phone?.includes(q) ||
-              c.client_code?.toLowerCase().includes(q)
+              c.phone?.includes(q) || 
+              c.client_code?.toLowerCase().includes(q) ||
+              c.clinic?.toLowerCase().includes(q)
           );
       }
-      list.sort((a, b) => {
-          switch (sortBy) {
-              case 'date_asc': return new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime();
+
+      // Sort
+      return [...filtered].sort((a, b) => {
+          switch (sortOption) {
               case 'date_desc': return new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime();
+              case 'date_asc': return new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime();
               case 'name_asc': return a.full_name.localeCompare(b.full_name);
               case 'name_desc': return b.full_name.localeCompare(a.full_name);
               case 'clinic': return (a.clinic || '').localeCompare(b.clinic || '');
               default: return 0;
           }
       });
-      return list;
-  }, [clients, searchQuery, sortBy]);
+  }, [clients, searchQuery, sortOption]);
 
-  const groupedClients = useMemo<Record<string, Client[]>>(() => {
-      if (groupBy === 'none') return { 'All Clients': processedClients };
+  // Grouping
+  const groupedClients = useMemo(() => {
+      if (groupOption === 'none') return { 'All Clients': filteredClients };
+      
       const groups: Record<string, Client[]> = {};
-      processedClients.forEach(client => {
+      
+      filteredClients.forEach(client => {
           let key = 'Other';
-          if (groupBy === 'clinic') key = client.clinic || 'Unspecified Location';
-          else if (groupBy === 'month') {
+          if (groupOption === 'clinic') {
+              key = client.clinic || 'Unassigned';
+          } else if (groupOption === 'month') {
               const d = new Date(client.visit_date);
               key = d.toLocaleString('default', { month: 'long', year: 'numeric' });
           }
+          
           if (!groups[key]) groups[key] = [];
           groups[key].push(client);
       });
       return groups;
-  }, [processedClients, groupBy]);
+  }, [filteredClients, groupOption]);
 
-  const chartData = useMemo(() => {
-      if (!editingClient || visits.length === 0) return null;
-      
-      const sortedVisits = [...visits].sort((a, b) => new Date(a.visit_date).getTime() - new Date(b.visit_date).getTime());
-      
-      const mapData = (key: keyof ClientVisit) => {
-          return sortedVisits
-              .filter(v => v[key] !== null && v[key] !== undefined && Number(v[key]) > 0)
-              .map(v => ({
-                  label: new Date(v.visit_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }),
-                  value: Number(v[key])
-              }));
-      };
-
-      // Handle custom extraction for Body Fat
-      const bodyFatData = sortedVisits
-        .filter(v => v.kcal_data?.inputs?.bodyFatPercent)
-        .map(v => ({
-            label: new Date(v.visit_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' }),
-            value: Number(v.kcal_data.inputs.bodyFatPercent)
-        }));
-
-      return {
-          weight: mapData('weight'),
-          bmi: mapData('bmi'),
-          waist: mapData('waist'),
-          hip: mapData('hip'),
-          miac: mapData('miac'),
-          height: mapData('height'),
-          head: mapData('head_circumference'),
-          bodyFat: bodyFatData
-      };
-
-  }, [visits, editingClient]);
-
-
-  const handleOpenProfile = (client?: Client) => {
-    setFormError('');
-    setSaveSuccess('');
-    setActiveTab('profile');
-    setExpandedCategory(null);
-    setAllTagsExpanded(false);
-    setSummaryText('');
-    setExpandedPediatricCategory(null);
-    setAgeDetail(null);
-    setEditingVisitId(null);
-
-    if (client) {
-      setEditingClient(client);
-      setNoJob(client.job === 'Unemployed / No Job');
-      setFormData({
-        client_code: client.client_code || generateCode(client.full_name),
-        full_name: client.full_name,
-        visit_date: client.visit_date,
-        dob: client.dob || '',
-        clinic: client.clinic || '',
-        phone: client.phone || '',
-        notes: client.notes || '', 
-        age: client.age !== undefined ? client.age : '',
-        gender: client.gender || 'male',
-        marital_status: client.marital_status || 'single',
-        kids_count: client.kids_count !== undefined ? client.kids_count : '',
-        job: client.job || '',
-        weight: client.weight || '',
-        height: client.height || '',
-        waist: client.waist || '',
-        hip: client.hip || '',
-        miac: client.miac || '',
-        head_circumference: client.head_circumference || ''
-      });
-      fetchVisits(client.id);
+  const handleClientClick = async (client: Client) => {
+    setActiveClient(client);
+    
+    // Fetch visits
+    const { data: visits } = await supabase
+      .from('client_visits')
+      .select('*')
+      .eq('client_id', client.id)
+      .order('visit_date', { ascending: false });
+    
+    // If no visits, create dummy active visit based on client data
+    if (visits && visits.length > 0) {
+        // Set most recent as active context but store history
+        setActiveVisit(visits[0]); 
+        // We'll attach history to the client object for charting in a real app, 
+        // but for now let's just use the latest visit for display
+        (client as any).history = visits.reverse(); // For charts (oldest to newest)
     } else {
-      setEditingClient(null);
-      setVisits([]);
-      setNoJob(false);
-      setFormData({
-        client_code: '',
-        full_name: '',
-        visit_date: new Date().toISOString().split('T')[0],
-        dob: '',
-        clinic: '',
-        phone: '',
-        notes: getDefaultNotes('male'), 
-        age: '',
-        gender: 'male',
-        marital_status: 'single',
-        kids_count: '',
-        job: '',
-        weight: '',
-        height: '',
-        waist: '',
-        hip: '',
-        miac: '',
-        head_circumference: ''
-      });
+        setActiveVisit({
+            id: 'temp',
+            client_id: client.id,
+            visit_date: client.visit_date,
+            weight: client.weight,
+            height: client.height,
+            waist: client.waist,
+            hip: client.hip,
+            bmi: client.bmi,
+            notes: client.notes
+        });
+        (client as any).history = [];
     }
-    setViewMode('details');
+
+    setViewMode('detail');
   };
 
-  const handleBackToList = () => {
-      setViewMode('list');
-      setEditingClient(null);
-  };
-
-  const addTag = (tag: string, categoryName: string) => {
-      if (formData.notes.includes(tag)) return;
-      const header = `[${categoryName}]`;
-      const notes = formData.notes;
-      if (notes.includes(header)) {
-          const headerIndex = notes.indexOf(header);
-          const lineBreakIndex = notes.indexOf('\n', headerIndex);
-          const insertIndex = lineBreakIndex !== -1 ? lineBreakIndex + 1 : headerIndex + header.length;
-          const newNotes = notes.slice(0, insertIndex) + (lineBreakIndex === -1 ? '\n' : '') + `• ${tag}\n` + notes.slice(insertIndex);
-          setFormData(prev => ({ ...prev, notes: newNotes }));
-      } else {
-          setFormData(prev => ({
-              ...prev,
-              notes: (prev.notes ? prev.notes + '\n' : '') + `\n[${categoryName}]\n• ${tag}\n`
-          }));
-      }
-  };
-  
-  const toggleAllTags = () => {
-      const newState = !allTagsExpanded;
-      setAllTagsExpanded(newState);
-      if (newState) setExpandedCategory(null);
-  };
-
-  const handleSubmitProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.full_name || !formData.visit_date) {
-      setFormError("Name and Last Visit Date are required.");
-      return;
-    }
-    setSubmitting(true);
-    setSaveSuccess('');
+  const handleSaveClient = async () => {
+    if (!session?.user.id) return;
+    notify('Saving...', 'loading');
     
     try {
       const payload = {
-        doctor_id: session?.user.id,
         ...formData,
-        dob: formData.dob === '' ? null : formData.dob,
-        age: formData.age === '' ? null : Number(formData.age),
-        kids_count: formData.kids_count === '' ? null : Number(formData.kids_count),
-        client_code: formData.client_code || generateCode(formData.full_name),
-        weight: formData.weight === '' ? null : Number(formData.weight),
-        height: formData.height === '' ? null : Number(formData.height),
-        waist: formData.waist === '' ? null : Number(formData.waist),
-        hip: formData.hip === '' ? null : Number(formData.hip),
-        miac: formData.miac === '' ? null : Number(formData.miac),
-        head_circumference: formData.head_circumference === '' ? null : Number(formData.head_circumference),
-        bmi: profileBMI ? Number(profileBMI) : null
+        doctor_id: session.user.id,
+        // Auto calculate BMI if weight/height present
+        bmi: (formData.weight && formData.height) 
+             ? Number((formData.weight / ((formData.height/100)**2)).toFixed(1)) 
+             : undefined
       };
 
-      let response;
-      if (editingClient) {
-        response = await supabase.from('clients').update(payload).eq('id', editingClient.id).select().single();
+      if (activeClient) {
+        // Update existing
+        const { error } = await supabase
+          .from('clients')
+          .update(payload)
+          .eq('id', activeClient.id);
+        if (error) throw error;
       } else {
-        response = await supabase.from('clients').insert(payload).select().single();
+        // Create new
+        const { error } = await supabase
+          .from('clients')
+          .insert(payload);
+        if (error) throw error;
       }
 
-      if (response.error) throw response.error;
-
-      if (response.data) {
-        if (!editingClient && (payload.weight || payload.height)) {
-            await supabase.from('client_visits').insert({
-                client_id: response.data.id,
-                visit_date: response.data.visit_date,
-                weight: payload.weight,
-                height: payload.height,
-                waist: payload.waist,
-                hip: payload.hip,
-                miac: payload.miac,
-                head_circumference: payload.head_circumference,
-                bmi: payload.bmi,
-                notes: "Initial Profile Visit"
-            });
-        }
-
-        if (editingClient) {
-          setClients(prev => prev.map(c => c.id === editingClient.id ? response.data : c));
-          setEditingClient(response.data);
-          setSaveSuccess("Saved successfully!");
-          setTimeout(() => setSaveSuccess(''), 3000);
-        } else {
-          setClients(prev => [response.data, ...prev]);
-          setEditingClient(response.data);
-          fetchVisits(response.data.id); 
-          setActiveTab('visits'); 
-          setSaveSuccess("Client Created!");
-          setTimeout(() => setSaveSuccess(''), 3000);
-        }
-      }
-    } catch (err: any) {
-      setFormError(err.message || "Failed to save client.");
-    } finally {
-      setSubmitting(false);
+      await fetchClients();
+      setShowAddModal(false);
+      resetFormData();
+      notify('Client Saved Successfully!', 'success');
+    } catch (error: any) {
+      console.error(error);
+      notify('Error saving client: ' + error.message, 'error');
     }
   };
 
-  const handleEditVisit = (visit: ClientVisit) => {
-      setEditingVisitId(visit.id);
-      
-      // Extract body fat from kcal_data
-      let bf = '';
-      if (visit.kcal_data?.inputs?.bodyFatPercent) {
-          bf = visit.kcal_data.inputs.bodyFatPercent;
-      }
+  const handleSaveVisit = async () => {
+      if (!activeClient || !session) return;
+      notify('Saving Visit...', 'loading');
 
-      setNewVisitData({
-          visit_date: visit.visit_date,
-          weight: visit.weight || '',
-          height: visit.height || '',
-          waist: visit.waist || '',
-          hip: visit.hip || '',
-          miac: visit.miac || '',
-          head_circumference: visit.head_circumference || '',
-          body_fat: bf,
-          notes: visit.notes || ''
-      });
-      // Scroll to form
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleCancelEditVisit = () => {
-      setEditingVisitId(null);
-      // Reset form to last visit defaults or blank
-      const lastVisit = visits.length > 0 ? visits[0] : null;
-      let lastBF = '';
-      if (lastVisit?.kcal_data?.inputs?.bodyFatPercent) {
-          lastBF = lastVisit.kcal_data.inputs.bodyFatPercent;
-      }
-      setNewVisitData({
-          visit_date: new Date().toISOString().split('T')[0],
-          weight: lastVisit?.weight || '',
-          height: lastVisit?.height || '',
-          waist: lastVisit?.waist || '',
-          hip: lastVisit?.hip || '',
-          miac: lastVisit?.miac || '',
-          head_circumference: lastVisit?.head_circumference || '',
-          body_fat: lastBF || '',
-          notes: ''
-      });
-  };
-
-  const handleSaveVisit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!editingClient) return;
-      setSubmitting(true);
       try {
-          const weight = newVisitData.weight === '' ? null : Number(newVisitData.weight);
-          const height = newVisitData.height === '' ? null : Number(newVisitData.height);
-          let bmi = null;
-          if (weight && height) {
-              bmi = Number((weight / ((height/100) * (height/100))).toFixed(1));
-          }
-
-          const kcalDataPayload = {
-              inputs: {
-                  bodyFatPercent: newVisitData.body_fat
-              }
-          };
-
           const payload = {
-              client_id: editingClient.id,
-              visit_date: newVisitData.visit_date,
-              weight: weight,
-              height: height,
-              waist: newVisitData.waist === '' ? null : Number(newVisitData.waist),
-              hip: newVisitData.hip === '' ? null : Number(newVisitData.hip),
-              miac: newVisitData.miac === '' ? null : Number(newVisitData.miac),
-              head_circumference: newVisitData.head_circumference === '' ? null : Number(newVisitData.head_circumference),
-              bmi: bmi,
-              notes: newVisitData.notes,
-              kcal_data: newVisitData.body_fat ? kcalDataPayload : undefined
+              client_id: activeClient.id,
+              ...visitFormData,
+              // Recalculate BMI for this visit
+              bmi: (visitFormData.weight && visitFormData.height)
+                  ? Number((visitFormData.weight / ((visitFormData.height/100)**2)).toFixed(1))
+                  : undefined
           };
 
-          let data;
-          if (editingVisitId) {
-              // UPDATE
-              const { data: updated, error } = await supabase.from('client_visits')
-                  .update(payload)
-                  .eq('id', editingVisitId)
-                  .select().single();
-              if (error) throw error;
-              data = updated;
-              // Update local state
-              setVisits(prev => prev.map(v => v.id === editingVisitId ? data : v));
-              setEditingVisitId(null);
-          } else {
-              // INSERT
-              const { data: inserted, error } = await supabase.from('client_visits')
-                  .insert(payload)
-                  .select().single();
-              if (error) throw error;
-              data = inserted;
-              setVisits(prev => [data, ...prev]);
-          }
+          // 1. Insert Visit
+          const { error: visitError } = await supabase.from('client_visits').insert(payload);
+          if (visitError) throw visitError;
 
-          if (data) {
-              // Update Client Profile if this is the most recent visit
-              if (new Date(data.visit_date) >= new Date(editingClient.visit_date)) {
-                   const { data: updatedClient } = await supabase.from('clients').update({
-                       visit_date: data.visit_date,
-                       weight: data.weight,
-                       height: data.height,
-                       waist: data.waist,
-                       hip: data.hip,
-                       miac: data.miac,
-                       head_circumference: data.head_circumference,
-                       bmi: data.bmi
-                   }).eq('id', editingClient.id).select().single();
-                   
-                   if (updatedClient) {
-                       setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
-                       setEditingClient(updatedClient);
-                   }
-              }
-              if (!editingVisitId) {
-                  setNewVisitData(prev => ({ ...prev, notes: '' }));
-              }
-          }
+          // 2. Update Client Main Record (Latest Data)
+          const { error: clientError } = await supabase
+            .from('clients')
+            .update({
+                weight: visitFormData.weight,
+                height: visitFormData.height,
+                waist: visitFormData.waist,
+                hip: visitFormData.hip,
+                miac: visitFormData.miac,
+                head_circumference: visitFormData.head_circumference,
+                bmi: payload.bmi,
+                visit_date: visitFormData.visit_date,
+                // Append notes if any
+                notes: visitFormData.notes ? (activeClient.notes ? activeClient.notes + '\n\n[' + visitFormData.visit_date + '] ' + visitFormData.notes : visitFormData.notes) : activeClient.notes
+            })
+            .eq('id', activeClient.id);
+            
+          if (clientError) throw clientError;
+
+          await fetchClients();
+          // Reload active client to reflect updates
+          const updatedClient = clients.find(c => c.id === activeClient.id);
+          if (updatedClient) handleClientClick(updatedClient);
+          
+          setShowVisitModal(false);
+          setVisitFormData({});
+          notify('Visit Recorded Successfully!', 'success');
       } catch (err: any) {
-          alert("Failed to save visit: " + err.message);
-      } finally {
-          setSubmitting(false);
-      }
-  };
-
-  const handleDeleteVisit = async (visitId: string) => {
-      if(!confirm("Delete this visit record?")) return;
-      try {
-          const { error } = await supabase.from('client_visits').delete().eq('id', visitId);
-          if (error) throw error;
-          setVisits(prev => prev.filter(v => v.id !== visitId));
-      } catch (err) {
           console.error(err);
+          notify('Error recording visit: ' + err.message, 'error');
       }
   };
 
-  const handleDeleteClient = async (id: string) => {
-    if (!window.confirm(t.common.delete + " client and all history?")) return;
-    try {
-      const { error } = await supabase.from('clients').delete().eq('id', id);
-      if (error) throw error;
-      setClients(prev => prev.filter(c => c.id !== id));
-      if (editingClient?.id === id) {
-          setViewMode('list');
-          setEditingClient(null);
+  const handleToolNoteSave = async (note: string) => {
+      if (!activeClient) return;
+      notify('Adding Note...', 'loading');
+      
+      const updatedNotes = activeClient.notes 
+          ? activeClient.notes + "\n\n" + note 
+          : note;
+      
+      try {
+          const { error } = await supabase
+            .from('clients')
+            .update({ notes: updatedNotes })
+            .eq('id', activeClient.id);
+            
+          if (error) throw error;
+          
+          // Update local state
+          setActiveClient({ ...activeClient, notes: updatedNotes });
+          
+          // Close Modals
+          setShowStrongKids(false);
+          setShowPediatricWaist(false);
+          setShowPediatricMAMC(false);
+          setShowGrowthCharts(false);
+          
+          notify('Note Added!', 'success');
+      } catch (err: any) {
+          console.error(err);
+          notify('Failed to add note: ' + err.message, 'error');
       }
-    } catch (err: any) {
-      alert("Error deleting client: " + err.message);
-    }
   };
 
-  const openKcalForVisit = (visit: ClientVisit) => {
-      if (!editingClient || !onAnalyzeInKcal) return;
-      onAnalyzeInKcal(editingClient, visit);
-  };
-
-  const openMealPlanForVisit = (visit: ClientVisit) => {
-      if (!editingClient || !onPlanMeals) return;
-      onPlanMeals(editingClient, visit);
-  };
-
-  const handleRunNFPE = () => {
-      if (!editingClient || !onRunNFPE) return;
-      onRunNFPE(editingClient);
-  };
-
-  const handlePrintReport = () => {
-      window.print();
-  };
-
-  const handleSaveSTRONGKids = (resultText: string) => {
-      if (!editingClient) return;
-      const updatedNotes = formData.notes ? formData.notes + "\n\n" + resultText : resultText;
-      setFormData(prev => ({ ...prev, notes: updatedNotes }));
-      setViewMode('details');
-      setSaveSuccess("STRONGkids assessment added to notes.");
-      setTimeout(() => setSaveSuccess(''), 3000);
-  };
-
-  const handleSaveWaistAnalysis = (note: string) => {
-      if (!editingClient) return;
-      const updatedNotes = formData.notes ? formData.notes + "\n\n" + note : note;
-      setFormData(prev => ({ ...prev, notes: updatedNotes }));
-      setViewMode('details');
-      setSaveSuccess("Waist analysis added to notes.");
-      setTimeout(() => setSaveSuccess(''), 3000);
-  };
-
-  const handleSaveMAMC = (note: string) => {
-      if (!editingClient) return;
-      const updatedNotes = formData.notes ? formData.notes + "\n\n" + note : note;
-      setFormData(prev => ({ ...prev, notes: updatedNotes }));
-      setViewMode('details');
-      setSaveSuccess("MAMC analysis added to notes.");
-      setTimeout(() => setSaveSuccess(''), 3000);
-  };
-
-  const handleSaveGrowthCharts = (note: string) => {
-      if (!editingClient) return;
-      const updatedNotes = formData.notes ? formData.notes + "\n\n" + note : note;
-      setFormData(prev => ({ ...prev, notes: updatedNotes }));
-      setViewMode('details');
-      setSaveSuccess("Growth Chart analysis added to notes.");
-      setTimeout(() => setSaveSuccess(''), 3000);
-  };
-
-  // --- Lab Suggestions Handlers ---
-  const toggleLabTest = (test: string) => {
-      const newSet = new Set(labChecklistSelection);
-      if (newSet.has(test)) newSet.delete(test);
-      else newSet.add(test);
-      setLabChecklistSelection(newSet);
-  };
-
-  const togglePanel = (tests: string[]) => {
-      // If all selected, deselect all. Else select all.
-      const allSelected = tests.every(t => labChecklistSelection.has(t));
-      const newSet = new Set(labChecklistSelection);
+  const handleUpdateLabNotes = async () => {
+      if (selectedLabItems.length === 0 || !activeClient) return;
       
-      if (allSelected) {
-          tests.forEach(t => newSet.delete(t));
-      } else {
-          tests.forEach(t => newSet.add(t));
-      }
-      setLabChecklistSelection(newSet);
+      const labNote = `[Suggested Labs - ${new Date().toLocaleDateString('en-GB')}]\n` + 
+                      selectedLabItems.map(i => `• ${i}`).join('\n');
+                      
+      await handleToolNoteSave(labNote);
+      setShowLabSelector(false);
+      setSelectedLabItems([]);
   };
 
-  const saveLabChecklistToNotes = () => {
-      if (!editingClient || labChecklistSelection.size === 0) return;
-      
-      const dateStr = new Date().toLocaleDateString('en-GB');
-      let labText = `\n\n[🧪 Requested Labs - ${dateStr}]\n`;
-      
-      Array.from(labChecklistSelection).forEach(test => {
-          labText += `  - [ ] ${test}\n`;
-      });
+  // Helper to toggle labs
+  const toggleLab = (lab: string) => {
+      setSelectedLabItems(prev => 
+          prev.includes(lab) ? prev.filter(i => i !== lab) : [...prev, lab]
+      );
+  };
 
-      setFormData(prev => ({
-          ...prev,
-          notes: prev.notes + labText
+  const resetFormData = () => {
+    setFormData({
+      visit_date: new Date().toISOString().split('T')[0],
+      gender: 'male',
+      clinic: 'Main Clinic'
+    });
+    setActiveClient(null);
+  };
+
+  // Chart Data Preparation
+  const weightHistory = useMemo(() => {
+      if (!activeClient || !(activeClient as any).history) return [];
+      return (activeClient as any).history.map((v: any) => ({
+          label: new Date(v.visit_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }),
+          value: v.weight
       }));
-      
-      setLabChecklistSelection(new Set()); // Clear selection
-      setLabSearch(''); // Clear search
-      setViewMode('details'); // Return to details
-      setSaveSuccess("Labs added to notes! Don't forget to save profile.");
-      setTimeout(() => setSaveSuccess(''), 3000);
-  };
+  }, [activeClient]);
 
-  // --- Summary Generator ---
-  const generateSummary = () => {
-      if (!editingClient) return;
-      const sortedVisits = [...visits].sort((a, b) => new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime());
-      
-      let summary = `Client Summary Report - ${new Date().toLocaleDateString()}\n`;
-      summary += `Name: ${editingClient.full_name} | Age: ${editingClient.age} | Gender: ${editingClient.gender}\n`;
-      summary += `Clinic: ${editingClient.clinic || 'N/A'}\n`;
-      summary += `--------------------------------------------------\n`;
-      
-      // Anthropometry
-      summary += `Current Status:\n`;
-      summary += `Weight: ${editingClient.weight || '-'} kg | Height: ${editingClient.height || '-'} cm | BMI: ${editingClient.bmi || '-'}\n`;
-      if (editingClient.head_circumference) summary += `Head Circ: ${editingClient.head_circumference} cm\n`;
-      
-      // Weight History (Last 3)
-      if (sortedVisits.length > 0) {
-          summary += `\nRecent History:\n`;
-          sortedVisits.slice(0, 3).forEach(v => {
-              summary += `- ${new Date(v.visit_date).toLocaleDateString()}: ${v.weight || '-'} kg (BMI: ${v.bmi || '-'})\n`;
-          });
-      }
+  // Derived Values
+  const isPediatric = activeClient?.age !== undefined && activeClient.age < 18;
 
-      // Notes Extract (Tags)
-      const tags: string[] = [];
-      if (editingClient.notes) {
-          const lines = editingClient.notes.split('\n');
-          lines.forEach(l => {
-              if (l.trim().startsWith('•')) {
-                  tags.push(l.trim().substring(1).trim());
-              }
-          });
-      }
-      if (tags.length > 0) {
-          summary += `\nKey Medical History:\n`;
-          summary += tags.join(', ') + '\n';
-      }
+  // --- SUB-COMPONENT RENDERERS ---
 
-      setSummaryText(summary);
-  };
-
-  // --- Tool Handlers ---
-  const handleOpenTool = (view: 'dietary-recall' | 'food-questionnaire' | 'lab-checklist' | 'strong-kids' | 'pediatric-waist' | 'pediatric-mamc' | 'growth-charts' | 'instructions', type: 'client' | 'visit', id: string, initialData?: any) => {
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Auto-scroll to top
-    if (view === 'lab-checklist') {
-        // Lab Checklist is a special view acting on the profile notes
-        setViewMode('lab-checklist');
-        setLabChecklistSelection(new Set()); // Reset selection
-    } else if (view === 'strong-kids') {
-        setViewMode('strong-kids');
-    } else if (view === 'pediatric-waist') {
-        setViewMode('pediatric-waist');
-        if (type === 'client') {
-            setToolTarget({ type, id, initialData }); // Use toolTarget to store profile data for component props
-        }
-    } else if (view === 'pediatric-mamc') {
-        setViewMode('pediatric-mamc');
-        if (type === 'client') {
-            setToolTarget({ type, id, initialData });
-        }
-    } else if (view === 'growth-charts') {
-        setViewMode('growth-charts');
-        if (type === 'client') {
-            setToolTarget({ type, id, initialData });
-        }
-    } else if (view === 'instructions') {
-        setViewMode('instructions');
-    } else {
-        setToolTarget({ type, id, initialData });
-        setViewMode(view);
-    }
-  };
-
-  const handleSaveDietary = async (data: DietaryAssessmentData) => {
-    if (!toolTarget) return;
-    setIsSavingTool(true);
-    try {
-      const table = toolTarget.type === 'client' ? 'clients' : 'client_visits';
-      const { error } = await supabase.from(table).update({ dietary_assessment: data }).eq('id', toolTarget.id);
-      
-      if (error) throw error;
-
-      if (toolTarget.type === 'client' && editingClient) {
-        const updated = { ...editingClient, dietary_assessment: data };
-        setEditingClient(updated);
-        setClients((prev: Client[]) => prev.map(c => c.id === updated.id ? updated : c));
-      } else {
-        setVisits((prev: ClientVisit[]) => prev.map(v => v.id === toolTarget.id ? { ...v, dietary_assessment: data } : v));
-      }
-      
-      setViewMode('details');
-      setSaveSuccess("Dietary Assessment Saved!");
-      setTimeout(() => setSaveSuccess(''), 3000);
-    } catch (err: any) {
-      alert("Failed to save dietary assessment: " + err.message);
-    } finally {
-      setIsSavingTool(false);
-    }
-  };
-
-  const handleSaveFoodQ = async (data: FoodQuestionnaireData) => {
-    if (!toolTarget) return;
-    setIsSavingTool(true);
-    try {
-      const table = toolTarget.type === 'client' ? 'clients' : 'client_visits';
-      const { error } = await supabase.from(table).update({ food_questionnaire: data }).eq('id', toolTarget.id);
-      
-      if (error) throw error;
-
-      if (toolTarget.type === 'client' && editingClient) {
-        const updated = { ...editingClient, food_questionnaire: data };
-        setEditingClient(updated);
-        setClients((prev: Client[]) => prev.map(c => c.id === updated.id ? updated : c));
-      } else {
-        setVisits((prev: ClientVisit[]) => prev.map(v => v.id === toolTarget.id ? { ...v, food_questionnaire: data } : v));
-      }
-      
-      setViewMode('details');
-      setSaveSuccess("Food Questionnaire Saved!");
-      setTimeout(() => setSaveSuccess(''), 3000);
-    } catch (err: any) {
-      alert("Failed to save food questionnaire: " + err.message);
-    } finally {
-      setIsSavingTool(false);
-    }
-  };
-
-  // --- RENDER: INSTRUCTIONS VIEW ---
-  if (viewMode === 'instructions') {
+  // 1. Dietary Assessment Wrapper
+  if (showDietaryAssessment && activeClient) {
       return (
-          <div className="animate-fade-in">
-              <InstructionsLibrary onClose={() => setViewMode('details')} />
-          </div>
+          <DietaryAssessment 
+              initialData={activeClient.dietary_assessment}
+              onClose={() => setShowDietaryAssessment(false)}
+              onSave={async (data) => {
+                  notify('Saving Dietary Assessment...', 'loading');
+                  const { error } = await supabase
+                      .from('clients')
+                      .update({ dietary_assessment: data })
+                      .eq('id', activeClient.id);
+                  if (!error) {
+                      setActiveClient({ ...activeClient, dietary_assessment: data });
+                      notify('Saved Successfully!', 'success');
+                      setShowDietaryAssessment(false);
+                  } else {
+                      notify('Error saving assessment.', 'error');
+                  }
+              }}
+          />
       );
   }
 
-  // --- RENDER: STRONG KIDS VIEW ---
-  if (viewMode === 'strong-kids') {
+  // 2. Food Questionnaire Wrapper
+  if (showFoodQuestionnaire && activeClient) {
       return (
-          <div className="animate-fade-in">
-              <STRONGKids onSave={handleSaveSTRONGKids} onClose={() => setViewMode('details')} />
-          </div>
+          <FoodQuestionnaire 
+              initialData={activeClient.food_questionnaire}
+              onClose={() => setShowFoodQuestionnaire(false)}
+              onSave={async (data) => {
+                  notify('Saving Questionnaire...', 'loading');
+                  const { error } = await supabase
+                      .from('clients')
+                      .update({ food_questionnaire: data })
+                      .eq('id', activeClient.id);
+                  if (!error) {
+                      setActiveClient({ ...activeClient, food_questionnaire: data });
+                      notify('Saved Successfully!', 'success');
+                      setShowFoodQuestionnaire(false);
+                  } else {
+                      notify('Error saving questionnaire.', 'error');
+                  }
+              }}
+          />
       );
   }
 
-  // --- RENDER: PEDIATRIC WAIST VIEW ---
-  if (viewMode === 'pediatric-waist') {
-      return (
-          <div className="animate-fade-in">
-              <PediatricWaist 
-                  initialGender={formData.gender}
-                  initialAge={formData.age !== '' ? Number(formData.age) : undefined}
-                  initialWaist={formData.waist !== '' ? Number(formData.waist) : undefined}
-                  onSave={handleSaveWaistAnalysis}
-                  onClose={() => setViewMode('details')} 
-              />
-          </div>
-      );
+  // 3. STRONGKids Wrapper
+  if (showStrongKids) {
+      return <STRONGKids onClose={() => setShowStrongKids(false)} onSave={handleToolNoteSave} />;
   }
 
-  // --- RENDER: PEDIATRIC MAMC VIEW ---
-  if (viewMode === 'pediatric-mamc') {
+  // 4. Pediatric Waist Wrapper
+  if (showPediatricWaist) {
       return (
-          <div className="animate-fade-in">
-              <PediatricMAMC
-                  initialGender={formData.gender}
-                  initialAge={formData.age !== '' ? Number(formData.age) : undefined}
-                  initialMac={formData.miac !== '' ? Number(formData.miac) : undefined}
-                  onSave={handleSaveMAMC}
-                  onClose={() => setViewMode('details')}
-              />
-          </div>
-      );
-  }
-
-  // --- RENDER: GROWTH CHARTS VIEW ---
-  if (viewMode === 'growth-charts') {
-      return (
-          <div className="animate-fade-in">
-              <GrowthCharts
-                  initialData={{
-                      name: editingClient?.full_name || '',
-                      gender: formData.gender,
-                      age: formData.age !== '' ? Number(formData.age) : 0,
-                      weight: formData.weight !== '' ? Number(formData.weight) : undefined,
-                      height: formData.height !== '' ? Number(formData.height) : undefined,
-                      head_circumference: formData.head_circumference !== '' ? Number(formData.head_circumference) : undefined,
-                      bmi: profileBMI ? Number(profileBMI) : undefined
-                  }}
-                  onSave={handleSaveGrowthCharts}
-                  onClose={() => setViewMode('details')}
-              />
-          </div>
-      );
-  }
-
-  // --- RENDER: DIETARY RECALL VIEW ---
-  if (viewMode === 'dietary-recall' && toolTarget) {
-      return (
-          <div className="h-[calc(100vh-100px)] animate-fade-in">
-              <DietaryAssessment 
-                  initialData={toolTarget.initialData}
-                  onSave={handleSaveDietary}
-                  onClose={() => setViewMode('details')}
-                  isSaving={isSavingTool}
-              />
-          </div>
-      );
-  }
-
-  // --- RENDER: FOOD QUESTIONNAIRE VIEW ---
-  if (viewMode === 'food-questionnaire' && toolTarget) {
-      return (
-          <div className="h-[calc(100vh-100px)] animate-fade-in">
-              <FoodQuestionnaire
-                  initialData={toolTarget.initialData}
-                  onSave={handleSaveFoodQ}
-                  onClose={() => setViewMode('details')}
-                  isSaving={isSavingTool}
-              />
-          </div>
-      );
-  }
-
-  // --- RENDER: LAB CHECKLIST VIEW ---
-  if (viewMode === 'lab-checklist') {
-      return (
-          <div className="max-w-5xl mx-auto animate-fade-in pb-12">
-              <LabReference /> 
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 flex justify-between items-center">
-                  <div>
-                      <h2 className="text-2xl font-bold text-blue-800 flex items-center gap-2">
-                          <span>🧪</span> Lab Request Checklist
-                      </h2>
-                      <p className="text-blue-600 text-sm">Select tests to add to client notes.</p>
-                  </div>
-                  <button onClick={() => { setLabSearch(''); setViewMode('details'); }} className="bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 transition shadow-sm font-medium text-sm">
-                      {t.common.back}
-                  </button>
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-xl">
+                  <PediatricWaist 
+                      onClose={() => setShowPediatricWaist(false)}
+                      onSave={handleToolNoteSave}
+                      initialGender={activeClient?.gender}
+                      initialAge={activeClient?.age}
+                      initialWaist={activeClient?.waist}
+                  />
               </div>
-
-              {/* Quick Select Panels */}
-              <div className="mb-8">
-                  <h3 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
-                      <span className="text-xl">⚡</span> Quick Select Panels
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {labPanels.map((panel: LabPanel) => (
-                      <div key={panel.id} className="bg-white rounded-xl shadow-sm border border-blue-100 overflow-hidden hover:shadow-md transition">
-                          <div className="bg-blue-50 p-4 border-b border-blue-100 flex justify-between items-center">
-                              <div>
-                                  <h3 className="font-bold text-blue-900">{panel.title}</h3>
-                                  <p className="text-xs text-blue-700 font-arabic">{panel.titleAr}</p>
-                              </div>
-                              <button 
-                                  onClick={() => togglePanel(panel.tests)}
-                                  className="text-xs bg-white text-blue-600 px-3 py-1 rounded border border-blue-200 hover:bg-blue-50"
-                              >
-                                  Toggle
-                              </button>
-                          </div>
-                          <div className="p-3 text-xs text-gray-600 space-y-1">
-                              {panel.tests.map(test => {
-                                  const isSelected = labChecklistSelection.has(test);
-                                  return (
-                                      <div key={test} onClick={() => toggleLabTest(test)} className={`flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded ${isSelected ? 'font-bold text-blue-700' : ''}`}>
-                                          <span className={`w-3 h-3 rounded-full border flex-shrink-0 ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}></span>
-                                          {test}
-                                      </div>
-                                  )
-                              })}
-                          </div>
-                      </div>
-                    ))}
-                  </div>
-              </div>
-
-              {/* Full Library Section */}
-              <div className="space-y-6">
-                  <div className="flex flex-col md:flex-row justify-between items-center gap-4 border-t border-gray-200 pt-6">
-                      <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
-                          <span className="text-xl">🧬</span> Full Laboratory Database
-                      </h3>
-                      <div className="relative w-full md:w-96">
-                          <input 
-                              type="text" 
-                              placeholder="Search all lab tests..." 
-                              value={labSearch}
-                              onChange={(e) => setLabSearch(e.target.value)}
-                              className="w-full p-2.5 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                          />
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-                      </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {Object.entries(fullLabCategories).map(([category, items]) => (
-                          <div key={category} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                              <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 font-bold text-gray-700 text-sm uppercase tracking-wide">
-                                  {category}
-                              </div>
-                              <div className="divide-y divide-gray-100">
-                                  {(items as LabTestItem[]).map((item) => {
-                                      const isSelected = labChecklistSelection.has(item.test);
-                                      return (
-                                          <div 
-                                              key={item.test} 
-                                              onClick={() => toggleLabTest(item.test)}
-                                              className={`p-3 cursor-pointer flex justify-between items-center hover:bg-blue-50 transition ${isSelected ? 'bg-blue-50' : 'bg-white'}`}
-                                          >
-                                              <div className="flex items-center gap-3">
-                                                  <div className={`w-5 h-5 rounded border flex items-center justify-center bg-white flex-shrink-0 ${isSelected ? 'border-blue-500' : 'border-gray-300'}`}>
-                                                      {isSelected && <span className="text-blue-600 text-sm font-bold">✓</span>}
-                                                  </div>
-                                                  <div>
-                                                      <div className={`text-sm ${isSelected ? 'text-blue-900 font-bold' : 'text-gray-800 font-medium'}`}>
-                                                          {item.test}
-                                                      </div>
-                                                      <div className="text-xs text-gray-400 font-mono">
-                                                          Range: {item.normal}
-                                                      </div>
-                                                  </div>
-                                              </div>
-                                          </div>
-                                      );
-                                  })}
-                              </div>
-                          </div>
-                      ))}
-                      {Object.keys(fullLabCategories).length === 0 && (
-                          <div className="col-span-full text-center py-10 text-gray-400 border border-dashed rounded-lg">
-                              No lab tests found matching "{labSearch}"
-                          </div>
-                      )}
-                  </div>
-              </div>
-
-              <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 z-50 flex justify-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-                  <div className="w-full max-w-5xl flex justify-between items-center px-4">
-                      <div className="text-sm text-gray-500">
-                          {labChecklistSelection.size} tests selected
-                      </div>
-                      <div className="flex gap-4">
-                          <button 
-                              onClick={() => { setLabSearch(''); setViewMode('details'); }}
-                              className="px-6 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium transition"
-                          >
-                              {t.common.cancel}
-                          </button>
-                          <button 
-                              onClick={saveLabChecklistToNotes}
-                              disabled={labChecklistSelection.size === 0}
-                              className="px-8 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                              Add to Notes
-                          </button>
-                      </div>
-                  </div>
-              </div>
-              <div className="h-20"></div> {/* Spacer for fixed footer */}
           </div>
       );
   }
 
-  // --- RENDER: LIST VIEW ---
+  // 5. Pediatric MAMC Wrapper
+  if (showPediatricMAMC) {
+      return (
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-white rounded-xl">
+                  <PediatricMAMC
+                      onClose={() => setShowPediatricMAMC(false)}
+                      onSave={handleToolNoteSave}
+                      initialGender={activeClient?.gender}
+                      initialAge={activeClient?.age}
+                      initialMac={activeClient?.miac}
+                  />
+              </div>
+          </div>
+      );
+  }
+
+  // 6. Growth Charts Wrapper
+  if (showGrowthCharts) {
+      return (
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="w-full max-w-6xl max-h-[95vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
+                  <GrowthCharts 
+                      onClose={() => setShowGrowthCharts(false)}
+                      onSave={handleToolNoteSave}
+                      initialData={{
+                          name: activeClient?.full_name,
+                          gender: activeClient?.gender || 'male',
+                          age: activeClient?.age || 0,
+                          weight: activeClient?.weight,
+                          height: activeClient?.height,
+                          head_circumference: activeClient?.head_circumference,
+                          bmi: activeClient?.bmi
+                      }}
+                  />
+              </div>
+          </div>
+      );
+  }
+
+  // 7. Instructions Wrapper
+  if (showInstructions) {
+      return (
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="w-full max-w-6xl max-h-[95vh] overflow-y-auto bg-white rounded-xl shadow-2xl">
+                  <InstructionsLibrary onClose={() => setShowInstructions(false)} />
+              </div>
+          </div>
+      );
+  }
+
+  // --- MAIN VIEW: LIST vs DETAIL ---
+
   if (viewMode === 'list') {
     return (
-        <div className="max-w-7xl mx-auto animate-fade-in space-y-6 pb-12">
-          {/* Header */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--color-heading)] flex items-center gap-2">
+      <div className="max-w-7xl mx-auto animate-fade-in pb-12">
+        {/* Header & Controls */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100 gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-[var(--color-heading)] flex items-center gap-2">
                 <span>👥</span> {t.clients.title}
-              </h1>
-              <p className="text-gray-500 text-sm mt-1">{t.tools.clients.desc}</p>
-            </div>
-            <button 
-              onClick={() => handleOpenProfile()}
-              disabled={tableError}
-              className={`text-white px-6 py-3 rounded-lg shadow-md transition flex items-center gap-2 font-medium ${tableError ? 'bg-gray-300 cursor-not-allowed' : 'bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)]'}`}
-            >
-              <span>+</span> {t.clients.addClient}
-            </button>
+            </h2>
+            <p className="text-sm text-gray-500">Manage patient records, visits, and assessments.</p>
           </div>
-    
-          {/* Search */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-             <div className="md:col-span-2 relative">
-                <input 
-                type="text"
-                placeholder={`${t.common.search} (Name, Code, Clinic)`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                disabled={tableError}
-                className="w-full p-3 pl-10 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none disabled:bg-gray-50"
-                dir={isRTL ? 'rtl' : 'ltr'}
-                />
-                <span className={`absolute top-1/2 -translate-y-1/2 text-gray-400 text-lg ${isRTL ? 'right-3' : 'left-3'}`}>🔍</span>
-             </div>
-             <div className="flex items-center gap-2">
-                 <label className="text-xs font-bold text-gray-500 uppercase">Sort:</label>
-                 <select 
-                    className="flex-grow p-2 rounded-lg border border-gray-200 text-sm bg-white"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as SortOption)}
-                 >
-                     <option value="date_desc">Date (Newest)</option>
-                     <option value="date_asc">Date (Oldest)</option>
-                     <option value="name_asc">Name (A-Z)</option>
-                     <option value="name_desc">Name (Z-A)</option>
-                     <option value="clinic">Clinic</option>
-                 </select>
-             </div>
-             <div className="flex items-center gap-2">
-                 <label className="text-xs font-bold text-gray-500 uppercase">Group:</label>
-                 <select 
-                    className="flex-grow p-2 rounded-lg border border-gray-200 text-sm bg-white"
-                    value={groupBy}
-                    onChange={(e) => setGroupBy(e.target.value as GroupOption)}
-                 >
-                     <option value="none">None</option>
-                     <option value="clinic">Location / Clinic</option>
-                     <option value="month">Month</option>
-                 </select>
-             </div>
+          
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+              <input 
+                  type="text" 
+                  placeholder="Search clients..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="p-2 border rounded-lg text-sm w-full md:w-48 focus:ring-2 focus:ring-green-500 outline-none"
+              />
+              <select 
+                  value={sortOption}
+                  onChange={(e) => setSortOption(e.target.value as SortOption)}
+                  className="p-2 border rounded-lg text-sm bg-gray-50"
+              >
+                  <option value="date_desc">Newest First</option>
+                  <option value="date_asc">Oldest First</option>
+                  <option value="name_asc">Name (A-Z)</option>
+                  <option value="clinic">Clinic</option>
+              </select>
+              <select 
+                  value={groupOption}
+                  onChange={(e) => setGroupOption(e.target.value as GroupOption)}
+                  className="p-2 border rounded-lg text-sm bg-gray-50"
+              >
+                  <option value="none">No Grouping</option>
+                  <option value="clinic">Group by Clinic</option>
+                  <option value="month">Group by Month</option>
+              </select>
+              <button 
+                onClick={() => { resetFormData(); setShowAddModal(true); }}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition text-sm font-bold shadow-sm flex items-center gap-1"
+              >
+                <span>+</span> {t.clients.addClient}
+              </button>
           </div>
-    
-          {/* List Content */}
-          {tableError && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-700 animate-fade-in">
-                <h3 className="text-lg font-bold mb-2">Database Configuration Error</h3>
-                <p>The 'clients' table could not be found in the database schema.</p>
-                <p className="text-sm mt-2">Please contact the administrator to initialize the database tables.</p>
-            </div>
-          )}
-          {!tableError && !loading && (
-              <div className="space-y-8">
-                  {Object.entries(groupedClients).map(([groupName, groupList]: [string, Client[]]) => (
-                      <div key={groupName} className="animate-fade-in">
-                          {groupBy !== 'none' && (
-                              <h3 className="text-lg font-bold text-gray-700 mb-3 pl-2 border-l-4 border-[var(--color-primary)]">
-                                  {groupName} <span className="text-sm font-normal text-gray-400">({groupList.length})</span>
-                              </h3>
-                          )}
-                          <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-                             {groupList.length === 0 ? (
-                                 <div className="p-8 text-center text-gray-400">No clients found.</div>
-                             ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead className="bg-gray-50 text-gray-600 uppercase text-xs font-bold">
-                                            <tr>
-                                            <th className="p-4 text-left">{t.clients.name}</th>
-                                            <th className="p-4 text-center hidden md:table-cell">Code</th>
-                                            <th className="p-4 text-center">{t.clients.visitDate}</th>
-                                            <th className="p-4 text-center hidden sm:table-cell">{t.clients.clinic}</th>
-                                            <th className="p-4 text-center">{t.common.actions}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                            {groupList.map(client => (
-                                                <tr key={client.id} className="hover:bg-blue-50 transition group">
-                                                    <td className="p-4">
-                                                        <div className="font-bold text-gray-800 text-lg flex items-center gap-2">
-                                                        {client.full_name}
-                                                        {client.gender && (
-                                                            <span className="text-sm" title={client.gender}>
-                                                            {client.gender === 'male' ? '👨' : '👩'}
-                                                            </span>
-                                                        )}
-                                                        </div>
-                                                        <div className="flex gap-3 text-xs text-gray-500 mt-1">
-                                                            {client.age && <span>{t.clients.age}: {client.age}</span>}
-                                                            {client.phone && <span>📞 {client.phone}</span>}
-                                                        </div>
-                                                    </td>
-                                                    <td className="p-4 text-center hidden md:table-cell text-xs font-mono text-gray-500">
-                                                        {client.client_code || '-'}
-                                                    </td>
-                                                    <td className="p-4 text-center">
-                                                        <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-mono">
-                                                        {formatDateUK(client.visit_date)}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-4 text-center text-gray-600 hidden sm:table-cell">
-                                                        {client.clinic || '-'}
-                                                    </td>
-                                                    <td className="p-4 text-center">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <button 
-                                                            onClick={() => handleOpenProfile(client)}
-                                                            className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition text-sm font-medium"
-                                                            >
-                                                            View
-                                                            </button>
-                                                            <button 
-                                                            onClick={() => handleDeleteClient(client.id)}
-                                                            className="p-2 text-red-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition"
-                                                            title={t.common.delete}
-                                                            >
-                                                            🗑️
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                             )}
-                          </div>
-                      </div>
-                  ))}
-              </div>
-          )}
-          {loading && <Loading />}
         </div>
-      );
-  }
 
-  // --- RENDER: PROFILE (DETAILS) VIEW ---
-  return (
-    <div className="max-w-[1920px] mx-auto animate-fade-in pb-12">
-         {/* Print Only View */}
-         {editingClient && <ClientPrintView client={editingClient} visits={visits} />}
-
-         {/* Profile Header */}
-         <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 no-print">
-           <div className="flex items-center gap-4">
-               <button 
-                  onClick={handleBackToList}
-                  className="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition flex items-center gap-2"
-               >
-                   <span>←</span> Back to List
-               </button>
-               <h2 className="text-2xl font-bold text-gray-800">
-                   {editingClient ? editingClient.full_name : t.clients.addClient}
-               </h2>
-           </div>
-           {editingClient && (
-               <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm overflow-x-auto">
-                   <button 
-                    onClick={() => setActiveTab('profile')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition whitespace-nowrap ${activeTab === 'profile' ? 'bg-blue-50 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]' : 'text-gray-600 hover:bg-gray-50'}`}
-                   >
-                       Profile
-                   </button>
-                   <button 
-                    onClick={() => setActiveTab('visits')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition whitespace-nowrap ${activeTab === 'visits' ? 'bg-blue-50 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]' : 'text-gray-600 hover:bg-gray-50'}`}
-                   >
-                       History ({visits.length})
-                   </button>
-                   <button 
-                    onClick={() => setActiveTab('report')}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition whitespace-nowrap ${activeTab === 'report' ? 'bg-blue-50 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]' : 'text-gray-600 hover:bg-gray-50'}`}
-                   >
-                       Report & Charts
-                   </button>
-               </div>
-           )}
-         </div>
-         
-         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden no-print">
-            {formError && <div className="bg-red-50 text-red-600 p-3 m-4 rounded-lg border border-red-100 no-print">{formError}</div>}
-            {saveSuccess && <div className="bg-green-50 text-green-600 p-3 m-4 rounded-lg border border-green-100 no-print">{saveSuccess}</div>}
-            
-            {/* TAB: PROFILE */}
-            {activeTab === 'profile' && (
-                 <div className="p-6">
-                    <form id="clientForm" onSubmit={handleSubmitProfile} className="space-y-6">
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                             
-                             {/* Left Col: Info & Measurements (Span 7) */}
-                             <div className="lg:col-span-7 space-y-6">
-                                {/* Core Identity */}
-                                <div className="bg-gray-50 p-5 rounded-xl border border-gray-100">
-                                    <h3 className="font-bold text-gray-700 text-sm uppercase border-b pb-2 mb-2">Core Identity</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="col-span-1 md:col-span-2">
-                                            <label className="block text-xs font-bold text-gray-500 mb-1">{t.clients.name} *</label>
-                                            <input 
-                                                type="text" required
-                                                value={formData.full_name}
-                                                onChange={e => {
-                                                    const val = e.target.value;
-                                                    setFormData(prev => ({...prev, full_name: val, client_code: prev.client_code || generateCode(val)}));
-                                                }}
-                                                className="w-full p-2 border rounded focus:ring-2 focus:ring-[var(--color-primary)] outline-none text-sm"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1">Gender</label>
-                                            <select 
-                                                value={formData.gender}
-                                                onChange={e => setFormData({...formData, gender: e.target.value as 'male' | 'female'})}
-                                                className="w-full p-2 border rounded outline-none bg-white text-sm"
-                                            >
-                                                <option value="male">{t.kcal.male}</option>
-                                                <option value="female">{t.kcal.female}</option>
-                                            </select>
-                                        </div>
-                                        
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1">Visit Date</label>
-                                            <div className="flex gap-2">
-                                                <input 
-                                                    type="date" 
-                                                    value={formData.visit_date}
-                                                    onChange={e => setFormData({...formData, visit_date: e.target.value})}
-                                                    className="w-full p-2 border rounded outline-none text-sm"
-                                                />
-                                                <button 
-                                                    type="button" 
-                                                    onClick={() => setFormData({...formData, visit_date: new Date().toISOString().split('T')[0]})}
-                                                    className="px-2 bg-gray-200 text-xs rounded hover:bg-gray-300 whitespace-nowrap"
-                                                    title="Set to Today"
-                                                >
-                                                    Today
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1">Date of Birth (Auto-Calc Age)</label>
-                                            <input 
-                                                type="date" 
-                                                value={formData.dob}
-                                                onChange={e => setFormData({...formData, dob: e.target.value})}
-                                                className="w-full p-2 border rounded outline-none text-sm"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1">
-                                                Age (Years) 
-                                                {ageDetail && <span className="text-[10px] font-normal text-blue-600 ml-1 bg-blue-50 px-1 rounded">({ageDetail.y}y {ageDetail.m}m {ageDetail.d}d)</span>}
-                                            </label>
-                                            <input 
-                                                type="number" 
-                                                value={formData.age}
-                                                onChange={e => setFormData({...formData, age: e.target.value === '' ? '' : Number(e.target.value)})}
-                                                className="w-full p-2 border rounded outline-none text-sm font-bold text-gray-800 focus:ring-2 focus:ring-[var(--color-primary)]"
-                                                placeholder="Enter manually"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1">Phone</label>
-                                            <input 
-                                                type="text" 
-                                                value={formData.phone}
-                                                onChange={e => setFormData({...formData, phone: e.target.value})}
-                                                className="w-full p-2 border rounded outline-none text-sm"
-                                                dir="ltr"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Marital & Job */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 mb-1">Marital Status</label>
-                                        <select 
-                                            value={formData.marital_status}
-                                            onChange={e => setFormData({...formData, marital_status: e.target.value})}
-                                            className="w-full p-2 border rounded outline-none bg-white text-sm"
-                                        >
-                                            <option value="single">Single</option>
-                                            <option value="married">Married</option>
-                                            <option value="divorced">Divorced</option>
-                                            <option value="widowed">Widowed</option>
-                                        </select>
-                                    </div>
-                                    {formData.marital_status !== 'single' ? (
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1">Kids Count</label>
-                                            <input 
-                                                type="number" 
-                                                value={formData.kids_count}
-                                                onChange={e => setFormData({...formData, kids_count: e.target.value === '' ? '' : Number(e.target.value)})}
-                                                className="w-full p-2 border rounded outline-none text-sm"
-                                            />
-                                        </div>
-                                    ) : <div></div>}
-                                    <div className="col-span-2">
-                                        <label className="block text-xs font-bold text-gray-500 mb-1">Job / Occupation</label>
-                                        <div className="flex gap-2">
-                                            <input 
-                                                type="text" 
-                                                value={formData.job}
-                                                disabled={noJob}
-                                                onChange={e => setFormData({...formData, job: e.target.value})}
-                                                className="flex-grow p-2 border rounded outline-none text-sm disabled:bg-gray-100"
-                                            />
-                                            <label className="flex items-center gap-1 text-xs cursor-pointer whitespace-nowrap">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={noJob} 
-                                                    onChange={e => setNoJob(e.target.checked)}
-                                                />
-                                                No Job
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Measurements */}
-                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                     <h3 className="font-bold text-blue-800 text-xs uppercase mb-3">1st Visit Measurements</h3>
-                                     <div className="grid grid-cols-3 gap-4">
-                                         <div>
-                                             <label className="block text-[10px] font-bold text-blue-600 uppercase">Weight (kg)</label>
-                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.weight} onChange={e => setFormData({...formData, weight: e.target.value === '' ? '' : Number(e.target.value)})} />
-                                         </div>
-                                         <div>
-                                             <label className="block text-[10px] font-bold text-blue-600 uppercase">
-                                                 {ageDetail && (ageDetail.y * 12 + ageDetail.m) < 24 ? 'Length (cm)' : 'Height (cm)'}
-                                             </label>
-                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.height} onChange={e => setFormData({...formData, height: e.target.value === '' ? '' : Number(e.target.value)})} />
-                                         </div>
-                                         
-                                         {/* Pediatric: Head Circ (Up to 36 months) */}
-                                         {ageDetail && (ageDetail.y * 12 + ageDetail.m) <= 36 ? (
-                                             <div>
-                                                 <label className="block text-[10px] font-bold text-blue-600 uppercase">Head Circ. (cm)</label>
-                                                 <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.head_circumference} onChange={e => setFormData({...formData, head_circumference: e.target.value === '' ? '' : Number(e.target.value)})} />
-                                             </div>
-                                         ) : (
-                                             <div>
-                                                 <label className="block text-[10px] font-bold text-blue-600 uppercase">BMI</label>
-                                                 <div className="w-full p-1.5 text-sm border rounded bg-white font-mono text-center">{profileBMI || '-'}</div>
-                                             </div>
-                                         )}
-
-                                         <div>
-                                             <label className="block text-[10px] font-bold text-blue-600 uppercase">Waist (cm)</label>
-                                             <div className="flex gap-1">
-                                                 <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.waist} onChange={e => setFormData({...formData, waist: e.target.value === '' ? '' : Number(e.target.value)})} />
-                                                 {/* Pediatric Waist Tool Link */}
-                                                 {formData.age !== '' && Number(formData.age) >= 2 && Number(formData.age) <= 19 && (
-                                                     <button 
-                                                        type="button" 
-                                                        onClick={() => handleOpenTool('pediatric-waist', 'client', editingClient?.id || '', { gender: formData.gender, age: formData.age, waist: formData.waist })}
-                                                        className="px-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded text-[10px] font-bold border border-blue-200"
-                                                        title="Pediatric Waist Percentile Tool"
-                                                     >
-                                                         📉 %
-                                                     </button>
-                                                 )}
-                                             </div>
-                                         </div>
-                                         <div>
-                                             <label className="block text-[10px] font-bold text-blue-600 uppercase">Hip (cm)</label>
-                                             <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.hip} onChange={e => setFormData({...formData, hip: e.target.value === '' ? '' : Number(e.target.value)})} />
-                                         </div>
-                                         <div>
-                                             <label className="block text-[10px] font-bold text-blue-600 uppercase">MIAC (cm)</label>
-                                             <div className="flex gap-1">
-                                                 <input type="number" className="w-full p-1.5 text-sm border rounded" value={formData.miac} onChange={e => setFormData({...formData, miac: e.target.value === '' ? '' : Number(e.target.value)})} />
-                                                 {/* Pediatric MAMC Tool Link */}
-                                                 {formData.age !== '' && Number(formData.age) >= 2 && Number(formData.age) <= 19 && (
-                                                     <button 
-                                                        type="button" 
-                                                        onClick={() => handleOpenTool('pediatric-mamc', 'client', editingClient?.id || '', { gender: formData.gender, age: formData.age, mac: formData.miac })}
-                                                        className="px-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded text-[10px] font-bold border border-blue-200"
-                                                        title="MAC/MAMC Analysis Tool"
-                                                     >
-                                                         📉 MAC
-                                                     </button>
-                                                 )}
-                                             </div>
-                                         </div>
-                                     </div>
-                                </div>
-
-                                {/* Pediatric History Tags */}
-                                {(formData.age !== '' && Number(formData.age) < 20) && (
-                                    <div className="bg-pink-50 p-5 rounded-xl border border-pink-100">
-                                        <div className="flex justify-between items-center mb-4 border-b border-pink-200 pb-2">
-                                            <h3 className="font-bold text-pink-700 text-sm uppercase">
-                                                👶 Pediatric Assessment
-                                            </h3>
-                                            <div className="flex gap-2">
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => handleOpenTool('strong-kids', 'client', editingClient?.id || '')}
-                                                    className="text-xs bg-white text-pink-600 px-3 py-1 rounded border border-pink-300 font-bold hover:bg-pink-100 transition"
-                                                >
-                                                    STRONGkids
-                                                </button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => handleOpenTool('growth-charts', 'client', editingClient?.id || '', { name: formData.full_name, gender: formData.gender, age: formData.age, weight: formData.weight, height: formData.height, head_circumference: formData.head_circumference, bmi: profileBMI })}
-                                                    className="text-xs bg-blue-600 text-white px-3 py-1 rounded border border-blue-600 font-bold hover:bg-blue-700 transition"
-                                                >
-                                                    📈 Growth Charts
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <p className="text-xs text-pink-600 mb-3 opacity-80">Click a tag to add it to notes.</p>
-                                        
-                                        <div className="space-y-3">
-                                            {Object.entries(PEDIATRIC_TAG_CATEGORIES).map(([category, tags]) => {
-                                                const isExpanded = expandedPediatricCategory === category;
-                                                return (
-                                                    <div key={category} className="bg-white rounded-lg border border-pink-200 overflow-hidden">
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => setExpandedPediatricCategory(isExpanded ? null : category)}
-                                                            className="w-full px-3 py-2 text-left flex justify-between items-center hover:bg-pink-50 transition"
-                                                        >
-                                                            <span className="text-xs font-bold text-pink-700">{category}</span>
-                                                            <span className="text-pink-400 text-xs">{isExpanded ? '▲' : '▼'}</span>
-                                                        </button>
-                                                        
-                                                        {isExpanded && (
-                                                            <div className="p-3 flex flex-wrap gap-2 bg-pink-50/30">
-                                                                {tags.map(tag => (
-                                                                    <button
-                                                                        key={tag}
-                                                                        type="button"
-                                                                        onClick={() => addTag(tag, category)}
-                                                                        className="px-2 py-1 bg-white hover:bg-pink-100 text-gray-700 text-xs rounded border border-pink-200 hover:border-pink-300 transition shadow-sm"
-                                                                    >
-                                                                        + {tag}
-                                                                    </button>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-                             </div>
-
-                             {/* Right Col: Notes (Span 5) */}
-                             <div className="lg:col-span-5 h-full flex flex-col">
-                                 <div className="sticky top-4">
-                                     <div className="flex justify-between items-center mb-2">
-                                         <div className="flex gap-2 items-center flex-wrap">
-                                            <label className="block text-xs font-bold text-gray-500">📝 Medical Notes & History</label>
-                                            <button type="button" onClick={insertTemplate} className="text-xs bg-gray-100 px-2 py-0.5 rounded border hover:bg-gray-200 text-gray-600">
-                                                Template
-                                            </button>
-                                            <button 
-                                                type="button"
-                                                onClick={handleRunNFPE}
-                                                className="text-xs bg-red-100 px-2 py-0.5 rounded border border-red-200 hover:bg-red-200 text-red-700 font-bold flex items-center gap-1"
-                                            >
-                                                🩺 NFPE
-                                            </button>
-                                            {editingClient && (
-                                                <>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => handleOpenTool('lab-checklist', 'client', editingClient.id)}
-                                                    className="text-xs bg-blue-100 px-2 py-0.5 rounded border border-blue-200 hover:bg-blue-200 text-blue-800 font-bold flex items-center gap-1"
-                                                >
-                                                    🧪 Labs
-                                                </button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => handleOpenTool('dietary-recall', 'client', editingClient.id, editingClient.dietary_assessment)}
-                                                    className="text-xs bg-yellow-100 px-2 py-0.5 rounded border border-yellow-200 hover:bg-yellow-200 text-yellow-800 font-bold flex items-center gap-1"
-                                                >
-                                                    📅 Recall
-                                                </button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => handleOpenTool('food-questionnaire', 'client', editingClient.id, editingClient.food_questionnaire)}
-                                                    className="text-xs bg-green-100 px-2 py-0.5 rounded border border-green-200 hover:bg-green-200 text-green-800 font-bold flex items-center gap-1"
-                                                >
-                                                    🥗 Food Q.
-                                                </button>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => handleOpenTool('instructions', 'client', editingClient.id)}
-                                                    className="text-xs bg-gray-100 px-2 py-0.5 rounded border border-gray-300 hover:bg-gray-200 text-gray-800 font-bold flex items-center gap-1"
-                                                >
-                                                    📋 Instructions
-                                                </button>
-                                                </>
-                                            )}
-                                         </div>
-                                         <button 
-                                            type="button"
-                                            onClick={toggleAllTags}
-                                            className="text-xs text-white bg-[var(--color-primary)] px-3 py-1 rounded font-medium hover:bg-[var(--color-primary-hover)] shadow-sm"
-                                         >
-                                             {allTagsExpanded ? 'Collapse' : 'Expand'}
-                                         </button>
-                                     </div>
-                                     
-                                     <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 mb-4 max-h-60 overflow-y-auto">
-                                        {Object.entries(TAG_CATEGORIES).map(([category, tags]) => {
-                                            if (category === "🌸 Female Only" && formData.gender === "male") return null;
-                                            const isExpanded = allTagsExpanded || expandedCategory === category;
-                                            return (
-                                                <div key={category} className="bg-white first:rounded-t-lg last:rounded-b-lg">
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => setExpandedCategory(isExpanded && !allTagsExpanded ? null : category)}
-                                                        className="w-full px-4 py-2 text-left flex justify-between items-center hover:bg-gray-50 transition"
-                                                    >
-                                                        <span className="text-sm font-medium text-gray-700">{category}</span>
-                                                        {!allTagsExpanded && (
-                                                            <span className="text-gray-400">{isExpanded ? '▲' : '▼'}</span>
-                                                        )}
-                                                    </button>
-                                                    {isExpanded && (
-                                                        <div className="px-4 pb-3 pt-1 flex flex-wrap gap-2 animate-fade-in bg-gray-50/50 border-t border-gray-50">
-                                                            {tags.map(tag => (
-                                                                <button
-                                                                    key={tag}
-                                                                    type="button"
-                                                                    onClick={() => addTag(tag, category)}
-                                                                    className="px-2 py-1 bg-white hover:bg-blue-50 text-gray-700 text-xs rounded border border-gray-200 hover:border-blue-300 transition shadow-sm"
-                                                                >
-                                                                    + {tag}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                     </div>
-
-                                     <textarea 
-                                        rows={16}
-                                        value={formData.notes}
-                                        onChange={e => setFormData({...formData, notes: e.target.value})}
-                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none resize-y whitespace-pre-wrap text-sm font-mono bg-gray-50 focus:bg-white min-h-[400px]"
-                                        placeholder="Clinical notes appear here..."
-                                    ></textarea>
-                                 </div>
-                             </div>
-                        </div>
-
-                        <div className="flex justify-between pt-4 border-t border-gray-100">
-                            {editingClient && (
-                                <button 
-                                    type="button"
-                                    onClick={() => window.print()}
-                                    className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition"
-                                >
-                                    🖨️ Print Full Profile
-                                </button>
-                            )}
-                            <button 
-                                type="submit" 
-                                disabled={submitting}
-                                className="px-8 py-3 rounded-lg bg-[var(--color-primary)] text-white font-bold hover:bg-[var(--color-primary-hover)] transition disabled:opacity-50 shadow-md ml-auto"
-                            >
-                                {submitting ? 'Saving...' : t.common.save}
-                            </button>
-                        </div>
-                    </form>
-                 </div>
-            )}
-
-            {/* TAB: VISITS */}
-            {activeTab === 'visits' && editingClient && (
-                <div className="p-6 space-y-8 animate-fade-in">
-                    {/* New/Edit Visit Form */}
-                    <div className={`p-5 rounded-xl border shadow-sm ${editingVisitId ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-100'}`}>
-                        <div className="flex justify-between items-center mb-3">
-                            <h4 className={`font-bold text-sm uppercase ${editingVisitId ? 'text-yellow-800' : 'text-blue-800'}`}>
-                                {editingVisitId ? `Edit Visit Record` : 'Record New Follow-up'}
-                            </h4>
-                            {editingVisitId && (
-                                <button 
-                                    onClick={handleCancelEditVisit}
-                                    className="text-xs bg-white border border-red-200 text-red-600 px-3 py-1 rounded hover:bg-red-50"
-                                >
-                                    Cancel Edit
-                                </button>
-                            )}
-                        </div>
-                        {!editingVisitId && (
-                             <div className="text-xs text-blue-600 mb-3 opacity-80">
-                                * Data auto-filled from previous visit. Adjust as needed.
-                            </div>
-                        )}
-                        <form onSubmit={handleSaveVisit} className="space-y-4">
-                            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                                    <div className="md:col-span-2">
-                                        <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>Date</label>
-                                        <input 
-                                        type="date" 
-                                        required
-                                        className={`w-full p-2 rounded border text-sm ${editingVisitId ? 'border-yellow-300 focus:ring-yellow-400' : 'border-blue-200 focus:ring-blue-400'} focus:ring-1`}
-                                        value={newVisitData.visit_date}
-                                        onChange={e => setNewVisitData({...newVisitData, visit_date: e.target.value})}
-                                    />
-                                    </div>
-                                    <div>
-                                        <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>Wt (kg)</label>
-                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.weight} onChange={e => setNewVisitData({...newVisitData, weight: e.target.value === '' ? '' : Number(e.target.value)})} />
-                                    </div>
-                                    <div>
-                                        <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>
-                                            {ageDetail && (ageDetail.y * 12 + ageDetail.m) < 24 ? 'Length (cm)' : 'Ht (cm)'}
-                                        </label>
-                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.height} onChange={e => setNewVisitData({...newVisitData, height: e.target.value === '' ? '' : Number(e.target.value)})} />
-                                    </div>
-                                    
-                                    {/* Head Circ for Visits? If infant */}
-                                    {ageDetail && (ageDetail.y * 12 + ageDetail.m) <= 36 && (
-                                        <div>
-                                            <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>Head (cm)</label>
-                                            <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.head_circumference} onChange={e => setNewVisitData({...newVisitData, head_circumference: e.target.value === '' ? '' : Number(e.target.value)})} />
-                                        </div>
-                                    )}
-
-                                    <div>
-                                        <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>Waist</label>
-                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.waist} onChange={e => setNewVisitData({...newVisitData, waist: e.target.value === '' ? '' : Number(e.target.value)})} />
-                                    </div>
-                                    <div>
-                                        <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>Hip</label>
-                                        <input type="number" className="w-full p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" value={newVisitData.hip} onChange={e => setNewVisitData({...newVisitData, hip: e.target.value === '' ? '' : Number(e.target.value)})} />
-                                    </div>
-                            </div>
-                            
-                            {/* InBody Section */}
-                            <div className="bg-white p-3 rounded border border-blue-100 flex items-center gap-4">
-                                <div>
-                                    <label className={`block text-[10px] uppercase font-bold mb-1 ${editingVisitId ? 'text-yellow-700' : 'text-blue-600'}`}>Body Fat % (InBody)</label>
-                                    <input 
-                                        type="number" 
-                                        className="w-24 p-2 rounded border border-blue-200 text-sm focus:ring-1 focus:ring-blue-400" 
-                                        value={newVisitData.body_fat} 
-                                        onChange={e => setNewVisitData({...newVisitData, body_fat: e.target.value === '' ? '' : Number(e.target.value)})} 
-                                        placeholder="%"
-                                    />
-                                </div>
-                                {bodyFatAnalysis && (
-                                    <div className={`mt-4 px-3 py-1 rounded text-sm font-bold bg-gray-50 border ${bodyFatAnalysis.color.replace('text-', 'border-')}`}>
-                                        <span className={bodyFatAnalysis.color}>{bodyFatAnalysis.status}</span>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex gap-3">
-                                <div className="flex-grow">
-                                    <textarea 
-                                        placeholder="Quick visit notes..."
-                                        className="w-full p-2 rounded border border-blue-200 text-sm resize-none focus:ring-1 focus:ring-blue-400"
-                                        rows={2}
-                                        value={newVisitData.notes}
-                                        onChange={e => setNewVisitData({...newVisitData, notes: e.target.value})}
-                                    ></textarea>
-                                </div>
-                                <button 
-                                    type="submit"
-                                    disabled={submitting}
-                                    className={`${editingVisitId ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-blue-600 hover:bg-blue-700'} text-white px-6 py-2 rounded-lg text-sm font-bold disabled:opacity-50 self-start shadow-md transition`}
-                                >
-                                    {editingVisitId ? 'Update Visit' : 'Add Visit'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    {/* Timeline List */}
-                    <div className="relative border-l-2 border-gray-200 ml-3 space-y-8 pb-8">
-                        {loadingVisits && <div className="pl-6 text-gray-400">Loading visits...</div>}
-                        {!loadingVisits && visits.length === 0 && (
-                            <div className="pl-6 text-gray-400 italic text-sm">No follow-up visits recorded yet.</div>
-                        )}
-
-                        {visits.map((visit) => {
-                             const planStats = visit.meal_plan_data?.servings ? calculatePlanStats(visit.meal_plan_data.servings) : null;
-                             const planTotalKcal = planStats ? planStats.kcal : 0;
-                             const planPcts = planTotalKcal > 0 && planStats ? {
-                                 cho: (planStats.cho * 4 / planTotalKcal * 100).toFixed(0),
-                                 pro: (planStats.pro * 4 / planTotalKcal * 100).toFixed(0),
-                                 fat: (planStats.fat * 9 / planTotalKcal * 100).toFixed(0)
-                             } : { cho: 0, pro: 0, fat: 0 };
-                             
-                             // Get fat % from kcal_data if stored
-                             const bodyFat = visit.kcal_data?.inputs?.bodyFatPercent;
-                             const isEditingThis = editingVisitId === visit.id;
-
-                             return (
-                                <div key={visit.id} className="relative pl-8">
-                                    <div className={`absolute -left-[9px] top-0 w-4 h-4 bg-white border-2 ${isEditingThis ? 'border-yellow-500 scale-125' : 'border-[var(--color-primary)]'} rounded-full z-10 transition-all`}></div>
-                                    <div className={`bg-white rounded-xl p-5 border ${isEditingThis ? 'border-yellow-300 ring-2 ring-yellow-100' : 'border-gray-200'} shadow-sm hover:shadow-md transition group`}>
-                                         <div className="flex justify-between items-start mb-4 border-b border-gray-100 pb-3">
-                                             <div className="flex items-center gap-4">
-                                                 <span className="font-bold text-gray-800 text-lg">
-                                                 {formatDateUK(visit.visit_date)}
-                                                 </span>
-                                                 <div className="flex gap-2 text-xs font-mono">
-                                                     {visit.weight && <span className="bg-blue-50 border border-blue-100 px-2 py-0.5 rounded text-blue-700 font-bold">Wt: {visit.weight}</span>}
-                                                     {visit.bmi && <span className="bg-orange-50 border border-orange-100 px-2 py-0.5 rounded text-orange-700 font-bold">BMI: {visit.bmi}</span>}
-                                                     {bodyFat && <span className="bg-purple-50 border border-purple-100 px-2 py-0.5 rounded text-purple-700 font-bold">Fat: {bodyFat}%</span>}
-                                                 </div>
-                                             </div>
-                                             <div className="flex gap-2">
-                                                 <button 
-                                                    onClick={() => handleEditVisit(visit)} 
-                                                    className="text-gray-400 hover:text-blue-600 px-2 font-bold text-sm"
-                                                    title="Edit Visit"
-                                                 >
-                                                     ✏️
-                                                 </button>
-                                                 <button 
-                                                    onClick={() => handleDeleteVisit(visit.id)} 
-                                                    className="text-red-400 hover:text-red-600 px-2 font-bold text-lg"
-                                                    title="Delete Visit"
-                                                 >
-                                                     ×
-                                                 </button>
-                                             </div>
-                                         </div>
-                                         
-                                         <div className="grid grid-cols-4 gap-2 text-xs text-gray-600 mb-4 bg-gray-50 p-3 rounded border border-gray-100">
-                                             <div><span className="font-bold text-gray-400 uppercase block">{ageDetail && (ageDetail.y * 12 + ageDetail.m) < 24 ? 'Length' : 'Ht'}</span> {visit.height || '-'} cm</div>
-                                             <div><span className="font-bold text-gray-400 uppercase block">Waist</span> {visit.waist || '-'} cm</div>
-                                             {visit.head_circumference && <div><span className="font-bold text-gray-400 uppercase block">Head Circ.</span> {visit.head_circumference} cm</div>}
-                                             <div><span className="font-bold text-gray-400 uppercase block">MIAC</span> {visit.miac || '-'} cm</div>
-                                         </div>
-
-                                         <div className="mb-4 flex flex-col sm:flex-row gap-6 items-start">
-                                             {/* Tools Column */}
-                                             <div className="flex flex-col gap-2 w-full sm:w-auto">
-                                                 <button 
-                                                     onClick={() => openKcalForVisit(visit)}
-                                                     className="text-xs font-bold text-green-700 hover:text-green-800 flex items-center gap-1 transition self-start bg-green-50 px-2 py-1 rounded border border-green-100 w-full"
-                                                 >
-                                                     <span>🔥</span> Kcal: {visit.kcal_data?.inputs?.reqKcal || '-'}
-                                                 </button>
-                                                 <button 
-                                                     onClick={() => openMealPlanForVisit(visit)}
-                                                     className="text-xs font-bold text-purple-700 hover:text-purple-800 flex items-center gap-1 transition self-start bg-purple-50 px-2 py-1 rounded border border-purple-100 w-full"
-                                                 >
-                                                     <span>📅</span> Plan: {visit.meal_plan_data ? `${planTotalKcal.toFixed(0)} kcal` : '-'}
-                                                 </button>
-                                                 {/* New Dietary Tool Buttons for Visit */}
-                                                 <button 
-                                                     onClick={() => handleOpenTool('dietary-recall', 'visit', visit.id, visit.dietary_assessment)}
-                                                     className="text-xs font-bold text-yellow-700 hover:text-yellow-800 flex items-center gap-1 transition self-start bg-yellow-50 px-2 py-1 rounded border border-yellow-100 w-full"
-                                                 >
-                                                     <span>📅</span> Recall {visit.dietary_assessment ? '✓' : ''}
-                                                 </button>
-                                                 <button 
-                                                     onClick={() => handleOpenTool('food-questionnaire', 'visit', visit.id, visit.food_questionnaire)}
-                                                     className="text-xs font-bold text-green-700 hover:text-green-800 flex items-center gap-1 transition self-start bg-green-50 px-2 py-1 rounded border border-green-100 w-full"
-                                                 >
-                                                     <span>🥗</span> Food Q. {visit.food_questionnaire ? '✓' : ''}
-                                                 </button>
-                                             </div>
-                                             
-                                             {/* Summaries (Meal Plan details) */}
-                                             {visit.meal_plan_data && (
-                                                 <div className="flex-grow flex flex-col gap-2 bg-purple-50 border border-purple-100 px-3 py-2 rounded-lg text-purple-800 text-xs">
-                                                     {planStats && (
-                                                         <div className="grid grid-cols-3 gap-2 text-center mt-1">
-                                                             <div>
-                                                                 <div className="font-bold text-blue-600">{planStats.cho.toFixed(0)}g</div>
-                                                                 <div className="text-[10px] text-blue-500">CHO ({planPcts.cho}%)</div>
-                                                             </div>
-                                                             <div>
-                                                                 <div className="font-bold text-red-600">{planStats.pro.toFixed(0)}g</div>
-                                                                 <div className="text-[10px] text-red-500">PRO ({planPcts.pro}%)</div>
-                                                             </div>
-                                                             <div>
-                                                                 <div className="font-bold text-yellow-600">{planStats.fat.toFixed(0)}g</div>
-                                                                 <div className="text-[10px] text-yellow-600">FAT ({planPcts.fat}%)</div>
-                                                             </div>
-                                                         </div>
-                                                     )}
-                                                 </div>
-                                             )}
-                                         </div>
-
-                                         {visit.notes && (
-                                             <div className="border-l-2 border-gray-200 pl-3 py-1">
-                                                 <NoteDisplay text={visit.notes} />
-                                             </div>
-                                         )}
-                                    </div>
-                                </div>
-                             );
-                        })}
-                    </div>
+        {/* Client List (Grouped) */}
+        <div className="space-y-8">
+            {Object.keys(groupedClients).length === 0 && (
+                <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+                    <span className="text-4xl block mb-2 opacity-50">📂</span>
+                    <p className="text-gray-500">{t.clients.noClients}</p>
                 </div>
             )}
+
+            {Object.entries(groupedClients).map(([group, groupClients]) => {
+                const clientsList = groupClients as Client[];
+                return (
+                <div key={group} className="animate-fade-in">
+                    {groupOption !== 'none' && (
+                        <h3 className="text-lg font-bold text-gray-700 mb-3 pl-2 border-l-4 border-green-500">{group} <span className="text-sm font-normal text-gray-400">({clientsList.length})</span></h3>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {clientsList.map(client => (
+                            <div 
+                                key={client.id} 
+                                onClick={() => handleClientClick(client)}
+                                className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-green-300 transition cursor-pointer group relative overflow-hidden"
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <h3 className="font-bold text-gray-800 text-lg group-hover:text-green-600 transition">{client.full_name}</h3>
+                                    {client.client_code && (
+                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-mono">#{client.client_code}</span>
+                                    )}
+                                </div>
+                                <div className="space-y-1 text-sm text-gray-600">
+                                    <p className="flex items-center gap-2"><span className="opacity-50">📅</span> {formatDateUK(client.visit_date)}</p>
+                                    <p className="flex items-center gap-2"><span className="opacity-50">📍</span> {client.clinic || '-'}</p>
+                                    <p className="flex items-center gap-2"><span className="opacity-50">📱</span> {client.phone || '-'}</p>
+                                </div>
+                                
+                                {/* Quick Stats Badge */}
+                                <div className="mt-3 pt-3 border-t border-gray-50 flex gap-2">
+                                    {client.bmi && (
+                                        <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                                            client.bmi > 30 ? 'bg-red-50 text-red-600' : 
+                                            client.bmi > 25 ? 'bg-orange-50 text-orange-600' : 'bg-green-50 text-green-600'
+                                        }`}>
+                                            BMI: {client.bmi}
+                                        </span>
+                                    )}
+                                    {client.age && client.age < 18 && (
+                                        <span className="text-[10px] px-2 py-0.5 rounded bg-blue-50 text-blue-600 font-bold">
+                                            Pediatric
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );})}
+        </div>
+
+        {/* Add/Edit Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
+              <h3 className="text-xl font-bold mb-4">{activeClient ? t.clients.editClient : t.clients.addClient}</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="col-span-2 md:col-span-1">
+                    <label className="block text-sm font-medium mb-1">{t.clients.name} *</label>
+                    <input 
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-green-500 outline-none"
+                      value={formData.full_name || ''}
+                      onChange={e => setFormData({...formData, full_name: e.target.value})}
+                    />
+                </div>
+                <div className="col-span-2 md:col-span-1">
+                    <label className="block text-sm font-medium mb-1">Client Code</label>
+                    <input 
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-green-500 outline-none"
+                      value={formData.client_code || ''}
+                      onChange={e => setFormData({...formData, client_code: e.target.value})}
+                    />
+                </div>
+                
+                <div className="col-span-1">
+                    <label className="block text-sm font-medium mb-1">{t.clients.visitDate} *</label>
+                    <input 
+                      type="date"
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-green-500 outline-none"
+                      value={formData.visit_date || ''}
+                      onChange={e => setFormData({...formData, visit_date: e.target.value})}
+                    />
+                </div>
+                <div className="col-span-1">
+                    <label className="block text-sm font-medium mb-1">{t.clients.clinic}</label>
+                    <input 
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-green-500 outline-none"
+                      value={formData.clinic || ''}
+                      onChange={e => setFormData({...formData, clinic: e.target.value})}
+                      list="clinic-suggestions"
+                    />
+                    <datalist id="clinic-suggestions">
+                        <option value="Main Clinic" />
+                        <option value="Hospital" />
+                        <option value="Online" />
+                    </datalist>
+                </div>
+
+                <div className="col-span-1">
+                    <label className="block text-sm font-medium mb-1">{t.clients.phone}</label>
+                    <input 
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-green-500 outline-none"
+                      value={formData.phone || ''}
+                      onChange={e => setFormData({...formData, phone: e.target.value})}
+                    />
+                </div>
+                <div className="col-span-1">
+                    <label className="block text-sm font-medium mb-1">{t.clients.gender}</label>
+                    <select 
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-green-500 outline-none bg-white"
+                      value={formData.gender || 'male'}
+                      onChange={e => setFormData({...formData, gender: e.target.value as any})}
+                    >
+                      <option value="male">{t.kcal.male}</option>
+                      <option value="female">{t.kcal.female}</option>
+                    </select>
+                </div>
+
+                {/* Vitals */}
+                <div className="col-span-2 border-t border-gray-100 pt-4 mt-2">
+                    <h4 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">Vitals & Anthropometry</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 mb-1">{t.kcal.age}</label>
+                            <input type="number" className="w-full p-2 border rounded" value={formData.age || ''} onChange={e => setFormData({...formData, age: Number(e.target.value)})} />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 mb-1">Wt (kg)</label>
+                            <input type="number" className="w-full p-2 border rounded" value={formData.weight || ''} onChange={e => setFormData({...formData, weight: Number(e.target.value)})} />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 mb-1">Ht (cm)</label>
+                            <input type="number" className="w-full p-2 border rounded" value={formData.height || ''} onChange={e => setFormData({...formData, height: Number(e.target.value)})} />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 mb-1">Waist (cm)</label>
+                            <input type="number" className="w-full p-2 border rounded" value={formData.waist || ''} onChange={e => setFormData({...formData, waist: Number(e.target.value)})} />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-1">{t.clients.notes}</label>
+                    <textarea 
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-green-500 outline-none h-24"
+                      value={formData.notes || ''}
+                      onChange={e => setFormData({...formData, notes: e.target.value})}
+                      placeholder="Medical history, complaints, etc."
+                    />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button 
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+                >
+                  {t.common.cancel}
+                </button>
+                <button 
+                  onClick={handleSaveClient}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-bold shadow-md"
+                >
+                  {t.common.save}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // --- DETAIL VIEW ---
+  if (!activeClient) return null;
+
+  return (
+    <div className="max-w-[1920px] mx-auto animate-fade-in pb-20">
+        
+        {/* Detail Header */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 no-print">
+            <div className="flex items-center gap-4">
+                <button 
+                    onClick={() => setViewMode('list')}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-2 rounded-lg transition flex items-center gap-2 text-sm font-bold"
+                >
+                    <span>←</span> Clients
+                </button>
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                        {activeClient.full_name}
+                        {activeClient.client_code && <span className="text-sm font-mono font-normal text-gray-400 bg-gray-50 px-2 rounded">#{activeClient.client_code}</span>}
+                    </h1>
+                    <div className="text-sm text-gray-500 flex flex-wrap gap-3 mt-1">
+                        <span>{activeClient.gender === 'male' ? '👨 Male' : '👩 Female'}</span>
+                        <span>•</span>
+                        <span>{activeClient.age} Years</span>
+                        <span>•</span>
+                        <span>{activeClient.phone || 'No Phone'}</span>
+                        <span>•</span>
+                        <span className="text-green-600 font-bold">{activeClient.clinic}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+                <button 
+                    onClick={() => { setFormData(activeClient); setShowAddModal(true); }}
+                    className="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-100 transition"
+                >
+                    ✏️ Edit Profile
+                </button>
+                <button 
+                    onClick={() => { setVisitFormData({ visit_date: new Date().toISOString().split('T')[0] }); setShowVisitModal(true); }}
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-green-700 transition shadow-sm flex items-center gap-1"
+                >
+                    <span>+</span> New Visit
+                </button>
+                {activeVisit && onAnalyzeInKcal && (
+                    <button 
+                        onClick={() => onAnalyzeInKcal(activeClient, activeVisit)}
+                        className="bg-purple-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-purple-700 transition shadow-sm flex items-center gap-1"
+                    >
+                        <span>🔥</span> Calc Kcal
+                    </button>
+                )}
+                {activeVisit && onPlanMeals && (
+                    <button 
+                        onClick={() => onPlanMeals(activeClient, activeVisit)}
+                        className="bg-orange-500 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-orange-600 transition shadow-sm flex items-center gap-1"
+                    >
+                        <span>🍽️</span> Plan Meals
+                    </button>
+                )}
+            </div>
+        </div>
+
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
             
-            {/* Report Tab (Unchanged) */}
-            {activeTab === 'report' && editingClient && chartData && (
-                 <div className="p-8 animate-fade-in">
-                     <div className="flex justify-end mb-6 no-print gap-2">
+            {/* Left Column: Vitals & History (4 cols) */}
+            <div className="xl:col-span-4 space-y-6">
+                
+                {/* Current Vitals Card */}
+                <div className="card bg-white shadow-sm border border-blue-100 overflow-hidden">
+                    <div className="p-4 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
+                        <h3 className="font-bold text-blue-900">Current Vitals</h3>
+                        <span className="text-xs text-blue-600 font-mono">{formatDateUK(activeClient.visit_date)}</span>
+                    </div>
+                    <div className="p-4 grid grid-cols-2 gap-4">
+                        <div className="text-center p-2 bg-gray-50 rounded border border-gray-100">
+                            <div className="text-xs text-gray-500 uppercase font-bold">Weight</div>
+                            <div className="text-xl font-bold text-gray-800">{activeClient.weight || '-'} <span className="text-xs font-normal text-gray-400">kg</span></div>
+                        </div>
+                        <div className="text-center p-2 bg-gray-50 rounded border border-gray-100">
+                            <div className="text-xs text-gray-500 uppercase font-bold">Height</div>
+                            <div className="text-xl font-bold text-gray-800">{activeClient.height || '-'} <span className="text-xs font-normal text-gray-400">cm</span></div>
+                        </div>
+                        <div className="text-center p-2 bg-gray-50 rounded border border-gray-100">
+                            <div className="text-xs text-gray-500 uppercase font-bold">BMI</div>
+                            <div className={`text-xl font-bold ${activeClient.bmi && activeClient.bmi > 25 ? 'text-orange-600' : 'text-green-600'}`}>
+                                {activeClient.bmi || '-'}
+                            </div>
+                        </div>
+                        <div className="text-center p-2 bg-gray-50 rounded border border-gray-100">
+                            <div className="text-xs text-gray-500 uppercase font-bold">Waist</div>
+                            <div className="text-xl font-bold text-gray-800">{activeClient.waist || '-'} <span className="text-xs font-normal text-gray-400">cm</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Weight Chart */}
+                {weightHistory.length > 1 && (
+                    <SimpleLineChart 
+                        data={weightHistory} 
+                        title="Weight Progress" 
+                        unit="kg" 
+                        color="#2563eb"
+                    />
+                )}
+
+                {/* Clinical Notes */}
+                <div className="card bg-white shadow-sm border border-yellow-100 h-96 flex flex-col">
+                    <div className="p-4 bg-yellow-50 border-b border-yellow-100 flex justify-between items-center">
+                        <h3 className="font-bold text-yellow-900">Clinical Notes</h3>
+                        <button className="text-xs bg-white text-yellow-700 px-2 py-1 rounded border border-yellow-200 hover:bg-yellow-100">Expand</button>
+                    </div>
+                    <div className="p-4 overflow-y-auto flex-grow bg-yellow-50/30">
+                        {activeClient.notes ? (
+                            <NoteDisplay text={activeClient.notes} />
+                        ) : (
+                            <div className="text-center text-gray-400 text-sm mt-10">No notes recorded.</div>
+                        )}
+                    </div>
+                </div>
+
+            </div>
+
+            {/* Right Column: Actions & Tools (8 cols) */}
+            <div className="xl:col-span-8 space-y-6">
+                
+                {/* 1. Assessment Tools Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button 
+                        onClick={() => setShowDietaryAssessment(true)}
+                        className="p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-yellow-400 transition text-center group"
+                    >
+                        <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📅</div>
+                        <div className="text-sm font-bold text-gray-700">Dietary Recall</div>
+                        <div className="text-xs text-gray-400 mt-1">24h - 7 Days</div>
+                    </button>
+                    
+                    <button 
+                        onClick={() => setShowFoodQuestionnaire(true)}
+                        className="p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-green-400 transition text-center group"
+                    >
+                        <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🥗</div>
+                        <div className="text-sm font-bold text-gray-700">Food Frequency</div>
+                        <div className="text-xs text-gray-400 mt-1">Questionnaire</div>
+                    </button>
+
+                    <button 
+                        onClick={() => onRunNFPE && onRunNFPE(activeClient)}
+                        className="p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-blue-400 transition text-center group"
+                    >
+                        <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🩺</div>
+                        <div className="text-sm font-bold text-gray-700">NFPE Exam</div>
+                        <div className="text-xs text-gray-400 mt-1">Physical Signs</div>
+                    </button>
+
+                    <button 
+                        onClick={() => setShowLabSelector(true)}
+                        className="p-4 bg-white border border-gray-200 rounded-xl hover:shadow-md hover:border-purple-400 transition text-center group"
+                    >
+                        <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">🧪</div>
+                        <div className="text-sm font-bold text-gray-700">Request Labs</div>
+                        <div className="text-xs text-gray-400 mt-1">Tests & Panels</div>
+                    </button>
+                </div>
+
+                {/* 2. Quick Tags (Notes) */}
+                <div className="card bg-white p-4 border border-gray-200">
+                    <h4 className="text-sm font-bold text-gray-600 mb-3 uppercase tracking-wider">Quick Note Tags</h4>
+                    <div className="space-y-4">
+                        {Object.entries(isPediatric ? PEDIATRIC_TAG_CATEGORIES : TAG_CATEGORIES).map(([category, tags]) => (
+                            <div key={category}>
+                                <h5 className="text-xs font-bold text-gray-400 mb-2">{category}</h5>
+                                <div className="flex flex-wrap gap-2">
+                                    {tags.map(tag => (
+                                        <button 
+                                            key={tag}
+                                            onClick={() => handleToolNoteSave(`• ${tag}`)}
+                                            className="px-2 py-1 bg-gray-50 border border-gray-200 rounded text-xs hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition"
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* 3. Pediatric Tools (Conditional) */}
+                {isPediatric && (
+                    <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                        <h3 className="font-bold text-purple-900 mb-4 flex items-center gap-2">
+                            <span>👶</span> Pediatric Specialist Tools
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <button onClick={() => setShowStrongKids(true)} className="bg-white p-3 rounded-lg shadow-sm text-sm font-bold text-purple-700 hover:bg-purple-100 transition border border-purple-200">
+                                STRONGkids
+                            </button>
+                            <button onClick={() => setShowPediatricWaist(true)} className="bg-white p-3 rounded-lg shadow-sm text-sm font-bold text-purple-700 hover:bg-purple-100 transition border border-purple-200">
+                                Waist %ile
+                            </button>
+                            <button onClick={() => setShowPediatricMAMC(true)} className="bg-white p-3 rounded-lg shadow-sm text-sm font-bold text-purple-700 hover:bg-purple-100 transition border border-purple-200">
+                                MAMC Analysis
+                            </button>
+                            <button onClick={() => setShowGrowthCharts(true)} className="bg-white p-3 rounded-lg shadow-sm text-sm font-bold text-purple-700 hover:bg-purple-100 transition border border-purple-200">
+                                Growth Charts
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* 4. Instructions Button */}
+                <div className="flex justify-end">
+                    <button 
+                        onClick={() => setShowInstructions(true)}
+                        className="bg-gray-800 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-gray-900 transition shadow-md flex items-center gap-2"
+                    >
+                        <span>📋</span> Print Instructions
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        {/* Visit Modal */}
+        {showVisitModal && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
+                    <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                        <span>📅</span> New Visit Record
+                    </h3>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Visit Date</label>
+                            <input 
+                                type="date" 
+                                className="w-full p-2 border rounded"
+                                value={visitFormData.visit_date || ''}
+                                onChange={e => setVisitFormData({...visitFormData, visit_date: e.target.value})}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Weight (kg)</label>
+                                <input type="number" className="w-full p-2 border rounded font-bold" value={visitFormData.weight || ''} onChange={e => setVisitFormData({...visitFormData, weight: Number(e.target.value)})} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Height (cm)</label>
+                                <input type="number" className="w-full p-2 border rounded" value={visitFormData.height || ''} onChange={e => setVisitFormData({...visitFormData, height: Number(e.target.value)})} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Waist (cm)</label>
+                                <input type="number" className="w-full p-2 border rounded" value={visitFormData.waist || ''} onChange={e => setVisitFormData({...visitFormData, waist: Number(e.target.value)})} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">Hip (cm)</label>
+                                <input type="number" className="w-full p-2 border rounded" value={visitFormData.hip || ''} onChange={e => setVisitFormData({...visitFormData, hip: Number(e.target.value)})} />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">Visit Notes</label>
+                            <textarea 
+                                className="w-full p-2 border rounded h-24"
+                                value={visitFormData.notes || ''}
+                                onChange={e => setVisitFormData({...visitFormData, notes: e.target.value})}
+                                placeholder="Progress, changes, complaints..."
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-3 mt-6">
+                        <button onClick={() => setShowVisitModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+                        <button onClick={handleSaveVisit} className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold">Save Visit</button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Lab Selector Modal */}
+        {showLabSelector && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100] backdrop-blur-sm">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 animate-fade-in max-h-[85vh] flex flex-col">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-bold flex items-center gap-2">
+                            <span>🧪</span> Select Labs
+                        </h3>
+                        <button onClick={() => setShowLabSelector(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                    </div>
+                    
+                    <div className="mb-4">
+                        <input 
+                            type="text" 
+                            placeholder="Search tests..." 
+                            value={labSearchQuery}
+                            onChange={(e) => setLabSearchQuery(e.target.value)}
+                            className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        />
+                    </div>
+
+                    <div className="flex-grow overflow-y-auto space-y-6 pr-2">
+                        {/* 1. Quick Panels */}
+                        <div>
+                            <h4 className="text-sm font-bold text-blue-800 uppercase mb-2">Quick Panels</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {labPanels.map(panel => (
+                                    <button 
+                                        key={panel.id}
+                                        onClick={() => handleToolNoteSave(`[Lab Panel: ${panel.title}]\n` + panel.tests.map(t => `• ${t}`).join('\n'))}
+                                        className="p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg text-left transition group"
+                                    >
+                                        <div className="font-bold text-blue-900 group-hover:text-blue-700">{panel.title}</div>
+                                        <div className="text-xs text-blue-600 font-arabic mt-0.5">{panel.titleAr}</div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 2. Individual Tests */}
+                        <div>
+                            <h4 className="text-sm font-bold text-gray-500 uppercase mb-2">Individual Tests</h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                {labTestsEncyclopedia
+                                    .filter(t => t.test.toLowerCase().includes(labSearchQuery.toLowerCase()))
+                                    .map((item, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => toggleLab(item.test)}
+                                        className={`p-2 text-xs text-left rounded border transition ${
+                                            selectedLabItems.includes(item.test) 
+                                            ? 'bg-green-100 border-green-300 text-green-800 font-bold' 
+                                            : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        {item.test}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-100 flex justify-end">
                         <button 
-                            onClick={generateSummary}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md flex items-center gap-2 transition"
+                            onClick={handleUpdateLabNotes}
+                            disabled={selectedLabItems.length === 0}
+                            className="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-blue-700 transition disabled:opacity-50"
                         >
-                            <span>📝</span> {t.clients.generateSummary}
+                            Add Selected ({selectedLabItems.length})
                         </button>
-                        <button 
-                            onClick={handlePrintReport}
-                            className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg shadow-md flex items-center gap-2 transition"
-                        >
-                            <span>🖨️</span> Print Report
-                        </button>
-                     </div>
+                    </div>
+                </div>
+            </div>
+        )}
 
-                     {summaryText && (
-                         <div className="mb-8 bg-gray-50 p-4 rounded-xl border border-gray-200 shadow-inner">
-                             <div className="flex justify-between items-center mb-2">
-                                 <h3 className="font-bold text-gray-700">Generated Summary</h3>
-                                 <button onClick={() => {navigator.clipboard.writeText(summaryText); alert('Copied!');}} className="text-xs text-blue-600 hover:underline">Copy to Clipboard</button>
-                             </div>
-                             <textarea 
-                                readOnly 
-                                value={summaryText} 
-                                className="w-full h-40 p-3 text-sm font-mono border rounded bg-white resize-none focus:outline-none"
-                             ></textarea>
-                         </div>
-                     )}
-
-                     <div className="space-y-8">
-                         <div className="border-b-2 border-gray-200 pb-4 mb-6">
-                             <div className="flex justify-between items-end">
-                                 <div>
-                                     <h2 className="text-3xl font-bold text-[var(--color-heading)]">Progress Report</h2>
-                                     <p className="text-gray-500 text-sm mt-1">Generated on {new Date().toLocaleDateString('en-GB')}</p>
-                                 </div>
-                                 <div className="text-right">
-                                     <div className="text-2xl font-bold text-gray-800">{editingClient.full_name}</div>
-                                     <div className="text-sm text-gray-600">Code: {editingClient.client_code || '-'}</div>
-                                 </div>
-                             </div>
-                         </div>
-
-                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">Latest Measurements</h3>
-                             <div className="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
-                                 <div className="p-2 bg-white rounded border border-gray-200">
-                                     <div className="text-xs text-gray-400 uppercase">Weight</div>
-                                     <div className="font-bold text-lg text-[var(--color-primary)]">{editingClient.weight || '-'} <span className="text-xs">kg</span></div>
-                                 </div>
-                                 <div className="p-2 bg-white rounded border border-gray-200">
-                                     <div className="text-xs text-gray-400 uppercase">BMI</div>
-                                     <div className="font-bold text-lg text-orange-600">{editingClient.bmi || '-'}</div>
-                                 </div>
-                                 <div className="p-2 bg-white rounded border border-gray-200">
-                                     <div className="text-xs text-gray-400 uppercase">Height</div>
-                                     <div className="font-bold text-lg text-gray-700">{editingClient.height || '-'} <span className="text-xs">cm</span></div>
-                                 </div>
-                                 <div className="p-2 bg-white rounded border border-gray-200">
-                                     <div className="text-xs text-gray-400 uppercase">Waist</div>
-                                     <div className="font-bold text-lg text-gray-700">{editingClient.waist || '-'} <span className="text-xs">cm</span></div>
-                                 </div>
-                                 {editingClient.head_circumference && (
-                                     <div className="p-2 bg-white rounded border border-gray-200">
-                                         <div className="text-xs text-gray-400 uppercase">Head</div>
-                                         <div className="font-bold text-lg text-gray-700">{editingClient.head_circumference} <span className="text-xs">cm</span></div>
-                                     </div>
-                                 )}
-                                 <div className="p-2 bg-white rounded border border-gray-200">
-                                     <div className="text-xs text-gray-400 uppercase">MIAC</div>
-                                     <div className="font-bold text-lg text-gray-700">{editingClient.miac || '-'} <span className="text-xs">cm</span></div>
-                                 </div>
-                             </div>
-                         </div>
-
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 break-inside-avoid">
-                             <SimpleLineChart data={chartData.weight} title="Body Weight" unit="kg" color="#3b82f6" />
-                             <SimpleLineChart data={chartData.bmi} title="BMI Score" unit="" color="#f97316" />
-                             <SimpleLineChart data={chartData.waist} title="Waist Circumference" unit="cm" color="#16a34a" />
-                             <SimpleLineChart data={chartData.hip} title="Hip Circumference" unit="cm" color="#a855f7" />
-                             <SimpleLineChart data={chartData.miac} title="MIAC (Arm)" unit="cm" color="#ec4899" />
-                            {chartData.height && chartData.height.length > 1 && (
-                                <SimpleLineChart data={chartData.height} title="Height Growth" unit="cm" color="#6366f1" />
-                            )}
-                            {chartData.head && chartData.head.length > 1 && (
-                                <SimpleLineChart data={chartData.head} title="Head Circumference" unit="cm" color="#8b5cf6" />
-                            )}
-                            {chartData.bodyFat && chartData.bodyFat.length > 1 && (
-                                <SimpleLineChart data={chartData.bodyFat} title="Body Fat %" unit="%" color="#8b5cf6" />
-                            )}
-                         </div>
-                         
-                         <div className="text-center text-xs text-gray-400 pt-8 mt-8 border-t border-gray-100">
-                             Diet-Nova System • Dr. Peter Ramsis
-                         </div>
-                     </div>
-                 </div>
-            )}
-         </div>
     </div>
   );
 };

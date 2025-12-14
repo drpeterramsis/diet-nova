@@ -1,8 +1,10 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { nfpeData, NFPESystem, NFPEItem } from '../../data/nfpeData';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Client } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { useNotification } from '../../contexts/NotificationContext';
 
 interface NFPEChecklistProps {
   client?: Client;
@@ -11,8 +13,8 @@ interface NFPEChecklistProps {
 
 const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
   const { t, isRTL } = useLanguage();
+  const { notify } = useNotification();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [saveStatus, setSaveStatus] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'assessment' | 'summary'>('assessment');
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,7 +62,7 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
   const handleSaveState = async () => {
       if (!client) return;
       setIsSaving(true);
-      setSaveStatus('');
+      notify('Saving checklist...', 'loading');
       
       try {
           // This requires the 'nfpe_data' column in Supabase 'clients' table.
@@ -80,11 +82,10 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
               }
               throw error;
           }
-          setSaveStatus('Checklist Saved Successfully!');
-          setTimeout(() => setSaveStatus(''), 2000);
+          notify('Checklist Saved Successfully!', 'success');
       } catch (err: any) {
           console.error("Save State Error:", err);
-          setSaveStatus('Error: ' + (err.message || 'Check database schema'));
+          notify('Error: ' + (err.message || 'Check database schema'), 'error');
       } finally {
           setIsSaving(false);
       }
@@ -94,7 +95,7 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
   const handleSaveToNotes = async () => {
     if (!client) return;
     setIsSaving(true);
-    setSaveStatus('');
+    notify('Appending to notes...', 'loading');
 
     const newNotes = generateReportText();
     const updatedNotes = client.notes 
@@ -108,11 +109,10 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
         .eq('id', client.id);
 
       if (error) throw error;
-      setSaveStatus('Report appended to Notes!');
-      setTimeout(() => setSaveStatus(''), 2000);
+      notify('Report appended to Notes!', 'success');
     } catch (err: any) {
       console.error(err);
-      setSaveStatus('Error saving: ' + err.message);
+      notify('Error saving: ' + err.message, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -120,8 +120,7 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
 
   const handleCopy = () => {
       navigator.clipboard.writeText(generateReportText());
-      setSaveStatus('Copied to clipboard!');
-      setTimeout(() => setSaveStatus(''), 2000);
+      notify('Copied to clipboard!', 'success');
   };
 
   // Filter systems and items based on search query
@@ -221,12 +220,6 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
              </button>
         </div>
       </div>
-
-      {saveStatus && (
-          <div className={`mb-6 p-3 rounded-lg text-center font-bold ${saveStatus.includes('Error') || saveStatus.includes('Missing') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-              {saveStatus}
-          </div>
-      )}
 
       {/* ASSESSMENT TAB */}
       {activeTab === 'assessment' && (

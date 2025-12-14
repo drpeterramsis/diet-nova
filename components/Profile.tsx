@@ -1,15 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { useNotification } from '../contexts/NotificationContext';
 
 const Profile = () => {
   const { session, profile } = useAuth();
+  const { notify } = useNotification();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState({ type: '', content: '' });
 
   useEffect(() => {
     if (profile && session) {
@@ -21,7 +23,7 @@ const Profile = () => {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMsg({ type: '', content: '' });
+    notify('Updating profile...', 'loading');
 
     try {
       const updates: any = {
@@ -47,7 +49,7 @@ const Profile = () => {
         if (authError) throw authError;
       }
 
-      setMsg({ type: 'success', content: 'Profile updated successfully! Reloading...' });
+      notify('Profile updated successfully! Reloading...', 'success');
       setPassword('');
       setConfirmPassword('');
 
@@ -57,7 +59,7 @@ const Profile = () => {
       }, 1500);
 
     } catch (error: any) {
-      setMsg({ type: 'error', content: error.message });
+      notify(error.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -74,6 +76,8 @@ const Profile = () => {
       }
 
       setLoading(true);
+      notify('Deleting account...', 'loading');
+      
       try {
           if (!session?.user.id) {
              throw new Error("No active session found.");
@@ -99,10 +103,10 @@ const Profile = () => {
              // Delete profile
              await supabase.from('profiles').delete().eq('id', session.user.id);
              
-             alert("Account data cleared successfully. Signing you out...");
+             notify("Account data cleared. Signing you out...", 'info');
           } else {
               // If RPC succeeded, the user is gone.
-              alert("Account successfully deleted.");
+              notify("Account successfully deleted.", 'success');
           }
 
           // 3. Force Logout & Redirect
@@ -114,7 +118,7 @@ const Profile = () => {
           console.error("Deletion error:", err);
           // Self-Healing: If an error occurs (e.g., network, or weird state),
           // we still assume the user wants to leave.
-          setMsg({ type: 'error', content: "Deletion processed with warnings. Signing out..." });
+          notify("Deletion processed with warnings. Signing out...", 'error');
           
           setTimeout(async () => {
              await supabase.auth.signOut();
@@ -129,12 +133,6 @@ const Profile = () => {
         <h2 className="text-2xl font-bold text-[var(--color-heading)] mb-6 flex items-center gap-2">
            <span>👤</span> Edit Profile
         </h2>
-
-        {msg.content && (
-            <div className={`p-4 rounded-lg mb-6 ${msg.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                {msg.content}
-            </div>
-        )}
 
         <form onSubmit={handleUpdate} className="space-y-6">
             <div>
