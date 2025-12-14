@@ -14,12 +14,15 @@ const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; fib
   meatLean: { cho: 0, pro: 7, fat: 3, fiber: 0, kcal: 45 },
   meatMed: { cho: 0, pro: 7, fat: 5, fiber: 0, kcal: 75 },
   meatHigh: { cho: 0, pro: 7, fat: 8, fiber: 0, kcal: 100 },
-  milkSkim: { cho: 12, pro: 8, fat: 3, fiber: 0, kcal: 100 }, // Updated to 12 CHO (was 15 in old code, new table says 12)
-  milkLow: { cho: 12, pro: 8, fat: 5, fiber: 0, kcal: 120 }, // Updated to 12 CHO
-  milkWhole: { cho: 12, pro: 8, fat: 8, fiber: 0, kcal: 150 }, // Updated to 12 CHO
+  milkSkim: { cho: 12, pro: 8, fat: 3, fiber: 0, kcal: 100 }, 
+  milkLow: { cho: 12, pro: 8, fat: 5, fiber: 0, kcal: 120 }, 
+  milkWhole: { cho: 12, pro: 8, fat: 8, fiber: 0, kcal: 150 }, 
   legumes: { cho: 15, pro: 7, fat: 1, fiber: 3, kcal: 110 },
-  fats: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
   sugar: { cho: 5, pro: 0, fat: 0, fiber: 0, kcal: 20 },
+  fats: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
+  fatsPufa: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
+  fatsMufa: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
+  fatsSat: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
 };
 
 const GROUP_STYLES: Record<string, { bg: string, text: string, border: string, icon: string }> = {
@@ -33,8 +36,11 @@ const GROUP_STYLES: Record<string, { bg: string, text: string, border: string, i
   milkLow: { bg: 'bg-blue-100', text: 'text-blue-900', border: 'border-blue-300', icon: '🥛' },
   milkWhole: { bg: 'bg-blue-200', text: 'text-blue-900', border: 'border-blue-400', icon: '🥛' },
   legumes: { bg: 'bg-amber-100', text: 'text-amber-900', border: 'border-amber-300', icon: '🥒' },
-  fats: { bg: 'bg-yellow-50', text: 'text-yellow-900', border: 'border-yellow-200', icon: '🧈' },
   sugar: { bg: 'bg-gray-100', text: 'text-gray-900', border: 'border-gray-300', icon: '🍬' },
+  fats: { bg: 'bg-yellow-50', text: 'text-yellow-900', border: 'border-yellow-200', icon: '🧈' },
+  fatsPufa: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: '🌻' },
+  fatsMufa: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: '🫒' },
+  fatsSat: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300', icon: '🥥' },
 };
 
 const GROUPS = Object.keys(GROUP_FACTORS);
@@ -170,15 +176,28 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   // --- Calculations ---
   const calcTotals = useMemo(() => {
     let cho = 0, pro = 0, fat = 0, fiber = 0, kcal = 0;
+    
+    // Sub-fats specific tracking
+    let kcalPufa = 0;
+    let kcalMufa = 0;
+    let kcalSat = 0;
+
     GROUPS.forEach(g => {
       const s = servings[g] || 0;
-      cho += s * GROUP_FACTORS[g].cho;
-      pro += s * GROUP_FACTORS[g].pro;
-      fat += s * GROUP_FACTORS[g].fat;
-      fiber += s * GROUP_FACTORS[g].fiber;
-      kcal += s * GROUP_FACTORS[g].kcal;
+      const factor = GROUP_FACTORS[g];
+      cho += s * factor.cho;
+      pro += s * factor.pro;
+      fat += s * factor.fat;
+      fiber += s * factor.fiber;
+      const groupKcal = s * factor.kcal;
+      kcal += groupKcal;
+
+      // Track calories from specific fat sources
+      if (g === 'fatsPufa') kcalPufa += s * factor.fat * 9;
+      if (g === 'fatsMufa') kcalMufa += s * factor.fat * 9;
+      if (g === 'fatsSat') kcalSat += s * factor.fat * 9;
     });
-    return { cho, pro, fat, fiber, kcal };
+    return { cho, pro, fat, fiber, kcal, kcalPufa, kcalMufa, kcalSat };
   }, [servings]);
 
   const distTotals = useMemo(() => {
@@ -413,6 +432,14 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       );
   };
 
+  // Helper to get Label for groups
+  const getGroupLabel = (group: string) => {
+      if (group === 'fatsPufa') return 'Fat PUFA';
+      if (group === 'fatsMufa') return 'Fat MUFA';
+      if (group === 'fatsSat') return 'Fat SAT';
+      return t.mealPlannerTool.groups[group as keyof typeof t.mealPlannerTool.groups] || group;
+  }
+
   return (
     <div className="max-w-[1920px] mx-auto animate-fade-in">
       <Toast message={statusMsg} />
@@ -549,7 +576,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                         <tr key={group} className={`${style.bg} border-b ${style.border} bg-opacity-30`}>
                                             <td className={`p-3 font-medium transition-colors`}>
                                                 <div className={`flex items-center gap-2 text-base ${style.text}`}>
-                                                    {t.mealPlannerTool.groups[group as keyof typeof t.mealPlannerTool.groups]}
+                                                    <span className="text-xl">{style.icon}</span> {getGroupLabel(group)}
                                                 </div>
                                             </td>
                                             <td className="p-3 text-center bg-white/50">
@@ -608,7 +635,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                             <tr key={group} className={`${style.bg} bg-opacity-30 border-b border-gray-100`}>
                                                 <td className={`p-2 font-medium border-r border-gray-200 sticky left-0 z-10 bg-white`}>
                                                     <div className={`flex items-center gap-1.5 ${style.text}`}>
-                                                        {t.mealPlannerTool.groups[group as keyof typeof t.mealPlannerTool.groups]}
+                                                        <span className="text-sm">{style.icon}</span> {getGroupLabel(group)}
                                                     </div>
                                                     <div className="text-[10px] text-gray-500 font-normal no-print mt-1 ml-5 border-t border-black/10 pt-0.5">
                                                         Total: <span className="font-bold">{servings[group]}</span>
@@ -723,6 +750,40 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             <div className="text-gray-500">Total Fiber</div>
                             <div className="text-right font-bold text-green-600">{calcTotals.fiber.toFixed(1)}g</div>
                         </div>
+
+                        {/* Fat Breakdown Section */}
+                        {calcTotals.kcal > 0 && (
+                            <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                                <h4 className="font-bold text-xs text-yellow-800 uppercase mb-2 border-b border-yellow-200 pb-1">Fat Quality Breakdown</h4>
+                                <div className="space-y-1 text-xs">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-orange-700">SFA (Sat)</span>
+                                        <div>
+                                            <span className="font-bold text-orange-900">{((calcTotals.kcalSat / calcTotals.kcal) * 100).toFixed(1)}%</span>
+                                            <span className="text-orange-600 ml-1">(&lt;10%)</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-yellow-700">PUFA</span>
+                                        <div>
+                                            <span className="font-bold text-yellow-900">{((calcTotals.kcalPufa / calcTotals.kcal) * 100).toFixed(1)}%</span>
+                                            <span className="text-yellow-600 ml-1">(~10%)</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-yellow-700">MUFA</span>
+                                        <div>
+                                            <span className="font-bold text-yellow-900">{((calcTotals.kcalMufa / calcTotals.kcal) * 100).toFixed(1)}%</span>
+                                            <span className="text-yellow-600 ml-1">(~20%)</span>
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-yellow-200 mt-1 pt-1 flex justify-between font-bold">
+                                        <span>Total Fat</span>
+                                        <span>{((calcTotals.fat * 9 / calcTotals.kcal) * 100).toFixed(1)}% <span className="text-[10px] font-normal text-gray-500">(20-25%)</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Manual Targets Toggle */}
                         <div className="mt-6 pt-4 border-t border-gray-100">

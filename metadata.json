@@ -1,5 +1,5 @@
 {
-  "name": "Copy of Diet-Nova CheckPoint_ToastPortal-Check41_v2.0.201",
-  "description": "Updated notification to use React Portals for fixed viewport positioning. Bumped version to 2.0.201.",
+  "name": "Diet-Nova CheckPoint_SubFats-Check43_v2.0.202",
+  "description": "Added PUFA, MUFA, SAT fat categories to Meal Planner and Client Manager with percentage breakdown in summary. Bumped version to 2.0.202.",
   "requestFramePermissions": []
 }

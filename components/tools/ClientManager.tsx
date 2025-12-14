@@ -29,8 +29,11 @@ const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; fib
   milkLow: { cho: 12, pro: 8, fat: 5, fiber: 0, kcal: 120 },
   milkWhole: { cho: 12, pro: 8, fat: 8, fiber: 0, kcal: 150 },
   legumes: { cho: 15, pro: 7, fat: 1, fiber: 3, kcal: 110 },
-  fats: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
   sugar: { cho: 5, pro: 0, fat: 0, fiber: 0, kcal: 20 },
+  fats: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
+  fatsPufa: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
+  fatsMufa: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
+  fatsSat: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
 };
 
 const calculatePlanStats = (servings: Record<string, number>) => {
@@ -51,6 +54,7 @@ const calculatePlanStats = (servings: Record<string, number>) => {
 
 // InBody Logic (Unchanged)
 const getBodyFatAnalysis = (fat: number, age: number, gender: 'male' | 'female') => {
+// ... rest of the file remains unchanged ...
     if (!fat || !age) return null;
     let status = '';
     let color = '';
@@ -166,6 +170,7 @@ const NoteDisplay: React.FC<{ text: string }> = ({ text }) => {
 
 // --- Full Profile Print Component ---
 const ClientPrintView: React.FC<{ client: Client, visits: ClientVisit[] }> = ({ client, visits }) => {
+// ... existing ClientPrintView content ...
     return (
         <div className="hidden print:block p-8 font-serif">
             <h1 className="text-3xl font-bold mb-2 border-b-2 border-black pb-2">{client.full_name}</h1>
@@ -235,6 +240,7 @@ const ClientPrintView: React.FC<{ client: Client, visits: ClientVisit[] }> = ({ 
 };
 
 const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal, onPlanMeals, onRunNFPE, autoOpenNew }) => {
+  // ... existing ClientManager logic ...
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   
@@ -1040,6 +1046,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
   // --- Summary Generator ---
   const generateSummary = () => {
+// ... existing generateSummary logic ...
       if (!editingClient) return;
       const sortedVisits = [...visits].sort((a, b) => new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime());
       
