@@ -29,7 +29,6 @@ import Loading from "./components/Loading";
 import ToolsGrid from "./components/ToolsGrid";
 import { LanguageProvider, useLanguage } from "./contexts/LanguageContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { NotificationProvider } from "./contexts/NotificationContext";
 import { Session } from "@supabase/supabase-js";
 import { KcalInitialData } from "./components/calculations/hooks/useKcalCalculations";
 import { Client, ClientVisit } from "./types";
@@ -477,9 +476,7 @@ function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <NotificationProvider>
-            <AppContent />
-        </NotificationProvider>
+        <AppContent />
       </AuthProvider>
     </LanguageProvider>
   );

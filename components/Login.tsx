@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import Loading from './Loading';
-import { useNotification } from '../contexts/NotificationContext';
 
 interface LoginProps {
     onClose?: () => void;
@@ -11,7 +10,6 @@ interface LoginProps {
 
 const Login: React.FC<LoginProps> = ({ onClose }) => {
   const { t, isRTL } = useLanguage();
-  const { notify } = useNotification();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,16 +17,20 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<'doctor' | 'patient'>('doctor');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!isSupabaseConfigured) {
-        notify("Backend database not configured. Please setup .env file.", 'error');
+        setError("Backend database not configured. Please setup .env file.");
         return;
     }
 
     setLoading(true);
+    setError(null);
+    setSuccess(null);
 
     try {
       if (isSignUp) {
@@ -48,7 +50,7 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
         if (error) throw error;
 
         if (data.session) {
-           notify("Success! Logging you in...", 'success');
+           setSuccess("Success! Logging you in...");
         } else if (data.user) {
            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
              email,
@@ -56,10 +58,10 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
            });
 
            if (signInData.session) {
-             notify("Success! Logging you in...", 'success');
+             setSuccess("Success! Logging you in...");
            } else {
              console.warn("Login failed after signup:", signInError?.message);
-             notify(t.auth.successSignup, 'success');
+             setSuccess(t.auth.successSignup);
              setIsSignUp(false);
            }
         }
@@ -69,11 +71,9 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
           password,
         });
         if (error) throw error;
-        notify("Logged in successfully!", 'success');
-        if (onClose) onClose();
       }
     } catch (err: any) {
-        notify(err.message || t.auth.errorGeneric, 'error');
+        setError(err.message || t.auth.errorGeneric);
     } finally {
       setLoading(false);
     }
@@ -105,6 +105,9 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
             {isSignUp ? t.auth.signupTitle : t.auth.loginTitle}
           </h2>
         </div>
+
+        {error && <div className="bg-red-100 text-red-600 p-3 rounded-lg mb-4 text-sm border border-red-200">{error}</div>}
+        {success && <div className="bg-green-100 text-green-600 p-3 rounded-lg mb-4 text-sm border border-green-200">{success}</div>}
         
         {!isSupabaseConfigured && (
             <div className="bg-yellow-50 text-yellow-800 p-3 rounded-lg mb-4 text-xs border border-yellow-200">
@@ -204,6 +207,8 @@ const Login: React.FC<LoginProps> = ({ onClose }) => {
           <button
             onClick={() => {
                 setIsSignUp(!isSignUp);
+                setError(null);
+                setSuccess(null);
             }}
             className="text-[var(--color-primary)] hover:underline text-sm font-medium"
           >

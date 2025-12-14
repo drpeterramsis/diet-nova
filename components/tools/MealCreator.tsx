@@ -6,7 +6,7 @@ import { MacroDonut } from "../Visuals";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { SavedMeal } from "../../types";
-import { useNotification } from "../../contexts/NotificationContext";
+import Toast from "../Toast";
 
 interface MealCreatorProps {
     initialLoadId?: string | null;
@@ -17,7 +17,6 @@ interface MealCreatorProps {
 const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, autoOpenNew }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
-  const { notify } = useNotification();
   const [searchQuery, setSearchQuery] = useState("");
   const [addedFoods, setAddedFoods] = useState<FoodItem[]>([]);
 
@@ -27,6 +26,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
   const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
   const [lastSavedName, setLastSavedName] = useState<string>(''); // Track name to detect changes
   const [savedPlans, setSavedPlans] = useState<SavedMeal[]>([]);
+  const [statusMsg, setStatusMsg] = useState('');
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [loadSearchQuery, setLoadSearchQuery] = useState('');
 
@@ -162,7 +162,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
         if (data) setSavedPlans(data);
     } catch (err) {
         console.error('Error fetching plans:', err);
-        notify("Error loading plans.", 'error');
+        setStatusMsg("Error loading plans.");
     } finally {
         setIsLoadingPlans(false);
     }
@@ -175,7 +175,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
     }
     if (!session) return;
     
-    notify("Saving...", 'loading');
+    setStatusMsg("Saving...");
     const planData = { addedFoods };
     const timestamp = new Date().toISOString();
 
@@ -228,16 +228,17 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
             setLoadedPlanId(data.id);
             setLastSavedName(data.name);
             if (isUpdate) {
-                notify("Meal Updated Successfully!", 'success');
+                setStatusMsg("Meal Updated Successfully!");
             } else {
-                notify("Meal Saved as New Entry!", 'success');
+                setStatusMsg("Meal Saved as New Entry!");
             }
         }
         
         fetchPlans(); 
+        setTimeout(() => setStatusMsg(''), 3000);
     } catch (err: any) {
         console.error('Error saving plan:', err);
-        notify("Failed to save: " + err.message, 'error');
+        setStatusMsg("Failed to save: " + err.message);
     }
   };
 
@@ -248,7 +249,8 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
     setLoadedPlanId(plan.id); 
     setLastSavedName(plan.name); 
     setShowLoadModal(false);
-    notify(t.common.loadSuccess, 'success');
+    setStatusMsg(t.common.loadSuccess);
+    setTimeout(() => setStatusMsg(''), 3000);
   };
 
   const deletePlan = async (id: string) => {
@@ -257,7 +259,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
         const { error } = await supabase.from('saved_meals').delete().eq('id', id).eq('user_id', session?.user.id);
         if (error) throw error;
         setSavedPlans(prev => prev.filter(p => p.id !== id));
-        notify("Meal deleted.", 'info');
         if (loadedPlanId === id) {
             setLoadedPlanId(null);
             setLastSavedName("");
@@ -265,13 +266,14 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
         }
     } catch (err) {
         console.error("Error deleting:", err);
-        notify("Error deleting meal.", 'error');
     }
   };
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in space-y-8">
-      
+      {/* Toast Notification */}
+      <Toast message={statusMsg} />
+
       {/* Header & Controls */}
       <div className="text-center space-y-4 relative bg-white p-6 rounded-xl shadow-sm border border-gray-100">
         

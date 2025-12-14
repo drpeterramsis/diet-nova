@@ -5,7 +5,7 @@ import { foodCompositionData, FoodCompositionItem } from '../../data/foodComposi
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { SavedMeal } from '../../types';
-import { useNotification } from '../../contexts/NotificationContext';
+import Toast from '../Toast';
 
 interface FoodCompositionProps {
     onClose?: () => void;
@@ -247,12 +247,12 @@ const NUTRIENT_OPTS: Array<{label: string, value: keyof FoodCompositionItem}> = 
 const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
     const { t } = useLanguage();
     const { session } = useAuth();
-    const { notify } = useNotification();
     
     // --- States ---
     const [activeData, setActiveData] = useState<FoodCompositionItem[]>(foodCompositionData);
     const [isLoadingData, setIsLoadingData] = useState(false);
     const [dataSource, setDataSource] = useState<'local' | 'cloud'>('local');
+    const [syncMsg, setSyncMsg] = useState('');
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -276,6 +276,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
     const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
     const [lastSavedName, setLastSavedName] = useState<string>('');
     const [savedPlans, setSavedPlans] = useState<SavedMeal[]>([]);
+    const [statusMsg, setStatusMsg] = useState('');
     const [isLoadingPlans, setIsLoadingPlans] = useState(false);
     const [loadSearchQuery, setLoadSearchQuery] = useState('');
 
@@ -365,18 +366,18 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
 
     const handleSyncToCloud = async () => {
         if (!window.confirm("This will upload all local food items to the Supabase database. Continue?")) return;
-        notify('Syncing to Cloud...', 'loading');
+        setSyncMsg('Syncing...');
         try {
             const payload = foodCompositionData.map(mapItemToDB);
             // Insert in batches to avoid payload limits
             const { error } = await supabase.from('food_composition').insert(payload);
             
             if (error) throw error;
-            notify('Success! Data uploaded.', 'success');
+            setSyncMsg('Success! Data uploaded.');
             window.location.reload(); // Reload to fetch from cloud
         } catch (err: any) {
             console.error(err);
-            notify('Error: ' + err.message, 'error');
+            setSyncMsg('Error: ' + err.message);
         }
     };
 
@@ -397,7 +398,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
             if (data) setSavedPlans(data);
         } catch (err) {
             console.error('Error fetching plans:', err);
-            notify("Error loading lists.", 'error');
+            setStatusMsg("Error loading lists.");
         } finally {
             setIsLoadingPlans(false);
         }
@@ -410,7 +411,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
         }
         if (!session) return;
         
-        notify("Saving...", 'loading');
+        setStatusMsg("Saving...");
         const planData = { mealItems };
         const timestamp = new Date().toISOString();
         const isUpdate = loadedPlanId && (planName === lastSavedName);
@@ -446,12 +447,13 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
             if (data) {
                 setLoadedPlanId(data.id);
                 setLastSavedName(data.name);
-                notify(isUpdate ? "List Updated Successfully!" : "List Saved Successfully!", 'success');
+                setStatusMsg(isUpdate ? "List Updated Successfully!" : "List Saved Successfully!");
                 fetchPlans();
+                setTimeout(() => setStatusMsg(''), 3000);
             }
         } catch (err: any) {
             console.error(err);
-            notify("Failed to save: " + err.message, 'error');
+            setStatusMsg("Failed to save: " + err.message);
         }
     };
 
@@ -462,7 +464,8 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
         setLoadedPlanId(plan.id);
         setLastSavedName(plan.name);
         setShowLoadModal(false);
-        notify("List loaded successfully.", 'success');
+        setStatusMsg("List loaded successfully.");
+        setTimeout(() => setStatusMsg(''), 3000);
     };
 
     const deletePlan = async (id: string) => {
@@ -471,7 +474,6 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
             const { error } = await supabase.from('saved_meals').delete().eq('id', id).eq('user_id', session?.user.id);
             if (error) throw error;
             setSavedPlans(prev => prev.filter(p => p.id !== id));
-            notify("List deleted.", 'info');
             if (loadedPlanId === id) {
                 setLoadedPlanId(null);
                 setPlanName('');
@@ -479,7 +481,6 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
             }
         } catch (err) {
             console.error("Error deleting:", err);
-            notify("Error deleting list.", 'error');
         }
     };
 
@@ -655,6 +656,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
 
     return (
         <div className="max-w-[1920px] mx-auto animate-fade-in pb-12">
+            <Toast message={statusMsg || syncMsg} />
             
             {/* Header */}
             <div className="flex flex-col xl:flex-row justify-between items-center mb-6 bg-white p-6 rounded-xl shadow-sm border border-gray-100 gap-4">
@@ -713,7 +715,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                     )}
                 </div>
             </div>
-            
+
             {/* 4 Cards Layout (Responsive Grid) */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
                 

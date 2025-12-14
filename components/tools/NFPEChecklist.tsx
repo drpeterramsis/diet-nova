@@ -4,7 +4,7 @@ import { nfpeData, NFPESystem, NFPEItem } from '../../data/nfpeData';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Client } from '../../types';
 import { supabase } from '../../lib/supabase';
-import { useNotification } from '../../contexts/NotificationContext';
+import Toast from '../Toast';
 
 interface NFPEChecklistProps {
   client?: Client;
@@ -13,8 +13,8 @@ interface NFPEChecklistProps {
 
 const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
   const { t, isRTL } = useLanguage();
-  const { notify } = useNotification();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [saveStatus, setSaveStatus] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'assessment' | 'summary'>('assessment');
   const [searchQuery, setSearchQuery] = useState('');
@@ -62,7 +62,7 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
   const handleSaveState = async () => {
       if (!client) return;
       setIsSaving(true);
-      notify('Saving checklist...', 'loading');
+      setSaveStatus('Saving...');
       
       try {
           // This requires the 'nfpe_data' column in Supabase 'clients' table.
@@ -82,10 +82,11 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
               }
               throw error;
           }
-          notify('Checklist Saved Successfully!', 'success');
+          setSaveStatus('Checklist Saved Successfully!');
+          setTimeout(() => setSaveStatus(''), 2000);
       } catch (err: any) {
           console.error("Save State Error:", err);
-          notify('Error: ' + (err.message || 'Check database schema'), 'error');
+          setSaveStatus('Error: ' + (err.message || 'Check database schema'));
       } finally {
           setIsSaving(false);
       }
@@ -95,7 +96,7 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
   const handleSaveToNotes = async () => {
     if (!client) return;
     setIsSaving(true);
-    notify('Appending to notes...', 'loading');
+    setSaveStatus('Saving...');
 
     const newNotes = generateReportText();
     const updatedNotes = client.notes 
@@ -109,10 +110,11 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
         .eq('id', client.id);
 
       if (error) throw error;
-      notify('Report appended to Notes!', 'success');
+      setSaveStatus('Report appended to Notes!');
+      setTimeout(() => setSaveStatus(''), 2000);
     } catch (err: any) {
       console.error(err);
-      notify('Error saving: ' + err.message, 'error');
+      setSaveStatus('Error saving: ' + err.message);
     } finally {
       setIsSaving(false);
     }
@@ -120,7 +122,8 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
 
   const handleCopy = () => {
       navigator.clipboard.writeText(generateReportText());
-      notify('Copied to clipboard!', 'success');
+      setSaveStatus('Copied to clipboard!');
+      setTimeout(() => setSaveStatus(''), 2000);
   };
 
   // Filter systems and items based on search query
@@ -189,6 +192,7 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in pb-12">
+      <Toast message={saveStatus} />
       
       {/* Header */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -256,12 +260,12 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
                     <div key={system.id} className={`card bg-white transition-all duration-300 ${activeCount > 0 ? 'ring-2 ring-[var(--color-primary)] shadow-lg' : 'shadow-sm hover:shadow-md'}`}>
                         <div className="flex items-center gap-3 mb-4 pb-2 border-b border-gray-100">
                             <span className="text-2xl">{system.icon}</span>
-                            <div className="flex-grow">
+                            <div>
                                 <h3 className="font-bold text-gray-800">{system.name}</h3>
-                                <p className="text-xs text-gray-500 font-arabic">{system.nameAr}</p>
+                                <p className="text-xs text-gray-500">{system.nameAr}</p>
                             </div>
                             {activeCount > 0 && (
-                                <span className="bg-[var(--color-primary)] text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                                <span className="ml-auto bg-[var(--color-primary)] text-white text-xs font-bold px-2 py-1 rounded-full">
                                     {activeCount}
                                 </span>
                             )}
@@ -274,26 +278,22 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
                                     <div 
                                         key={item.id}
                                         onClick={() => toggleItem(item.id)}
-                                        className={`p-2 rounded-lg cursor-pointer border transition-all ${
-                                            isSelected 
-                                            ? 'bg-red-50 border-red-200' 
-                                            : 'bg-white border-transparent hover:bg-gray-50 hover:border-gray-200'
-                                        }`}
+                                        className={`p-3 rounded-lg border cursor-pointer transition-all ${isSelected ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100 hover:border-gray-300'}`}
                                     >
                                         <div className="flex items-start gap-2">
-                                            <div className={`w-5 h-5 mt-1 rounded border flex flex-shrink-0 items-center justify-center ${isSelected ? 'bg-red-500 border-red-500' : 'border-gray-300'}`}>
-                                                {isSelected && <span className="text-white text-xs">✓</span>}
+                                            <div className={`mt-1 w-4 h-4 rounded border flex items-center justify-center ${isSelected ? 'bg-red-500 border-red-500' : 'border-gray-300'}`}>
+                                                {isSelected && <span className="text-white text-[10px]">✓</span>}
                                             </div>
-                                            <div className="flex-grow">
-                                                <div className={`text-sm font-medium ${isSelected ? 'text-red-700' : 'text-gray-700'}`}>
+                                            <div>
+                                                <p className={`text-sm font-medium ${isSelected ? 'text-red-700' : 'text-gray-700'}`}>
                                                     {item.sign}
-                                                </div>
-                                                <div className={`text-xs font-arabic ${isSelected ? 'text-red-600' : 'text-gray-500'}`}>
-                                                    {item.signAr}
-                                                </div>
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-0.5">{item.signAr}</p>
+                                                
                                                 {isSelected && (
-                                                    <div className="mt-1 text-[10px] text-red-500 font-medium">
-                                                        Deficiency: {item.deficiency}
+                                                    <div className="mt-2 text-xs bg-white bg-opacity-60 p-2 rounded">
+                                                        <p className="font-bold text-red-600">Possible Deficiency:</p>
+                                                        <p>{item.deficiency}</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -305,170 +305,104 @@ const NFPEChecklist: React.FC<NFPEChecklistProps> = ({ client, onBack }) => {
                     </div>
                 );
                 })}
-                {filteredSystems.length === 0 && (
-                    <div className="col-span-full text-center py-10 text-gray-400">
-                        No signs found matching "{searchQuery}"
-                    </div>
-                )}
             </div>
         </div>
       )}
 
-      {/* SUMMARY TAB */}
+      {/* SUMMARY REPORT TAB */}
       {activeTab === 'summary' && (
           <div className="animate-fade-in space-y-8">
-              <div className="bg-purple-50 p-6 rounded-xl border border-purple-100 flex flex-col sm:flex-row justify-between items-center gap-4 no-print">
-                   <div>
-                       <h2 className="text-xl font-bold text-purple-900">Assessment Report</h2>
-                       <p className="text-sm text-purple-700">Review findings and aggregated recommendations.</p>
-                   </div>
-                   <div className="flex gap-2">
-                        {client ? (
-                            <>
-                            <button 
-                                onClick={handleSaveToNotes}
-                                disabled={isSaving}
-                                className="bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 px-4 py-2 rounded-lg font-bold shadow-sm transition disabled:opacity-50 text-sm"
-                            >
-                                📝 Append to Notes
-                            </button>
-                            <button 
-                                onClick={handleSaveState}
-                                disabled={isSaving}
-                                className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-6 py-2 rounded-lg font-bold shadow-md transition disabled:opacity-50 text-sm"
-                            >
-                                {isSaving ? 'Saving...' : '💾 Save Checklist Only'}
-                            </button>
-                            </>
-                        ) : (
-                            <button 
-                                onClick={handleCopy}
-                                className="bg-gray-800 hover:bg-gray-900 text-white px-6 py-2 rounded-lg font-bold shadow-md transition"
-                            >
-                                📋 Copy Text
-                            </button>
-                        )}
-                   </div>
-              </div>
-
-              {/* Detailed Findings */}
-              {activeFindingsBySystem.length === 0 ? (
-                  <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300 text-gray-400">
-                      <div className="text-4xl mb-3">🩺</div>
-                      <p className="font-medium">No physical signs selected.</p>
-                      <p className="text-sm">Go to the "Checklist" tab to record your findings.</p>
-                  </div>
-              ) : (
-                  <div className="space-y-6">
-                      {activeFindingsBySystem.map(sys => (
-                          <div key={sys.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden break-inside-avoid">
-                              <div className="bg-gray-50 p-4 border-b border-gray-200 flex items-center gap-3">
-                                  <span className="text-2xl">{sys.icon}</span>
-                                  <div>
-                                      <h3 className="font-bold text-gray-800">{sys.name}</h3>
-                                      <p className="text-xs text-gray-500 font-arabic">{sys.nameAr}</p>
-                                  </div>
-                              </div>
-                              <div className="divide-y divide-gray-100">
-                                  {sys.items.map(item => (
-                                      <div key={item.id} className="p-4 hover:bg-gray-50 transition">
-                                          <div className="flex flex-col md:flex-row gap-6">
-                                              
-                                              {/* 1. Symptom */}
-                                              <div className="md:w-1/3 space-y-3">
+              {/* Findings Section */}
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 border-b pb-2">Recorded Findings</h3>
+                  {activeFindingsBySystem.length === 0 ? (
+                      <p className="text-gray-500 text-center py-8">No findings recorded yet.</p>
+                  ) : (
+                      <div className="grid grid-cols-1 gap-6">
+                          {activeFindingsBySystem.map(system => (
+                              <div key={system.id}>
+                                  <h4 className="font-bold text-[var(--color-primary)] flex items-center gap-2 mb-2">
+                                      <span>{system.icon}</span> {system.name}
+                                  </h4>
+                                  <div className="space-y-2 pl-4 border-l-2 border-gray-100">
+                                      {system.items.map(item => (
+                                          <div key={item.id} className="bg-gray-50 p-3 rounded-lg">
+                                              <p className="font-bold text-gray-800">{item.sign}</p>
+                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 text-sm">
                                                   <div>
-                                                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Symptom / العلامة</span>
-                                                      <div className="font-bold text-gray-800 text-lg leading-tight">{item.sign}</div>
-                                                      <div className="text-gray-600 font-arabic text-sm">{item.signAr}</div>
+                                                      <span className="text-red-600 font-bold block text-xs uppercase">Deficiency</span>
+                                                      {item.deficiency}
+                                                  </div>
+                                                  <div>
+                                                      <span className="text-green-600 font-bold block text-xs uppercase">Food Sources</span>
+                                                      {item.food}
                                                   </div>
                                               </div>
-
-                                              {/* 2. Deficiency Info */}
-                                              <div className="md:w-1/3 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
-                                                   <span className="text-xs font-bold text-red-500 uppercase tracking-wider block mb-1">Nutrients / Deficiency</span>
-                                                   <div className="font-bold text-red-700 text-lg">{item.deficiency}</div>
-                                                   <div className="text-red-600 font-arabic text-sm">{item.deficiencyAr}</div>
-                                              </div>
-
-                                              {/* 3. Nutrition Advice */}
-                                              <div className="md:w-1/3 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
-                                                   <span className="text-xs font-bold text-green-600 uppercase tracking-wider block mb-1">Suggested Nutrition</span>
-                                                   <div className="font-medium text-gray-800">{item.food}</div>
-                                                   <div className="text-sm text-gray-600 font-arabic mt-1">{item.foodAr}</div>
-                                              </div>
                                           </div>
-                                      </div>
-                                  ))}
+                                      ))}
+                                  </div>
                               </div>
-                          </div>
-                      ))}
-                  </div>
-              )}
+                          ))}
+                      </div>
+                  )}
+              </div>
 
-              {/* Aggregated Summary Section */}
+              {/* Aggregated Deficiencies */}
               {activeFindingsBySystem.length > 0 && (
-                  <div className="mt-8 bg-gradient-to-br from-gray-800 to-gray-900 text-white rounded-xl shadow-lg p-8 break-inside-avoid">
-                      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 border-b border-gray-600 pb-4">
-                          <span>📊</span> Total Assessment Summary
-                      </h2>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                          {/* Deficiencies */}
-                          <div>
-                              <h3 className="font-bold text-red-300 uppercase tracking-wider text-sm mb-4">
-                                  Potential Deficiencies Suspected
-                              </h3>
-                              <div className="flex flex-wrap gap-2 mb-4">
-                                  {aggregatedSummary.deficiencies.map((def, idx) => (
-                                      <span key={idx} className="bg-red-900/40 border border-red-700/50 text-red-100 px-3 py-1.5 rounded-lg text-sm font-medium">
-                                          {def}
-                                      </span>
-                                  ))}
-                              </div>
-                              <div className="flex flex-wrap gap-2 rtl" dir="rtl">
-                                  {aggregatedSummary.deficienciesAr.map((def, idx) => (
-                                      <span key={idx} className="bg-red-900/40 border border-red-700/50 text-red-100 px-3 py-1.5 rounded-lg text-sm font-medium font-arabic">
-                                          {def}
-                                      </span>
-                                  ))}
-                              </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-red-50 rounded-xl border border-red-200 p-6">
+                          <h3 className="text-lg font-bold text-red-800 mb-4 flex items-center gap-2">
+                              <span>⚠️</span> Potential Deficiencies
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                              {aggregatedSummary.deficiencies.map((def, idx) => (
+                                  <span key={idx} className="bg-white text-red-700 px-3 py-1 rounded-full text-sm font-medium border border-red-100 shadow-sm">
+                                      {def}
+                                  </span>
+                              ))}
                           </div>
+                      </div>
 
-                          {/* Food Recommendations */}
-                          <div>
-                              <h3 className="font-bold text-green-300 uppercase tracking-wider text-sm mb-4">
-                                  Aggregate Nutrition Recommendations
-                              </h3>
-                              <div className="mb-4">
-                                <h4 className="text-xs text-gray-400 mb-2">English</h4>
-                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300">
-                                    {aggregatedSummary.foods.map((food, idx) => (
-                                        <li key={idx} className="flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-                                            {food}
-                                        </li>
-                                    ))}
-                                </ul>
-                              </div>
-                              
-                              <div dir="rtl">
-                                <h4 className="text-xs text-gray-400 mb-2 font-arabic">عربي</h4>
-                                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-300 font-arabic">
-                                    {aggregatedSummary.foodsAr.map((food, idx) => (
-                                        <li key={idx} className="flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 bg-green-500 rounded-full ml-2"></span>
-                                            {food}
-                                        </li>
-                                    ))}
-                                </ul>
-                              </div>
+                      <div className="bg-green-50 rounded-xl border border-green-200 p-6">
+                          <h3 className="text-lg font-bold text-green-800 mb-4 flex items-center gap-2">
+                              <span>🥗</span> Recommended Foods
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                              {aggregatedSummary.foods.map((food, idx) => (
+                                  <span key={idx} className="bg-white text-green-700 px-3 py-1 rounded-full text-sm font-medium border border-green-100 shadow-sm">
+                                      {food}
+                                  </span>
+                              ))}
                           </div>
                       </div>
                   </div>
               )}
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 no-print">
+                  <button 
+                      onClick={handleCopy}
+                      className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-bold transition"
+                  >
+                      Copy to Clipboard
+                  </button>
+                  {client && (
+                      <button 
+                          onClick={handleSaveToNotes}
+                          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold transition shadow-md"
+                      >
+                          Append to Client Notes
+                      </button>
+                  )}
+                  <button 
+                      onClick={() => window.print()}
+                      className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg font-bold transition shadow-md"
+                  >
+                      Print Report
+                  </button>
+              </div>
           </div>
       )}
-
     </div>
   );
 };

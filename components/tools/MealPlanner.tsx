@@ -5,7 +5,7 @@ import { ProgressBar, MacroDonut } from '../Visuals';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { SavedMeal, Client, ClientVisit } from '../../types';
-import { useNotification } from '../../contexts/NotificationContext';
+import Toast from '../Toast';
 
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
   starch: { cho: 15, pro: 3, fat: 0, kcal: 80 },
@@ -76,7 +76,6 @@ interface MealPlannerProps {
 export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, initialLoadId, autoOpenLoad, autoOpenNew, activeVisit }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
-  const { notify } = useNotification();
   const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both'>('calculator');
   
   // --- Saving/Loading UI State ---
@@ -85,6 +84,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
   const [lastSavedName, setLastSavedName] = useState<string>('');
   const [savedPlans, setSavedPlans] = useState<SavedMeal[]>([]);
+  const [statusMsg, setStatusMsg] = useState('');
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [loadSearchQuery, setLoadSearchQuery] = useState('');
 
@@ -236,7 +236,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
           if (data) setSavedPlans(data);
       } catch (err) {
           console.error('Error fetching plans:', err);
-          notify("Error loading plans.", 'error');
+          setStatusMsg("Error loading plans.");
       } finally {
           setIsLoadingPlans(false);
       }
@@ -249,7 +249,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       }
       if (!session) return;
       
-      notify("Saving...", 'loading');
+      setStatusMsg("Saving...");
       const planData = {
           servings,
           distribution,
@@ -310,22 +310,23 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
               setLoadedPlanId(data.id);
               setLastSavedName(data.name);
               if (isUpdate) {
-                  notify("Plan Updated Successfully!", 'success');
+                  setStatusMsg("Plan Updated Successfully!");
               } else {
-                  notify("Plan Saved as New Entry!", 'success');
+                  setStatusMsg("Plan Saved as New Entry!");
               }
           }
 
           fetchPlans();
+          setTimeout(() => setStatusMsg(''), 3000);
       } catch (err: any) {
           console.error('Error saving plan:', err);
-          notify("Failed to save: " + err.message, 'error');
+          setStatusMsg("Failed to save: " + err.message);
       }
   };
 
   const handleSaveToVisit = async () => {
       if (!activeVisit) return;
-      notify('Saving to Client Visit...', 'loading');
+      setStatusMsg('Saving to Client Visit...');
 
       const planData = {
           servings,
@@ -342,10 +343,11 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
             .eq('id', activeVisit.visit.id);
 
           if (error) throw error;
-          notify('Saved to Client Visit Record!', 'success');
+          setStatusMsg('Saved to Client Visit Record!');
+          setTimeout(() => setStatusMsg(''), 3000);
       } catch (err: any) {
           console.error(err);
-          notify('Error Saving to Visit: ' + err.message, 'error');
+          setStatusMsg('Error Saving to Visit: ' + err.message);
       }
   };
 
@@ -362,7 +364,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       setLastSavedName(plan.name);
       
       setShowLoadModal(false);
-      notify(t.common.loadSuccess, 'success');
+      setStatusMsg(t.common.loadSuccess);
+      setTimeout(() => setStatusMsg(''), 3000);
   };
 
   const deletePlan = async (id: string) => {
@@ -376,10 +379,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
               setPlanName('');
               setLastSavedName('');
           }
-          notify("Plan deleted.", 'info');
       } catch (err) {
           console.error("Error deleting:", err);
-          notify("Error deleting plan.", 'error');
       }
   };
 
@@ -412,6 +413,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
   return (
     <div className="max-w-[1920px] mx-auto animate-fade-in">
+      <Toast message={statusMsg} />
       
       {/* Active Visit Toolbar */}
       {activeVisit && (
