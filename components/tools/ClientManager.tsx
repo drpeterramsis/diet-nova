@@ -17,24 +17,24 @@ import GrowthCharts from './GrowthCharts';
 import InstructionsLibrary from './InstructionsLibrary';
 import Toast from '../Toast';
 
-// Helper for Plan Stats (Copied from MealPlanner logic for display)
-const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
-  starch: { cho: 15, pro: 3, fat: 0, kcal: 80 },
-  veg: { cho: 5, pro: 2, fat: 0, kcal: 25 },
-  fruit: { cho: 15, pro: 0, fat: 0, kcal: 60 },
-  meatLean: { cho: 0, pro: 7, fat: 3, kcal: 45 },
-  meatMed: { cho: 0, pro: 7, fat: 5, kcal: 75 },
-  meatHigh: { cho: 0, pro: 7, fat: 8, kcal: 100 },
-  milkSkim: { cho: 15, pro: 8, fat: 3, kcal: 100 },
-  milkLow: { cho: 15, pro: 8, fat: 5, kcal: 120 },
-  milkWhole: { cho: 15, pro: 8, fat: 8, kcal: 160 },
-  legumes: { cho: 15, pro: 7, fat: 0, kcal: 110 },
-  fats: { cho: 0, pro: 0, fat: 5, kcal: 45 },
-  sugar: { cho: 5, pro: 0, fat: 0, kcal: 20 },
+// Helper for Plan Stats (Updated)
+const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; fiber: number; kcal: number }> = {
+  starch: { cho: 15, pro: 3, fat: 1, fiber: 1.75, kcal: 80 },
+  veg: { cho: 5, pro: 2, fat: 0, fiber: 1.5, kcal: 25 },
+  fruit: { cho: 15, pro: 0, fat: 0, fiber: 1.5, kcal: 60 },
+  meatLean: { cho: 0, pro: 7, fat: 3, fiber: 0, kcal: 45 },
+  meatMed: { cho: 0, pro: 7, fat: 5, fiber: 0, kcal: 75 },
+  meatHigh: { cho: 0, pro: 7, fat: 8, fiber: 0, kcal: 100 },
+  milkSkim: { cho: 12, pro: 8, fat: 3, fiber: 0, kcal: 100 },
+  milkLow: { cho: 12, pro: 8, fat: 5, fiber: 0, kcal: 120 },
+  milkWhole: { cho: 12, pro: 8, fat: 8, fiber: 0, kcal: 150 },
+  legumes: { cho: 15, pro: 7, fat: 1, fiber: 3, kcal: 110 },
+  fats: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
+  sugar: { cho: 5, pro: 0, fat: 0, fiber: 0, kcal: 20 },
 };
 
 const calculatePlanStats = (servings: Record<string, number>) => {
-    let cho = 0, pro = 0, fat = 0, kcal = 0;
+    let cho = 0, pro = 0, fat = 0, fiber = 0, kcal = 0;
     Object.keys(servings).forEach(group => {
         const s = servings[group] || 0;
         const factor = GROUP_FACTORS[group];
@@ -42,13 +42,14 @@ const calculatePlanStats = (servings: Record<string, number>) => {
             cho += s * factor.cho;
             pro += s * factor.pro;
             fat += s * factor.fat;
+            fiber += s * factor.fiber;
             kcal += s * factor.kcal;
         }
     });
-    return { cho, pro, fat, kcal };
+    return { cho, pro, fat, fiber, kcal };
 };
 
-// InBody Logic
+// InBody Logic (Unchanged)
 const getBodyFatAnalysis = (fat: number, age: number, gender: 'male' | 'female') => {
     if (!fat || !age) return null;
     let status = '';
@@ -2200,7 +2201,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                              {visit.meal_plan_data && (
                                                  <div className="flex-grow flex flex-col gap-2 bg-purple-50 border border-purple-100 px-3 py-2 rounded-lg text-purple-800 text-xs">
                                                      {planStats && (
-                                                         <div className="grid grid-cols-3 gap-2 text-center mt-1">
+                                                         <div className="grid grid-cols-4 gap-2 text-center mt-1">
                                                              <div>
                                                                  <div className="font-bold text-blue-600">{planStats.cho.toFixed(0)}g</div>
                                                                  <div className="text-[10px] text-blue-500">CHO ({planPcts.cho}%)</div>
@@ -2212,6 +2213,10 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                              <div>
                                                                  <div className="font-bold text-yellow-600">{planStats.fat.toFixed(0)}g</div>
                                                                  <div className="text-[10px] text-yellow-600">FAT ({planPcts.fat}%)</div>
+                                                             </div>
+                                                             <div>
+                                                                 <div className="font-bold text-green-600">{planStats.fiber.toFixed(1)}g</div>
+                                                                 <div className="text-[10px] text-green-500">Fiber</div>
                                                              </div>
                                                          </div>
                                                      )}

@@ -7,19 +7,19 @@ import { useAuth } from '../../contexts/AuthContext';
 import { SavedMeal, Client, ClientVisit } from '../../types';
 import Toast from '../Toast';
 
-const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; kcal: number }> = {
-  starch: { cho: 15, pro: 3, fat: 0, kcal: 80 },
-  veg: { cho: 5, pro: 2, fat: 0, kcal: 25 },
-  fruit: { cho: 15, pro: 0, fat: 0, kcal: 60 },
-  meatLean: { cho: 0, pro: 7, fat: 3, kcal: 45 },
-  meatMed: { cho: 0, pro: 7, fat: 5, kcal: 75 },
-  meatHigh: { cho: 0, pro: 7, fat: 8, kcal: 100 },
-  milkSkim: { cho: 15, pro: 8, fat: 3, kcal: 100 },
-  milkLow: { cho: 15, pro: 8, fat: 5, kcal: 120 },
-  milkWhole: { cho: 15, pro: 8, fat: 8, kcal: 160 },
-  legumes: { cho: 15, pro: 7, fat: 0, kcal: 110 },
-  fats: { cho: 0, pro: 0, fat: 5, kcal: 45 },
-  sugar: { cho: 5, pro: 0, fat: 0, kcal: 20 },
+const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; fiber: number; kcal: number }> = {
+  starch: { cho: 15, pro: 3, fat: 1, fiber: 1.75, kcal: 80 },
+  veg: { cho: 5, pro: 2, fat: 0, fiber: 1.5, kcal: 25 },
+  fruit: { cho: 15, pro: 0, fat: 0, fiber: 1.5, kcal: 60 },
+  meatLean: { cho: 0, pro: 7, fat: 3, fiber: 0, kcal: 45 },
+  meatMed: { cho: 0, pro: 7, fat: 5, fiber: 0, kcal: 75 },
+  meatHigh: { cho: 0, pro: 7, fat: 8, fiber: 0, kcal: 100 },
+  milkSkim: { cho: 12, pro: 8, fat: 3, fiber: 0, kcal: 100 }, // Updated to 12 CHO (was 15 in old code, new table says 12)
+  milkLow: { cho: 12, pro: 8, fat: 5, fiber: 0, kcal: 120 }, // Updated to 12 CHO
+  milkWhole: { cho: 12, pro: 8, fat: 8, fiber: 0, kcal: 150 }, // Updated to 12 CHO
+  legumes: { cho: 15, pro: 7, fat: 1, fiber: 3, kcal: 110 },
+  fats: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
+  sugar: { cho: 5, pro: 0, fat: 0, fiber: 0, kcal: 20 },
 };
 
 const GROUP_STYLES: Record<string, { bg: string, text: string, border: string, icon: string }> = {
@@ -169,29 +169,31 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
   // --- Calculations ---
   const calcTotals = useMemo(() => {
-    let cho = 0, pro = 0, fat = 0, kcal = 0;
+    let cho = 0, pro = 0, fat = 0, fiber = 0, kcal = 0;
     GROUPS.forEach(g => {
       const s = servings[g] || 0;
       cho += s * GROUP_FACTORS[g].cho;
       pro += s * GROUP_FACTORS[g].pro;
       fat += s * GROUP_FACTORS[g].fat;
+      fiber += s * GROUP_FACTORS[g].fiber;
       kcal += s * GROUP_FACTORS[g].kcal;
     });
-    return { cho, pro, fat, kcal };
+    return { cho, pro, fat, fiber, kcal };
   }, [servings]);
 
   const distTotals = useMemo(() => {
-      let cho = 0, pro = 0, fat = 0, kcal = 0;
+      let cho = 0, pro = 0, fat = 0, fiber = 0, kcal = 0;
       GROUPS.forEach(g => {
           MEALS.forEach(m => {
               const s = distribution[g][m] || 0;
               cho += s * GROUP_FACTORS[g].cho;
               pro += s * GROUP_FACTORS[g].pro;
               fat += s * GROUP_FACTORS[g].fat;
+              fiber += s * GROUP_FACTORS[g].fiber;
               kcal += s * GROUP_FACTORS[g].kcal;
           });
       });
-      return { cho, pro, fat, kcal };
+      return { cho, pro, fat, fiber, kcal };
   }, [distribution]);
 
   const rowRemains = useMemo(() => {
@@ -533,6 +535,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                     <th className="p-3 text-center">{t.mealPlannerTool.cho}</th>
                                     <th className="p-3 text-center">{t.mealPlannerTool.pro}</th>
                                     <th className="p-3 text-center">{t.mealPlannerTool.fat}</th>
+                                    <th className="p-3 text-center bg-green-700">Fiber</th>
                                     <th className="p-3 text-center bg-[var(--color-primary-dark)]">{t.mealPlannerTool.kcal}</th>
                                 </tr>
                             </thead>
@@ -564,6 +567,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                             <RenderCell val={s * f.cho} factor={f.cho} label="CHO" />
                                             <RenderCell val={s * f.pro} factor={f.pro} label="PRO" />
                                             <RenderCell val={s * f.fat} factor={f.fat} label="FAT" />
+                                            <RenderCell val={s * f.fiber} factor={f.fiber} label="g" />
                                             <RenderCell val={s * f.kcal} factor={f.kcal} label="Kcal" />
                                         </tr>
                                     );
@@ -665,6 +669,10 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                         <div className="text-yellow-400">FAT</div>
                                     </div>
                                 </div>
+                                <div className="p-2 bg-green-50 rounded text-center text-xs">
+                                    <div className="font-bold text-green-700">{distTotals.fiber.toFixed(1)}g</div>
+                                    <div className="text-green-500">Fiber</div>
+                                </div>
                             </div>
                          </div>
                     </div>
@@ -702,7 +710,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                 label={t.mealPlannerTool.targetKcal} 
                                 unit="kcal" 
                             />
-                            {/* Macros Progress could go here if targets were broken down */}
                         </div>
 
                         {/* Detailed Grid */}
@@ -713,6 +720,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             <div className="text-right font-bold text-red-600">{calcTotals.pro.toFixed(1)}g</div>
                             <div className="text-gray-500">Total FAT</div>
                             <div className="text-right font-bold text-yellow-600">{calcTotals.fat.toFixed(1)}g</div>
+                            <div className="text-gray-500">Total Fiber</div>
+                            <div className="text-right font-bold text-green-600">{calcTotals.fiber.toFixed(1)}g</div>
                         </div>
 
                         {/* Manual Targets Toggle */}
