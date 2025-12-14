@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova CheckPoint_SubFats-Check43_v2.0.202",
-  "description": "Added PUFA, MUFA, SAT fat categories to Meal Planner and Client Manager with percentage breakdown in summary. Bumped version to 2.0.202.",
+  "name": "Diet-Nova CheckPoint_SubFats-Check43_v2.0.203",
+  "description": "Implemented Detailed Fats Breakdown toggle in Meal Planner with auto-sum functionality. Removed duplicate emojis from translations.",
   "requestFramePermissions": []
 }

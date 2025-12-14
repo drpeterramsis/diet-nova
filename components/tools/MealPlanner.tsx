@@ -43,8 +43,8 @@ const GROUP_STYLES: Record<string, { bg: string, text: string, border: string, i
   fatsSat: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300', icon: '🥥' },
 };
 
-const GROUPS = Object.keys(GROUP_FACTORS);
 const MEALS = ['snack1', 'breakfast', 'snack2', 'lunch', 'snack3', 'dinner', 'snack4'];
+const BASE_GROUPS = Object.keys(GROUP_FACTORS);
 
 // --- Extracted Component to prevent re-renders/focus loss ---
 interface TargetKcalInputProps {
@@ -83,6 +83,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both'>('calculator');
+  const [useFatBreakdown, setUseFatBreakdown] = useState(false);
   
   // --- Saving/Loading UI State ---
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -96,7 +97,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
   // State for Calculator Input (Servings)
   const [servings, setServings] = useState<Record<string, number>>(
-    GROUPS.reduce((acc, group) => ({ ...acc, [group]: 0 }), {})
+    BASE_GROUPS.reduce((acc, group) => ({ ...acc, [group]: 0 }), {})
   );
 
   // State for Targets
@@ -151,6 +152,10 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
           if (data.targetKcal) setTargetKcal(data.targetKcal);
           if (data.manualGm) setManualGm(data.manualGm);
           if (data.manualPerc) setManualPerc(data.manualPerc);
+          
+          // Check if detailed fats are used
+          const hasDetails = (data.servings?.fatsPufa || 0) > 0 || (data.servings?.fatsMufa || 0) > 0 || (data.servings?.fatsSat || 0) > 0;
+          if (hasDetails) setUseFatBreakdown(true);
       }
   }, [activeVisit]);
 
@@ -167,62 +172,129 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
   // State for Planner Distribution
   const [distribution, setDistribution] = useState<Record<string, Record<string, number>>>(
-    GROUPS.reduce((acc, group) => ({
+    BASE_GROUPS.reduce((acc, group) => ({
       ...acc,
       [group]: MEALS.reduce((mAcc, meal) => ({ ...mAcc, [meal]: 0 }), {})
     }), {})
   );
 
+  // --- Memos & Derived State ---
+  
+  // Determine visible groups based on mode
+  const VISIBLE_GROUPS = useMemo(() => {
+      if (useFatBreakdown) {
+          // Include sub-fats, include 'fats' but it will be handled specially
+          return BASE_GROUPS;
+      } else {
+          // Exclude sub-fats
+          return BASE_GROUPS.filter(g => !['fatsPufa', 'fatsMufa', 'fatsSat'].includes(g));
+      }
+  }, [useFatBreakdown]);
+
+  // Auto-Sum Fats Logic
+  // When in breakdown mode, 'fats' serves should be sum of sub-categories for DISPLAY.
+  // We don't necessarily update the state of 'fats' to avoid circular updates, but we use calculated value.
+  const calculatedFatsSum = useMemo(() => {
+      return (servings['fatsPufa'] || 0) + (servings['fatsMufa'] || 0) + (servings['fatsSat'] || 0);
+  }, [servings]);
+
   // --- Calculations ---
   const calcTotals = useMemo(() => {
     let cho = 0, pro = 0, fat = 0, fiber = 0, kcal = 0;
     
-    // Sub-fats specific tracking
+    // Sub-fats specific tracking for display
     let kcalPufa = 0;
     let kcalMufa = 0;
     let kcalSat = 0;
 
-    GROUPS.forEach(g => {
-      const s = servings[g] || 0;
-      const factor = GROUP_FACTORS[g];
-      cho += s * factor.cho;
-      pro += s * factor.pro;
-      fat += s * factor.fat;
-      fiber += s * factor.fiber;
-      const groupKcal = s * factor.kcal;
-      kcal += groupKcal;
+    BASE_GROUPS.forEach(g => {
+      // Logic:
+      // If useFatBreakdown is TRUE: Ignore 'fats' key for totals (to avoid double counting), count sub-fats.
+      // If useFatBreakdown is FALSE: Count 'fats', ignore sub-fats (should be 0 anyway if hidden, but ensure safety).
+      
+      let s = servings[g] || 0;
+      
+      if (useFatBreakdown) {
+          if (g === 'fats') s = 0; // Don't count generic 'fats' in totals if breakdown is on
+      } else {
+          if (['fatsPufa', 'fatsMufa', 'fatsSat'].includes(g)) s = 0; // Don't count hidden sub-fats
+      }
 
-      // Track calories from specific fat sources
-      if (g === 'fatsPufa') kcalPufa += s * factor.fat * 9;
-      if (g === 'fatsMufa') kcalMufa += s * factor.fat * 9;
-      if (g === 'fatsSat') kcalSat += s * factor.fat * 9;
+      const factor = GROUP_FACTORS[g];
+      if (factor) {
+          cho += s * factor.cho;
+          pro += s * factor.pro;
+          fat += s * factor.fat;
+          fiber += s * factor.fiber;
+          const groupKcal = s * factor.kcal;
+          kcal += groupKcal;
+
+          // Track calories from specific fat sources
+          if (g === 'fatsPufa') kcalPufa += s * factor.fat * 9;
+          if (g === 'fatsMufa') kcalMufa += s * factor.fat * 9;
+          if (g === 'fatsSat') kcalSat += s * factor.fat * 9;
+      }
     });
     return { cho, pro, fat, fiber, kcal, kcalPufa, kcalMufa, kcalSat };
-  }, [servings]);
+  }, [servings, useFatBreakdown]);
 
   const distTotals = useMemo(() => {
       let cho = 0, pro = 0, fat = 0, fiber = 0, kcal = 0;
-      GROUPS.forEach(g => {
+      VISIBLE_GROUPS.forEach(g => {
           MEALS.forEach(m => {
-              const s = distribution[g][m] || 0;
-              cho += s * GROUP_FACTORS[g].cho;
-              pro += s * GROUP_FACTORS[g].pro;
-              fat += s * GROUP_FACTORS[g].fat;
-              fiber += s * GROUP_FACTORS[g].fiber;
-              kcal += s * GROUP_FACTORS[g].kcal;
+              // Same logic for 'fats' row in distribution? 
+              // If breakdown is ON, user distributes PUFA/MUFA/SAT. 'fats' row is likely just a visual sum or disabled.
+              // If user distributed 'fats' previously, it might linger.
+              
+              let s = distribution[g]?.[m] || 0;
+              
+              if (useFatBreakdown) {
+                  if (g === 'fats') s = 0; 
+              } 
+              
+              if (GROUP_FACTORS[g]) {
+                  cho += s * GROUP_FACTORS[g].cho;
+                  pro += s * GROUP_FACTORS[g].pro;
+                  fat += s * GROUP_FACTORS[g].fat;
+                  fiber += s * GROUP_FACTORS[g].fiber;
+                  kcal += s * GROUP_FACTORS[g].kcal;
+              }
           });
       });
       return { cho, pro, fat, fiber, kcal };
-  }, [distribution]);
+  }, [distribution, useFatBreakdown, VISIBLE_GROUPS]);
 
   const rowRemains = useMemo(() => {
     const remains: Record<string, number> = {};
-    GROUPS.forEach(g => {
-        const totalDist = MEALS.reduce((acc, m) => acc + (distribution[g][m] || 0), 0);
-        remains[g] = (servings[g] || 0) - totalDist;
+    VISIBLE_GROUPS.forEach(g => {
+        const totalDist = MEALS.reduce((acc, m) => acc + (distribution[g]?.[m] || 0), 0);
+        let target = servings[g] || 0;
+        
+        // Special case for 'fats' in breakdown mode
+        if (useFatBreakdown && g === 'fats') {
+            target = calculatedFatsSum; // The target is the sum of inputs
+            // The dist for 'fats' is likely 0 if disabled, but if we want to distribute generic fats, we can't in this mode.
+            // Actually, usually in breakdown mode, we distribute the specific fats.
+            // So 'fats' row in planner might just show the SUM of distributed fats vs SUM of target? 
+            // Or we just hide 'fats' row in planner if breakdown is on?
+            // Let's keep it consistent: If breakdown ON, 'fats' row is a summary row.
+            // Rem = Sum(SubTargets) - Sum(SubDistributions) ?? No that's complex.
+            // Let's just say for 'fats' row in breakdown mode, it shows total Undistributed Fat?
+            // Simplest: In breakdown mode, 'fats' row is READ ONLY sum of other rows.
+            
+            // Calculate total distributed specific fats
+            const distPufa = MEALS.reduce((acc, m) => acc + (distribution['fatsPufa']?.[m] || 0), 0);
+            const distMufa = MEALS.reduce((acc, m) => acc + (distribution['fatsMufa']?.[m] || 0), 0);
+            const distSat = MEALS.reduce((acc, m) => acc + (distribution['fatsSat']?.[m] || 0), 0);
+            const totalDistSpecific = distPufa + distMufa + distSat;
+            
+            remains[g] = target - totalDistSpecific; 
+        } else {
+            remains[g] = target - totalDist;
+        }
     });
     return remains;
-  }, [servings, distribution]);
+  }, [servings, distribution, useFatBreakdown, calculatedFatsSum, VISIBLE_GROUPS]);
 
   // --- Handlers ---
   const updateServing = (group: string, val: number) => {
@@ -280,14 +352,11 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       };
       const timestamp = new Date().toISOString();
 
-      // Logic: If loadedPlanId is present AND name is the same -> Update.
-      // If name changes, create NEW (Save As).
       const isUpdate = loadedPlanId && (planName === lastSavedName);
       
       try {
           let data;
           if (isUpdate) {
-             // Explicit UPDATE
              const updatePayload = {
                 name: planName,
                 data: planData,
@@ -301,14 +370,11 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                 .select();
 
              if (response.error) throw response.error;
-             
-             // Verify update succeeded
              if (!response.data || response.data.length === 0) {
-                throw new Error("Update failed: Plan not found or permission denied (RLS).");
+                throw new Error("Update failed.");
              }
              data = response.data[0];
           } else {
-             // Explicit INSERT
              const insertPayload = {
                 user_id: session.user.id,
                 name: planName,
@@ -330,11 +396,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
           if (data) {
               setLoadedPlanId(data.id);
               setLastSavedName(data.name);
-              if (isUpdate) {
-                  setStatusMsg("Plan Updated Successfully!");
-              } else {
-                  setStatusMsg("Plan Saved as New Entry!");
-              }
+              setStatusMsg(isUpdate ? "Plan Updated Successfully!" : "Plan Saved as New Entry!");
           }
 
           fetchPlans();
@@ -374,7 +436,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
   const loadPlan = (plan: SavedMeal) => {
       if (!plan.data) return;
-      // Ensure we replace state completely
       setServings({ ...plan.data.servings } || {});
       setDistribution({ ...plan.data.distribution } || {});
       setTargetKcal(plan.data.targetKcal || 0);
@@ -384,6 +445,10 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       setLoadedPlanId(plan.id);
       setLastSavedName(plan.name);
       
+      // Check fat mode
+      const hasDetails = (plan.data.servings?.fatsPufa || 0) > 0 || (plan.data.servings?.fatsMufa || 0) > 0 || (plan.data.servings?.fatsSat || 0) > 0;
+      if (hasDetails) setUseFatBreakdown(true);
+
       setShowLoadModal(false);
       setStatusMsg(t.common.loadSuccess);
       setTimeout(() => setStatusMsg(''), 3000);
@@ -406,8 +471,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   };
 
   const resetAll = () => {
-      setServings(GROUPS.reduce((acc, group) => ({ ...acc, [group]: 0 }), {}));
-      setDistribution(GROUPS.reduce((acc, group) => ({
+      setServings(BASE_GROUPS.reduce((acc, group) => ({ ...acc, [group]: 0 }), {}));
+      setDistribution(BASE_GROUPS.reduce((acc, group) => ({
           ...acc,
           [group]: MEALS.reduce((mAcc, meal) => ({ ...mAcc, [meal]: 0 }), {})
       }), {}));
@@ -415,6 +480,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       setPlanName('');
       setLoadedPlanId(null);
       setLastSavedName('');
+      setUseFatBreakdown(false);
   };
 
   const RenderCell = ({ val, factor, label }: { val: number, factor: number, label: string }) => {
@@ -432,7 +498,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       );
   };
 
-  // Helper to get Label for groups
   const getGroupLabel = (group: string) => {
       if (group === 'fatsPufa') return 'Fat PUFA';
       if (group === 'fatsMufa') return 'Fat MUFA';
@@ -468,7 +533,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
           </div>
       )}
 
-      {/* Top Control Bar (Static, Non-Floating) */}
+      {/* Top Control Bar */}
       <div className="relative flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-100 gap-4 no-print">
         <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
            {onBack && (
@@ -478,7 +543,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
            )}
            <h1 className="text-2xl font-bold text-[var(--color-heading)] hidden xl:block whitespace-nowrap">{t.tools.mealPlanner.title}</h1>
            
-           {/* Plan Name Input */}
            <div className="relative flex-grow md:flex-grow-0">
                 <input 
                     type="text"
@@ -553,6 +617,18 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
             {/* CALCULATOR TABLE */}
             {viewMode === 'calculator' && (
                  <div className="card bg-white shadow-lg overflow-hidden">
+                    <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                        <span className="font-bold text-gray-700">Exchanges</span>
+                        <div className="flex items-center gap-2">
+                            <label className="text-xs font-bold text-gray-600 uppercase">Detailed Fats Breakdown</label>
+                            <button 
+                                onClick={() => setUseFatBreakdown(!useFatBreakdown)}
+                                className={`w-10 h-5 rounded-full p-1 transition-colors ${useFatBreakdown ? 'bg-[var(--color-primary)]' : 'bg-gray-300'}`}
+                            >
+                                <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform ${useFatBreakdown ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                            </button>
+                        </div>
+                    </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm border-collapse">
                             <thead className="bg-[var(--color-primary)] text-white">
@@ -567,8 +643,11 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {GROUPS.map(group => {
-                                    const s = servings[group] || 0;
+                                {VISIBLE_GROUPS.map(group => {
+                                    // Logic for 'fats' row in Breakdown Mode
+                                    const isAutoFat = useFatBreakdown && group === 'fats';
+                                    const s = isAutoFat ? calculatedFatsSum : (servings[group] || 0);
+                                    
                                     const f = GROUP_FACTORS[group];
                                     const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
                                     
@@ -577,13 +656,16 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                             <td className={`p-3 font-medium transition-colors`}>
                                                 <div className={`flex items-center gap-2 text-base ${style.text}`}>
                                                     <span className="text-xl">{style.icon}</span> {getGroupLabel(group)}
+                                                    {isAutoFat && <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded ml-2">Auto-Sum</span>}
                                                 </div>
                                             </td>
                                             <td className="p-3 text-center bg-white/50">
                                                 <input 
                                                     type="number"
                                                     min="0" step="0.5"
+                                                    disabled={isAutoFat}
                                                     className={`w-20 p-2 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all ${
+                                                        isAutoFat ? 'bg-gray-100 font-bold text-gray-500 cursor-not-allowed' :
                                                         s === 0 ? 'text-red-300 bg-white' : 'font-bold text-lg text-gray-800 bg-white shadow-sm'
                                                     }`}
                                                     value={s || ''}
@@ -624,34 +706,58 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {GROUPS.map(group => {
-                                        const rem = rowRemains[group];
+                                    {VISIBLE_GROUPS.map(group => {
+                                        const isAutoFat = useFatBreakdown && group === 'fats';
+                                        // For AutoFat row in planner:
+                                        // We display calculated sum as target.
+                                        // Distribution cells: We could sum sub-fats for display? 
+                                        // Simplified: If Breakdown ON, 'fats' row is purely visual sum of sub-rows.
+                                        
+                                        let displayDistributions: Record<string, number> = distribution[group];
+                                        if (isAutoFat) {
+                                            // Aggregate sub-distributions for display
+                                            displayDistributions = {};
+                                            MEALS.forEach(m => {
+                                                displayDistributions[m] = (distribution['fatsPufa']?.[m] || 0) + 
+                                                                          (distribution['fatsMufa']?.[m] || 0) + 
+                                                                          (distribution['fatsSat']?.[m] || 0);
+                                            });
+                                        }
+
+                                        const target = isAutoFat ? calculatedFatsSum : (servings[group] || 0);
+                                        const totalDist = MEALS.reduce((acc, m) => acc + (displayDistributions[m] || 0), 0);
+                                        const rem = target - totalDist;
+                                        
                                         const isOver = rem < 0;
-                                        const isComplete = rem === 0 && servings[group] > 0;
+                                        const isComplete = rem === 0 && target > 0;
                                         const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
-                                        const f = GROUP_FACTORS[group];
 
                                         return (
                                             <tr key={group} className={`${style.bg} bg-opacity-30 border-b border-gray-100`}>
                                                 <td className={`p-2 font-medium border-r border-gray-200 sticky left-0 z-10 bg-white`}>
                                                     <div className={`flex items-center gap-1.5 ${style.text}`}>
                                                         <span className="text-sm">{style.icon}</span> {getGroupLabel(group)}
+                                                        {isAutoFat && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded ml-1">Sum</span>}
                                                     </div>
                                                     <div className="text-[10px] text-gray-500 font-normal no-print mt-1 ml-5 border-t border-black/10 pt-0.5">
-                                                        Total: <span className="font-bold">{servings[group]}</span>
+                                                        Total: <span className="font-bold">{target}</span>
                                                     </div>
                                                 </td>
                                                 {MEALS.map(meal => (
                                                     <td key={meal} className="p-1 text-center border-r border-gray-100">
-                                                        <input 
-                                                            type="number"
-                                                            className={`w-full h-8 text-center bg-transparent focus:bg-blue-50 outline-none rounded hover:bg-gray-100 transition ${
-                                                                (distribution[group][meal] || 0) === 0 ? 'text-red-300' : 'text-black font-bold'
-                                                            }`}
-                                                            placeholder="-"
-                                                            value={distribution[group][meal] || ''}
-                                                            onChange={(e) => updateDistribution(group, meal, parseFloat(e.target.value) || 0)}
-                                                        />
+                                                        {isAutoFat ? (
+                                                            <div className="text-gray-500 font-bold text-xs">{displayDistributions[meal] > 0 ? displayDistributions[meal] : '-'}</div>
+                                                        ) : (
+                                                            <input 
+                                                                type="number"
+                                                                className={`w-full h-8 text-center bg-transparent focus:bg-blue-50 outline-none rounded hover:bg-gray-100 transition ${
+                                                                    (displayDistributions?.[meal] || 0) === 0 ? 'text-red-300' : 'text-black font-bold'
+                                                                }`}
+                                                                placeholder="-"
+                                                                value={displayDistributions?.[meal] || ''}
+                                                                onChange={(e) => updateDistribution(group, meal, parseFloat(e.target.value) || 0)}
+                                                            />
+                                                        )}
                                                     </td>
                                                 ))}
                                                 <td className={`p-2 text-center font-bold border-l-2 ${isOver ? 'bg-red-50 text-red-600 border-red-200' : isComplete ? 'bg-green-50 text-green-600 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
@@ -665,7 +771,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                         </div>
                     </div>
 
-                    {/* Planner Sidebar (Inside Grid for Planner Mode) */}
+                    {/* Planner Sidebar */}
                     <div className="w-full lg:w-80 flex-shrink-0 space-y-4 no-print">
                          <div className="card bg-white p-4 sticky top-24">
                             <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">Planner Snapshot</h3>
@@ -716,10 +822,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             <span className="text-2xl">📊</span> Smart Summary
                         </h3>
 
-                        {/* Target Input (Extracted) */}
                         <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={t.kcal.kcalRequired} />
 
-                        {/* Visuals */}
                         <div className="mb-6">
                              <MacroDonut 
                                 cho={calcTotals.cho} 
@@ -729,7 +833,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                              />
                         </div>
 
-                        {/* Progress Bars */}
                         <div className="space-y-4 mb-6">
                             <ProgressBar 
                                 current={calcTotals.kcal} 
@@ -739,7 +842,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             />
                         </div>
 
-                        {/* Detailed Grid */}
                         <div className="grid grid-cols-2 gap-2 text-sm bg-gray-50 p-3 rounded-lg border border-gray-200">
                             <div className="text-gray-500">Total CHO</div>
                             <div className="text-right font-bold text-blue-600">{calcTotals.cho.toFixed(1)}g</div>
@@ -785,7 +887,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             </div>
                         )}
 
-                        {/* Manual Targets Toggle */}
                         <div className="mt-6 pt-4 border-t border-gray-100">
                              <div className="flex justify-center gap-2 mb-4">
                                  <button 
@@ -817,9 +918,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         )}
       </div>
 
-        {/* --- MODALS --- */}
-      
-      {/* Load Modal */}
       {showLoadModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm no-print">
             <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-2xl h-[80vh] flex flex-col">
