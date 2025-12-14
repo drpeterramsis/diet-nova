@@ -51,13 +51,24 @@ const calculateNutrition = (item: FoodCompositionItem, weight: number) => {
         fat: item.fat * factor,
         carb: item.carb * factor,
         fiber: item.fiber * factor,
+        water: item.water * factor,
+        ash: item.ash * factor,
+        
         calcium: item.calcium * factor,
         iron: item.iron * factor,
         sodium: item.sodium * factor,
         potassium: item.potassium * factor,
         phosphorus: item.phosphorus * factor,
+        magnesium: (item.magnesium || 0) * factor,
+        zinc: (item.zinc || 0) * factor,
+        copper: (item.copper || 0) * factor,
+        
         vitC: item.vitC * factor,
-        zinc: (item.zinc || 0) * factor
+        vitA: (item.vitA || 0) * factor,
+        thiamin: (item.thiamin || 0) * factor,
+        riboflavin: (item.riboflavin || 0) * factor,
+        
+        refuse: item.refuse // Percentage doesn't scale with weight directly for display, but useful context
     };
 };
 
@@ -85,10 +96,13 @@ const NutritionLabel: React.FC<{ data: any; weight: number; title?: string }> = 
             {title && <h3 className="text-center font-black text-sm mb-2 border-b-2 border-black pb-1 uppercase tracking-widest truncate">{title}</h3>}
             
             <h2 className="font-black text-4xl leading-none mb-1">Nutrition Facts</h2>
-            <p className="text-base font-bold mb-1 flex justify-between items-end border-b-[8px] border-black pb-1">
-                <span>Serving Size</span>
+            <div className="flex justify-between items-end border-b-[8px] border-black pb-1 mb-2">
+                <div>
+                    <p className="text-base font-bold">Serving Size</p>
+                    <p className="text-xs text-gray-500">Refuse: {data.refuse}%</p>
+                </div>
                 <span className="font-black text-2xl">{weight}g</span>
-            </p>
+            </div>
             
             <div className="flex justify-between items-end border-b-4 border-black pb-1 mb-1">
                 <div>
@@ -102,61 +116,102 @@ const NutritionLabel: React.FC<{ data: any; weight: number; title?: string }> = 
                 <div className="text-right text-xs font-bold border-b border-black mb-1 pt-1">% Daily Value*</div>
 
                 {/* Macros Section */}
-                <div className="border-b border-gray-300 py-1.5 flex justify-between items-center group hover:bg-gray-50 transition">
-                    <span className="flex items-center gap-2"><span className="text-base">🛢️</span> <span className="font-black text-base">Total Fat</span></span>
-                    <span className="font-bold text-red-600 text-base">{data.fat.toFixed(1)}g <span className="text-black text-xs font-normal ml-1">({getDV(data.fat, dv.fat)}%)</span></span>
+                <div className="border-b border-gray-300 py-1 flex justify-between items-center group hover:bg-gray-50 transition">
+                    <span className="flex items-center gap-2"><span className="text-base">🛢️</span> <span className="font-black">Total Fat</span></span>
+                    <span className="font-bold text-red-600">{data.fat.toFixed(1)}g <span className="text-black text-xs font-normal ml-1">({getDV(data.fat, dv.fat)}%)</span></span>
                 </div>
 
-                <div className="border-b border-gray-300 py-1.5 flex justify-between items-center group hover:bg-gray-50 transition">
-                    <span className="flex items-center gap-2"><span className="text-base">🧂</span> <span className="font-black text-base">Sodium</span></span>
-                    <span className="font-bold text-gray-600 text-base">{data.sodium.toFixed(0)}mg <span className="text-black text-xs font-normal ml-1">({getDV(data.sodium, dv.sodium)}%)</span></span>
+                <div className="border-b border-gray-300 py-1 flex justify-between items-center group hover:bg-gray-50 transition">
+                    <span className="flex items-center gap-2"><span className="text-base">🍞</span> <span className="font-black">Total Carb</span></span>
+                    <span className="font-bold text-blue-600">{data.carb.toFixed(1)}g <span className="text-black text-xs font-normal ml-1">({getDV(data.carb, dv.carb)}%)</span></span>
                 </div>
 
-                <div className="border-b border-gray-300 py-1.5 flex justify-between items-center group hover:bg-gray-50 transition">
-                    <span className="flex items-center gap-2"><span className="text-base">🍞</span> <span className="font-black text-base">Total Carb</span></span>
-                    <span className="font-bold text-blue-600 text-base">{data.carb.toFixed(1)}g <span className="text-black text-xs font-normal ml-1">({getDV(data.carb, dv.carb)}%)</span></span>
-                </div>
-
-                <div className="border-b border-gray-300 py-1.5 pl-6 flex justify-between items-center text-gray-700 bg-gray-50/50">
+                <div className="border-b border-gray-300 py-1 pl-6 flex justify-between items-center text-gray-700 bg-gray-50/50">
                     <span className="flex items-center gap-1 text-sm">🥦 Dietary Fiber</span>
                     <span className="font-bold text-sm">{data.fiber.toFixed(1)}g <span className="text-xs font-normal">({getDV(data.fiber, dv.fiber)}%)</span></span>
                 </div>
 
-                <div className="border-b-[8px] border-black py-1.5 flex justify-between items-center group hover:bg-gray-50 transition">
-                    <span className="flex items-center gap-2"><span className="text-base">🥩</span> <span className="font-black text-base">Protein</span></span>
-                    <span className="font-bold text-green-700 text-base">{data.protein.toFixed(1)}g</span>
+                <div className="border-b-[4px] border-black py-1 flex justify-between items-center group hover:bg-gray-50 transition">
+                    <span className="flex items-center gap-2"><span className="text-base">🥩</span> <span className="font-black">Protein</span></span>
+                    <span className="font-bold text-green-700">{data.protein.toFixed(1)}g</span>
                 </div>
 
-                {/* Micronutrients - Grid */}
-                <div className="grid grid-cols-2 gap-x-6 gap-y-2 py-2 text-xs font-medium">
-                    <div className="flex justify-between border-b border-gray-300 py-1">
-                        <span className="flex items-center gap-1">🍊 Vit C</span>
-                        <span className="font-bold text-orange-600">{data.vitC.toFixed(1)} mg</span>
+                {/* Extended Details (Water/Ash) */}
+                <div className="grid grid-cols-2 gap-4 border-b border-gray-300 py-2 text-xs text-gray-600">
+                    <div className="flex justify-between">
+                        <span>💧 Water</span>
+                        <span className="font-bold">{data.water.toFixed(1)} g</span>
                     </div>
-                    <div className="flex justify-between border-b border-gray-300 py-1">
-                        <span className="flex items-center gap-1">🦴 Calcium</span>
-                        <span className="font-bold text-blue-800">{data.calcium.toFixed(0)} mg</span>
+                    <div className="flex justify-between">
+                        <span>⚱️ Ash</span>
+                        <span className="font-bold">{data.ash.toFixed(2)} g</span>
                     </div>
-                    <div className="flex justify-between border-b border-gray-300 py-1">
-                        <span className="flex items-center gap-1">🩸 Iron</span>
-                        <span className="font-bold text-red-800">{data.iron.toFixed(2)} mg</span>
+                </div>
+
+                {/* Minerals Grid */}
+                <div className="py-2">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-gray-500 mb-1">Minerals</h4>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs font-medium">
+                        <div className="flex justify-between border-b border-gray-200 py-0.5">
+                            <span>🦴 Calcium</span>
+                            <span className="font-bold text-blue-800">{data.calcium.toFixed(0)} mg</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-0.5">
+                            <span>🩸 Iron</span>
+                            <span className="font-bold text-red-800">{data.iron.toFixed(2)} mg</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-0.5">
+                            <span>🍌 Potassium</span>
+                            <span className="font-bold text-purple-700">{data.potassium.toFixed(0)} mg</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-0.5">
+                            <span>🧂 Sodium</span>
+                            <span className="font-bold text-gray-700">{data.sodium.toFixed(0)} mg</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-0.5">
+                            <span>✨ Phosphorus</span>
+                            <span className="font-bold text-teal-700">{data.phosphorus.toFixed(0)} mg</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-0.5">
+                            <span>⚙️ Magnesium</span>
+                            <span className="font-bold text-gray-600">{data.magnesium.toFixed(0)} mg</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-0.5">
+                            <span>🛡️ Zinc</span>
+                            <span className="font-bold text-gray-700">{data.zinc.toFixed(2)} mg</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-0.5">
+                            <span>🥉 Copper</span>
+                            <span className="font-bold text-orange-800">{data.copper.toFixed(2)} mg</span>
+                        </div>
                     </div>
-                    <div className="flex justify-between border-b border-gray-300 py-1">
-                        <span className="flex items-center gap-1">🍌 Potassium</span>
-                        <span className="font-bold text-purple-700">{data.potassium.toFixed(0)} mg</span>
-                    </div>
-                    <div className="flex justify-between border-b border-gray-300 py-1">
-                        <span className="flex items-center gap-1">⚙️ Zinc</span>
-                        <span className="font-bold text-gray-700">{data.zinc ? data.zinc.toFixed(2) : '-'} mg</span>
-                    </div>
-                    <div className="flex justify-between border-b border-gray-300 py-1">
-                        <span className="flex items-center gap-1">✨ Phos</span>
-                        <span className="font-bold text-teal-700">{data.phosphorus.toFixed(0)} mg</span>
+                </div>
+
+                {/* Vitamins Grid */}
+                <div className="py-2 border-t border-black">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-gray-500 mb-1">Vitamins</h4>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs font-medium">
+                        <div className="flex justify-between border-b border-gray-200 py-0.5">
+                            <span>🍊 Vit C</span>
+                            <span className="font-bold text-orange-600">{data.vitC.toFixed(1)} mg</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-0.5">
+                            <span>👁️ Vit A</span>
+                            <span className="font-bold text-green-600">{data.vitA.toFixed(0)} ugRE</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-0.5">
+                            <span>⚡ Thiamin (B1)</span>
+                            <span className="font-bold text-gray-700">{data.thiamin.toFixed(2)} mg</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-200 py-0.5">
+                            <span>💡 Riboflavin (B2)</span>
+                            <span className="font-bold text-yellow-600">{data.riboflavin.toFixed(2)} mg</span>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <div className="text-[10px] leading-tight text-gray-500 pt-2 font-medium">
+            <div className="text-[10px] leading-tight text-gray-500 pt-2 font-medium border-t border-gray-300 mt-1">
                 * The % Daily Value (DV) tells you how much a nutrient in a serving of food contributes to a daily diet. 2,000 calories a day is used for general nutrition advice.
             </div>
         </div>
@@ -427,7 +482,10 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
     const mealTotals = useMemo(() => {
         const totals = {
             energy: 0, protein: 0, fat: 0, carb: 0, fiber: 0,
-            calcium: 0, iron: 0, sodium: 0, potassium: 0, phosphorus: 0, vitC: 0, zinc: 0
+            calcium: 0, iron: 0, sodium: 0, potassium: 0, phosphorus: 0, 
+            magnesium: 0, zinc: 0, copper: 0,
+            vitC: 0, vitA: 0, thiamin: 0, riboflavin: 0,
+            water: 0, ash: 0, refuse: 0
         };
         let totalWeight = 0;
 
@@ -439,13 +497,22 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
             totals.fat += nut.fat;
             totals.carb += nut.carb;
             totals.fiber += nut.fiber;
+            totals.water += nut.water;
+            totals.ash += nut.ash;
+            
             totals.calcium += nut.calcium;
             totals.iron += nut.iron;
             totals.sodium += nut.sodium;
             totals.potassium += nut.potassium;
             totals.phosphorus += nut.phosphorus;
-            totals.vitC += nut.vitC;
+            totals.magnesium += nut.magnesium;
             totals.zinc += nut.zinc;
+            totals.copper += nut.copper;
+            
+            totals.vitC += nut.vitC;
+            totals.vitA += nut.vitA;
+            totals.thiamin += nut.thiamin;
+            totals.riboflavin += nut.riboflavin;
         });
         return { totals, totalWeight };
     }, [mealItems]);
