@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova CheckPoint_SubFats-Check43_v2.0.203",
-  "description": "Implemented Detailed Fats Breakdown toggle in Meal Planner with auto-sum functionality. Removed duplicate emojis from translations.",
+  "name": "Diet-Nova CheckPoint_SubFats-Check44_v2.0.204",
+  "description": "Moved Detailed Fats Breakdown toggle to Fats row in Meal Planner. Updated Fat Breakdown limits text.",
   "requestFramePermissions": []
 }

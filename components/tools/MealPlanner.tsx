@@ -193,7 +193,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
   // Auto-Sum Fats Logic
   // When in breakdown mode, 'fats' serves should be sum of sub-categories for DISPLAY.
-  // We don't necessarily update the state of 'fats' to avoid circular updates, but we use calculated value.
   const calculatedFatsSum = useMemo(() => {
       return (servings['fatsPufa'] || 0) + (servings['fatsMufa'] || 0) + (servings['fatsSat'] || 0);
   }, [servings]);
@@ -208,10 +207,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
     let kcalSat = 0;
 
     BASE_GROUPS.forEach(g => {
-      // Logic:
-      // If useFatBreakdown is TRUE: Ignore 'fats' key for totals (to avoid double counting), count sub-fats.
-      // If useFatBreakdown is FALSE: Count 'fats', ignore sub-fats (should be 0 anyway if hidden, but ensure safety).
-      
       let s = servings[g] || 0;
       
       if (useFatBreakdown) {
@@ -242,10 +237,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       let cho = 0, pro = 0, fat = 0, fiber = 0, kcal = 0;
       VISIBLE_GROUPS.forEach(g => {
           MEALS.forEach(m => {
-              // Same logic for 'fats' row in distribution? 
-              // If breakdown is ON, user distributes PUFA/MUFA/SAT. 'fats' row is likely just a visual sum or disabled.
-              // If user distributed 'fats' previously, it might linger.
-              
               let s = distribution[g]?.[m] || 0;
               
               if (useFatBreakdown) {
@@ -273,16 +264,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         // Special case for 'fats' in breakdown mode
         if (useFatBreakdown && g === 'fats') {
             target = calculatedFatsSum; // The target is the sum of inputs
-            // The dist for 'fats' is likely 0 if disabled, but if we want to distribute generic fats, we can't in this mode.
-            // Actually, usually in breakdown mode, we distribute the specific fats.
-            // So 'fats' row in planner might just show the SUM of distributed fats vs SUM of target? 
-            // Or we just hide 'fats' row in planner if breakdown is on?
-            // Let's keep it consistent: If breakdown ON, 'fats' row is a summary row.
-            // Rem = Sum(SubTargets) - Sum(SubDistributions) ?? No that's complex.
-            // Let's just say for 'fats' row in breakdown mode, it shows total Undistributed Fat?
-            // Simplest: In breakdown mode, 'fats' row is READ ONLY sum of other rows.
-            
-            // Calculate total distributed specific fats
             const distPufa = MEALS.reduce((acc, m) => acc + (distribution['fatsPufa']?.[m] || 0), 0);
             const distMufa = MEALS.reduce((acc, m) => acc + (distribution['fatsMufa']?.[m] || 0), 0);
             const distSat = MEALS.reduce((acc, m) => acc + (distribution['fatsSat']?.[m] || 0), 0);
@@ -617,17 +598,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
             {/* CALCULATOR TABLE */}
             {viewMode === 'calculator' && (
                  <div className="card bg-white shadow-lg overflow-hidden">
-                    <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                    <div className="p-3 bg-gray-50 border-b border-gray-200">
                         <span className="font-bold text-gray-700">Exchanges</span>
-                        <div className="flex items-center gap-2">
-                            <label className="text-xs font-bold text-gray-600 uppercase">Detailed Fats Breakdown</label>
-                            <button 
-                                onClick={() => setUseFatBreakdown(!useFatBreakdown)}
-                                className={`w-10 h-5 rounded-full p-1 transition-colors ${useFatBreakdown ? 'bg-[var(--color-primary)]' : 'bg-gray-300'}`}
-                            >
-                                <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform ${useFatBreakdown ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                            </button>
-                        </div>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm border-collapse">
@@ -644,7 +616,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {VISIBLE_GROUPS.map(group => {
-                                    // Logic for 'fats' row in Breakdown Mode
                                     const isAutoFat = useFatBreakdown && group === 'fats';
                                     const s = isAutoFat ? calculatedFatsSum : (servings[group] || 0);
                                     
@@ -656,6 +627,15 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                             <td className={`p-3 font-medium transition-colors`}>
                                                 <div className={`flex items-center gap-2 text-base ${style.text}`}>
                                                     <span className="text-xl">{style.icon}</span> {getGroupLabel(group)}
+                                                    {group === 'fats' && (
+                                                        <button 
+                                                            onClick={() => setUseFatBreakdown(!useFatBreakdown)}
+                                                            className={`ml-2 text-[10px] px-2 py-0.5 rounded border transition font-bold ${useFatBreakdown ? 'bg-yellow-200 border-yellow-300 text-yellow-800' : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200'}`}
+                                                            title="Toggle detailed fat types (SFA, MUFA, PUFA)"
+                                                        >
+                                                            {useFatBreakdown ? 'Hide Details' : 'Show Breakdown'}
+                                                        </button>
+                                                    )}
                                                     {isAutoFat && <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded ml-2">Auto-Sum</span>}
                                                 </div>
                                             </td>
@@ -708,14 +688,9 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                 <tbody className="divide-y divide-gray-100">
                                     {VISIBLE_GROUPS.map(group => {
                                         const isAutoFat = useFatBreakdown && group === 'fats';
-                                        // For AutoFat row in planner:
-                                        // We display calculated sum as target.
-                                        // Distribution cells: We could sum sub-fats for display? 
-                                        // Simplified: If Breakdown ON, 'fats' row is purely visual sum of sub-rows.
                                         
                                         let displayDistributions: Record<string, number> = distribution[group];
                                         if (isAutoFat) {
-                                            // Aggregate sub-distributions for display
                                             displayDistributions = {};
                                             MEALS.forEach(m => {
                                                 displayDistributions[m] = (distribution['fatsPufa']?.[m] || 0) + 
@@ -737,6 +712,14 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                                 <td className={`p-2 font-medium border-r border-gray-200 sticky left-0 z-10 bg-white`}>
                                                     <div className={`flex items-center gap-1.5 ${style.text}`}>
                                                         <span className="text-sm">{style.icon}</span> {getGroupLabel(group)}
+                                                        {group === 'fats' && (
+                                                            <button 
+                                                                onClick={() => setUseFatBreakdown(!useFatBreakdown)}
+                                                                className={`ml-2 text-[8px] px-1.5 py-0.5 rounded border font-bold ${useFatBreakdown ? 'bg-yellow-200 text-yellow-800 border-yellow-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}
+                                                            >
+                                                                {useFatBreakdown ? 'Hide' : 'Show'}
+                                                            </button>
+                                                        )}
                                                         {isAutoFat && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded ml-1">Sum</span>}
                                                     </div>
                                                     <div className="text-[10px] text-gray-500 font-normal no-print mt-1 ml-5 border-t border-black/10 pt-0.5">
@@ -869,14 +852,14 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                         <span className="text-yellow-700">PUFA</span>
                                         <div>
                                             <span className="font-bold text-yellow-900">{((calcTotals.kcalPufa / calcTotals.kcal) * 100).toFixed(1)}%</span>
-                                            <span className="text-yellow-600 ml-1">(~10%)</span>
+                                            <span className="text-yellow-600 ml-1">(Up to 10%)</span>
                                         </div>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-yellow-700">MUFA</span>
                                         <div>
                                             <span className="font-bold text-yellow-900">{((calcTotals.kcalMufa / calcTotals.kcal) * 100).toFixed(1)}%</span>
-                                            <span className="text-yellow-600 ml-1">(~20%)</span>
+                                            <span className="text-yellow-600 ml-1">(Up to 20%)</span>
                                         </div>
                                     </div>
                                     <div className="border-t border-yellow-200 mt-1 pt-1 flex justify-between font-bold">
