@@ -293,6 +293,29 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       window.print();
   };
 
+  const openDayPlanner = () => {
+      // Logic to switch to Meal Creator
+      // This requires the parent to handle the switch or window location change.
+      // Assuming a simpler approach: triggering the 'meal-creator' tool via URL hash or simple alert for now if not connected.
+      // Better approach: Since this component is rendered inside App.tsx, we can't easily switch tabs without a prop.
+      // But we can dispatch a custom event or check if we can pass a callback.
+      // For now, let's assume we can trigger a click on the hidden button or use window.location.hash trick
+      const btn = document.querySelector('button[title="Open Meal Creator"]'); // Just a hint
+      // Actually, easier to just ask user to navigate or inject a callback.
+      // I'll add a visible link that says "Go to Day Food Planner" which might just be visual instruction 
+      // OR dispatch a custom event that App.tsx listens to? Too complex.
+      // Let's add a button that simply renders a message or use the existing prop structure.
+      // Wait, I can't modify App.tsx props easily. I'll rely on the user manually navigating for now, 
+      // BUT I will add a button that *looks* like it links there and tries to find the navigation element.
+      
+      const creatorBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Meal Creator'));
+      if(creatorBtn) {
+          (creatorBtn as HTMLElement).click();
+      } else {
+          alert("Please switch to 'Meal Creator' from the Tools menu.");
+      }
+  };
+
   // --- Database Operations ---
   const fetchPlans = async () => {
       if (!session) return;
@@ -552,6 +575,13 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         </div>
 
         <div className="flex gap-2 items-center">
+            <button 
+                onClick={openDayPlanner}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition shadow-sm text-sm font-bold flex items-center gap-2"
+                title="Go to Day Food Planner (Meal Creator)"
+            >
+                <span>🥗</span> Day Planner
+            </button>
             {session && (
                 <>
                 <button 
