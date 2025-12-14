@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova CheckPoint_PredataFoodAnalysis_23_v2.0.194",
-  "description": "Updated Food Composition database with new items (120-142) including legumes and nuts. Bumped version to 2.0.194.",
+  "name": "Diet-Nova CheckPoint_PredataFoodAnalysis_25_v2.0.195",
+  "description": "Integrated Supabase Food Composition Database. Bumped version to 2.0.195.",
   "requestFramePermissions": []
 }

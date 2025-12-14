@@ -1,7 +1,9 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { foodCompositionData, FoodCompositionItem } from '../../data/foodCompositionData';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface FoodCompositionProps {
     onClose?: () => void;
@@ -10,6 +12,34 @@ interface FoodCompositionProps {
 interface MealItem {
     item: FoodCompositionItem;
     weight: number; // grams
+}
+
+// Interface representing the Supabase DB Schema
+interface FoodDBRow {
+    id: number;
+    code: number;
+    food_name: string;
+    food_group: string;
+    energy_kcal: number;
+    protein_g: number;
+    fat_g: number;
+    carbohydrate_g: number;
+    fiber_g: number;
+    water_g: number;
+    ash_g: number;
+    calcium_mg: number;
+    phosphorus_mg: number;
+    magnesium_mg: number;
+    iron_mg: number;
+    zinc_mg: number;
+    copper_mg: number;
+    sodium_mg: number;
+    potassium_mg: number;
+    vitamin_a_ugre: number;
+    vitamin_c_mg: number;
+    riboflavin_mg: number;
+    thiamin_mg: number;
+    refuse_percent: number;
 }
 
 // Helper to calculate nutrition for any item/weight
@@ -151,8 +181,14 @@ const NUTRIENT_OPTS: Array<{label: string, value: keyof FoodCompositionItem}> = 
 
 const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
     const { t } = useLanguage();
+    const { session } = useAuth();
     
     // --- States ---
+    const [activeData, setActiveData] = useState<FoodCompositionItem[]>(foodCompositionData);
+    const [isLoadingData, setIsLoadingData] = useState(false);
+    const [dataSource, setDataSource] = useState<'local' | 'cloud'>('local');
+    const [syncMsg, setSyncMsg] = useState('');
+
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState<string>('All');
     
@@ -169,13 +205,115 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
     const [viewMode, setViewMode] = useState<'total' | 'item'>('total');
     const [viewingItemIndex, setViewingItemIndex] = useState<number | null>(null);
 
-    const categories = useMemo(() => {
-        const cats = new Set(foodCompositionData.map(d => d.category));
-        return ['All', ...Array.from(cats)];
+    // --- DB Integration ---
+    const mapDBToItem = (row: FoodDBRow): FoodCompositionItem => ({
+        id: String(row.id),
+        code: row.code,
+        food: row.food_name,
+        category: row.food_group,
+        energy: row.energy_kcal,
+        protein: row.protein_g,
+        fat: row.fat_g,
+        carb: row.carbohydrate_g,
+        fiber: row.fiber_g,
+        water: row.water_g,
+        ash: row.ash_g,
+        calcium: row.calcium_mg,
+        phosphorus: row.phosphorus_mg,
+        magnesium: row.magnesium_mg,
+        iron: row.iron_mg,
+        zinc: row.zinc_mg,
+        copper: row.copper_mg,
+        sodium: row.sodium_mg,
+        potassium: row.potassium_mg,
+        vitA: row.vitamin_a_ugre,
+        vitC: row.vitamin_c_mg,
+        riboflavin: row.riboflavin_mg,
+        thiamin: row.thiamin_mg,
+        refuse: row.refuse_percent
+    });
+
+    const mapItemToDB = (item: FoodCompositionItem) => ({
+        code: item.code,
+        food_name: item.food,
+        food_group: item.category,
+        energy_kcal: item.energy,
+        protein_g: item.protein,
+        fat_g: item.fat,
+        carbohydrate_g: item.carb,
+        fiber_g: item.fiber,
+        water_g: item.water,
+        ash_g: item.ash,
+        calcium_mg: item.calcium,
+        phosphorus_mg: item.phosphorus,
+        magnesium_mg: item.magnesium,
+        iron_mg: item.iron,
+        zinc_mg: item.zinc,
+        copper_mg: item.copper,
+        sodium_mg: item.sodium,
+        potassium_mg: item.potassium,
+        vitamin_a_ugre: item.vitA,
+        vitamin_c_mg: item.vitC,
+        riboflavin_mg: item.riboflavin,
+        thiamin_mg: item.thiamin,
+        refuse_percent: item.refuse
+    });
+
+    useEffect(() => {
+        const fetchDB = async () => {
+            setIsLoadingData(true);
+            try {
+                const { data, error } = await supabase
+                    .from('food_composition')
+                    .select('*')
+                    .order('code', { ascending: true })
+                    .limit(1000); // Reasonable limit for client-side functionality
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    const mapped = data.map(mapDBToItem);
+                    setActiveData(mapped);
+                    setDataSource('cloud');
+                } else {
+                    console.log("No cloud data found, using local.");
+                    setDataSource('local');
+                }
+            } catch (err) {
+                console.warn("Using local food data. DB Error:", err);
+                setDataSource('local');
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+        fetchDB();
     }, []);
 
+    const handleSyncToCloud = async () => {
+        if (!window.confirm("This will upload all local food items to the Supabase database. Continue?")) return;
+        setSyncMsg('Syncing...');
+        try {
+            const payload = foodCompositionData.map(mapItemToDB);
+            // Insert in batches to avoid payload limits
+            const { error } = await supabase.from('food_composition').insert(payload);
+            
+            if (error) throw error;
+            setSyncMsg('Success! Data uploaded.');
+            window.location.reload(); // Reload to fetch from cloud
+        } catch (err: any) {
+            console.error(err);
+            setSyncMsg('Error: ' + err.message);
+        }
+    };
+
+    // --- Memos ---
+    const categories = useMemo(() => {
+        const cats = new Set(activeData.map(d => d.category));
+        return ['All', ...Array.from(cats)];
+    }, [activeData]);
+
     const filteredData = useMemo(() => {
-        let data = foodCompositionData;
+        let data = activeData;
         
         // 1. Filter by Category
         if (selectedCategory !== 'All') {
@@ -191,7 +329,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
             );
         }
 
-        // 3. Filter by Composition (Advanced) - All filters must pass (AND logic)
+        // 3. Filter by Composition (Advanced)
         if (compositionFilters.length > 0) {
             data = data.filter(item => {
                 return compositionFilters.every(filter => {
@@ -200,23 +338,20 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                     
                     if (filter.op === '>') return itemVal > targetVal;
                     if (filter.op === '<') return itemVal < targetVal;
-                    if (filter.op === '=') {
-                        // Exact match with small tolerance for floats
-                        return Math.abs(itemVal - targetVal) < 0.1;
-                    }
+                    if (filter.op === '=') return Math.abs(itemVal - targetVal) < 0.1;
                     return true;
                 });
             });
         }
 
         return data;
-    }, [searchQuery, selectedCategory, compositionFilters]);
+    }, [searchQuery, selectedCategory, compositionFilters, activeData]);
 
     // --- Filter Handlers ---
     const addFilter = () => {
         setCompositionFilters(prev => [
             ...prev, 
-            { id: Date.now(), key: 'protein', op: '>', val: 10 } // Default new filter
+            { id: Date.now(), key: 'protein', op: '>', val: 10 }
         ]);
         setShowFilters(true);
     };
@@ -232,8 +367,8 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
     // --- Meal Handlers ---
     const handleDatabaseSelect = (item: FoodCompositionItem) => {
         setSelectedItem(item);
-        setInputWeight(100); // Default to 100g
-        setViewMode('total'); // Reset to total view when picking new item
+        setInputWeight(100);
+        setViewMode('total');
         setViewingItemIndex(null);
     };
 
@@ -271,19 +406,16 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
 
     const updateInlineWeight = (index: number, newWeight: number) => {
         setMealItems(prev => prev.map((item, i) => i === index ? { ...item, weight: Math.max(0, newWeight) } : item));
-        // If currently editing this item in Card 2, update that input too to stay in sync
         if (viewingItemIndex === index) {
             setInputWeight(newWeight);
         }
     };
 
-    // Calculate details for the currently selected item (Card 2)
     const selectedItemCalculated = useMemo(() => {
         if (!selectedItem) return null;
         return calculateNutrition(selectedItem, inputWeight);
     }, [selectedItem, inputWeight]);
 
-    // Calculate totals for Meal Summary (Card 4 Default)
     const mealTotals = useMemo(() => {
         const totals = {
             energy: 0, protein: 0, fat: 0, carb: 0, fiber: 0,
@@ -310,7 +442,6 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
         return { totals, totalWeight };
     }, [mealItems]);
 
-    // Data for Label Card (Card 4)
     const labelData = useMemo(() => {
         if (viewMode === 'item' && viewingItemIndex !== null && mealItems[viewingItemIndex]) {
             const item = mealItems[viewingItemIndex];
@@ -336,19 +467,36 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                     <h1 className="text-2xl font-bold text-[var(--color-heading)] flex items-center gap-2">
                         <span>🧪</span> {t.tools.foodComposition.title}
                     </h1>
-                    <p className="text-sm text-gray-500">Analyze food composition, check nutrition facts, and build meals.</p>
+                    <p className="text-sm text-gray-500 flex items-center gap-2">
+                        Analyze food composition, check nutrition facts, and build meals.
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${dataSource === 'cloud' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
+                            {dataSource === 'cloud' ? '☁️ Cloud DB' : '💾 Local Data'}
+                        </span>
+                    </p>
                 </div>
-                {onClose && (
-                    <button onClick={onClose} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition text-sm font-medium">
-                        Close Tool
-                    </button>
-                )}
+                <div className="flex gap-2">
+                    {session && dataSource === 'local' && (
+                        <button 
+                            onClick={handleSyncToCloud}
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg transition text-xs font-bold border border-blue-200"
+                        >
+                            ☁️ Sync to Cloud
+                        </button>
+                    )}
+                    {onClose && (
+                        <button onClick={onClose} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition text-sm font-medium">
+                            Close Tool
+                        </button>
+                    )}
+                </div>
             </div>
+            
+            {syncMsg && <div className="mb-4 p-2 bg-blue-100 text-blue-800 text-xs rounded text-center">{syncMsg}</div>}
 
             {/* 4 Cards Layout (Responsive Grid) */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-start">
                 
-                {/* CARD 1: DATABASE SEARCH (Scrollable fixed height list) */}
+                {/* CARD 1: DATABASE SEARCH */}
                 <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden h-[650px]">
                     <div className="p-4 border-b border-gray-100 bg-gray-50">
                         <div className="flex justify-between items-center mb-3">
@@ -386,7 +534,6 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                                 <div className="space-y-2 max-h-32 overflow-y-auto pr-1 scrollbar-thin">
                                     {compositionFilters.map(f => (
                                         <div key={f.id} className="flex gap-1 items-center">
-                                            {/* Nutrient Select */}
                                             <select 
                                                 className="w-24 text-[10px] p-1 border rounded"
                                                 value={f.key}
@@ -397,7 +544,6 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                                                 ))}
                                             </select>
                                             
-                                            {/* Operator Select */}
                                             <select 
                                                 className="w-10 text-[10px] p-1 border rounded text-center font-bold"
                                                 value={f.op}
@@ -408,7 +554,6 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                                                 <option value="=">=</option>
                                             </select>
 
-                                            {/* Value Input */}
                                             <input 
                                                 type="number" 
                                                 className="w-12 text-[10px] p-1 border rounded"
@@ -416,7 +561,6 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                                                 onChange={(e) => updateFilter(f.id, 'val', Number(e.target.value))}
                                             />
 
-                                            {/* Remove Button */}
                                             <button onClick={() => removeFilter(f.id)} className="text-red-500 hover:text-red-700 text-xs px-1">✕</button>
                                         </div>
                                     ))}
@@ -442,31 +586,34 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                     </div>
 
                     <div className="flex-grow overflow-y-auto p-2 space-y-2 bg-gray-50/50">
-                        {filteredData.map(item => (
-                            <div 
-                                key={item.id}
-                                onClick={() => handleDatabaseSelect(item)}
-                                className={`p-3 border rounded-lg cursor-pointer transition hover:shadow-md flex flex-col gap-1 ${selectedItem?.id === item.id && viewingItemIndex === null ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-400' : 'bg-white border-gray-200 hover:border-blue-300'}`}
-                            >
-                                <div className="flex justify-between items-start">
-                                    <h4 className="font-bold text-gray-800 text-sm leading-tight">{item.food}</h4>
-                                    <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-mono">#{item.code}</span>
-                                </div>
-                                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500 mt-1 font-mono">
-                                    <span className="text-green-700 font-bold">{item.energy} kcal</span>
-                                    <span>P: {item.protein}g</span>
-                                    <span>C: {item.carb}g</span>
-                                    <span>F: {item.fat}g</span>
-                                </div>
-                            </div>
-                        ))}
-                        {filteredData.length === 0 && (
+                        {isLoadingData ? (
+                            <div className="p-8 text-center text-gray-400 text-sm">Loading database...</div>
+                        ) : filteredData.length === 0 ? (
                             <div className="p-8 text-center text-gray-400 text-sm">No foods found.</div>
+                        ) : (
+                            filteredData.map(item => (
+                                <div 
+                                    key={item.id}
+                                    onClick={() => handleDatabaseSelect(item)}
+                                    className={`p-3 border rounded-lg cursor-pointer transition hover:shadow-md flex flex-col gap-1 ${selectedItem?.id === item.id && viewingItemIndex === null ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-400' : 'bg-white border-gray-200 hover:border-blue-300'}`}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <h4 className="font-bold text-gray-800 text-sm leading-tight">{item.food}</h4>
+                                        <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-mono">#{item.code}</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-gray-500 mt-1 font-mono">
+                                        <span className="text-green-700 font-bold">{item.energy} kcal</span>
+                                        <span>P: {item.protein}g</span>
+                                        <span>C: {item.carb}g</span>
+                                        <span>F: {item.fat}g</span>
+                                    </div>
+                                </div>
+                            ))
                         )}
                     </div>
                 </div>
 
-                {/* CARD 2: SELECTED ITEM ANALYSIS (Auto Height) */}
+                {/* CARD 2: SELECTED ITEM ANALYSIS */}
                 <div className={`bg-white rounded-xl shadow-lg border flex flex-col overflow-hidden relative transition-colors ${viewingItemIndex !== null ? 'border-yellow-300 ring-2 ring-yellow-100' : 'border-gray-200'}`}>
                     <div className={`p-4 border-b flex justify-between items-center ${viewingItemIndex !== null ? 'bg-yellow-50 border-yellow-200' : 'bg-blue-50 border-blue-100'}`}>
                         <h3 className={`font-bold mb-1 flex items-center gap-2 ${viewingItemIndex !== null ? 'text-yellow-800' : 'text-blue-900'}`}>
@@ -527,7 +674,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                     )}
                 </div>
 
-                {/* CARD 3: MEAL LIST (CALCULATION) - Fixed height list */}
+                {/* CARD 3: MEAL LIST (CALCULATION) */}
                 <div className="bg-white rounded-xl shadow-lg border border-gray-200 flex flex-col overflow-hidden relative h-[650px]">
                     <div className="p-4 border-b border-gray-100 bg-green-50 flex justify-between items-center">
                         <h3 className="font-bold text-green-900 flex items-center gap-2">
@@ -597,7 +744,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                     )}
                 </div>
 
-                {/* CARD 4: MEAL TOTALS / ITEM LABEL - Auto Height */}
+                {/* CARD 4: MEAL TOTALS / ITEM LABEL */}
                 <div className={`bg-white rounded-xl shadow-lg border flex flex-col overflow-hidden relative transition-colors ${viewMode === 'item' ? 'border-yellow-200' : 'border-gray-200'}`}>
                     <div 
                         className={`p-4 border-b flex justify-between items-center cursor-pointer hover:opacity-80 transition ${viewMode === 'item' ? 'bg-yellow-100 border-yellow-200' : 'bg-purple-50 border-gray-100'}`}
