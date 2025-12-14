@@ -1,3 +1,4 @@
+
 export interface ExchangeItem {
   name: string;
   group: string;
@@ -7,6 +8,18 @@ export interface ExchangeItem {
   fat: number;
   fiber: number;
   kcal: number;
+}
+
+export interface FoodExchangeRow {
+  id?: number;
+  food: string;
+  serve: number;
+  cho: number;
+  protein: number;
+  fat: number;
+  fiber: number;
+  kcal: number;
+  food_group: string;
 }
 
 // Reuse the meal creator database for simple mode as it matches the provided structure

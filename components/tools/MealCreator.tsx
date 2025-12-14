@@ -1,12 +1,12 @@
-
 import React, { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
-import { MacroDonut } from "../Visuals";
+import { MacroDonut, ProgressBar } from "../Visuals";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { SavedMeal } from "../../types";
 import Toast from "../Toast";
+import { FoodExchangeRow } from "../../data/exchangeData";
 
 interface MealCreatorProps {
     initialLoadId?: string | null;
@@ -14,126 +14,180 @@ interface MealCreatorProps {
     autoOpenNew?: boolean;
 }
 
+type MealTime = 'Breakfast' | 'Morning Snack' | 'Lunch' | 'Afternoon Snack' | 'Dinner' | 'Late Snack';
+const MEAL_TIMES: MealTime[] = ['Breakfast', 'Morning Snack', 'Lunch', 'Afternoon Snack', 'Dinner', 'Late Snack'];
+
+interface PlannerItem extends FoodItem {
+    selected: boolean;
+}
+
+interface DayPlan {
+    [key: string]: PlannerItem[];
+}
+
 const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, autoOpenNew }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
+  
+  // Data Source State
+  const [activeData, setActiveData] = useState<FoodItem[]>(mealCreatorDatabase);
+  const [dataSource, setDataSource] = useState<'local' | 'cloud'>('local');
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
+
+  // Planner State
+  const [dayPlan, setDayPlan] = useState<DayPlan>(
+      MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {})
+  );
+  
+  // UI State
   const [searchQuery, setSearchQuery] = useState("");
-  const [addedFoods, setAddedFoods] = useState<FoodItem[]>([]);
+  const [targetKcal, setTargetKcal] = useState<number>(2000);
+  const [showAddMenu, setShowAddMenu] = useState<number | null>(null); // Index of item in search results
 
   // Save/Load State
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [planName, setPlanName] = useState('');
   const [loadedPlanId, setLoadedPlanId] = useState<string | null>(null);
-  const [lastSavedName, setLastSavedName] = useState<string>(''); // Track name to detect changes
+  const [lastSavedName, setLastSavedName] = useState<string>('');
   const [savedPlans, setSavedPlans] = useState<SavedMeal[]>([]);
   const [statusMsg, setStatusMsg] = useState('');
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [loadSearchQuery, setLoadSearchQuery] = useState('');
 
-  // Search Logic
+  // --- 1. Database Integration ---
+  const mapDBToItem = (row: FoodExchangeRow): FoodItem => ({
+      name: row.food,
+      group: row.food_group,
+      serves: Number(row.serve),
+      cho: Number(row.cho),
+      protein: Number(row.protein),
+      fat: Number(row.fat),
+      fiber: Number(row.fiber),
+      kcal: Number(row.kcal)
+  });
+
+  const mapItemToDB = (item: FoodItem): FoodExchangeRow => ({
+      food: item.name,
+      food_group: item.group,
+      serve: item.serves,
+      cho: item.cho,
+      protein: item.protein,
+      fat: item.fat,
+      fiber: item.fiber,
+      kcal: item.kcal
+  });
+
+  useEffect(() => {
+      const fetchDB = async () => {
+          setIsLoadingData(true);
+          try {
+              const { data, error } = await supabase
+                  .from('food_exchange')
+                  .select('*')
+                  .order('food', { ascending: true })
+                  .limit(2000);
+
+              if (error) throw error;
+
+              if (data && data.length > 0) {
+                  const mapped = data.map(mapDBToItem);
+                  setActiveData(mapped);
+                  setDataSource('cloud');
+              } else {
+                  console.log("No cloud data found, using local.");
+                  setDataSource('local');
+              }
+          } catch (err) {
+              console.warn("Using local exchange data. DB Error:", err);
+              setDataSource('local');
+          } finally {
+              setIsLoadingData(false);
+          }
+      };
+      fetchDB();
+  }, []);
+
+  const handleSyncToCloud = async () => {
+      if (!session) return;
+      if (!window.confirm("This will upload local exchange items to the Supabase database. Continue?")) return;
+      setSyncMsg('Syncing...');
+      try {
+          const payload = mealCreatorDatabase.map(mapItemToDB);
+          const { error } = await supabase.from('food_exchange').insert(payload);
+          
+          if (error) throw error;
+          setSyncMsg('Success! Data uploaded.');
+          window.location.reload(); 
+      } catch (err: any) {
+          console.error(err);
+          setSyncMsg('Error: ' + err.message);
+      }
+  };
+
+  // --- 2. Search Logic ---
   const filteredFoods = useMemo(() => {
     if (!searchQuery) return [];
     const q = searchQuery.toLowerCase();
-    return mealCreatorDatabase.filter(
+    return activeData.filter(
       (food) => food.name.toLowerCase().includes(q) || food.group.toLowerCase().includes(q)
     );
-  }, [searchQuery]);
+  }, [searchQuery, activeData]);
 
-  // Filter Saved Plans Logic
-  const filteredSavedPlans = useMemo(() => {
-      if (!loadSearchQuery) return savedPlans;
-      const q = loadSearchQuery.toLowerCase();
-      return savedPlans.filter(plan => plan.name.toLowerCase().includes(q));
-  }, [savedPlans, loadSearchQuery]);
-
-  // Auto-load effect
-  useEffect(() => {
-      const autoLoad = async () => {
-          if (initialLoadId && session) {
-              try {
-                  const { data, error } = await supabase
-                    .from('saved_meals')
-                    .select('*')
-                    .eq('id', initialLoadId)
-                    .eq('user_id', session.user.id)
-                    .single();
-                  
-                  if (data && !error) {
-                      loadPlan(data);
-                  }
-              } catch (err) {
-                  console.error("Auto-load failed", err);
-              }
-          }
-      };
-      autoLoad();
-  }, [initialLoadId, session]);
-
-  // Handle Auto Open Load/New
-  useEffect(() => {
-      if (autoOpenLoad && session) {
-          fetchPlans();
-          setShowLoadModal(true);
-      }
-      if (autoOpenNew) {
-          resetCreator();
-      }
-  }, [autoOpenLoad, autoOpenNew, session]);
-
-  const addFood = (food: FoodItem) => {
-    // Ensure deep copy of added item
-    setAddedFoods([...addedFoods, { ...food, serves: 1 }]);
-    setSearchQuery("");
+  // --- 3. Planner Logic ---
+  
+  const addToPlan = (food: FoodItem, mealTime: MealTime) => {
+      setDayPlan(prev => ({
+          ...prev,
+          [mealTime]: [...(prev[mealTime] || []), { ...food, serves: 1, selected: true }]
+      }));
+      setSearchQuery("");
+      setShowAddMenu(null);
   };
 
-  const removeFood = (index: number) => {
-    const newFoods = [...addedFoods];
-    newFoods.splice(index, 1);
-    setAddedFoods(newFoods);
+  const removeFromPlan = (mealTime: string, index: number) => {
+      setDayPlan(prev => {
+          const newList = [...prev[mealTime]];
+          newList.splice(index, 1);
+          return { ...prev, [mealTime]: newList };
+      });
   };
 
-  const updateServes = (index: number, val: number) => {
-    const newFoods = [...addedFoods];
-    // Deep copy the specific item to ensure React state change detection and safe mutation
-    newFoods[index] = { ...newFoods[index], serves: val };
-    setAddedFoods(newFoods);
+  const updateItem = (mealTime: string, index: number, field: keyof PlannerItem, value: any) => {
+      setDayPlan(prev => {
+          const newList = [...prev[mealTime]];
+          newList[index] = { ...newList[index], [field]: value };
+          return { ...prev, [mealTime]: newList };
+      });
   };
 
-  const resetCreator = () => {
-    setAddedFoods([]);
-    setSearchQuery("");
-    setPlanName("");
-    setLoadedPlanId(null);
-    setLastSavedName("");
+  const resetPlanner = () => {
+      setDayPlan(MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {}));
+      setPlanName("");
+      setLoadedPlanId(null);
+      setLastSavedName("");
   };
 
-  // Calculations
+  // --- 4. Calculations ---
   const summary = useMemo(() => {
     let totalServes = 0, totalCHO = 0, totalProtein = 0, totalFat = 0, totalFiber = 0, totalKcal = 0;
-    const groupSummary: Record<string, any> = {};
-
-    addedFoods.forEach(food => {
-      const s = food.serves;
-      totalServes += s;
-      totalCHO += food.cho * s;
-      totalProtein += food.protein * s;
-      totalFat += food.fat * s;
-      totalFiber += food.fiber * s;
-      totalKcal += food.kcal * s;
-
-      if (!groupSummary[food.group]) {
-        groupSummary[food.group] = { serves: 0, cho: 0, protein: 0, fat: 0, fiber: 0, kcal: 0 };
-      }
-      groupSummary[food.group].serves += s;
-      groupSummary[food.group].cho += food.cho * s;
-      groupSummary[food.group].protein += food.protein * s;
-      groupSummary[food.group].fat += food.fat * s;
-      groupSummary[food.group].fiber += food.fiber * s;
-      groupSummary[food.group].kcal += food.kcal * s;
+    
+    (Object.values(dayPlan) as PlannerItem[][]).forEach(mealList => {
+        mealList.forEach(item => {
+            if (item.selected) { // Only count if checkbox is active
+                const s = item.serves;
+                totalServes += s;
+                totalCHO += item.cho * s;
+                totalProtein += item.protein * s;
+                totalFat += item.fat * s;
+                totalFiber += item.fiber * s;
+                totalKcal += item.kcal * s;
+            }
+        });
     });
 
-    return { totalServes, totalCHO, totalProtein, totalFat, totalFiber, totalKcal, groupSummary };
-  }, [addedFoods]);
+    return { totalServes, totalCHO, totalProtein, totalFat, totalFiber, totalKcal };
+  }, [dayPlan]);
 
   const percentages = useMemo(() => {
      const k = summary.totalKcal || 1;
@@ -141,21 +195,20 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
          cho: ((summary.totalCHO * 4) / k * 100).toFixed(1),
          pro: ((summary.totalProtein * 4) / k * 100).toFixed(1),
          fat: ((summary.totalFat * 9) / k * 100).toFixed(1),
-         fib: ((summary.totalFiber * 2) / k * 100).toFixed(1),
      }
   }, [summary]);
 
-  // --- Database Operations ---
+  // --- 5. Save/Load --- (Same logic, new structure)
   const fetchPlans = async () => {
     if (!session) return;
     setIsLoadingPlans(true);
-    setLoadSearchQuery(''); // Reset search on open
+    setLoadSearchQuery('');
     try {
         const { data, error } = await supabase
           .from('saved_meals')
           .select('*')
-          .eq('tool_type', 'meal-creator')
-          .eq('user_id', session.user.id) // Strict user filtering
+          .eq('tool_type', 'day-planner') // New Type
+          .eq('user_id', session.user.id)
           .order('created_at', { ascending: false });
         
         if (error) throw error;
@@ -170,81 +223,61 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
 
   const savePlan = async () => {
     if (!planName.trim()) {
-        alert("Please enter a meal name.");
+        alert("Please enter a plan name.");
         return;
     }
     if (!session) return;
     
     setStatusMsg("Saving...");
-    const planData = { addedFoods };
-    const timestamp = new Date().toISOString();
-
+    const planData = { dayPlan, targetKcal };
     const isUpdate = loadedPlanId && (planName === lastSavedName);
 
     try {
         let data;
-        
         if (isUpdate) {
-            // Explicit UPDATE
-            // We only update mutable fields (name, data)
-            const updatePayload = {
-                name: planName,
-                data: planData,
-            };
-
-            const response = await supabase
+            const { data: updated, error } = await supabase
                 .from('saved_meals')
-                .update(updatePayload)
+                .update({ name: planName, data: planData })
                 .eq('id', loadedPlanId)
-                .eq('user_id', session.user.id) // Strict check for security
-                .select();
-                
-            if (response.error) throw response.error;
-            if (!response.data || response.data.length === 0) {
-               throw new Error("Update failed: Meal not found or permission denied (RLS).");
-            }
-            data = response.data[0];
-        } else {
-            // Explicit INSERT
-            const insertPayload = {
-                user_id: session.user.id,
-                name: planName,
-                tool_type: 'meal-creator',
-                data: planData,
-                created_at: timestamp
-            };
-
-            const response = await supabase
-                .from('saved_meals')
-                .insert(insertPayload)
+                .eq('user_id', session.user.id)
                 .select()
                 .single();
-
-            if (response.error) throw response.error;
-            data = response.data;
+            if (error) throw error;
+            data = updated;
+        } else {
+            const { data: inserted, error } = await supabase
+                .from('saved_meals')
+                .insert({
+                    user_id: session.user.id,
+                    name: planName,
+                    tool_type: 'day-planner',
+                    data: planData,
+                    created_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+            if (error) throw error;
+            data = inserted;
         }
         
         if (data) {
             setLoadedPlanId(data.id);
             setLastSavedName(data.name);
-            if (isUpdate) {
-                setStatusMsg("Meal Updated Successfully!");
-            } else {
-                setStatusMsg("Meal Saved as New Entry!");
-            }
+            setStatusMsg(isUpdate ? "Plan Updated Successfully!" : "Plan Saved Successfully!");
         }
         
         fetchPlans(); 
         setTimeout(() => setStatusMsg(''), 3000);
     } catch (err: any) {
-        console.error('Error saving plan:', err);
+        console.error('Error saving:', err);
         setStatusMsg("Failed to save: " + err.message);
     }
   };
 
   const loadPlan = (plan: SavedMeal) => {
-    if (!plan.data || !plan.data.addedFoods) return;
-    setAddedFoods([...plan.data.addedFoods]);
+    if (!plan.data || !plan.data.dayPlan) return;
+    setDayPlan(plan.data.dayPlan);
+    if (plan.data.targetKcal) setTargetKcal(plan.data.targetKcal);
     setPlanName(plan.name);
     setLoadedPlanId(plan.id); 
     setLastSavedName(plan.name); 
@@ -253,267 +286,285 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
     setTimeout(() => setStatusMsg(''), 3000);
   };
 
-  const deletePlan = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this meal?")) return;
-    try {
-        const { error } = await supabase.from('saved_meals').delete().eq('id', id).eq('user_id', session?.user.id);
-        if (error) throw error;
-        setSavedPlans(prev => prev.filter(p => p.id !== id));
-        if (loadedPlanId === id) {
-            setLoadedPlanId(null);
-            setLastSavedName("");
-            setPlanName('');
-        }
-    } catch (err) {
-        console.error("Error deleting:", err);
-    }
-  };
+  // Filter Saved Plans Logic
+  const filteredSavedPlans = useMemo(() => {
+      if (!loadSearchQuery) return savedPlans;
+      const q = loadSearchQuery.toLowerCase();
+      return savedPlans.filter(plan => plan.name.toLowerCase().includes(q));
+  }, [savedPlans, loadSearchQuery]);
+
+  // Handle Initial Load
+  useEffect(() => {
+      if (initialLoadId && session) {
+          const autoLoad = async () => {
+              const { data } = await supabase.from('saved_meals').select('*').eq('id', initialLoadId).single();
+              if (data) loadPlan(data);
+          };
+          autoLoad();
+      }
+  }, [initialLoadId]);
 
   return (
-    <div className="max-w-6xl mx-auto animate-fade-in space-y-8">
-      {/* Toast Notification */}
-      <Toast message={statusMsg} />
+    <div className="max-w-[1920px] mx-auto animate-fade-in space-y-6 pb-12">
+      <Toast message={statusMsg || syncMsg} />
 
-      {/* Header & Controls */}
-      <div className="text-center space-y-4 relative bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <h1 className="text-3xl font-bold text-[var(--color-heading)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)]">
-            {t.tools.mealCreator.title}
-            </h1>
-
-            {session && (
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <div className="relative flex-grow">
-                        <input 
-                            type="text"
-                            placeholder="Enter Meal Name..."
-                            value={planName}
-                            onChange={(e) => setPlanName(e.target.value)}
-                            className="w-full md:w-64 px-4 py-2 pl-9 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
-                        />
-                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">✎</span>
-                    </div>
-
-                    <button 
-                        onClick={savePlan}
-                        className="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-full shadow-md flex items-center justify-center transition flex-shrink-0"
-                        title={t.common.save}
-                    >
-                        💾
-                    </button>
-                    <button 
-                        onClick={() => {
-                            fetchPlans();
-                            setShowLoadModal(true);
-                        }}
-                        className="bg-purple-500 hover:bg-purple-600 text-white w-10 h-10 rounded-full shadow-md flex items-center justify-center transition flex-shrink-0"
-                        title={t.common.load}
-                    >
-                        📂
-                    </button>
-                    <button onClick={resetCreator} className="text-red-500 hover:text-red-700 font-medium text-sm px-3 py-2 border border-red-200 rounded-full hover:bg-red-50 transition whitespace-nowrap">
-                        {t.mealCreator.resetCreator}
-                    </button>
-                </div>
-            )}
-        </div>
-        
-        <div className="relative max-w-xl mx-auto">
-          <input
-            type="text"
-            className="w-full px-6 py-3 rounded-full border-2 border-[var(--color-border)] focus:border-[var(--color-primary)] focus:outline-none shadow-sm text-lg"
-            placeholder={t.mealCreator.searchPlaceholder}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            dir={isRTL ? 'rtl' : 'ltr'}
-          />
-          {searchQuery && filteredFoods.length > 0 && (
-            <ul className="absolute w-full bg-white mt-2 rounded-xl shadow-xl max-h-60 overflow-y-auto z-50 border border-gray-100 text-right">
-              {filteredFoods.map((food, idx) => (
-                <li 
-                  key={idx} 
-                  onClick={() => addFood(food)}
-                  className="px-4 py-3 hover:bg-green-50 cursor-pointer border-b border-gray-50 last:border-0 transition-colors"
-                >
-                  <div className="font-medium text-[var(--color-text)]">{food.name.replace(/\(.*?\)/g, '')}</div>
-                  <div className="text-xs text-[var(--color-text-light)] flex justify-between">
-                     <span>{food.group}</span>
-                     <span className="text-red-500">{food.name.match(/\(.*?\)/g)}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left: Added Foods Table */}
-        <div className="lg:col-span-2 card bg-white shadow-lg overflow-hidden">
-           <div className="flex justify-between items-center mb-4 px-2">
-              <h3 className="font-bold text-lg text-[var(--color-heading)]">Meal Items</h3>
-              <button onClick={() => setAddedFoods([])} className="text-red-500 text-sm hover:underline">{t.mealCreator.clear}</button>
-           </div>
-           
-           <div className="overflow-x-auto">
-             <table className="w-full">
-               <thead className="bg-[var(--color-bg-soft)] text-[var(--color-heading)]">
-                 <tr>
-                   <th className="p-3 text-right w-1/2">{t.mealCreator.foodName}</th>
-                   <th className="p-3 text-center">{t.mealCreator.serves}</th>
-                   <th className="p-3 text-center">{t.mealCreator.kcal}</th>
-                   <th className="p-3"></th>
-                 </tr>
-               </thead>
-               <tbody className="divide-y divide-gray-100">
-                 {addedFoods.map((food, idx) => (
-                   <tr key={idx} className="hover:bg-gray-50">
-                     <td className="p-3 text-right text-sm">
-                       <div className="font-medium">{food.name.replace(/\(.*?\)/g, '')}</div>
-                       <div className="text-xs text-gray-500">{food.group} <span className="text-red-400">{food.name.match(/\(.*?\)/g)}</span></div>
-                     </td>
-                     <td className="p-3 text-center">
-                       <input 
-                         type="number" 
-                         min="0.25" 
-                         step="0.25"
-                         value={food.serves}
-                         onChange={(e) => updateServes(idx, Number(e.target.value))}
-                         className="w-16 text-center border rounded p-1 focus:ring-1 focus:ring-[var(--color-primary)]"
-                       />
-                     </td>
-                     <td className="p-3 text-center font-mono text-blue-600">
-                       {(food.kcal * food.serves).toFixed(0)}
-                     </td>
-                     <td className="p-3 text-center">
-                       <button onClick={() => removeFood(idx)} className="text-red-400 hover:text-red-600 text-xl">×</button>
-                     </td>
-                   </tr>
-                 ))}
-                 {addedFoods.length === 0 && (
-                   <tr>
-                     <td colSpan={4} className="p-8 text-center text-gray-400 italic">
-                       No food items added yet. Search above to add.
-                     </td>
-                   </tr>
-                 )}
-               </tbody>
-             </table>
-           </div>
-        </div>
-
-        {/* Right: Summary */}
-        <div className="lg:col-span-1 space-y-6">
-          
-          {/* Total Summary Card */}
-          <div className="card bg-gradient-to-b from-white to-green-50 border-green-100 shadow-lg">
-            <h3 className="font-bold text-center text-[var(--color-primary-dark)] mb-2">
-              {t.mealCreator.mealSummary}
-            </h3>
-
-            {/* Macro Chart */}
-            {summary.totalKcal > 0 ? (
-              <MacroDonut 
-                cho={summary.totalCHO} 
-                pro={summary.totalProtein} 
-                fat={summary.totalFat} 
-                totalKcal={summary.totalKcal} 
-              />
-            ) : (
-               <div className="h-32 flex items-center justify-center text-gray-400 text-sm">Add food to see breakdown</div>
-            )}
-            
-            <div className="space-y-3 text-sm px-2 pb-2">
-               <div className="flex justify-between p-2 bg-yellow-50 rounded border border-yellow-100">
-                  <span>{t.mealCreator.total} (Serves)</span>
-                  <span className="font-bold">{summary.totalServes.toFixed(2)}</span>
-               </div>
-               
-               <div className="grid grid-cols-3 gap-2 text-center">
-                 <div className="p-2 bg-blue-50 rounded">
-                   <div className="text-xs text-gray-500">CHO</div>
-                   <div className="font-bold text-blue-700">{summary.totalCHO.toFixed(1)}g</div>
-                   <div className="text-[10px] text-blue-400">{percentages.cho}%</div>
-                 </div>
-                 <div className="p-2 bg-red-50 rounded">
-                   <div className="text-xs text-gray-500">Prot</div>
-                   <div className="font-bold text-red-700">{summary.totalProtein.toFixed(1)}g</div>
-                   <div className="text-[10px] text-red-400">{percentages.pro}%</div>
-                 </div>
-                 <div className="p-2 bg-yellow-50 rounded">
-                   <div className="text-xs text-gray-500">Fat</div>
-                   <div className="font-bold text-yellow-700">{summary.totalFat.toFixed(1)}g</div>
-                   <div className="text-[10px] text-yellow-400">{percentages.fat}%</div>
-                 </div>
-               </div>
-               
-               <div className="flex justify-between items-center p-2 bg-green-100 rounded text-green-800">
-                   <span className="text-xs">Fiber</span>
-                   <span className="font-bold">{summary.totalFiber.toFixed(1)}g</span>
-               </div>
-            </div>
+      {/* Header & Search */}
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-6 sticky top-20 z-40">
+          <div className="text-center xl:text-left">
+              <h1 className="text-3xl font-bold text-[var(--color-heading)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)]">
+                  Day Food Planner
+              </h1>
+              <p className="text-sm text-gray-500 mt-1 flex items-center gap-2 justify-center xl:justify-start">
+                  Plan meals, check alternatives, and track daily intake.
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border ${dataSource === 'cloud' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
+                      {dataSource === 'cloud' ? '☁️ Cloud DB' : '💾 Local Data'}
+                  </span>
+              </p>
           </div>
 
-          {/* Group Summary */}
-          {Object.keys(summary.groupSummary).length > 0 && (
-            <div className="card bg-white shadow">
-              <h4 className="font-bold text-sm text-gray-600 mb-2">Group Breakdown</h4>
-              <div className="space-y-1 text-xs max-h-60 overflow-y-auto pr-1">
-                {Object.entries(summary.groupSummary).map(([group, val]: [string, any]) => (
-                  <div key={group} className="flex justify-between items-center p-2 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition">
-                    <span className="font-medium text-gray-700">{group}</span>
-                    <div className="text-right">
-                        <span className="font-mono text-[var(--color-primary)] font-bold block">{val.kcal.toFixed(0)} kcal</span>
-                        <span className="text-[10px] text-gray-500 block">{val.serves.toFixed(2)} Serves</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-        </div>
+          {/* Search Bar */}
+          <div className="relative w-full max-w-xl">
+              <input
+                type="text"
+                className="w-full px-6 py-3 rounded-full border-2 border-[var(--color-border)] focus:border-[var(--color-primary)] focus:outline-none shadow-sm text-lg"
+                placeholder={t.mealCreator.searchPlaceholder}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                dir={isRTL ? 'rtl' : 'ltr'}
+              />
+              {/* Search Results Dropdown */}
+              {searchQuery && filteredFoods.length > 0 && (
+                <ul className="absolute w-full bg-white mt-2 rounded-xl shadow-2xl max-h-80 overflow-y-auto z-50 border border-gray-100 text-right">
+                  {filteredFoods.map((food, idx) => (
+                    <li 
+                      key={idx} 
+                      className="px-4 py-3 hover:bg-green-50 border-b border-gray-50 last:border-0 transition-colors flex justify-between items-center group relative"
+                      onMouseEnter={() => setShowAddMenu(idx)}
+                      onMouseLeave={() => setShowAddMenu(null)}
+                    >
+                      <div className="flex-grow text-left cursor-pointer" onClick={() => addToPlan(food, 'Lunch')}>
+                          <div className="font-medium text-[var(--color-text)]">{food.name.replace(/\(.*?\)/g, '')}</div>
+                          <div className="text-xs text-[var(--color-text-light)] flex justify-between">
+                             <span>{food.group}</span>
+                             <span className="font-bold text-blue-600">{food.kcal.toFixed(0)} kcal</span>
+                          </div>
+                      </div>
+                      
+                      {/* Add Button with Dropdown */}
+                      <div className="flex items-center gap-2">
+                          <button 
+                             onClick={() => addToPlan(food, 'Breakfast')}
+                             className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded hover:bg-orange-200"
+                          >
+                              Bkfast
+                          </button>
+                          <button 
+                             onClick={() => addToPlan(food, 'Lunch')}
+                             className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200"
+                          >
+                              Lunch
+                          </button>
+                          <button 
+                             onClick={() => addToPlan(food, 'Dinner')}
+                             className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200"
+                          >
+                              Dinner
+                          </button>
+                          <button 
+                             onClick={() => addToPlan(food, 'Morning Snack')}
+                             className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded hover:bg-gray-200"
+                          >
+                              Snack
+                          </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2">
+                {session && (
+                    <>
+                    <input 
+                        type="text" placeholder="Plan Name" value={planName} onChange={e => setPlanName(e.target.value)}
+                        className="w-33 p-2 border rounded text-sm focus:ring-1 focus:ring-blue-400 outline-none"
+                    />
+                    <button onClick={savePlan} className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded transition" title="Save Plan">💾</button>
+                    <button onClick={() => { fetchPlans(); setShowLoadModal(true); }} className="bg-purple-500 hover:bg-purple-600 text-white p-2 rounded transition" title="Load Plan">📂</button>
+                    </>
+                )}
+                {session && dataSource === 'local' && (
+                    <button onClick={handleSyncToCloud} className="bg-orange-100 text-orange-700 px-3 py-2 rounded text-xs font-bold hover:bg-orange-200">
+                        ☁️ Sync
+                    </button>
+                )}
+                <button onClick={resetPlanner} className="text-red-500 hover:text-red-700 text-sm font-medium border border-red-200 px-3 py-2 rounded hover:bg-red-50">
+                    {t.mealCreator.resetCreator}
+                </button>
+          </div>
       </div>
 
-      {/* --- MODALS --- */}
-      
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          
+          {/* Main Planner: Meal Sections */}
+          <div className="xl:col-span-8 space-y-6">
+              {MEAL_TIMES.map((time) => (
+                  <div key={time} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                          <h3 className="font-bold text-gray-700 text-lg flex items-center gap-2">
+                              {time === 'Breakfast' ? '🍳' : time === 'Lunch' ? '🥗' : time === 'Dinner' ? '🍲' : '🍎'} 
+                              {time}
+                          </h3>
+                          <span className="text-xs font-mono font-bold text-gray-500">
+                              {dayPlan[time]?.filter(i => i.selected).reduce((acc, i) => acc + (i.kcal * i.serves), 0).toFixed(0)} kcal
+                          </span>
+                      </div>
+                      
+                      {dayPlan[time]?.length === 0 ? (
+                          <div className="p-4 text-center text-sm text-gray-400 italic">No items added. Search above to add to {time}.</div>
+                      ) : (
+                          <div className="divide-y divide-gray-100">
+                              {dayPlan[time].map((item, idx) => (
+                                  <div key={idx} className={`p-3 flex flex-col sm:flex-row items-center gap-3 transition ${!item.selected ? 'bg-gray-50 opacity-60' : 'hover:bg-blue-50'}`}>
+                                      {/* Checkbox for Selection/Alternative */}
+                                      <input 
+                                        type="checkbox" 
+                                        checked={item.selected} 
+                                        onChange={(e) => updateItem(time, idx, 'selected', e.target.checked)}
+                                        className="w-5 h-5 cursor-pointer accent-blue-600"
+                                        title="Include in Calculation"
+                                      />
+                                      
+                                      <div className="flex-grow text-left w-full sm:w-auto">
+                                          <div className="font-bold text-gray-800 text-sm">{item.name.replace(/\(.*?\)/g, '')}</div>
+                                          <div className="text-[10px] text-gray-500">{item.group}</div>
+                                      </div>
+
+                                      <div className="flex items-center gap-2">
+                                          <input 
+                                            type="number" step="0.25" min="0" 
+                                            value={item.serves}
+                                            onChange={(e) => updateItem(time, idx, 'serves', Number(e.target.value))}
+                                            className="w-14 p-1 border rounded text-center text-sm font-bold focus:ring-1 focus:ring-blue-400"
+                                          />
+                                          <span className="text-xs text-gray-500">serves</span>
+                                      </div>
+
+                                      <div className="text-right w-24 hidden sm:block">
+                                          <div className="font-mono font-bold text-blue-700 text-sm">{(item.kcal * item.serves).toFixed(0)} kcal</div>
+                                          <div className="text-[9px] text-gray-400 flex gap-1 justify-end">
+                                              <span>P:{(item.protein*item.serves).toFixed(0)}</span>
+                                              <span>C:{(item.cho*item.serves).toFixed(0)}</span>
+                                              <span>F:{(item.fat*item.serves).toFixed(0)}</span>
+                                          </div>
+                                      </div>
+
+                                      <button onClick={() => removeFromPlan(time, idx)} className="text-red-400 hover:text-red-600 px-2 text-lg">×</button>
+                                  </div>
+                              ))}
+                          </div>
+                      )}
+                  </div>
+              ))}
+          </div>
+
+          {/* Sidebar: Totals & Targets */}
+          <div className="xl:col-span-4 space-y-6">
+              <div className="bg-white rounded-xl shadow-lg border-t-4 border-t-blue-600 p-6 sticky top-40">
+                  <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+                      <span>📊</span> Daily Summary
+                  </h3>
+
+                  <div className="mb-6">
+                      <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Target Calories</label>
+                      <div className="relative">
+                        <input 
+                            type="number" 
+                            className="w-full p-2 border-2 border-blue-200 rounded-lg text-center font-bold text-xl text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                            placeholder="0"
+                            value={targetKcal} 
+                            onChange={(e) => setTargetKcal(parseFloat(e.target.value))}
+                            dir="ltr"
+                        />
+                        <span className="absolute right-3 top-3 text-gray-400 text-xs font-medium">Kcal</span>
+                      </div>
+                  </div>
+
+                  <div className="mb-6">
+                      <MacroDonut 
+                        cho={summary.totalCHO} 
+                        pro={summary.totalProtein} 
+                        fat={summary.totalFat} 
+                        totalKcal={summary.totalKcal} 
+                      />
+                  </div>
+
+                  <div className="space-y-4">
+                      <ProgressBar 
+                        current={summary.totalKcal} 
+                        target={targetKcal} 
+                        label="Calories" 
+                        unit="kcal" 
+                        color="bg-blue-500"
+                      />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-center mt-6">
+                     <div className="p-2 bg-blue-50 rounded border border-blue-100">
+                        <div className="text-xs text-gray-500">CHO</div>
+                        <div className="font-bold text-blue-700">{summary.totalCHO.toFixed(0)}g</div>
+                        <div className="text-[10px] text-blue-400">{percentages.cho}%</div>
+                     </div>
+                     <div className="p-2 bg-red-50 rounded border border-red-100">
+                        <div className="text-xs text-gray-500">PRO</div>
+                        <div className="font-bold text-red-700">{summary.totalProtein.toFixed(0)}g</div>
+                        <div className="text-[10px] text-red-400">{percentages.pro}%</div>
+                     </div>
+                     <div className="p-2 bg-yellow-50 rounded border border-yellow-100">
+                        <div className="text-xs text-gray-500">FAT</div>
+                        <div className="font-bold text-yellow-700">{summary.totalFat.toFixed(0)}g</div>
+                        <div className="text-[10px] text-yellow-400">{percentages.fat}%</div>
+                     </div>
+                  </div>
+                  
+                  <div className="mt-4 p-3 bg-gray-50 rounded text-center text-xs text-gray-500">
+                      <strong>Note:</strong> Calculation includes only checked items. Uncheck items to create alternatives.
+                  </div>
+              </div>
+          </div>
+
+      </div>
+
       {/* Load Modal */}
       {showLoadModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm no-print">
             <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-2xl h-[80vh] flex flex-col">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-bold">{t.common.load}</h3>
                     <button onClick={() => setShowLoadModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
                 </div>
-                
                 <div className="mb-4">
                     <input 
-                        type="text" 
-                        placeholder={t.common.search}
-                        value={loadSearchQuery}
-                        onChange={(e) => setLoadSearchQuery(e.target.value)}
+                        type="text" placeholder={t.common.search} value={loadSearchQuery} onChange={(e) => setLoadSearchQuery(e.target.value)}
                         className="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                     />
                 </div>
-
                 <div className="flex-grow overflow-y-auto space-y-2 pr-2">
                     {isLoadingPlans ? (
                         <div className="text-center py-10 text-gray-400">Loading...</div>
                     ) : filteredSavedPlans.length === 0 ? (
-                        <div className="text-center py-10 text-gray-400">No saved meals found.</div>
+                        <div className="text-center py-10 text-gray-400">No saved plans found.</div>
                     ) : (
                         filteredSavedPlans.map(plan => (
                             <div key={plan.id} className="flex justify-between items-center p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-100 group">
                                 <div>
                                     <div className="font-bold text-gray-800">{plan.name}</div>
-                                    <div className="text-xs text-gray-500">{new Date(plan.created_at).toLocaleDateString('en-GB')}</div>
+                                    <div className="text-xs text-gray-500">{new Date(plan.created_at).toLocaleDateString()}</div>
                                 </div>
-                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                                <div className="flex gap-2">
                                     <button onClick={() => loadPlan(plan)} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Load</button>
-                                    <button onClick={() => deletePlan(plan.id)} className="px-3 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200">Del</button>
                                 </div>
                             </div>
                         ))
