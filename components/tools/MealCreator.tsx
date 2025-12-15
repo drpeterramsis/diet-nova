@@ -114,7 +114,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
     onWeeklyPlanChange
 }) => {
   const { t, isRTL } = useLanguage();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   
   // Data Source State
   const [activeData, setActiveData] = useState<FoodItem[]>(mealCreatorDatabase);
@@ -148,6 +148,16 @@ const MealCreator: React.FC<MealCreatorProps> = ({
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [loadSearchQuery, setLoadSearchQuery] = useState('');
 
+  // Print State
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printSettings, setPrintSettings] = useState({
+      doctorName: '',
+      clinicName: 'Diet-Nova Clinic',
+      patientName: '',
+      printDate: new Date().toISOString().split('T')[0],
+      notes: ''
+  });
+
   // Sync external target kcal
   useEffect(() => {
       if (externalTargetKcal && externalTargetKcal > 0) {
@@ -155,6 +165,20 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           setTargetKcal(externalTargetKcal);
       }
   }, [externalTargetKcal, isEmbedded]);
+
+  // Sync Print Settings from Profile/Visit
+  useEffect(() => {
+      if (profile?.full_name) {
+          setPrintSettings(prev => ({ ...prev, doctorName: profile.full_name }));
+      }
+      if (activeVisit) {
+          setPrintSettings(prev => ({ 
+              ...prev, 
+              patientName: activeVisit.client.full_name,
+              clinicName: activeVisit.client.clinic || prev.clinicName
+          }));
+      }
+  }, [profile, activeVisit]);
 
   // --- 1. Database Integration ---
   const mapDBToItem = (row: FoodExchangeRow): FoodItem => ({
@@ -257,6 +281,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
   // Hydrate from Active Visit
   const fetchTargetKcal = () => {
+      // Prioritize embedded prop first (Live Sync from Exchange Calculator)
       if (externalTargetKcal && externalTargetKcal > 0) {
           setTargetKcal(externalTargetKcal);
           setStatusMsg(`Synced target: ${externalTargetKcal.toFixed(0)} kcal`);
@@ -266,11 +291,13 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
       if (!activeVisit) return;
       let target = 0;
+      // Try to find target from saved plans or kcal calc
       if (activeVisit.visit.meal_plan_data?.targetKcal) {
           target = Number(activeVisit.visit.meal_plan_data.targetKcal);
       } else if (activeVisit.visit.kcal_data?.inputs?.reqKcal) {
           target = Number(activeVisit.visit.kcal_data.inputs.reqKcal);
       }
+      
       if (target > 0) {
           setTargetKcal(target);
           setStatusMsg(`Target updated to ${target} kcal`);
@@ -698,21 +725,15 @@ const MealCreator: React.FC<MealCreatorProps> = ({
   }, [initialLoadId, activeVisit, isEmbedded]);
 
   // --- Print Logic ---
-  const handlePrint = (mode: 'day' | 'week') => {
-      const printArea = document.getElementById('print-area');
-      if (printArea) {
-          if (mode === 'day') {
-              document.body.classList.add('print-day-only');
-              document.body.classList.remove('print-week');
-          } else {
-              document.body.classList.add('print-week');
-              document.body.classList.remove('print-day-only');
-          }
+  const handlePrintRequest = () => {
+      setShowPrintModal(true);
+  };
+
+  const confirmPrint = () => {
+      setShowPrintModal(false);
+      setTimeout(() => {
           window.print();
-          // Reset
-          document.body.classList.remove('print-day-only');
-          document.body.classList.remove('print-week');
-      }
+      }, 300);
   };
 
   // --- Render Helpers ---
@@ -844,10 +865,15 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                             ☁️ Sync
                         </button>
                     )}
-                    <div className="flex bg-gray-100 rounded-lg p-1">
-                        <button onClick={() => handlePrint('day')} className="px-3 py-1 text-xs font-bold text-gray-600 hover:bg-white rounded shadow-sm">Print Day</button>
-                        <button onClick={() => handlePrint('week')} className="px-3 py-1 text-xs font-bold text-gray-600 hover:bg-white rounded shadow-sm">Print Week</button>
-                    </div>
+                    
+                    <button 
+                        onClick={handlePrintRequest}
+                        className="bg-gray-700 hover:bg-gray-800 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm"
+                        title="Print Plan"
+                    >
+                        <span className="text-xl">🖨️</span>
+                    </button>
+                    
                     <button onClick={resetPlanner} className="text-red-500 hover:text-red-700 text-sm font-medium border border-red-200 px-3 py-2 rounded hover:bg-red-50">
                         Clear All
                     </button>
@@ -873,7 +899,146 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           <button onClick={clearDay} className="ml-auto text-xs text-red-400 hover:text-red-600 px-3">Clear Day {currentDay}</button>
       </div>
 
-      <div id="print-area" className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      {/* --- PRINT LAYOUT (Hidden by default, shown on print) --- */}
+      <div className="hidden print:block font-sans text-sm p-4 w-full">
+          {/* Header */}
+          <div className="border-b-2 border-gray-800 pb-4 mb-6 flex justify-between items-start">
+              <div>
+                  <h1 className="text-2xl font-bold uppercase tracking-wider text-gray-900">{printSettings.clinicName}</h1>
+                  <p className="text-sm text-gray-600 mt-1">{printSettings.doctorName}</p>
+              </div>
+              <div className="text-right">
+                  <h2 className="text-xl font-bold text-[var(--color-primary-dark)]">Daily Meal Plan</h2>
+                  <div className="text-sm mt-1">
+                      {printSettings.patientName && <div>Patient: <strong>{printSettings.patientName}</strong></div>}
+                      <div>Date: <strong>{new Date(printSettings.printDate).toLocaleDateString('en-GB')}</strong></div>
+                      <div>Day: <strong>{currentDay}</strong></div>
+                  </div>
+              </div>
+          </div>
+
+          {/* Targets Summary */}
+          <div className="mb-6 grid grid-cols-5 gap-4 border border-gray-300 rounded-lg p-3 bg-gray-50 text-center">
+              <div>
+                  <span className="block text-[10px] uppercase text-gray-500 font-bold">Target Kcal</span>
+                  <span className="font-bold text-lg">{targetKcal.toFixed(0)}</span>
+              </div>
+              <div>
+                  <span className="block text-[10px] uppercase text-gray-500 font-bold">Planned Kcal</span>
+                  <span className="font-bold text-lg">{summary.totalKcal.toFixed(0)}</span>
+              </div>
+              <div className="border-l border-gray-300">
+                  <span className="block text-[10px] uppercase text-blue-500 font-bold">Carbs</span>
+                  <span className="font-bold">{summary.totalCHO.toFixed(0)}g</span> <span className="text-[10px]">({percentages.cho}%)</span>
+              </div>
+              <div>
+                  <span className="block text-[10px] uppercase text-red-500 font-bold">Protein</span>
+                  <span className="font-bold">{summary.totalProtein.toFixed(0)}g</span> <span className="text-[10px]">({percentages.pro}%)</span>
+              </div>
+              <div>
+                  <span className="block text-[10px] uppercase text-yellow-600 font-bold">Fat</span>
+                  <span className="font-bold">{summary.totalFat.toFixed(0)}g</span> <span className="text-[10px]">({percentages.fat}%)</span>
+              </div>
+          </div>
+
+          {/* Plan Table */}
+          <table className="w-full border-collapse border border-gray-300 mb-6">
+              <thead className="bg-gray-100 text-gray-800">
+                  <tr>
+                      <th className="p-2 border border-gray-300 text-left w-1/5">Meal Time</th>
+                      <th className="p-2 border border-gray-300 text-left w-1/2">Menu Item</th>
+                      <th className="p-2 border border-gray-300 text-center w-24">Amount</th>
+                      <th className="p-2 border border-gray-300 text-center w-20">Kcal</th>
+                      <th className="p-2 border border-gray-300 text-left">Notes</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  {MEAL_TIMES.map(time => {
+                      const dayData = weeklyPlan[currentDay] || { items: {}, meta: {} };
+                      const items = dayData.items[time]?.filter(i => i.selected && i.optionGroup === 'main') || [];
+                      const meta = dayData.meta[time];
+                      
+                      // Skip empty meals unless they have notes
+                      if (items.length === 0 && !meta?.notes) return null;
+
+                      // Group items for display? No, just list main items.
+                      // NOTE: We only print 'main' items for clarity in the table, or list alts below.
+                      const altGroups = getUniqueGroups(dayData.items[time] || []).filter(g => g !== 'main');
+
+                      return (
+                          <React.Fragment key={time}>
+                              <tr className="bg-gray-50/50 break-inside-avoid">
+                                  <td className="p-2 border border-gray-300 font-bold align-top" rowSpan={items.length + (altGroups.length > 0 ? 1 : 0) + 1}>
+                                      {time}
+                                      {meta?.timeStart && <div className="text-[10px] font-normal mt-1">{meta.timeStart} - {meta.timeEnd}</div>}
+                                  </td>
+                              </tr>
+                              {items.map((item, idx) => (
+                                  <tr key={`${time}-${idx}`} className="break-inside-avoid">
+                                      <td className="p-2 border border-gray-300">
+                                          <span className="font-medium">{item.name.replace(/\(.*?\)/g, '')}</span>
+                                          <span className="text-xs text-gray-500 ml-1">{item.name.match(/\(.*?\)/g)}</span>
+                                      </td>
+                                      <td className="p-2 border border-gray-300 text-center">
+                                          {item.serves} sv
+                                      </td>
+                                      <td className="p-2 border border-gray-300 text-center text-xs">
+                                          {(item.kcal * item.serves).toFixed(0)}
+                                      </td>
+                                      {/* Only show notes on first row or merge? Notes column spans down */}
+                                      {idx === 0 && (
+                                          <td className="p-2 border border-gray-300 text-xs italic align-top" rowSpan={items.length}>
+                                              {meta?.notes}
+                                          </td>
+                                      )}
+                                  </tr>
+                              ))}
+                              
+                              {/* Alts Row */}
+                              {altGroups.length > 0 && (
+                                  <tr className="break-inside-avoid bg-yellow-50">
+                                      <td colSpan={4} className="p-2 border border-gray-300 text-xs">
+                                          <strong>Alternatives:</strong> 
+                                          {altGroups.map(grp => {
+                                              const alts = dayData.items[time].filter(i => i.optionGroup === grp && i.selected);
+                                              return alts.length > 0 ? (
+                                                  <div key={grp} className="ml-2 mt-1">
+                                                      <span className="font-bold text-yellow-800">{grp}:</span> {alts.map(i => `${i.name} (${i.serves} sv)`).join(', ')}
+                                                  </div>
+                                              ) : null;
+                                          })}
+                                      </td>
+                                  </tr>
+                              )}
+                              
+                              {/* Fallback for empty meal with notes */}
+                              {items.length === 0 && meta?.notes && (
+                                  <tr>
+                                      <td colSpan={3} className="p-2 border border-gray-300 text-gray-400 italic text-center">No food items listed</td>
+                                      <td className="p-2 border border-gray-300 text-xs italic">{meta.notes}</td>
+                                  </tr>
+                              )}
+                          </React.Fragment>
+                      );
+                  })}
+              </tbody>
+          </table>
+
+          {printSettings.notes && (
+              <div className="border border-gray-300 rounded p-3 mb-6 bg-white">
+                  <strong className="block text-xs uppercase text-gray-500 mb-1">General Plan Notes</strong>
+                  <p className="text-sm whitespace-pre-wrap">{printSettings.notes}</p>
+              </div>
+          )}
+
+          {/* Footer */}
+          <div className="border-t-2 border-gray-800 pt-2 flex justify-between items-center text-xs text-gray-500">
+              <span>System generated by Diet-Nova</span>
+              <span>Page 1 of 1</span>
+          </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 no-print">
           
           {/* Left Column: Exchange Control & Schedule */}
           <div className="xl:col-span-3 space-y-6 order-2 xl:order-1">
@@ -977,37 +1142,9 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           {/* Middle Column: Meal Sections (Main Planner) */}
           <div className="xl:col-span-6 space-y-6 order-1 xl:order-2">
               
-              {/* PRINT WEEK VIEW */}
-              <div className="hidden print-week-only">
-                  <h2 className="text-2xl font-bold mb-4 text-center">Weekly Meal Plan</h2>
-                  {Object.keys(weeklyPlan).map(dayStr => {
-                      const d = Number(dayStr);
-                      const dayData = weeklyPlan[d];
-                      return (
-                          <div key={d} className="mb-6 break-inside-avoid border p-2">
-                              <h3 className="font-bold text-lg border-b bg-gray-100 p-1">Day {d}</h3>
-                              <div className="text-xs grid grid-cols-1 gap-2 mt-2">
-                                  {MEAL_TIMES.map(time => {
-                                      const items = dayData?.items[time]?.filter(i => i.selected) || [];
-                                      const meta = dayData?.meta[time];
-                                      if(items.length === 0 && !meta?.notes) return null;
-                                      return (
-                                          <div key={time}>
-                                              <strong className="text-gray-700">{time} {meta?.timeStart ? `(${meta.timeStart}-${meta.timeEnd})` : ''}:</strong> 
-                                              <span className="ml-1">{items.map(i => i.name).join(', ')}</span>
-                                              {meta?.notes && <div className="italic text-gray-500 ml-4">Note: {meta.notes}</div>}
-                                          </div>
-                                      )
-                                  })}
-                              </div>
-                          </div>
-                      )
-                  })}
-              </div>
-
               {/* CURRENT DAY VIEW */}
-              <div className="print-day-content">
-                  <div className="mb-4 print:block hidden text-center">
+              <div>
+                  <div className="mb-4 text-center">
                       <h2 className="text-2xl font-bold">Daily Meal Plan - Day {currentDay}</h2>
                       {activeVisit && <p>Client: {activeVisit.client.full_name}</p>}
                   </div>
@@ -1029,7 +1166,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                       }), { kcal: 0, cho: 0, protein: 0, fat: 0 });
 
                       return (
-                        <div key={time} className={`rounded-xl shadow-sm border overflow-hidden mb-6 break-inside-avoid transition-all ${isActive ? 'border-yellow-400 ring-2 ring-yellow-100' : 'border-gray-200'}`}>
+                        <div key={time} className={`rounded-xl shadow-sm border overflow-hidden mb-6 transition-all ${isActive ? 'border-yellow-400 ring-2 ring-yellow-100' : 'border-gray-200'}`}>
                             {/* Header (Click to Activate) */}
                             <div 
                                 className={`px-4 py-3 flex flex-col md:flex-row justify-between items-center cursor-pointer transition-colors ${isActive ? 'bg-yellow-50 border-b border-yellow-200' : 'bg-gray-50 border-b border-gray-200 hover:bg-gray-100'}`}
@@ -1271,6 +1408,83 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           </div>
 
       </div>
+
+      {/* Print Configuration Modal */}
+      {showPrintModal && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm no-print">
+              <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl animate-fade-in">
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-bold text-gray-800">🖨️ Print Settings</h3>
+                      <button onClick={() => setShowPrintModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                  </div>
+                  
+                  <div className="space-y-3 mb-6">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Clinic Name</label>
+                          <input 
+                              type="text" 
+                              value={printSettings.clinicName} 
+                              onChange={e => setPrintSettings({...printSettings, clinicName: e.target.value})}
+                              className="w-full p-2 border rounded text-sm"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Doctor Name</label>
+                          <input 
+                              type="text" 
+                              value={printSettings.doctorName} 
+                              onChange={e => setPrintSettings({...printSettings, doctorName: e.target.value})}
+                              className="w-full p-2 border rounded text-sm"
+                          />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Patient Name</label>
+                              <input 
+                                  type="text" 
+                                  value={printSettings.patientName} 
+                                  onChange={e => setPrintSettings({...printSettings, patientName: e.target.value})}
+                                  className="w-full p-2 border rounded text-sm"
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                              <input 
+                                  type="date" 
+                                  value={printSettings.printDate} 
+                                  onChange={e => setPrintSettings({...printSettings, printDate: e.target.value})}
+                                  className="w-full p-2 border rounded text-sm"
+                              />
+                          </div>
+                      </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-1">General Notes (Footer)</label>
+                          <textarea 
+                              value={printSettings.notes} 
+                              onChange={e => setPrintSettings({...printSettings, notes: e.target.value})}
+                              className="w-full p-2 border rounded text-sm h-20 resize-none"
+                              placeholder="Add instructions or comments..."
+                          ></textarea>
+                      </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                      <button 
+                          onClick={() => setShowPrintModal(false)}
+                          className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold hover:bg-gray-200 transition"
+                      >
+                          Cancel
+                      </button>
+                      <button 
+                          onClick={confirmPrint}
+                          className="flex-1 py-2 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 transition"
+                      >
+                          Confirm & Print
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* Load Modal */}
       {showLoadModal && (
