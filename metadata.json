@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova CheckPoint_SubFats-Check50_v2.0.210",
-  "description": "Fixed Day Planner UI overlap and target calories auto-fill logic.",
+  "name": "Diet-Nova CheckPoint_SubFats-Check52_v2.0.210",
+  "description": "Added Day Planner 3-column layout, exchange comparison summary, and target calorie sync.",
   "requestFramePermissions": []
 }

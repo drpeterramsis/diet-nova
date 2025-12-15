@@ -62,6 +62,22 @@ const renderHighlightedText = (text: string) => {
     );
 };
 
+// Mapping for Exchange Comparison
+const GROUP_MAPPING: Record<string, string> = {
+    "Starch": "starch",
+    "Fruits": "fruit",
+    "Vegetables": "veg",
+    "Lean Meat": "meatLean",
+    "Medium Meat": "meatMed",
+    "High Meat": "meatHigh",
+    "Skimmed Milk": "milkSkim",
+    "Low Milk": "milkLow",
+    "Whole Milk": "milkWhole",
+    "Legumes": "legumes",
+    "Sugar": "sugar",
+    // Fats aggregator handled separately
+};
+
 const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, autoOpenNew, activeVisit, onNavigate }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
@@ -196,6 +212,23 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
   }, [currentDay]);
 
   // Hydrate from Active Visit
+  const fetchTargetKcal = () => {
+      if (!activeVisit) return;
+      let target = 0;
+      if (activeVisit.visit.meal_plan_data?.targetKcal) {
+          target = Number(activeVisit.visit.meal_plan_data.targetKcal);
+      } else if (activeVisit.visit.kcal_data?.inputs?.reqKcal) {
+          target = Number(activeVisit.visit.kcal_data.inputs.reqKcal);
+      }
+      if (target > 0) {
+          setTargetKcal(target);
+          setStatusMsg(`Target updated to ${target} kcal`);
+          setTimeout(() => setStatusMsg(''), 2000);
+      } else {
+          alert("No calculated target found in Meal Planner or Kcal Calculator.");
+      }
+  };
+
   useEffect(() => {
       if (activeVisit) {
           // 1. Set Target Kcal (Prioritize Plan Data if exists, otherwise Kcal Calc)
@@ -332,8 +365,11 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
   const summary = useMemo(() => {
     let totalServes = 0, totalCHO = 0, totalProtein = 0, totalFat = 0, totalFiber = 0, totalKcal = 0;
     
+    // Track used serves per mapped group
+    const usedExchanges: Record<string, number> = {};
+
     const dayData = weeklyPlan[currentDay];
-    if (!dayData) return { totalServes: 0, totalCHO: 0, totalProtein: 0, totalFat: 0, totalFiber: 0, totalKcal: 0 };
+    if (!dayData) return { totalServes: 0, totalCHO: 0, totalProtein: 0, totalFat: 0, totalFiber: 0, totalKcal: 0, usedExchanges };
 
     Object.values(dayData.items).forEach((mealList: any) => {
         if (Array.isArray(mealList)) {
@@ -346,12 +382,19 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                     totalFat += item.fat * s;
                     totalFiber += item.fiber * s;
                     totalKcal += item.kcal * s;
+
+                    // Map to Exchange Key
+                    let key = GROUP_MAPPING[item.group] || item.group;
+                    // Handle fats aggregation
+                    if (item.group.includes("Fat")) key = 'fats';
+                    
+                    usedExchanges[key] = (usedExchanges[key] || 0) + s;
                 }
             });
         }
     });
 
-    return { totalServes, totalCHO, totalProtein, totalFat, totalFiber, totalKcal };
+    return { totalServes, totalCHO, totalProtein, totalFat, totalFiber, totalKcal, usedExchanges };
   }, [weeklyPlan, currentDay]);
 
   const percentages = useMemo(() => {
@@ -362,6 +405,41 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
          fat: ((summary.totalFat * 9) / k * 100).toFixed(1),
      }
   }, [summary]);
+
+  const exchangeComparison = useMemo(() => {
+      if (!activeVisit?.visit.meal_plan_data?.servings) return [];
+      const planned = activeVisit.visit.meal_plan_data.servings;
+      const used = summary.usedExchanges;
+      
+      // Define list of groups to compare
+      const groups = [
+          { key: 'starch', label: 'Starch' },
+          { key: 'fruit', label: 'Fruits' },
+          { key: 'veg', label: 'Vegetables' },
+          { key: 'meatLean', label: 'Lean Meat' },
+          { key: 'meatMed', label: 'Med Meat' },
+          { key: 'meatHigh', label: 'High Meat' },
+          { key: 'milkSkim', label: 'Skim Milk' },
+          { key: 'milkLow', label: 'Low Milk' },
+          { key: 'milkWhole', label: 'Full Milk' },
+          { key: 'legumes', label: 'Legumes' },
+          { key: 'sugar', label: 'Sugar' },
+          { key: 'fats', label: 'Fats' },
+      ];
+
+      return groups.map(g => {
+          let planVal = planned[g.key] || 0;
+          
+          // Special handling for aggregated Fats if planned separates them
+          if (g.key === 'fats' && planVal === 0) {
+              planVal = (planned['fatsPufa'] || 0) + (planned['fatsMufa'] || 0) + (planned['fatsSat'] || 0);
+          }
+
+          const useVal = used[g.key] || 0;
+          return { ...g, plan: planVal, used: useVal };
+      }).filter(g => g.plan > 0 || g.used > 0);
+
+  }, [activeVisit, summary.usedExchanges]);
 
   // --- 5. Save/Load --- 
   const fetchPlans = async () => {
@@ -573,7 +651,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
       )}
 
       {/* Sticky Header Wrapper to fix overlap issues */}
-      <div className="sticky top-12 z-40 bg-[var(--color-bg)] pt-2 pb-4 -mx-4 px-4 no-print">
+      <div className="sticky top-12 z-40 bg-[var(--color-bg)] pt-2 pb-4 -mx-4 px-4 no-print shadow-sm border-b border-gray-100/50">
           {/* Header & Search */}
           <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-6">
               <div className="text-center xl:text-left">
@@ -686,8 +764,58 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
 
       <div id="print-area" className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           
-          {/* Main Planner: Meal Sections */}
-          <div className="xl:col-span-8 space-y-6">
+          {/* Left Column: Exchange Control (New Feature) */}
+          <div className="xl:col-span-3 space-y-6 order-2 xl:order-1">
+              <div className="bg-white rounded-xl shadow-lg border border-purple-100 p-4 sticky top-40">
+                  <h3 className="font-bold text-purple-800 mb-4 flex items-center gap-2 border-b border-purple-100 pb-2">
+                      <span>📋</span> Exchange Control
+                  </h3>
+                  
+                  {exchangeComparison.length === 0 ? (
+                      <div className="text-center py-6 text-gray-400 text-xs italic">
+                          No planned exchanges found in Meal Planner.
+                          {activeVisit ? " Set targets in Meal Planner first." : ""}
+                      </div>
+                  ) : (
+                      <div className="space-y-3">
+                          <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase">
+                              <span>Group</span>
+                              <span>Used / Plan</span>
+                          </div>
+                          {exchangeComparison.map(ex => {
+                              const pct = Math.min((ex.used / (ex.plan || 1)) * 100, 100);
+                              const isOver = ex.used > ex.plan;
+                              const isComplete = ex.used === ex.plan;
+                              const barColor = isOver ? 'bg-red-500' : isComplete ? 'bg-green-500' : 'bg-purple-500';
+                              
+                              return (
+                                  <div key={ex.key} className="space-y-1">
+                                      <div className="flex justify-between text-xs font-medium text-gray-700">
+                                          <span>{ex.label}</span>
+                                          <span className={`${isOver ? 'text-red-600 font-bold' : isComplete ? 'text-green-600 font-bold' : 'text-gray-600'}`}>
+                                              {ex.used.toFixed(1)} / {ex.plan.toFixed(1)}
+                                          </span>
+                                      </div>
+                                      <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                                          <div className={`h-full ${barColor} transition-all duration-500`} style={{ width: `${pct}%` }}></div>
+                                      </div>
+                                  </div>
+                              )
+                          })}
+                      </div>
+                  )}
+                  
+                  {/* Legend */}
+                  <div className="mt-4 pt-3 border-t border-purple-50 text-[10px] text-gray-400 flex justify-between">
+                      <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> Match</span>
+                      <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500"></div> Over</span>
+                      <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500"></div> Under</span>
+                  </div>
+              </div>
+          </div>
+
+          {/* Middle Column: Meal Sections (Main Planner) */}
+          <div className="xl:col-span-6 space-y-6 order-1 xl:order-2">
               
               {/* PRINT WEEK VIEW */}
               <div className="hidden print-week-only">
@@ -901,25 +1029,36 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
               </div>
           </div>
 
-          {/* Sidebar: Totals & Targets */}
-          <div className="xl:col-span-4 space-y-6">
+          {/* Right Column: Totals & Targets */}
+          <div className="xl:col-span-3 space-y-6 order-3 xl:order-3">
               <div className="bg-white rounded-xl shadow-lg border-t-4 border-t-blue-600 p-6 sticky top-40">
                   <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                      <span>📊</span> Daily Summary (Day {currentDay})
+                      <span>📊</span> Daily Summary
                   </h3>
 
                   <div className="mb-6">
                       <label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Target Calories</label>
-                      <div className="relative">
-                        <input 
-                            type="number" 
-                            className="w-full p-2 border-2 border-blue-200 rounded-lg text-center font-bold text-xl text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                            placeholder="0"
-                            value={targetKcal} 
-                            onChange={(e) => setTargetKcal(parseFloat(e.target.value))}
-                            dir="ltr"
-                        />
-                        <span className="absolute right-3 top-3 text-gray-400 text-xs font-medium">Kcal</span>
+                      <div className="relative flex items-center gap-2">
+                        <div className="relative flex-grow">
+                            <input 
+                                type="number" 
+                                className="w-full p-2 border-2 border-blue-200 rounded-lg text-center font-bold text-xl text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                                placeholder="0"
+                                value={targetKcal} 
+                                onChange={(e) => setTargetKcal(parseFloat(e.target.value))}
+                                dir="ltr"
+                            />
+                            <span className="absolute right-3 top-3 text-gray-400 text-xs font-medium">Kcal</span>
+                        </div>
+                        {activeVisit && (
+                            <button 
+                                onClick={fetchTargetKcal}
+                                className="bg-blue-100 text-blue-700 p-2 rounded-lg hover:bg-blue-200"
+                                title="Fetch calculated target from Kcal Calculator"
+                            >
+                                🔄
+                            </button>
+                        )}
                       </div>
                   </div>
 
