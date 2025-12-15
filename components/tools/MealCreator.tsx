@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
@@ -13,6 +14,7 @@ interface MealCreatorProps {
     autoOpenLoad?: boolean;
     autoOpenNew?: boolean;
     activeVisit?: { client: Client, visit: ClientVisit } | null;
+    onNavigate?: (toolId: string, loadId?: string, action?: 'load' | 'new', preserveContext?: boolean) => void;
 }
 
 type MealTime = 'Pre-Breakfast' | 'Breakfast' | 'Morning Snack' | 'Lunch' | 'Afternoon Snack' | 'Dinner' | 'Late Snack';
@@ -60,7 +62,7 @@ const renderHighlightedText = (text: string) => {
     );
 };
 
-const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, autoOpenNew, activeVisit }) => {
+const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, autoOpenNew, activeVisit, onNavigate }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   
@@ -196,15 +198,17 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
   // Hydrate from Active Visit
   useEffect(() => {
       if (activeVisit) {
-          // 1. Set Target Kcal
-          if (activeVisit.visit.kcal_data?.inputs?.reqKcal) {
+          // 1. Set Target Kcal (Prioritize Plan Data if exists, otherwise Kcal Calc)
+          if (activeVisit.visit.day_plan_data?.targetKcal) {
+              setTargetKcal(Number(activeVisit.visit.day_plan_data.targetKcal));
+          } else if (activeVisit.visit.kcal_data?.inputs?.reqKcal) {
               setTargetKcal(Number(activeVisit.visit.kcal_data.inputs.reqKcal));
           }
+          
           // 2. Load Day Plan if exists
           if (activeVisit.visit.day_plan_data) {
               const data = activeVisit.visit.day_plan_data;
               if (data.weeklyPlan) setWeeklyPlan(data.weeklyPlan);
-              if (data.targetKcal) setTargetKcal(data.targetKcal);
               setStatusMsg("Loaded Client Plan");
           }
       }
@@ -563,15 +567,15 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
       )}
 
       {/* Header & Search */}
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-6 sticky top-20 z-50 no-print">
+      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-6 sticky top-14 z-40 no-print">
           <div className="text-center xl:text-left">
               <h1 className="text-3xl font-bold text-[var(--color-heading)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)]">
                   Day Food Planner
               </h1>
               <p className="text-sm text-gray-500 mt-1 flex items-center gap-2 justify-center xl:justify-start">
                   Select a meal time (click header) then search to add foods.
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border ${dataSource === 'cloud' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
-                      {dataSource === 'cloud' ? '☁️ Cloud DB' : '💾 Local Data'}
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full border cursor-help ${dataSource === 'cloud' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`} title={dataSource === 'cloud' ? 'Cloud Database' : 'Local Database'}>
+                      {dataSource === 'cloud' ? '☁️' : '💾'}
                   </span>
               </p>
           </div>
@@ -580,7 +584,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
           <div className="relative w-full max-w-xl">
               <input
                 type="text"
-                className={`w-full px-6 py-3 rounded-full border-2 focus:outline-none shadow-sm text-lg transition-colors ${
+                className={`w-full px-6 py-3 rounded-full border-2 focus:outline-none shadow-sm text-lg transition-colors bg-white ${
                     activeMealTime ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary-light)]' : 'border-gray-300'
                 }`}
                 placeholder={`Search to add to: ${activeMealTime}`}
@@ -621,6 +625,13 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-wrap justify-center">
+                <button 
+                    onClick={() => onNavigate && onNavigate('meal-planner', undefined, undefined, true)}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-lg transition shadow-sm text-sm font-bold flex items-center gap-2"
+                    title="Back to Meal Planner"
+                >
+                    <span>📅</span> Meal Planner
+                </button>
                 {!activeVisit && session && (
                     <>
                     <input 

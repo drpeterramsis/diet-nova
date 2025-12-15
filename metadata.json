@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova CheckPoint_SubFats-Check48_v2.0.208",
-  "description": "Added Nutrient Summary to Meal Headers, Expanded Alt Groups to 10, Fixed Sticky Header UI.",
+  "name": "Diet-Nova CheckPoint_SubFats-Check49_v2.0.209",
+  "description": "Added day_plan_data column requirement, Fixed Day Planner Navigation & UI, Compacted Cloud Badge.",
   "requestFramePermissions": []
 }

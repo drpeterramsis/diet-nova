@@ -221,7 +221,7 @@ const AppContent = () => {
       setActiveTool('profile');
   };
 
-  const handleToolClick = (toolId: string, loadId?: string, action?: 'load' | 'new') => {
+  const handleToolClick = (toolId: string, loadId?: string, action?: 'load' | 'new', preserveContext: boolean = false) => {
       if (toolId === 'home') {
           handleNavHome();
           return;
@@ -254,9 +254,11 @@ const AppContent = () => {
       setAutoOpenLoad(action === 'load');
       setAutoOpenNew(action === 'new');
 
-      setToolData(null); 
-      setCurrentVisit(null); 
-      setCurrentClientForNFPE(undefined); 
+      if (!preserveContext) {
+          setToolData(null); 
+          setCurrentVisit(null); 
+          setCurrentClientForNFPE(undefined); 
+      }
       setActiveTool(toolId);
   };
 
@@ -386,6 +388,7 @@ const AppContent = () => {
                     autoOpenLoad={autoOpenLoad}
                     autoOpenNew={autoOpenNew}
                     activeVisit={currentVisit} 
+                    onNavigate={handleToolClick}
                   />
                 </div>
               </>
@@ -397,6 +400,7 @@ const AppContent = () => {
                     autoOpenLoad={autoOpenLoad}
                     autoOpenNew={autoOpenNew}
                     activeVisit={currentVisit}
+                    onNavigate={handleToolClick}
                 />
             )}
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
