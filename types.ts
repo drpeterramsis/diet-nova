@@ -13,7 +13,7 @@ export interface SavedMeal {
   id: string;
   user_id: string;
   name: string;
-  tool_type: 'meal-creator' | 'meal-planner';
+  tool_type: 'meal-creator' | 'meal-planner' | 'day-planner' | 'food-composition';
   data: any;
   created_at: string;
 }
@@ -71,6 +71,7 @@ export interface ClientVisit {
   notes?: string;
   kcal_data?: any;
   meal_plan_data?: any;
+  day_plan_data?: any;
   dietary_assessment?: DietaryAssessmentData;
   food_questionnaire?: FoodQuestionnaireData;
 }

@@ -1,11 +1,10 @@
-
 import React, { useState, useMemo, useEffect } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
 import { MacroDonut, ProgressBar } from "../Visuals";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
-import { SavedMeal } from "../../types";
+import { SavedMeal, Client, ClientVisit } from "../../types";
 import Toast from "../Toast";
 import { FoodExchangeRow } from "../../data/exchangeData";
 
@@ -13,18 +12,30 @@ interface MealCreatorProps {
     initialLoadId?: string | null;
     autoOpenLoad?: boolean;
     autoOpenNew?: boolean;
+    activeVisit?: { client: Client, visit: ClientVisit } | null;
 }
 
 type MealTime = 'Pre-Breakfast' | 'Breakfast' | 'Morning Snack' | 'Lunch' | 'Afternoon Snack' | 'Dinner' | 'Late Snack';
 const MEAL_TIMES: MealTime[] = ['Pre-Breakfast', 'Breakfast', 'Morning Snack', 'Lunch', 'Afternoon Snack', 'Dinner', 'Late Snack'];
 
+// Extended Planner Item
 interface PlannerItem extends FoodItem {
     selected: boolean;
-    optionGroup: 'A' | 'B'; // Main or Alternative
+    optionGroup: string; // Changed from 'A'|'B' to string to support "Main", "Alt 1", "Alt 2"...
+    // Default group ID is 'main'
 }
 
+// Metadata for each meal (Time, Notes)
+interface MealMeta {
+    timeStart: string;
+    timeEnd: string;
+    notes: string;
+}
+
+// Day Data Structure
 interface DayPlan {
-    [key: string]: PlannerItem[];
+    items: Record<string, PlannerItem[]>; // Keyed by MealTime
+    meta: Record<string, MealMeta>;       // Keyed by MealTime
 }
 
 interface WeeklyPlan {
@@ -47,7 +58,7 @@ const renderHighlightedText = (text: string) => {
     );
 };
 
-const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, autoOpenNew }) => {
+const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, autoOpenNew, activeVisit }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   
@@ -60,13 +71,16 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
   // Weekly Planner State (Default 7 Days)
   const [currentDay, setCurrentDay] = useState<number>(1);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan>({
-      1: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {})
+      1: { items: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {}), meta: {} }
   });
   
   // UI State
   const [searchQuery, setSearchQuery] = useState("");
   const [targetKcal, setTargetKcal] = useState<number>(2000);
-  const [showAddMenu, setShowAddMenu] = useState<number | null>(null); // Index of item in search results
+  
+  // New UI Logic
+  const [activeMealTime, setActiveMealTime] = useState<MealTime>('Lunch'); // Default active meal for adding items
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({}); // Collapse state for alternative groups
 
   // Save/Load State
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -165,7 +179,10 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
           if (prev[day]) return prev;
           return {
               ...prev,
-              [day]: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {})
+              [day]: { 
+                  items: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {}),
+                  meta: {}
+              }
           };
       });
   };
@@ -174,33 +191,55 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
       ensureDayExists(currentDay);
   }, [currentDay]);
 
-  const addToPlan = (food: FoodItem, mealTime: MealTime, optionGroup: 'A' | 'B' = 'A') => {
+  // Hydrate from Active Visit
+  useEffect(() => {
+      if (activeVisit) {
+          // 1. Set Target Kcal
+          if (activeVisit.visit.kcal_data?.inputs?.reqKcal) {
+              setTargetKcal(Number(activeVisit.visit.kcal_data.inputs.reqKcal));
+          }
+          // 2. Load Day Plan if exists
+          if (activeVisit.visit.day_plan_data) {
+              const data = activeVisit.visit.day_plan_data;
+              if (data.weeklyPlan) setWeeklyPlan(data.weeklyPlan);
+              if (data.targetKcal) setTargetKcal(data.targetKcal);
+              setStatusMsg("Loaded Client Plan");
+          }
+      }
+  }, [activeVisit]);
+
+  const addToPlan = (food: FoodItem) => {
       setWeeklyPlan(prev => {
-          const currentDayPlan = prev[currentDay] || MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {});
-          const currentList = currentDayPlan[mealTime] || [];
+          const dayData = prev[currentDay] || { items: {}, meta: {} };
+          const currentList = dayData.items[activeMealTime] || [];
           
           return {
               ...prev,
               [currentDay]: {
-                  ...currentDayPlan,
-                  [mealTime]: [...currentList, { ...food, serves: 1, selected: true, optionGroup }]
+                  ...dayData,
+                  items: {
+                      ...dayData.items,
+                      [activeMealTime]: [...currentList, { ...food, serves: 1, selected: true, optionGroup: 'main' }]
+                  }
               }
           };
       });
       setSearchQuery("");
-      setShowAddMenu(null);
   };
 
   const removeFromPlan = (mealTime: string, index: number) => {
       setWeeklyPlan(prev => {
-          const currentDayPlan = prev[currentDay];
-          const newList = [...currentDayPlan[mealTime]];
+          const dayData = prev[currentDay];
+          const newList = [...dayData.items[mealTime]];
           newList.splice(index, 1);
           return {
               ...prev,
               [currentDay]: {
-                  ...currentDayPlan,
-                  [mealTime]: newList
+                  ...dayData,
+                  items: {
+                      ...dayData.items,
+                      [mealTime]: newList
+                  }
               }
           };
       });
@@ -208,31 +247,69 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
 
   const updateItem = (mealTime: string, index: number, field: keyof PlannerItem, value: any) => {
       setWeeklyPlan(prev => {
-          const currentDayPlan = prev[currentDay];
-          const newList = [...currentDayPlan[mealTime]];
+          const dayData = prev[currentDay];
+          const newList = [...dayData.items[mealTime]];
           newList[index] = { ...newList[index], [field]: value };
           return {
               ...prev,
               [currentDay]: {
-                  ...currentDayPlan,
-                  [mealTime]: newList
+                  ...dayData,
+                  items: {
+                      ...dayData.items,
+                      [mealTime]: newList
+                  }
               }
           };
       });
   };
 
-  // Toggle Entire Option Group (A or B)
-  const toggleGroup = (mealTime: string, group: 'A' | 'B', status: boolean) => {
+  const updateMeta = (mealTime: string, field: keyof MealMeta, value: string) => {
       setWeeklyPlan(prev => {
-          const currentDayPlan = prev[currentDay];
-          const newList = currentDayPlan[mealTime].map(item => 
+          const dayData = prev[currentDay];
+          const currentMeta = dayData.meta[mealTime] || { timeStart: '', timeEnd: '', notes: '' };
+          return {
+              ...prev,
+              [currentDay]: {
+                  ...dayData,
+                  meta: {
+                      ...dayData.meta,
+                      [mealTime]: { ...currentMeta, [field]: value }
+                  }
+              }
+          };
+      });
+  };
+
+  const addNewAlternativeGroup = (mealTime: string) => {
+      const id = `alt-${Date.now()}`;
+      // Just creating a flag or we can rely on moving items to it.
+      // We don't explicitly create empty groups in data, we just render them if items exist OR
+      // we need a UI way to start adding to a new group.
+      // Easiest way: The UI renders groups based on unique 'optionGroup' values found in items.
+      // But adding a new empty group is tricky if there are no items.
+      // workaround: Alert user to select item then move? No.
+      // Let's rely on item movement for now or add a dummy item?
+      // Better: Add next available ID logic.
+      
+      // Actually, let's keep it simple: Items default to 'main'. User can change their group string manually or pick from a list.
+      // Or simply: "Add Alternative" button adds a placeholder item or just allows moving existing items.
+      // Let's implement "Move to New Group" on items.
+  };
+
+  const toggleGroupSelection = (mealTime: string, group: string, status: boolean) => {
+      setWeeklyPlan(prev => {
+          const dayData = prev[currentDay];
+          const newList = dayData.items[mealTime].map(item => 
               item.optionGroup === group ? { ...item, selected: status } : item
           );
           return {
               ...prev,
               [currentDay]: {
-                  ...currentDayPlan,
-                  [mealTime]: newList
+                  ...dayData,
+                  items: {
+                      ...dayData.items,
+                      [mealTime]: newList
+                  }
               }
           };
       });
@@ -240,7 +317,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
 
   const resetPlanner = () => {
       if(!confirm("Clear all days?")) return;
-      setWeeklyPlan({ 1: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {}) });
+      setWeeklyPlan({ 1: { items: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {}), meta: {} } });
       setCurrentDay(1);
       setPlanName("");
       setLoadedPlanId(null);
@@ -251,7 +328,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
       if(!confirm("Clear current day only?")) return;
       setWeeklyPlan(prev => ({
           ...prev,
-          [currentDay]: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {})
+          [currentDay]: { items: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {}), meta: {} }
       }));
   };
 
@@ -259,21 +336,23 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
   const summary = useMemo(() => {
     let totalServes = 0, totalCHO = 0, totalProtein = 0, totalFat = 0, totalFiber = 0, totalKcal = 0;
     
-    const currentDayPlan = weeklyPlan[currentDay];
-    if (!currentDayPlan) return { totalServes: 0, totalCHO: 0, totalProtein: 0, totalFat: 0, totalFiber: 0, totalKcal: 0 };
+    const dayData = weeklyPlan[currentDay];
+    if (!dayData) return { totalServes: 0, totalCHO: 0, totalProtein: 0, totalFat: 0, totalFiber: 0, totalKcal: 0 };
 
-    (Object.values(currentDayPlan) as PlannerItem[][]).forEach(mealList => {
-        mealList.forEach(item => {
-            if (item.selected) { // Only count if checkbox is active
-                const s = item.serves;
-                totalServes += s;
-                totalCHO += item.cho * s;
-                totalProtein += item.protein * s;
-                totalFat += item.fat * s;
-                totalFiber += item.fiber * s;
-                totalKcal += item.kcal * s;
-            }
-        });
+    Object.values(dayData.items).forEach((mealList: any) => {
+        if (Array.isArray(mealList)) {
+            mealList.forEach((item: PlannerItem) => {
+                if (item.selected) { // Only count if checkbox is active
+                    const s = item.serves;
+                    totalServes += s;
+                    totalCHO += item.cho * s;
+                    totalProtein += item.protein * s;
+                    totalFat += item.fat * s;
+                    totalFiber += item.fiber * s;
+                    totalKcal += item.kcal * s;
+                }
+            });
+        }
     });
 
     return { totalServes, totalCHO, totalProtein, totalFat, totalFiber, totalKcal };
@@ -288,7 +367,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
      }
   }, [summary]);
 
-  // --- 5. Save/Load --- (Same logic, new structure)
+  // --- 5. Save/Load --- 
   const fetchPlans = async () => {
     if (!session) return;
     setIsLoadingPlans(true);
@@ -297,7 +376,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
         const { data, error } = await supabase
           .from('saved_meals')
           .select('*')
-          .eq('tool_type', 'day-planner') // New Type
+          .eq('tool_type', 'day-planner')
           .eq('user_id', session.user.id)
           .order('created_at', { ascending: false });
         
@@ -312,14 +391,34 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
   };
 
   const savePlan = async () => {
+    // Mode 1: Save to Visit
+    if (activeVisit) {
+        setStatusMsg("Saving to Client Visit...");
+        try {
+            const planData = { weeklyPlan, targetKcal };
+            const { error } = await supabase
+                .from('client_visits')
+                .update({ day_plan_data: planData })
+                .eq('id', activeVisit.visit.id);
+            
+            if (error) throw error;
+            setStatusMsg("Saved to Visit Successfully!");
+            setTimeout(() => setStatusMsg(''), 3000);
+        } catch (err: any) {
+            console.error(err);
+            setStatusMsg("Error saving to visit: " + err.message);
+        }
+        return;
+    }
+
+    // Mode 2: Save as Template
     if (!planName.trim()) {
         alert("Please enter a plan name.");
         return;
     }
     if (!session) return;
     
-    setStatusMsg("Saving...");
-    // Save the WHOLE week structure
+    setStatusMsg("Saving Template...");
     const planData = { weeklyPlan, targetKcal };
     const isUpdate = loadedPlanId && (planName === lastSavedName);
 
@@ -354,7 +453,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
         if (data) {
             setLoadedPlanId(data.id);
             setLastSavedName(data.name);
-            setStatusMsg(isUpdate ? "Plan Updated Successfully!" : "Plan Saved Successfully!");
+            setStatusMsg(isUpdate ? "Plan Updated!" : "Plan Saved!");
         }
         
         fetchPlans(); 
@@ -368,12 +467,11 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
   const loadPlan = (plan: SavedMeal) => {
     if (!plan.data) return;
     
-    // Handle Legacy (Single Day) vs New (Weekly)
     if (plan.data.weeklyPlan) {
         setWeeklyPlan(plan.data.weeklyPlan);
     } else if (plan.data.dayPlan) {
         // Legacy convert
-        setWeeklyPlan({ 1: plan.data.dayPlan });
+        setWeeklyPlan({ 1: { items: { ...plan.data.dayPlan }, meta: {} } });
     }
 
     if (plan.data.targetKcal) setTargetKcal(plan.data.targetKcal);
@@ -394,18 +492,17 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
 
   // Handle Initial Load
   useEffect(() => {
-      if (initialLoadId && session) {
+      if (initialLoadId && session && !activeVisit) {
           const autoLoad = async () => {
               const { data } = await supabase.from('saved_meals').select('*').eq('id', initialLoadId).single();
               if (data) loadPlan(data);
           };
           autoLoad();
       }
-  }, [initialLoadId]);
+  }, [initialLoadId, activeVisit]);
 
   // --- Print Logic ---
   const handlePrint = (mode: 'day' | 'week') => {
-      // Add a class to body to control CSS printing logic if needed, or just rely on CSS media queries
       const printArea = document.getElementById('print-area');
       if (printArea) {
           if (mode === 'day') {
@@ -422,9 +519,50 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
       }
   };
 
+  // --- Render Helpers ---
+  const getUniqueGroups = (items: PlannerItem[]) => {
+      const groups = new Set<string>();
+      items.forEach(i => groups.add(i.optionGroup));
+      // Ensure 'main' is first
+      const arr = Array.from(groups);
+      if (arr.includes('main')) {
+          return ['main', ...arr.filter(g => g !== 'main').sort()];
+      }
+      return arr.sort();
+  };
+
+  const getNextGroupId = (items: PlannerItem[]) => {
+      const existing = getUniqueGroups(items);
+      let i = 1;
+      while (existing.includes(`Alt ${i}`)) i++;
+      return `Alt ${i}`;
+  };
+
   return (
     <div className="max-w-[1920px] mx-auto animate-fade-in space-y-6 pb-12">
       <Toast message={statusMsg || syncMsg} />
+
+      {/* Active Visit Toolbar */}
+      {activeVisit && (
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl mb-2 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm no-print">
+              <div>
+                  <h3 className="font-bold text-blue-800 text-lg">
+                     Day Planner: {activeVisit.client.full_name}
+                  </h3>
+                  <p className="text-sm text-blue-600">
+                     Visit Date: {new Date(activeVisit.visit.visit_date).toLocaleDateString('en-GB')}
+                  </p>
+              </div>
+              <div className="flex items-center gap-3">
+                  <button 
+                    onClick={savePlan}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow font-bold transition flex items-center gap-2"
+                  >
+                      <span>💾</span> Save to Visit
+                  </button>
+              </div>
+          </div>
+      )}
 
       {/* Header & Search */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-6 sticky top-20 z-40 no-print">
@@ -433,75 +571,49 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                   Day Food Planner
               </h1>
               <p className="text-sm text-gray-500 mt-1 flex items-center gap-2 justify-center xl:justify-start">
-                  Plan meals, check alternatives, and track daily intake.
+                  Select a meal time (click header) then search to add foods.
                   <span className={`text-[10px] px-2 py-0.5 rounded-full border ${dataSource === 'cloud' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
                       {dataSource === 'cloud' ? '☁️ Cloud DB' : '💾 Local Data'}
                   </span>
               </p>
           </div>
 
-          {/* Search Bar */}
+          {/* Search Bar - Adds to ACTIVE MEAL TIME */}
           <div className="relative w-full max-w-xl">
               <input
                 type="text"
-                className="w-full px-6 py-3 rounded-full border-2 border-[var(--color-border)] focus:border-[var(--color-primary)] focus:outline-none shadow-sm text-lg"
-                placeholder={t.mealCreator.searchPlaceholder}
+                className={`w-full px-6 py-3 rounded-full border-2 focus:outline-none shadow-sm text-lg transition-colors ${
+                    activeMealTime ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary-light)]' : 'border-gray-300'
+                }`}
+                placeholder={`Search to add to: ${activeMealTime}`}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 dir={isRTL ? 'rtl' : 'ltr'}
               />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--color-primary)] bg-white px-2">
+                  Adding to: {activeMealTime}
+              </span>
+              
               {/* Search Results Dropdown */}
               {searchQuery && filteredFoods.length > 0 && (
                 <ul className="absolute w-full bg-white mt-2 rounded-xl shadow-2xl max-h-80 overflow-y-auto z-50 border border-gray-100 text-right">
                   {filteredFoods.map((food, idx) => (
                     <li 
                       key={idx} 
-                      className="px-4 py-3 hover:bg-green-50 border-b border-gray-50 last:border-0 transition-colors flex justify-between items-center group relative"
-                      onMouseEnter={() => setShowAddMenu(idx)}
-                      onMouseLeave={() => setShowAddMenu(null)}
+                      className="px-4 py-3 hover:bg-green-50 border-b border-gray-50 last:border-0 transition-colors flex justify-between items-center cursor-pointer group"
+                      onClick={() => addToPlan(food)}
                     >
-                      <div className="flex-grow text-left cursor-pointer" onClick={() => addToPlan(food, 'Lunch')}>
+                      <div className="flex-grow text-left">
                           <div className="font-medium text-[var(--color-text)]">
                               {renderHighlightedText(food.name)}
                           </div>
-                          <div className="text-xs text-[var(--color-text-light)] flex justify-between">
+                          <div className="text-xs text-[var(--color-text-light)] flex gap-2">
                              <span>{food.group}</span>
                              <span className="font-bold text-blue-600">{food.kcal.toFixed(0)} kcal</span>
                           </div>
                       </div>
-                      
-                      {/* Add Button with Dropdown */}
-                      <div className="flex items-center gap-2 flex-wrap justify-end max-w-[200px]">
-                          <button 
-                             onClick={() => addToPlan(food, 'Pre-Breakfast')}
-                             className="text-[10px] bg-purple-100 text-purple-800 px-2 py-1 rounded hover:bg-purple-200"
-                          >
-                              Pre-B
-                          </button>
-                          <button 
-                             onClick={() => addToPlan(food, 'Breakfast')}
-                             className="text-[10px] bg-orange-100 text-orange-800 px-2 py-1 rounded hover:bg-orange-200"
-                          >
-                              Break
-                          </button>
-                          <button 
-                             onClick={() => addToPlan(food, 'Lunch')}
-                             className="text-[10px] bg-green-100 text-green-800 px-2 py-1 rounded hover:bg-green-200"
-                          >
-                              Lunch
-                          </button>
-                          <button 
-                             onClick={() => addToPlan(food, 'Dinner')}
-                             className="text-[10px] bg-blue-100 text-blue-800 px-2 py-1 rounded hover:bg-blue-200"
-                          >
-                              Dinner
-                          </button>
-                          <button 
-                             onClick={() => addToPlan(food, 'Morning Snack')}
-                             className="text-[10px] bg-gray-100 text-gray-800 px-2 py-1 rounded hover:bg-gray-200"
-                          >
-                              Snack
-                          </button>
+                      <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-bold group-hover:bg-green-200">
+                          + Add
                       </div>
                     </li>
                   ))}
@@ -510,15 +622,15 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 flex-wrap">
-                {session && (
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+                {!activeVisit && session && (
                     <>
                     <input 
                         type="text" placeholder="Plan Name" value={planName} onChange={e => setPlanName(e.target.value)}
                         className="w-32 p-2 border rounded text-sm focus:ring-1 focus:ring-blue-400 outline-none"
                     />
-                    <button onClick={savePlan} className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded transition" title="Save Plan">💾</button>
-                    <button onClick={() => { fetchPlans(); setShowLoadModal(true); }} className="bg-purple-500 hover:bg-purple-600 text-white p-2 rounded transition" title="Load Plan">📂</button>
+                    <button onClick={savePlan} className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded transition" title="Save Template">💾</button>
+                    <button onClick={() => { fetchPlans(); setShowLoadModal(true); }} className="bg-purple-500 hover:bg-purple-600 text-white p-2 rounded transition" title="Load Template">📂</button>
                     </>
                 )}
                 {session && dataSource === 'local' && (
@@ -559,7 +671,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
           {/* Main Planner: Meal Sections */}
           <div className="xl:col-span-8 space-y-6">
               
-              {/* PRINT WEEK VIEW (Hidden normally, visible on print if mode is week) */}
+              {/* PRINT WEEK VIEW */}
               <div className="hidden print-week-only">
                   <h2 className="text-2xl font-bold mb-4 text-center">Weekly Meal Plan</h2>
                   {Object.keys(weeklyPlan).map(dayStr => {
@@ -570,11 +682,14 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                               <h3 className="font-bold text-lg border-b bg-gray-100 p-1">Day {d}</h3>
                               <div className="text-xs grid grid-cols-1 gap-2 mt-2">
                                   {MEAL_TIMES.map(time => {
-                                      const items = dayData?.[time]?.filter(i => i.selected) || [];
-                                      if(items.length === 0) return null;
+                                      const items = dayData?.items[time]?.filter(i => i.selected) || [];
+                                      const meta = dayData?.meta[time];
+                                      if(items.length === 0 && !meta?.notes) return null;
                                       return (
                                           <div key={time}>
-                                              <strong className="text-gray-700">{time}:</strong> {items.map(i => i.name).join(', ')}
+                                              <strong className="text-gray-700">{time} {meta?.timeStart ? `(${meta.timeStart}-${meta.timeEnd})` : ''}:</strong> 
+                                              <span className="ml-1">{items.map(i => i.name).join(', ')}</span>
+                                              {meta?.notes && <div className="italic text-gray-500 ml-4">Note: {meta.notes}</div>}
                                           </div>
                                       )
                                   })}
@@ -584,181 +699,179 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                   })}
               </div>
 
-              {/* CURRENT DAY VIEW (Default) */}
+              {/* CURRENT DAY VIEW */}
               <div className="print-day-content">
                   <div className="mb-4 print:block hidden text-center">
                       <h2 className="text-2xl font-bold">Daily Meal Plan - Day {currentDay}</h2>
+                      {activeVisit && <p>Client: {activeVisit.client.full_name}</p>}
                   </div>
 
                   {MEAL_TIMES.map((time) => {
-                      const dayData = weeklyPlan[currentDay] || {};
-                      const items = dayData[time] || [];
-                      const groupA = items.filter(i => i.optionGroup !== 'B');
-                      const groupB = items.filter(i => i.optionGroup === 'B');
+                      const dayData = weeklyPlan[currentDay] || { items: {}, meta: {} };
+                      const items = dayData.items[time] || [];
+                      const meta = dayData.meta[time] || { timeStart: '', timeEnd: '', notes: '' };
                       
-                      const hasItems = items.length > 0;
+                      const isActive = activeMealTime === time;
+                      const uniqueGroups = getUniqueGroups(items);
                       
-                      // Calculate active calories for header
+                      // Calculate active calories for header (ONLY MAIN group typically, or all selected?)
+                      // Usually Alternatives are OR logic. Let's count selected items.
                       const sectionKcal = items.filter(i => i.selected).reduce((acc, i) => acc + (i.kcal * i.serves), 0);
 
                       return (
-                        <div key={time} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6 break-inside-avoid">
-                            <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-                                <h3 className="font-bold text-gray-700 text-lg flex items-center gap-2">
-                                    {time === 'Breakfast' ? '🍳' : time === 'Lunch' ? '🥗' : time === 'Dinner' ? '🍲' : '🍎'} 
-                                    {time}
-                                </h3>
+                        <div key={time} className={`rounded-xl shadow-sm border overflow-hidden mb-6 break-inside-avoid transition-all ${isActive ? 'border-yellow-400 ring-2 ring-yellow-100' : 'border-gray-200'}`}>
+                            {/* Header (Click to Activate) */}
+                            <div 
+                                className={`px-4 py-3 flex flex-col md:flex-row justify-between items-center cursor-pointer transition-colors ${isActive ? 'bg-yellow-50 border-b border-yellow-200' : 'bg-gray-50 border-b border-gray-200 hover:bg-gray-100'}`}
+                                onClick={() => setActiveMealTime(time)}
+                            >
                                 <div className="flex items-center gap-3">
-                                    {hasItems && (
-                                        <button 
-                                            onClick={() => {
-                                                // If B exists but empty, do nothing. If B has items, user is adding to it.
-                                                // Actually, simpler: Set search context to add to B for this meal.
-                                                // For now, just a visual indicator or toggle is tricky without search context.
-                                                // Workaround: We use the Search Bar to add.
-                                                // Let's rely on the user adding via search, then moving? No, search adds to A by default.
-                                                // Let's make "Add Alternative" act as a state toggle for the search bar?
-                                                // Or simpler: Add to A, then user clicks "Move to Alt".
-                                                alert("To add an alternative option, select items from search, add to this meal, then use the 'Move to Option B' button on the item.");
-                                            }}
-                                            className="text-[10px] bg-white border border-blue-200 text-blue-600 px-2 py-1 rounded hover:bg-blue-50 no-print"
-                                        >
-                                            + Alternative
-                                        </button>
-                                    )}
-                                    <span className="text-xs font-mono font-bold text-gray-500">
+                                    <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-yellow-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                                    <h3 className={`font-bold text-lg flex items-center gap-2 ${isActive ? 'text-yellow-900' : 'text-gray-700'}`}>
+                                        {time === 'Breakfast' ? '🍳' : time === 'Lunch' ? '🥗' : time === 'Dinner' ? '🍲' : '🍎'} 
+                                        {time}
+                                    </h3>
+                                    {isActive && <span className="text-[10px] bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded font-bold no-print">ACTIVE</span>}
+                                </div>
+                                
+                                <div className="flex items-center gap-3 mt-2 md:mt-0" onClick={e => e.stopPropagation()}>
+                                    <div className="flex items-center gap-1 text-xs">
+                                        <input 
+                                            type="time" 
+                                            value={meta.timeStart}
+                                            onChange={e => updateMeta(time, 'timeStart', e.target.value)}
+                                            className="p-1 border rounded bg-white w-20"
+                                        />
+                                        <span>-</span>
+                                        <input 
+                                            type="time" 
+                                            value={meta.timeEnd}
+                                            onChange={e => updateMeta(time, 'timeEnd', e.target.value)}
+                                            className="p-1 border rounded bg-white w-20"
+                                        />
+                                    </div>
+                                    <span className="text-xs font-mono font-bold text-gray-500 min-w-[60px] text-right">
                                         {sectionKcal.toFixed(0)} kcal
                                     </span>
                                 </div>
                             </div>
                             
-                            {!hasItems ? (
-                                <div className="p-4 text-center text-sm text-gray-400 italic">No items added. Search above to add to {time}.</div>
-                            ) : (
-                                <div className="divide-y divide-gray-100">
-                                    {/* OPTION A */}
-                                    {groupA.length > 0 && (
-                                        <div className="relative">
-                                            {groupB.length > 0 && (
-                                                <div className="bg-blue-50/50 px-2 py-1 text-[10px] font-bold text-blue-800 uppercase flex justify-between items-center">
-                                                    <span>Option A (Main)</span>
-                                                    <label className="flex items-center gap-1 cursor-pointer no-print">
-                                                        <input type="checkbox" onChange={(e) => toggleGroup(time, 'A', e.target.checked)} checked={groupA.every(i => i.selected)} />
-                                                        Select All
-                                                    </label>
+                            <div className="bg-white p-4">
+                                {items.length === 0 ? (
+                                    <div className="text-center text-sm text-gray-400 italic py-4 border-2 border-dashed border-gray-100 rounded-lg">
+                                        {isActive ? "Search above to add items here..." : "Click header to activate, then add items."}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {uniqueGroups.map(group => {
+                                            const groupItems = items.filter(i => i.optionGroup === group);
+                                            // Main group always visible, others collapsible
+                                            const isMain = group === 'main';
+                                            const groupKey = `${time}-${group}`;
+                                            const isExpanded = isMain || expandedGroups[groupKey];
+
+                                            return (
+                                                <div key={group} className={`rounded-lg border ${isMain ? 'border-blue-100 bg-blue-50/20' : 'border-orange-100 bg-orange-50/20'}`}>
+                                                    {/* Group Header */}
+                                                    <div className={`px-3 py-2 flex justify-between items-center text-xs font-bold uppercase tracking-wider ${isMain ? 'bg-blue-50 text-blue-800' : 'bg-orange-50 text-orange-800 cursor-pointer'}`}
+                                                         onClick={() => !isMain && setExpandedGroups(prev => ({...prev, [groupKey]: !prev[groupKey]}))}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            {!isMain && <span>{isExpanded ? '▼' : '►'}</span>}
+                                                            <span>{group === 'main' ? 'Main Meal' : group}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 no-print">
+                                                            <label className="flex items-center gap-1 cursor-pointer">
+                                                                <input type="checkbox" onChange={(e) => toggleGroupSelection(time, group, e.target.checked)} checked={groupItems.every(i => i.selected)} />
+                                                                All
+                                                            </label>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Group Items */}
+                                                    {isExpanded && (
+                                                        <div className="divide-y divide-gray-100">
+                                                            {groupItems.map((item) => {
+                                                                const realIdx = items.indexOf(item);
+                                                                return (
+                                                                    <div key={realIdx} className={`p-2 pl-4 flex flex-col sm:flex-row items-center gap-3 transition ${!item.selected ? 'opacity-50 grayscale' : ''}`}>
+                                                                        <input 
+                                                                            type="checkbox" 
+                                                                            checked={item.selected} 
+                                                                            onChange={(e) => updateItem(time, realIdx, 'selected', e.target.checked)}
+                                                                            className="w-4 h-4 cursor-pointer no-print"
+                                                                        />
+                                                                        
+                                                                        <div className="flex-grow text-left w-full sm:w-auto">
+                                                                            <div className="font-bold text-gray-800 text-sm">
+                                                                                {renderHighlightedText(item.name)}
+                                                                            </div>
+                                                                            <div className="text-[10px] text-gray-500 flex gap-2">
+                                                                                <span>{item.group}</span>
+                                                                                {/* Move Item Controls */}
+                                                                                <select 
+                                                                                    value={item.optionGroup}
+                                                                                    onChange={(e) => updateItem(time, realIdx, 'optionGroup', e.target.value)}
+                                                                                    className="bg-transparent border-b border-gray-300 text-[9px] outline-none hover:border-blue-400 no-print"
+                                                                                >
+                                                                                    <option value="main">Main</option>
+                                                                                    <option value="Alt 1">Alt 1</option>
+                                                                                    <option value="Alt 2">Alt 2</option>
+                                                                                    <option value="Alt 3">Alt 3</option>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="flex items-center gap-1">
+                                                                            <input 
+                                                                                type="number" step="0.25" min="0" 
+                                                                                value={item.serves}
+                                                                                onChange={(e) => updateItem(time, realIdx, 'serves', Number(e.target.value))}
+                                                                                className="w-12 p-1 border rounded text-center text-sm font-bold focus:ring-1 focus:ring-blue-400"
+                                                                            />
+                                                                            <span className="text-[10px] text-gray-500">sv</span>
+                                                                        </div>
+
+                                                                        <div className="text-right w-16 hidden sm:block">
+                                                                            <div className="font-mono font-bold text-gray-700 text-xs">{(item.kcal * item.serves).toFixed(0)}</div>
+                                                                        </div>
+
+                                                                        <button onClick={() => removeFromPlan(time, realIdx)} className="text-red-400 hover:text-red-600 px-2 text-lg no-print">×</button>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                            {groupA.map((item, idx) => {
-                                                const realIdx = items.indexOf(item); // Find index in main array
-                                                return (
-                                                    <div key={realIdx} className={`p-3 flex flex-col sm:flex-row items-center gap-3 transition ${!item.selected ? 'bg-gray-50 opacity-60' : 'hover:bg-blue-50'}`}>
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={item.selected} 
-                                                            onChange={(e) => updateItem(time, realIdx, 'selected', e.target.checked)}
-                                                            className="w-5 h-5 cursor-pointer accent-blue-600 no-print"
-                                                        />
-                                                        
-                                                        <div className="flex-grow text-left w-full sm:w-auto">
-                                                            <div className="font-bold text-gray-800 text-sm">
-                                                                {renderHighlightedText(item.name)}
-                                                            </div>
-                                                            <div className="text-[10px] text-gray-500 flex gap-2">
-                                                                <span>{item.group}</span>
-                                                                {groupB.length > 0 && (
-                                                                    <button onClick={() => updateItem(time, realIdx, 'optionGroup', 'B')} className="text-blue-500 hover:underline no-print">
-                                                                        → Move to Option B
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
 
-                                                        <div className="flex items-center gap-2">
-                                                            <input 
-                                                                type="number" step="0.25" min="0" 
-                                                                value={item.serves}
-                                                                onChange={(e) => updateItem(time, realIdx, 'serves', Number(e.target.value))}
-                                                                className="w-14 p-1 border rounded text-center text-sm font-bold focus:ring-1 focus:ring-blue-400"
-                                                            />
-                                                            <span className="text-xs text-gray-500">serves</span>
-                                                        </div>
-
-                                                        <div className="text-right w-24 hidden sm:block">
-                                                            <div className="font-mono font-bold text-blue-700 text-sm">{(item.kcal * item.serves).toFixed(0)} kcal</div>
-                                                            <div className="text-[9px] text-gray-400 flex gap-1 justify-end">
-                                                                <span>P:{(item.protein*item.serves).toFixed(0)}</span>
-                                                                <span>C:{(item.cho*item.serves).toFixed(0)}</span>
-                                                                <span>F:{(item.fat*item.serves).toFixed(0)}</span>
-                                                            </div>
-                                                        </div>
-
-                                                        <button onClick={() => removeFromPlan(time, realIdx)} className="text-red-400 hover:text-red-600 px-2 text-lg no-print">×</button>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-
-                                    {/* OPTION B */}
-                                    {groupB.length > 0 && (
-                                        <div className="relative border-t-2 border-dashed border-gray-200">
-                                            <div className="bg-orange-50/50 px-2 py-1 text-[10px] font-bold text-orange-800 uppercase flex justify-between items-center">
-                                                <span>Option B (Alternative)</span>
-                                                <label className="flex items-center gap-1 cursor-pointer no-print">
-                                                    <input type="checkbox" onChange={(e) => toggleGroup(time, 'B', e.target.checked)} checked={groupB.every(i => i.selected)} />
-                                                    Select All
-                                                </label>
-                                            </div>
-                                            {groupB.map((item, idx) => {
-                                                const realIdx = items.indexOf(item);
-                                                return (
-                                                    <div key={realIdx} className={`p-3 flex flex-col sm:flex-row items-center gap-3 transition ${!item.selected ? 'bg-gray-50 opacity-60' : 'hover:bg-orange-50'}`}>
-                                                        <input 
-                                                            type="checkbox" 
-                                                            checked={item.selected} 
-                                                            onChange={(e) => updateItem(time, realIdx, 'selected', e.target.checked)}
-                                                            className="w-5 h-5 cursor-pointer accent-orange-600 no-print"
-                                                        />
-                                                        
-                                                        <div className="flex-grow text-left w-full sm:w-auto">
-                                                            <div className="font-bold text-gray-800 text-sm">
-                                                                {renderHighlightedText(item.name)}
-                                                            </div>
-                                                            <div className="text-[10px] text-gray-500 flex gap-2">
-                                                                <span>{item.group}</span>
-                                                                <button onClick={() => updateItem(time, realIdx, 'optionGroup', 'A')} className="text-orange-500 hover:underline no-print">
-                                                                    ↑ Move to Option A
-                                                                </button>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-2">
-                                                            <input 
-                                                                type="number" step="0.25" min="0" 
-                                                                value={item.serves}
-                                                                onChange={(e) => updateItem(time, realIdx, 'serves', Number(e.target.value))}
-                                                                className="w-14 p-1 border rounded text-center text-sm font-bold focus:ring-1 focus:ring-orange-400"
-                                                            />
-                                                            <span className="text-xs text-gray-500">serves</span>
-                                                        </div>
-
-                                                        <div className="text-right w-24 hidden sm:block">
-                                                            <div className="font-mono font-bold text-orange-700 text-sm">{(item.kcal * item.serves).toFixed(0)} kcal</div>
-                                                            <div className="text-[9px] text-gray-400 flex gap-1 justify-end">
-                                                                <span>P:{(item.protein*item.serves).toFixed(0)}</span>
-                                                                <span>C:{(item.cho*item.serves).toFixed(0)}</span>
-                                                                <span>F:{(item.fat*item.serves).toFixed(0)}</span>
-                                                            </div>
-                                                        </div>
-
-                                                        <button onClick={() => removeFromPlan(time, realIdx)} className="text-red-400 hover:text-red-600 px-2 text-lg no-print">×</button>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                {/* Footer Controls for Meal */}
+                                <div className="mt-4 pt-3 border-t border-gray-100 flex flex-col md:flex-row gap-3">
+                                    <textarea 
+                                        placeholder="Notes for this meal..." 
+                                        value={meta.notes}
+                                        onChange={e => updateMeta(time, 'notes', e.target.value)}
+                                        className="w-full p-2 text-xs border rounded bg-gray-50 focus:bg-white focus:ring-1 focus:ring-yellow-400 resize-none h-16"
+                                    />
+                                    {items.length > 0 && (
+                                        <button 
+                                            onClick={() => {
+                                                // Trigger logic to create a new alt group by adding a dummy item? 
+                                                // Or just let user select from dropdown on existing items.
+                                                // Let's scroll to search for adding more.
+                                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                setActiveMealTime(time);
+                                            }}
+                                            className="text-xs bg-gray-100 text-gray-600 px-3 py-1 rounded hover:bg-gray-200 whitespace-nowrap h-fit self-start no-print"
+                                        >
+                                            + Add Item / Alt
+                                        </button>
                                     )}
                                 </div>
-                            )}
+                            </div>
                         </div>
                       );
                   })}
@@ -823,10 +936,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                         <div className="text-[10px] text-yellow-400">{percentages.fat}%</div>
                      </div>
                   </div>
-                  
-                  <div className="mt-4 p-3 bg-gray-50 rounded text-center text-xs text-gray-500 no-print">
-                      <strong>Note:</strong> Calculation includes only checked items. Use Option A/B to create alternatives.
-                  </div>
               </div>
           </div>
 
@@ -858,8 +967,9 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                                     <div className="font-bold text-gray-800">{plan.name}</div>
                                     <div className="text-xs text-gray-500">{new Date(plan.created_at).toLocaleDateString()}</div>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
                                     <button onClick={() => loadPlan(plan)} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Load</button>
+                                    <button onClick={() => deletePlan(plan.id)} className="px-3 py-1 bg-red-100 text-red-600 text-xs rounded hover:bg-red-200">Del</button>
                                 </div>
                             </div>
                         ))

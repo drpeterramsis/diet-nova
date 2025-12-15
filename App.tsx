@@ -284,6 +284,11 @@ const AppContent = () => {
       setActiveTool('meal-planner');
   };
 
+  const handleDayPlanForClient = (client: Client, visit: ClientVisit) => {
+      setCurrentVisit({ client, visit });
+      setActiveTool('meal-creator');
+  };
+
   const handleRunNFPEForClient = (client: Client) => {
       setCurrentClientForNFPE(client);
       setActiveTool('nfpe');
@@ -349,7 +354,7 @@ const AppContent = () => {
                   {t.common.backHome}
                 </button>
                 
-                {currentVisit && isComplexFlow && (
+                {currentVisit && (
                     <div className="flex items-center gap-3">
                          <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm hidden sm:flex items-center gap-2">
                              <span>👥 Client Mode: {currentVisit.client.full_name}</span>
@@ -391,6 +396,7 @@ const AppContent = () => {
                     initialLoadId={selectedLoadId} 
                     autoOpenLoad={autoOpenLoad}
                     autoOpenNew={autoOpenNew}
+                    activeVisit={currentVisit}
                 />
             )}
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
@@ -400,6 +406,7 @@ const AppContent = () => {
                     initialClientId={selectedLoadId} 
                     onAnalyzeInKcal={handleAnalyzeClient}
                     onPlanMeals={handlePlanMealsForClient}
+                    onDayPlan={handleDayPlanForClient}
                     onRunNFPE={handleRunNFPEForClient}
                     autoOpenNew={autoOpenNew}
                 />

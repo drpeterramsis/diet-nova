@@ -54,7 +54,6 @@ const calculatePlanStats = (servings: Record<string, number>) => {
 
 // InBody Logic (Unchanged)
 const getBodyFatAnalysis = (fat: number, age: number, gender: 'male' | 'female') => {
-// ... rest of the file remains unchanged ...
     if (!fat || !age) return null;
     let status = '';
     let color = '';
@@ -107,6 +106,7 @@ interface ClientManagerProps {
   initialClientId?: string | null;
   onAnalyzeInKcal?: (client: Client, visit: ClientVisit) => void;
   onPlanMeals?: (client: Client, visit: ClientVisit) => void;
+  onDayPlan?: (client: Client, visit: ClientVisit) => void;
   onRunNFPE?: (client: Client) => void;
   autoOpenNew?: boolean;
 }
@@ -170,7 +170,6 @@ const NoteDisplay: React.FC<{ text: string }> = ({ text }) => {
 
 // --- Full Profile Print Component ---
 const ClientPrintView: React.FC<{ client: Client, visits: ClientVisit[] }> = ({ client, visits }) => {
-// ... existing ClientPrintView content ...
     return (
         <div className="hidden print:block p-8 font-serif">
             <h1 className="text-3xl font-bold mb-2 border-b-2 border-black pb-2">{client.full_name}</h1>
@@ -239,8 +238,7 @@ const ClientPrintView: React.FC<{ client: Client, visits: ClientVisit[] }> = ({ 
     );
 };
 
-const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal, onPlanMeals, onRunNFPE, autoOpenNew }) => {
-  // ... existing ClientManager logic ...
+const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyzeInKcal, onPlanMeals, onDayPlan, onRunNFPE, autoOpenNew }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   
@@ -956,6 +954,11 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       onPlanMeals(editingClient, visit);
   };
 
+  const openDayPlanForVisit = (visit: ClientVisit) => {
+      if (!editingClient || !onDayPlan) return;
+      onDayPlan(editingClient, visit);
+  };
+
   const handleRunNFPE = () => {
       if (!editingClient || !onRunNFPE) return;
       onRunNFPE(editingClient);
@@ -1046,7 +1049,6 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
 
   // --- Summary Generator ---
   const generateSummary = () => {
-// ... existing generateSummary logic ...
       if (!editingClient) return;
       const sortedVisits = [...visits].sort((a, b) => new Date(b.visit_date).getTime() - new Date(a.visit_date).getTime());
       
@@ -2188,6 +2190,12 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
                                                      className="text-xs font-bold text-purple-700 hover:text-purple-800 flex items-center gap-1 transition self-start bg-purple-50 px-2 py-1 rounded border border-purple-100 w-full"
                                                  >
                                                      <span>📅</span> Plan: {visit.meal_plan_data ? `${planTotalKcal.toFixed(0)} kcal` : '-'}
+                                                 </button>
+                                                 <button 
+                                                     onClick={() => openDayPlanForVisit(visit)}
+                                                     className="text-xs font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1 transition self-start bg-blue-50 px-2 py-1 rounded border border-blue-100 w-full"
+                                                 >
+                                                     <span>🥗</span> Day Menu {visit.day_plan_data ? '✓' : ''}
                                                  </button>
                                                  {/* New Dietary Tool Buttons for Visit */}
                                                  <button 
