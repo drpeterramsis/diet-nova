@@ -857,13 +857,14 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                             <span>📅</span> Meal Planner
                         </button>
                     )}
-                    {!activeVisit && session && !isEmbedded && (
+                    {/* Allow Template Save even if Embedded */}
+                    {session && (
                         <>
                         <input 
                             type="text" placeholder="Plan Name" value={planName} onChange={e => setPlanName(e.target.value)}
                             className="w-32 p-2 border rounded text-sm focus:ring-1 focus:ring-blue-400 outline-none"
                         />
-                        <button onClick={savePlan} className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded transition" title="Save Template">💾</button>
+                        <button onClick={saveAsTemplate} className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded transition" title="Save Template">💾</button>
                         <button onClick={() => { fetchPlans(); setShowLoadModal(true); }} className="bg-purple-500 hover:bg-purple-600 text-white p-2 rounded transition" title="Load Template">📂</button>
                         </>
                     )}

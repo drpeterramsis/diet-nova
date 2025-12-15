@@ -102,8 +102,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
     BASE_GROUPS.reduce((acc, group) => ({ ...acc, [group]: 0 }), {})
   );
 
-  // State for Targets
-  const [targetKcal, setTargetKcal] = useState<number>(0);
+  // State for Targets - Default to 2000 if not provided
+  const [targetKcal, setTargetKcal] = useState<number>(initialTargetKcal || 2000);
   const [manualGm, setManualGm] = useState({ cho: 0, pro: 0, fat: 0 });
   const [manualPerc, setManualPerc] = useState({ cho: 0, pro: 0, fat: 0 });
   const [activeTargetTab, setActiveTargetTab] = useState<'none' | 'gm' | 'perc'>('none');
@@ -111,7 +111,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   // State for Day Menu (Unified State)
   const [dayMenuPlan, setDayMenuPlan] = useState<WeeklyPlan>(DEFAULT_WEEKLY_PLAN);
 
-  // Initialize target if provided prop
+  // Initialize target if provided prop updates
   useEffect(() => {
     if (initialTargetKcal && initialTargetKcal > 0) {
       setTargetKcal(initialTargetKcal);
@@ -468,7 +468,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
           ...acc,
           [group]: MEALS.reduce((mAcc, meal) => ({ ...mAcc, [meal]: 0 }), {})
       }), {}));
-      setTargetKcal(0);
+      setTargetKcal(2000);
       setPlanName('');
       setLoadedPlanId(null);
       setLastSavedName('');
@@ -927,8 +927,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                 activeVisit={activeVisit}
                 // Integrated Props
                 isEmbedded={true}
-                // Using strictly calculated total per user request (instead of fallback to target)
-                externalTargetKcal={calcTotals.kcal}
+                // Fixed: Use targetKcal input (required) instead of calculated total
+                externalTargetKcal={targetKcal}
                 plannedExchanges={servings}
                 externalWeeklyPlan={dayMenuPlan}
                 onWeeklyPlanChange={setDayMenuPlan}
