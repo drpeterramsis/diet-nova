@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
 import { MacroDonut, ProgressBar } from "../Visuals";
@@ -21,6 +21,7 @@ export interface WeeklyPlan {
 interface PlannerItem extends FoodItem {
     selected: boolean;
     optionGroup: string; 
+    customDisplayName?: string; // Stores HTML for rich text description
 }
 
 interface MealMeta {
@@ -45,6 +46,26 @@ interface MealCreatorProps {
 
 type MealTime = 'Pre-Breakfast' | 'Breakfast' | 'Morning Snack' | 'Lunch' | 'Afternoon Snack' | 'Dinner' | 'Late Snack';
 const MEAL_TIMES: MealTime[] = ['Pre-Breakfast', 'Breakfast', 'Morning Snack', 'Lunch', 'Afternoon Snack', 'Dinner', 'Late Snack'];
+
+const MEAL_ICONS: Record<string, string> = {
+    'Pre-Breakfast': '🌅',
+    'Breakfast': '🍳',
+    'Morning Snack': '🍎',
+    'Lunch': '🥗',
+    'Afternoon Snack': '🍇',
+    'Dinner': '🍲',
+    'Late Snack': '🥛'
+};
+
+const MEAL_COLORS: Record<string, string> = {
+    'Pre-Breakfast': 'bg-orange-50 border-orange-200 text-orange-900',
+    'Breakfast': 'bg-yellow-50 border-yellow-200 text-yellow-900',
+    'Morning Snack': 'bg-green-50 border-green-200 text-green-900',
+    'Lunch': 'bg-blue-50 border-blue-200 text-blue-900',
+    'Afternoon Snack': 'bg-purple-50 border-purple-200 text-purple-900',
+    'Dinner': 'bg-red-50 border-red-200 text-red-900',
+    'Late Snack': 'bg-indigo-50 border-indigo-200 text-indigo-900'
+};
 
 // Generate Alt Options (Main + 10 Alts)
 const ALT_OPTIONS = ['main', ...Array.from({length: 10}, (_, i) => `Alt ${i+1}`)];
@@ -101,6 +122,70 @@ export const DEFAULT_WEEKLY_PLAN: WeeklyPlan = {
     1: { items: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {}), meta: {} }
 };
 
+// --- RICH TEXT EDITOR COMPONENT ---
+const RichTextEditorModal: React.FC<{
+    initialHtml: string;
+    onSave: (html: string) => void;
+    onClose: () => void;
+}> = ({ initialHtml, onSave, onClose }) => {
+    const editorRef = useRef<HTMLDivElement>(null);
+
+    // Initial population
+    useEffect(() => {
+        if (editorRef.current) {
+            editorRef.current.innerHTML = initialHtml;
+        }
+    }, []);
+
+    const execCmd = (command: string, value: string | undefined = undefined) => {
+        document.execCommand(command, false, value);
+        editorRef.current?.focus();
+    };
+
+    const handleSave = () => {
+        if (editorRef.current) {
+            onSave(editorRef.current.innerHTML);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm no-print">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in">
+                <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                    <h3 className="font-bold text-gray-800">Edit Meal Description</h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+                
+                {/* Toolbar */}
+                <div className="p-2 border-b flex gap-1 flex-wrap bg-gray-50">
+                    <button onClick={() => execCmd('bold')} className="p-1.5 min-w-[30px] rounded hover:bg-gray-200 font-bold border border-gray-300" title="Bold">B</button>
+                    <button onClick={() => execCmd('italic')} className="p-1.5 min-w-[30px] rounded hover:bg-gray-200 italic border border-gray-300" title="Italic">I</button>
+                    <button onClick={() => execCmd('underline')} className="p-1.5 min-w-[30px] rounded hover:bg-gray-200 underline border border-gray-300" title="Underline">U</button>
+                    <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                    {/* Colors */}
+                    <button onClick={() => execCmd('foreColor', '#000000')} className="w-6 h-6 rounded-full bg-black border border-gray-300 hover:scale-110 transition" title="Black"></button>
+                    <button onClick={() => execCmd('foreColor', '#dc2626')} className="w-6 h-6 rounded-full bg-red-600 border border-gray-300 hover:scale-110 transition" title="Red"></button>
+                    <button onClick={() => execCmd('foreColor', '#2563eb')} className="w-6 h-6 rounded-full bg-blue-600 border border-gray-300 hover:scale-110 transition" title="Blue"></button>
+                    <button onClick={() => execCmd('foreColor', '#16a34a')} className="w-6 h-6 rounded-full bg-green-600 border border-gray-300 hover:scale-110 transition" title="Green"></button>
+                    <button onClick={() => execCmd('foreColor', '#d97706')} className="w-6 h-6 rounded-full bg-yellow-600 border border-gray-300 hover:scale-110 transition" title="Orange"></button>
+                </div>
+
+                <div 
+                    ref={editorRef}
+                    className="p-4 min-h-[150px] max-h-[300px] overflow-y-auto outline-none text-sm leading-relaxed"
+                    contentEditable
+                    suppressContentEditableWarning
+                />
+
+                <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                    <button onClick={onClose} className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded">Cancel</button>
+                    <button onClick={handleSave} className="px-6 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 shadow-sm">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const MealCreator: React.FC<MealCreatorProps> = ({ 
     initialLoadId, 
     autoOpenLoad, 
@@ -137,6 +222,9 @@ const MealCreator: React.FC<MealCreatorProps> = ({
   // New UI Logic
   const [activeMealTime, setActiveMealTime] = useState<MealTime>('Lunch'); // Default active meal for adding items
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({}); // Collapse state for alternative groups
+
+  // Editing Item State
+  const [editingItem, setEditingItem] = useState<{ day: number, meal: string, index: number, initialHtml: string } | null>(null);
 
   // Save/Load State
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -344,7 +432,8 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                   ...dayData,
                   items: {
                       ...dayData.items,
-                      [activeMealTime]: [...currentList, { ...food, serves: 1, selected: true, optionGroup: 'main' }]
+                      // Initial customDisplayName is just the food name (safe default)
+                      [activeMealTime]: [...currentList, { ...food, serves: 1, selected: true, optionGroup: 'main', customDisplayName: food.name }]
                   }
               }
           };
@@ -439,6 +528,23 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           ...prev,
           [currentDay]: { items: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {}), meta: {} }
       }));
+  };
+
+  // --- RICH TEXT HANDLERS ---
+  const openEditor = (meal: string, index: number, item: PlannerItem) => {
+      setEditingItem({
+          day: currentDay,
+          meal: meal,
+          index: index,
+          initialHtml: item.customDisplayName || item.name
+      });
+  };
+
+  const saveEditorContent = (html: string) => {
+      if (editingItem) {
+          updateItem(editingItem.meal, editingItem.index, 'customDisplayName', html);
+          setEditingItem(null);
+      }
   };
 
   // --- 4. Calculations (Current Day Only) ---
@@ -759,6 +865,15 @@ const MealCreator: React.FC<MealCreatorProps> = ({
     <div className="max-w-[1920px] mx-auto animate-fade-in space-y-6 pb-12">
       <Toast message={statusMsg || syncMsg} />
 
+      {/* Editor Modal */}
+      {editingItem && (
+          <RichTextEditorModal 
+              initialHtml={editingItem.initialHtml}
+              onSave={saveEditorContent}
+              onClose={() => setEditingItem(null)}
+          />
+      )}
+
       {/* Active Visit Toolbar - Hide if embedded (parent usually shows it) */}
       {!isEmbedded && activeVisit && (
           <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl mb-2 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm no-print">
@@ -810,7 +925,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                     className={`w-full px-6 py-3 rounded-full border-2 focus:outline-none shadow-sm text-lg transition-colors bg-white ${
                         activeMealTime ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary-light)]' : 'border-gray-300'
                     }`}
-                    placeholder={`Search to add to: ${activeMealTime}`}
+                    placeholder={`Search to add to: ${MEAL_ICONS[activeMealTime] || ''} ${activeMealTime}`}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     dir={isRTL ? 'rtl' : 'ltr'}
@@ -934,7 +1049,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           </div>
 
           {/* Targets Summary */}
-          <div className="mb-6 grid grid-cols-5 gap-4 border border-gray-300 rounded-lg p-3 bg-gray-50 text-center">
+          <div className="mb-6 grid grid-cols-5 gap-4 border border-gray-300 rounded-lg p-3 bg-gray-50 text-center print-color-exact">
               <div>
                   <span className="block text-[10px] uppercase text-gray-500 font-bold">Target Kcal</span>
                   <span className="font-bold text-lg">{targetKcal.toFixed(0)}</span>
@@ -959,7 +1074,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
           {/* Plan Table */}
           <table className="w-full border-collapse border border-gray-300 mb-6">
-              <thead className="bg-gray-100 text-gray-800">
+              <thead className="bg-gray-100 text-gray-800 print-color-exact">
                   <tr>
                       <th className="p-2 border border-gray-300 text-left w-1/5">Meal Time</th>
                       <th className="p-2 border border-gray-300 text-left w-1/2">Menu Item</th>
@@ -978,22 +1093,30 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                       if (items.length === 0 && !meta?.notes) return null;
 
                       // Group items for display? No, just list main items.
-                      // NOTE: We only print 'main' items for clarity in the table, or list alts below.
                       const altGroups = getUniqueGroups(dayData.items[time] || []).filter(g => g !== 'main');
+                      
+                      // Meal Colors for Print row background
+                      const mealColorClass = MEAL_COLORS[time]?.split(' ')[0] || 'bg-gray-50'; // Extract just the bg class
 
                       return (
                           <React.Fragment key={time}>
-                              <tr className="bg-gray-50/50 break-inside-avoid">
-                                  <td className="p-2 border border-gray-300 font-bold align-top" rowSpan={items.length + (altGroups.length > 0 ? 1 : 0) + 1}>
-                                      {time}
-                                      {meta?.timeStart && <div className="text-[10px] font-normal mt-1">{meta.timeStart} - {meta.timeEnd}</div>}
+                              <tr className={`${mealColorClass} print-color-exact break-inside-avoid`}>
+                                  <td className="p-2 border border-gray-300 font-bold align-top text-gray-900" rowSpan={items.length + (altGroups.length > 0 ? 1 : 0) + 1}>
+                                      <span className="mr-2 text-lg">{MEAL_ICONS[time]}</span> {time}
+                                      {meta?.timeStart && <div className="text-[10px] font-normal mt-1 text-gray-600">{meta.timeStart} - {meta.timeEnd}</div>}
                                   </td>
                               </tr>
                               {items.map((item, idx) => (
                                   <tr key={`${time}-${idx}`} className="break-inside-avoid">
                                       <td className="p-2 border border-gray-300">
-                                          <span className="font-medium">{item.name.replace(/\(.*?\)/g, '')}</span>
-                                          <span className="text-xs text-gray-500 ml-1">{item.name.match(/\(.*?\)/g)}</span>
+                                          {item.customDisplayName ? (
+                                              <div dangerouslySetInnerHTML={{ __html: item.customDisplayName }} />
+                                          ) : (
+                                              <>
+                                                <span className="font-medium">{item.name.replace(/\(.*?\)/g, '')}</span>
+                                                <span className="text-xs text-gray-500 ml-1">{item.name.match(/\(.*?\)/g)}</span>
+                                              </>
+                                          )}
                                       </td>
                                       <td className="p-2 border border-gray-300 text-center">
                                           {item.serves} sv
@@ -1001,7 +1124,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                                       <td className="p-2 border border-gray-300 text-center text-xs">
                                           {(item.kcal * item.serves).toFixed(0)}
                                       </td>
-                                      {/* Only show notes on first row or merge? Notes column spans down */}
                                       {idx === 0 && (
                                           <td className="p-2 border border-gray-300 text-xs italic align-top" rowSpan={items.length}>
                                               {meta?.notes}
@@ -1012,14 +1134,17 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                               
                               {/* Alts Row */}
                               {altGroups.length > 0 && (
-                                  <tr className="break-inside-avoid bg-yellow-50">
+                                  <tr className="break-inside-avoid bg-yellow-50 print-color-exact">
                                       <td colSpan={4} className="p-2 border border-gray-300 text-xs">
                                           <strong>Alternatives:</strong> 
                                           {altGroups.map(grp => {
                                               const alts = dayData.items[time].filter(i => i.optionGroup === grp && i.selected);
                                               return alts.length > 0 ? (
                                                   <div key={grp} className="ml-2 mt-1">
-                                                      <span className="font-bold text-yellow-800">{grp}:</span> {alts.map(i => `${i.name} (${i.serves} sv)`).join(', ')}
+                                                      <span className="font-bold text-yellow-800">{grp}:</span> {alts.map(i => {
+                                                          const name = i.customDisplayName ? i.customDisplayName.replace(/<[^>]*>?/gm, '') : i.name; // Strip HTML for alt concise list
+                                                          return `${name} (${i.serves} sv)`;
+                                                      }).join(', ')}
                                                   </div>
                                               ) : null;
                                           })}
@@ -1054,7 +1179,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           </div>
       </div>
 
-      {/* --- PRINT LAYOUT: WEEKLY TABLE (New Feature) --- */}
+      {/* --- PRINT LAYOUT: WEEKLY TABLE (Enhanced) --- */}
       {printWeekMode && (
           <div className="hidden print:block font-sans text-xs w-full h-full absolute top-0 left-0 bg-white z-[9999] p-4">
               {/* Weekly Header */}
@@ -1075,10 +1200,12 @@ const MealCreator: React.FC<MealCreatorProps> = ({
               {/* Weekly Grid (Columns: Meals, Rows: Days) */}
               <table className="w-full border-collapse border border-gray-400 text-[10px]">
                   <thead>
-                      <tr className="bg-gray-200 text-gray-800">
+                      <tr className="bg-gray-200 text-gray-800 print-color-exact">
                           <th className="border border-gray-400 p-1 w-16">Day</th>
                           {MEAL_TIMES.map(time => (
-                              <th key={time} className="border border-gray-400 p-1">{time}</th>
+                              <th key={time} className={`border border-gray-400 p-1 ${MEAL_COLORS[time]?.split(' ')[0] || ''}`}>
+                                  <span className="mr-1">{MEAL_ICONS[time]}</span> {time}
+                              </th>
                           ))}
                       </tr>
                   </thead>
@@ -1092,7 +1219,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
                           return (
                               <tr key={day} className="break-inside-avoid">
-                                  <td className="border border-gray-400 p-1 font-bold text-center bg-gray-50">Day {day}</td>
+                                  <td className="border border-gray-400 p-1 font-bold text-center bg-gray-50 print-color-exact">Day {day}</td>
                                   {MEAL_TIMES.map(time => {
                                       const items = dayData.items[time]?.filter(i => i.selected && i.optionGroup === 'main') || [];
                                       return (
@@ -1101,7 +1228,11 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                                                   <ul className="list-disc list-inside leading-tight">
                                                       {items.map((item, idx) => (
                                                           <li key={idx}>
-                                                              {item.name} <span className="text-gray-500 font-bold">({item.serves} sv)</span>
+                                                              {item.customDisplayName ? (
+                                                                  <span dangerouslySetInnerHTML={{ __html: item.customDisplayName }} />
+                                                              ) : (
+                                                                  <span>{item.name} <span className="text-gray-500 font-bold">({item.serves} sv)</span></span>
+                                                              )}
                                                           </li>
                                                       ))}
                                                   </ul>
@@ -1256,6 +1387,8 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                           fat: acc.fat + (i.fat * i.serves)
                       }), { kcal: 0, cho: 0, protein: 0, fat: 0 });
 
+                      const mealColorClass = MEAL_COLORS[time];
+
                       return (
                         <div key={time} className={`rounded-xl shadow-sm border overflow-hidden mb-6 transition-all ${isActive ? 'border-yellow-400 ring-2 ring-yellow-100' : 'border-gray-200'}`}>
                             {/* Header (Click to Activate) */}
@@ -1266,8 +1399,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                                 <div className="flex items-center gap-3">
                                     <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-yellow-500 animate-pulse' : 'bg-gray-300'}`}></div>
                                     <h3 className={`font-bold text-lg flex items-center gap-2 ${isActive ? 'text-yellow-900' : 'text-gray-700'}`}>
-                                        {time === 'Breakfast' ? '🍳' : time === 'Lunch' ? '🥗' : time === 'Dinner' ? '🍲' : '🍎'} 
-                                        {time}
+                                        <span className="text-xl">{MEAL_ICONS[time]}</span> {time}
                                     </h3>
                                     {isActive && <span className="text-[10px] bg-yellow-200 text-yellow-800 px-2 py-0.5 rounded font-bold no-print">ACTIVE</span>}
                                 </div>
@@ -1346,8 +1478,19 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                                                                         />
                                                                         
                                                                         <div className="flex-grow text-left w-full sm:w-auto">
-                                                                            <div className="font-bold text-gray-800 text-sm">
-                                                                                {renderHighlightedText(item.name)}
+                                                                            <div className="font-bold text-gray-800 text-sm flex items-center gap-2">
+                                                                                {item.customDisplayName ? (
+                                                                                    <div dangerouslySetInnerHTML={{ __html: item.customDisplayName }} />
+                                                                                ) : (
+                                                                                    renderHighlightedText(item.name)
+                                                                                )}
+                                                                                <button 
+                                                                                    onClick={() => openEditor(time, realIdx, item)}
+                                                                                    className="text-gray-400 hover:text-blue-500 p-1 no-print"
+                                                                                    title="Edit Description"
+                                                                                >
+                                                                                    ✎
+                                                                                </button>
                                                                             </div>
                                                                             <div className="text-[10px] text-gray-500 flex gap-2">
                                                                                 <span>{item.group}</span>
@@ -1585,12 +1728,17 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                     <h3 className="text-xl font-bold">{t.common.load}</h3>
                     <button onClick={() => setShowLoadModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
                 </div>
+                
                 <div className="mb-4">
                     <input 
-                        type="text" placeholder={t.common.search} value={loadSearchQuery} onChange={(e) => setLoadSearchQuery(e.target.value)}
+                        type="text" 
+                        placeholder={t.common.search}
+                        value={loadSearchQuery}
+                        onChange={(e) => setLoadSearchQuery(e.target.value)}
                         className="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                     />
                 </div>
+
                 <div className="flex-grow overflow-y-auto space-y-2 pr-2">
                     {isLoadingPlans ? (
                         <div className="text-center py-10 text-gray-400">Loading...</div>
@@ -1601,7 +1749,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                             <div key={plan.id} className="flex justify-between items-center p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-100 group">
                                 <div>
                                     <div className="font-bold text-gray-800">{plan.name}</div>
-                                    <div className="text-xs text-gray-500">{new Date(plan.created_at).toLocaleDateString()}</div>
+                                    <div className="text-xs text-gray-500">{new Date(plan.created_at).toLocaleDateString('en-GB')}</div>
                                 </div>
                                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
                                     <button onClick={() => loadPlan(plan)} className="px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Load</button>

@@ -73,4 +73,10 @@ h3 { font-size: 1.1rem; line-height: 1.2; margin-bottom: 0.5rem; }
     border: none !important;
     background: transparent !important;
   }
+
+  /* Force background colors in print */
+  .print-color-exact {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }
