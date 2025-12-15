@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { SavedMeal, Client, ClientVisit } from '../../types';
 import Toast from '../Toast';
-import MealCreator from './MealCreator';
+import MealCreator, { WeeklyPlan, DEFAULT_WEEKLY_PLAN } from './MealCreator';
 
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; fiber: number; kcal: number }> = {
   starch: { cho: 15, pro: 3, fat: 1, fiber: 1.75, kcal: 80 },
@@ -36,9 +36,9 @@ const GROUP_STYLES: Record<string, { bg: string, text: string, border: string, i
   milkSkim: { bg: 'bg-blue-50', text: 'text-blue-900', border: 'border-blue-200', icon: '🥛' },
   milkLow: { bg: 'bg-blue-100', text: 'text-blue-900', border: 'border-blue-300', icon: '🥛' },
   milkWhole: { bg: 'bg-blue-200', text: 'text-blue-900', border: 'border-blue-400', icon: '🥛' },
-  legumes: { bg: 'bg-amber-100', text: 'text-amber-900', border: 'border-amber-300', icon: '🥒' },
+  legumes: { bg: 'bg-amber-100', text: 'text-amber-900', border: 'border-amber-300', icon: '🥣' },
   sugar: { bg: 'bg-gray-100', text: 'text-gray-900', border: 'border-gray-300', icon: '🍬' },
-  fats: { bg: 'bg-yellow-50', text: 'text-yellow-900', border: 'border-yellow-200', icon: '🧈' },
+  fats: { bg: 'bg-yellow-50', text: 'text-yellow-900', border: 'border-yellow-200', icon: '🥑' },
   fatsPufa: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: '🌻' },
   fatsMufa: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: '🫒' },
   fatsSat: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300', icon: '🥥' },
@@ -108,6 +108,9 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   const [manualPerc, setManualPerc] = useState({ cho: 0, pro: 0, fat: 0 });
   const [activeTargetTab, setActiveTargetTab] = useState<'none' | 'gm' | 'perc'>('none');
 
+  // State for Day Menu (Unified State)
+  const [dayMenuPlan, setDayMenuPlan] = useState<WeeklyPlan>(DEFAULT_WEEKLY_PLAN);
+
   // Initialize target if provided prop
   useEffect(() => {
     if (initialTargetKcal && initialTargetKcal > 0) {
@@ -154,6 +157,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
           if (data.targetKcal) setTargetKcal(data.targetKcal);
           if (data.manualGm) setManualGm(data.manualGm);
           if (data.manualPerc) setManualPerc(data.manualPerc);
+          if (data.dayMenuPlan) setDayMenuPlan(data.dayMenuPlan); // Hydrate Day Menu
           
           // Check if detailed fats are used
           const hasDetails = (data.servings?.fatsPufa || 0) > 0 || (data.servings?.fatsMufa || 0) > 0 || (data.servings?.fatsSat || 0) > 0;
@@ -326,12 +330,14 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       if (!session) return;
       
       setStatusMsg("Saving...");
+      // UNIFIED SAVING: Includes Servings, Distribution, AND Day Menu Plan
       const planData = {
           servings,
           distribution,
           targetKcal,
           manualGm,
-          manualPerc
+          manualPerc,
+          dayMenuPlan // Included
       };
       const timestamp = new Date().toISOString();
 
@@ -399,7 +405,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
           distribution,
           targetKcal,
           manualGm,
-          manualPerc
+          manualPerc,
+          dayMenuPlan // Include Day Menu
       };
 
       try {
@@ -424,6 +431,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       setTargetKcal(plan.data.targetKcal || 0);
       setManualGm(plan.data.manualGm || {cho:0, pro:0, fat:0});
       setManualPerc(plan.data.manualPerc || {cho:0, pro:0, fat:0});
+      if (plan.data.dayMenuPlan) setDayMenuPlan(plan.data.dayMenuPlan); // Load Day Menu
+      
       setPlanName(plan.name);
       setLoadedPlanId(plan.id);
       setLastSavedName(plan.name);
@@ -464,6 +473,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       setLoadedPlanId(null);
       setLastSavedName('');
       setUseFatBreakdown(false);
+      setDayMenuPlan(DEFAULT_WEEKLY_PLAN);
   };
 
   const RenderCell = ({ val, factor, label }: { val: number, factor: number, label: string }) => {
@@ -919,6 +929,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                 isEmbedded={true}
                 externalTargetKcal={calcTotals.kcal > 0 ? calcTotals.kcal : targetKcal}
                 plannedExchanges={servings}
+                externalWeeklyPlan={dayMenuPlan}
+                onWeeklyPlanChange={setDayMenuPlan}
             />
         </div>
 

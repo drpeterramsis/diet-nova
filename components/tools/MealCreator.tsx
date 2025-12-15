@@ -9,6 +9,26 @@ import { SavedMeal, Client, ClientVisit } from "../../types";
 import Toast from "../Toast";
 import { FoodExchangeRow } from "../../data/exchangeData";
 
+export interface DayPlan {
+    items: Record<string, PlannerItem[]>;
+    meta: Record<string, MealMeta>;
+}
+
+export interface WeeklyPlan {
+    [day: number]: DayPlan;
+}
+
+interface PlannerItem extends FoodItem {
+    selected: boolean;
+    optionGroup: string; 
+}
+
+interface MealMeta {
+    timeStart: string;
+    timeEnd: string;
+    notes: string;
+}
+
 interface MealCreatorProps {
     initialLoadId?: string | null;
     autoOpenLoad?: boolean;
@@ -19,6 +39,8 @@ interface MealCreatorProps {
     isEmbedded?: boolean;
     externalTargetKcal?: number;
     plannedExchanges?: Record<string, number>;
+    externalWeeklyPlan?: WeeklyPlan;
+    onWeeklyPlanChange?: React.Dispatch<React.SetStateAction<WeeklyPlan>>;
 }
 
 type MealTime = 'Pre-Breakfast' | 'Breakfast' | 'Morning Snack' | 'Lunch' | 'Afternoon Snack' | 'Dinner' | 'Late Snack';
@@ -26,29 +48,6 @@ const MEAL_TIMES: MealTime[] = ['Pre-Breakfast', 'Breakfast', 'Morning Snack', '
 
 // Generate Alt Options (Main + 10 Alts)
 const ALT_OPTIONS = ['main', ...Array.from({length: 10}, (_, i) => `Alt ${i+1}`)];
-
-// Extended Planner Item
-interface PlannerItem extends FoodItem {
-    selected: boolean;
-    optionGroup: string; 
-}
-
-// Metadata for each meal (Time, Notes)
-interface MealMeta {
-    timeStart: string;
-    timeEnd: string;
-    notes: string;
-}
-
-// Day Data Structure
-interface DayPlan {
-    items: Record<string, PlannerItem[]>; // Keyed by MealTime
-    meta: Record<string, MealMeta>;       // Keyed by MealTime
-}
-
-interface WeeklyPlan {
-    [day: number]: DayPlan;
-}
 
 // Regex to detect text like "(150 gm)" or "(1)"
 const REGEX_PARENS = /(\(\d+.*?\))/g;
@@ -82,6 +81,26 @@ const GROUP_MAPPING: Record<string, string> = {
     // Fats aggregator handled separately
 };
 
+// Group Icons for Exchange Control
+const GROUP_ICONS: Record<string, string> = {
+    starch: '🍞',
+    fruit: '🍓',
+    veg: '🥦',
+    meatLean: '🍗',
+    meatMed: '🥩',
+    meatHigh: '🍔',
+    milkSkim: '🥛',
+    milkLow: '🍼',
+    milkWhole: '🧀',
+    legumes: '🥣',
+    sugar: '🍬',
+    fats: '🥑'
+};
+
+export const DEFAULT_WEEKLY_PLAN: WeeklyPlan = {
+    1: { items: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {}), meta: {} }
+};
+
 const MealCreator: React.FC<MealCreatorProps> = ({ 
     initialLoadId, 
     autoOpenLoad, 
@@ -90,7 +109,9 @@ const MealCreator: React.FC<MealCreatorProps> = ({
     onNavigate,
     isEmbedded,
     externalTargetKcal,
-    plannedExchanges
+    plannedExchanges,
+    externalWeeklyPlan,
+    onWeeklyPlanChange
 }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
@@ -103,9 +124,11 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
   // Weekly Planner State (Default 7 Days)
   const [currentDay, setCurrentDay] = useState<number>(1);
-  const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan>({
-      1: { items: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {}), meta: {} }
-  });
+  const [localWeeklyPlan, setLocalWeeklyPlan] = useState<WeeklyPlan>(DEFAULT_WEEKLY_PLAN);
+
+  // Derived State for Planner (Supports Embedded Mode)
+  const weeklyPlan = (isEmbedded && externalWeeklyPlan) ? externalWeeklyPlan : localWeeklyPlan;
+  const setWeeklyPlan = (isEmbedded && onWeeklyPlanChange) ? onWeeklyPlanChange : setLocalWeeklyPlan;
   
   // UI State
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,10 +148,15 @@ const MealCreator: React.FC<MealCreatorProps> = ({
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [loadSearchQuery, setLoadSearchQuery] = useState('');
 
-  // Sync external target kcal (unless user manually changed it)
+  // Sync external target kcal (Initial only, unless user requests sync)
   useEffect(() => {
-      if (externalTargetKcal && externalTargetKcal > 0) {
+      if (externalTargetKcal && externalTargetKcal > 0 && !isEmbedded) {
+          // In standalone, just take it if available (rare case)
           setTargetKcal(externalTargetKcal);
+      } else if (externalTargetKcal && externalTargetKcal > 0 && isEmbedded) {
+          // In embedded, we might want to respect user manual override unless they click sync
+          // But initially, set it.
+          if (targetKcal === 2000) setTargetKcal(externalTargetKcal);
       }
   }, [externalTargetKcal]);
 
@@ -233,6 +261,14 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
   // Hydrate from Active Visit
   const fetchTargetKcal = () => {
+      // Logic for button click
+      if (externalTargetKcal && externalTargetKcal > 0) {
+          setTargetKcal(externalTargetKcal);
+          setStatusMsg(`Synced target: ${externalTargetKcal.toFixed(0)} kcal`);
+          setTimeout(() => setStatusMsg(''), 2000);
+          return;
+      }
+
       if (!activeVisit) return;
       let target = 0;
       if (activeVisit.visit.meal_plan_data?.targetKcal) {
@@ -250,7 +286,8 @@ const MealCreator: React.FC<MealCreatorProps> = ({
   };
 
   useEffect(() => {
-      if (activeVisit) {
+      // Only do this auto-loading if NOT embedded (parent handles embedded load)
+      if (activeVisit && !isEmbedded) {
           // 1. Set Target Kcal (Prioritize Plan Data if exists, otherwise Kcal Calc)
           let target = 2000;
           
@@ -271,7 +308,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
               setStatusMsg("Loaded Client Plan");
           }
       }
-  }, [activeVisit]);
+  }, [activeVisit, isEmbedded]);
 
   const addToPlan = (food: FoodItem) => {
       setWeeklyPlan(prev => {
@@ -435,7 +472,8 @@ const MealCreator: React.FC<MealCreatorProps> = ({
       } else if (activeVisit?.visit.meal_plan_data?.servings) {
           planned = activeVisit.visit.meal_plan_data.servings;
       } else {
-          return []; // No target plan
+          // If no plan, we still show what we used
+          // No return here, proceed with planned={}
       }
 
       const used = summary.usedExchanges;
@@ -465,7 +503,8 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           }
 
           const useVal = used[g.key] || 0;
-          return { ...g, plan: planVal, used: useVal };
+          const icon = GROUP_ICONS[g.key] || '🍽️';
+          return { ...g, plan: planVal, used: useVal, icon };
       }).filter(g => g.plan > 0 || g.used > 0);
 
   }, [activeVisit, summary.usedExchanges, plannedExchanges]);
@@ -495,7 +534,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
   const savePlan = async () => {
     // Mode 1: Save to Visit
-    if (activeVisit) {
+    if (activeVisit && !isEmbedded) {
         setStatusMsg("Saving to Client Visit...");
         try {
             const planData = { weeklyPlan, targetKcal };
@@ -612,16 +651,16 @@ const MealCreator: React.FC<MealCreatorProps> = ({
       return savedPlans.filter(plan => plan.name.toLowerCase().includes(q));
   }, [savedPlans, loadSearchQuery]);
 
-  // Handle Initial Load
+  // Handle Initial Load (Only standalone mode)
   useEffect(() => {
-      if (initialLoadId && session && !activeVisit) {
+      if (initialLoadId && session && !activeVisit && !isEmbedded) {
           const autoLoad = async () => {
               const { data } = await supabase.from('saved_meals').select('*').eq('id', initialLoadId).single();
               if (data) loadPlan(data);
           };
           autoLoad();
       }
-  }, [initialLoadId, activeVisit]);
+  }, [initialLoadId, activeVisit, isEmbedded]);
 
   // --- Print Logic ---
   const handlePrint = (mode: 'day' | 'week') => {
@@ -749,7 +788,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                             <span>📅</span> Meal Planner
                         </button>
                     )}
-                    {!activeVisit && session && (
+                    {!activeVisit && session && !isEmbedded && (
                         <>
                         <input 
                             type="text" placeholder="Plan Name" value={planName} onChange={e => setPlanName(e.target.value)}
@@ -822,7 +861,9 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                               return (
                                   <div key={ex.key} className="space-y-1">
                                       <div className="flex justify-between text-xs font-medium text-gray-700">
-                                          <span>{ex.label}</span>
+                                          <span className="flex items-center gap-1">
+                                              <span>{ex.icon}</span> {ex.label}
+                                          </span>
                                           <span className={`${isOver ? 'text-red-600 font-bold' : isComplete ? 'text-green-600 font-bold' : 'text-gray-600'}`}>
                                               {ex.used.toFixed(1)} / {ex.plan.toFixed(1)}
                                           </span>
@@ -1088,6 +1129,15 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                                 title="Fetch calculated target from Kcal Calculator"
                             >
                                 🔄
+                            </button>
+                        )}
+                        {isEmbedded && externalTargetKcal && externalTargetKcal > 0 && (
+                            <button 
+                                onClick={fetchTargetKcal}
+                                className="bg-green-100 text-green-700 p-2 rounded-lg hover:bg-green-200 text-xs font-bold whitespace-nowrap"
+                                title="Sync target from Planner/Calculator"
+                            >
+                                🔄 Sync
                             </button>
                         )}
                       </div>
