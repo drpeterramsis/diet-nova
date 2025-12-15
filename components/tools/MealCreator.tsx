@@ -199,11 +199,17 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
   useEffect(() => {
       if (activeVisit) {
           // 1. Set Target Kcal (Prioritize Plan Data if exists, otherwise Kcal Calc)
+          let target = 2000;
+          
           if (activeVisit.visit.day_plan_data?.targetKcal) {
-              setTargetKcal(Number(activeVisit.visit.day_plan_data.targetKcal));
+              target = Number(activeVisit.visit.day_plan_data.targetKcal);
+          } else if (activeVisit.visit.meal_plan_data?.targetKcal) {
+              target = Number(activeVisit.visit.meal_plan_data.targetKcal);
           } else if (activeVisit.visit.kcal_data?.inputs?.reqKcal) {
-              setTargetKcal(Number(activeVisit.visit.kcal_data.inputs.reqKcal));
+              target = Number(activeVisit.visit.kcal_data.inputs.reqKcal);
           }
+          
+          if (target > 0) setTargetKcal(target);
           
           // 2. Load Day Plan if exists
           if (activeVisit.visit.day_plan_data) {
@@ -566,94 +572,97 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
           </div>
       )}
 
-      {/* Header & Search */}
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-6 sticky top-14 z-40 no-print">
-          <div className="text-center xl:text-left">
-              <h1 className="text-3xl font-bold text-[var(--color-heading)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)]">
-                  Day Food Planner
-              </h1>
-              <p className="text-sm text-gray-500 mt-1 flex items-center gap-2 justify-center xl:justify-start">
-                  Select a meal time (click header) then search to add foods.
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full border cursor-help ${dataSource === 'cloud' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`} title={dataSource === 'cloud' ? 'Cloud Database' : 'Local Database'}>
-                      {dataSource === 'cloud' ? '☁️' : '💾'}
+      {/* Sticky Header Wrapper to fix overlap issues */}
+      <div className="sticky top-12 z-40 bg-[var(--color-bg)] pt-2 pb-4 -mx-4 px-4 no-print">
+          {/* Header & Search */}
+          <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-6">
+              <div className="text-center xl:text-left">
+                  <h1 className="text-3xl font-bold text-[var(--color-heading)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)]">
+                      Day Food Planner
+                  </h1>
+                  <p className="text-sm text-gray-500 mt-1 flex items-center gap-2 justify-center xl:justify-start">
+                      Select a meal time (click header) then search to add foods.
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border cursor-help ${dataSource === 'cloud' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`} title={dataSource === 'cloud' ? 'Cloud Database' : 'Local Database'}>
+                          {dataSource === 'cloud' ? '☁️' : '💾'}
+                      </span>
+                  </p>
+              </div>
+
+              {/* Search Bar - Adds to ACTIVE MEAL TIME */}
+              <div className="relative w-full max-w-xl">
+                  <input
+                    type="text"
+                    className={`w-full px-6 py-3 rounded-full border-2 focus:outline-none shadow-sm text-lg transition-colors bg-white ${
+                        activeMealTime ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary-light)]' : 'border-gray-300'
+                    }`}
+                    placeholder={`Search to add to: ${activeMealTime}`}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                  />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--color-primary)] bg-white px-2">
+                      Adding to: {activeMealTime}
                   </span>
-              </p>
-          </div>
+                  
+                  {/* Search Results Dropdown */}
+                  {searchQuery && filteredFoods.length > 0 && (
+                    <ul className="absolute w-full bg-white mt-2 rounded-xl shadow-2xl max-h-80 overflow-y-auto z-50 border border-gray-100 text-right">
+                      {filteredFoods.map((food, idx) => (
+                        <li 
+                          key={idx} 
+                          className="px-4 py-3 hover:bg-green-50 border-b border-gray-50 last:border-0 transition-colors flex justify-between items-center cursor-pointer group"
+                          onClick={() => addToPlan(food)}
+                        >
+                          <div className="flex-grow text-left">
+                              <div className="font-medium text-[var(--color-text)]">
+                                  {renderHighlightedText(food.name)}
+                              </div>
+                              <div className="text-xs text-[var(--color-text-light)] flex gap-2">
+                                 <span>{food.group}</span>
+                                 <span className="font-bold text-blue-600">{food.kcal.toFixed(0)} kcal</span>
+                              </div>
+                          </div>
+                          <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-bold group-hover:bg-green-200">
+                              + Add
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+              </div>
 
-          {/* Search Bar - Adds to ACTIVE MEAL TIME */}
-          <div className="relative w-full max-w-xl">
-              <input
-                type="text"
-                className={`w-full px-6 py-3 rounded-full border-2 focus:outline-none shadow-sm text-lg transition-colors bg-white ${
-                    activeMealTime ? 'border-[var(--color-primary)] ring-2 ring-[var(--color-primary-light)]' : 'border-gray-300'
-                }`}
-                placeholder={`Search to add to: ${activeMealTime}`}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                dir={isRTL ? 'rtl' : 'ltr'}
-              />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--color-primary)] bg-white px-2">
-                  Adding to: {activeMealTime}
-              </span>
-              
-              {/* Search Results Dropdown */}
-              {searchQuery && filteredFoods.length > 0 && (
-                <ul className="absolute w-full bg-white mt-2 rounded-xl shadow-2xl max-h-80 overflow-y-auto z-50 border border-gray-100 text-right">
-                  {filteredFoods.map((food, idx) => (
-                    <li 
-                      key={idx} 
-                      className="px-4 py-3 hover:bg-green-50 border-b border-gray-50 last:border-0 transition-colors flex justify-between items-center cursor-pointer group"
-                      onClick={() => addToPlan(food)}
+              {/* Actions */}
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                    <button 
+                        onClick={() => onNavigate && onNavigate('meal-planner', undefined, undefined, true)}
+                        className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-lg transition shadow-sm text-sm font-bold flex items-center gap-2"
+                        title="Back to Meal Planner"
                     >
-                      <div className="flex-grow text-left">
-                          <div className="font-medium text-[var(--color-text)]">
-                              {renderHighlightedText(food.name)}
-                          </div>
-                          <div className="text-xs text-[var(--color-text-light)] flex gap-2">
-                             <span>{food.group}</span>
-                             <span className="font-bold text-blue-600">{food.kcal.toFixed(0)} kcal</span>
-                          </div>
-                      </div>
-                      <div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-bold group-hover:bg-green-200">
-                          + Add
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-2 flex-wrap justify-center">
-                <button 
-                    onClick={() => onNavigate && onNavigate('meal-planner', undefined, undefined, true)}
-                    className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-lg transition shadow-sm text-sm font-bold flex items-center gap-2"
-                    title="Back to Meal Planner"
-                >
-                    <span>📅</span> Meal Planner
-                </button>
-                {!activeVisit && session && (
-                    <>
-                    <input 
-                        type="text" placeholder="Plan Name" value={planName} onChange={e => setPlanName(e.target.value)}
-                        className="w-32 p-2 border rounded text-sm focus:ring-1 focus:ring-blue-400 outline-none"
-                    />
-                    <button onClick={savePlan} className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded transition" title="Save Template">💾</button>
-                    <button onClick={() => { fetchPlans(); setShowLoadModal(true); }} className="bg-purple-500 hover:bg-purple-600 text-white p-2 rounded transition" title="Load Template">📂</button>
-                    </>
-                )}
-                {session && dataSource === 'local' && (
-                    <button onClick={handleSyncToCloud} className="bg-orange-100 text-orange-700 px-3 py-2 rounded text-xs font-bold hover:bg-orange-200">
-                        ☁️ Sync
+                        <span>📅</span> Meal Planner
                     </button>
-                )}
-                <div className="flex bg-gray-100 rounded-lg p-1">
-                    <button onClick={() => handlePrint('day')} className="px-3 py-1 text-xs font-bold text-gray-600 hover:bg-white rounded shadow-sm">Print Day</button>
-                    <button onClick={() => handlePrint('week')} className="px-3 py-1 text-xs font-bold text-gray-600 hover:bg-white rounded shadow-sm">Print Week</button>
-                </div>
-                <button onClick={resetPlanner} className="text-red-500 hover:text-red-700 text-sm font-medium border border-red-200 px-3 py-2 rounded hover:bg-red-50">
-                    Clear All
-                </button>
+                    {!activeVisit && session && (
+                        <>
+                        <input 
+                            type="text" placeholder="Plan Name" value={planName} onChange={e => setPlanName(e.target.value)}
+                            className="w-32 p-2 border rounded text-sm focus:ring-1 focus:ring-blue-400 outline-none"
+                        />
+                        <button onClick={savePlan} className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded transition" title="Save Template">💾</button>
+                        <button onClick={() => { fetchPlans(); setShowLoadModal(true); }} className="bg-purple-500 hover:bg-purple-600 text-white p-2 rounded transition" title="Load Template">📂</button>
+                        </>
+                    )}
+                    {session && dataSource === 'local' && (
+                        <button onClick={handleSyncToCloud} className="bg-orange-100 text-orange-700 px-3 py-2 rounded text-xs font-bold hover:bg-orange-200">
+                            ☁️ Sync
+                        </button>
+                    )}
+                    <div className="flex bg-gray-100 rounded-lg p-1">
+                        <button onClick={() => handlePrint('day')} className="px-3 py-1 text-xs font-bold text-gray-600 hover:bg-white rounded shadow-sm">Print Day</button>
+                        <button onClick={() => handlePrint('week')} className="px-3 py-1 text-xs font-bold text-gray-600 hover:bg-white rounded shadow-sm">Print Week</button>
+                    </div>
+                    <button onClick={resetPlanner} className="text-red-500 hover:text-red-700 text-sm font-medium border border-red-200 px-3 py-2 rounded hover:bg-red-50">
+                        Clear All
+                    </button>
+              </div>
           </div>
       </div>
 

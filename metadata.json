@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova CheckPoint_SubFats-Check49_v2.0.209",
-  "description": "Added day_plan_data column requirement, Fixed Day Planner Navigation & UI, Compacted Cloud Badge.",
+  "name": "Diet-Nova CheckPoint_SubFats-Check50_v2.0.210",
+  "description": "Fixed Day Planner UI overlap and target calories auto-fill logic.",
   "requestFramePermissions": []
 }
