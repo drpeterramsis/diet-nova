@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova CheckPoint_SubFats-Check52_v2.0.210",
-  "description": "Added Day Planner 3-column layout, exchange comparison summary, and target calorie sync.",
+  "name": "Diet-Nova CheckPoint_IntegratedPlanner_v2.0.211",
+  "description": "Integrated Day Food Planner into Meal Planner tool for seamless navigation and data linking without resets.",
   "requestFramePermissions": []
 }

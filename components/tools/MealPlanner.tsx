@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { SavedMeal, Client, ClientVisit } from '../../types';
 import Toast from '../Toast';
+import MealCreator from './MealCreator';
 
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; fiber: number; kcal: number }> = {
   starch: { cho: 15, pro: 3, fat: 1, fiber: 1.75, kcal: 80 },
@@ -83,7 +84,7 @@ interface MealPlannerProps {
 export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, initialLoadId, autoOpenLoad, autoOpenNew, activeVisit, onNavigate }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
-  const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both'>('calculator');
+  const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both' | 'day-menu'>('calculator');
   const [useFatBreakdown, setUseFatBreakdown] = useState(false);
   
   // --- Saving/Loading UI State ---
@@ -292,20 +293,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
   const handlePrint = () => {
       window.print();
-  };
-
-  const openDayPlanner = () => {
-      if (onNavigate) {
-          onNavigate('meal-creator', undefined, undefined, true);
-      } else {
-          // Fallback if not provided (shouldn't happen with updated app)
-          const creatorBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent?.includes('Meal Creator'));
-          if(creatorBtn) {
-              (creatorBtn as HTMLElement).click();
-          } else {
-              alert("Please switch to 'Meal Creator' from the Tools menu.");
-          }
-      }
   };
 
   // --- Database Operations ---
@@ -564,16 +551,15 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
             >
                 {t.mealPlannerTool.modePlanner}
             </button>
+            <button 
+                onClick={() => setViewMode('day-menu')}
+                className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'day-menu' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+                🥗 Day Menu
+            </button>
         </div>
 
         <div className="flex gap-2 items-center">
-            <button 
-                onClick={openDayPlanner}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition shadow-sm text-sm font-bold flex items-center gap-2"
-                title="Go to Day Food Planner (Meal Creator)"
-            >
-                <span>🥗</span> Go to Day Planner
-            </button>
             {session && (
                 <>
                 <button 
@@ -614,8 +600,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       {/* Main Layout Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Left Column: Content */}
-        <div className={`transition-all duration-300 ${viewMode === 'calculator' ? 'lg:col-span-8 xl:col-span-9' : 'lg:col-span-12'}`}>
+        {/* Left Column: Content (Calculator & Planner Modes) */}
+        <div className={`transition-all duration-300 ${viewMode === 'calculator' ? 'lg:col-span-8 xl:col-span-9' : viewMode === 'planner' ? 'lg:col-span-12' : 'hidden'}`}>
             
             {/* CALCULATOR TABLE */}
             {viewMode === 'calculator' && (
@@ -921,6 +907,21 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                 </div>
             </div>
         )}
+
+        {/* Day Menu Integrated View */}
+        <div className={`col-span-12 ${viewMode === 'day-menu' ? 'block' : 'hidden'}`}>
+            <MealCreator 
+                initialLoadId={initialLoadId}
+                autoOpenLoad={autoOpenLoad}
+                autoOpenNew={autoOpenNew}
+                activeVisit={activeVisit}
+                // Integrated Props
+                isEmbedded={true}
+                externalTargetKcal={calcTotals.kcal > 0 ? calcTotals.kcal : targetKcal}
+                plannedExchanges={servings}
+            />
+        </div>
+
       </div>
 
       {showLoadModal && (

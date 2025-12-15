@@ -15,6 +15,10 @@ interface MealCreatorProps {
     autoOpenNew?: boolean;
     activeVisit?: { client: Client, visit: ClientVisit } | null;
     onNavigate?: (toolId: string, loadId?: string, action?: 'load' | 'new', preserveContext?: boolean) => void;
+    // New Props for Integration
+    isEmbedded?: boolean;
+    externalTargetKcal?: number;
+    plannedExchanges?: Record<string, number>;
 }
 
 type MealTime = 'Pre-Breakfast' | 'Breakfast' | 'Morning Snack' | 'Lunch' | 'Afternoon Snack' | 'Dinner' | 'Late Snack';
@@ -78,7 +82,16 @@ const GROUP_MAPPING: Record<string, string> = {
     // Fats aggregator handled separately
 };
 
-const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, autoOpenNew, activeVisit, onNavigate }) => {
+const MealCreator: React.FC<MealCreatorProps> = ({ 
+    initialLoadId, 
+    autoOpenLoad, 
+    autoOpenNew, 
+    activeVisit, 
+    onNavigate,
+    isEmbedded,
+    externalTargetKcal,
+    plannedExchanges
+}) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   
@@ -111,6 +124,13 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
   const [statusMsg, setStatusMsg] = useState('');
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [loadSearchQuery, setLoadSearchQuery] = useState('');
+
+  // Sync external target kcal (unless user manually changed it)
+  useEffect(() => {
+      if (externalTargetKcal && externalTargetKcal > 0) {
+          setTargetKcal(externalTargetKcal);
+      }
+  }, [externalTargetKcal]);
 
   // --- 1. Database Integration ---
   const mapDBToItem = (row: FoodExchangeRow): FoodItem => ({
@@ -407,8 +427,17 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
   }, [summary]);
 
   const exchangeComparison = useMemo(() => {
-      if (!activeVisit?.visit.meal_plan_data?.servings) return [];
-      const planned = activeVisit.visit.meal_plan_data.servings;
+      // Prioritize Props (Live Linking) if available, then Active Visit
+      let planned: Record<string, number> = {};
+      
+      if (plannedExchanges && Object.keys(plannedExchanges).length > 0) {
+          planned = plannedExchanges;
+      } else if (activeVisit?.visit.meal_plan_data?.servings) {
+          planned = activeVisit.visit.meal_plan_data.servings;
+      } else {
+          return []; // No target plan
+      }
+
       const used = summary.usedExchanges;
       
       // Define list of groups to compare
@@ -439,7 +468,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
           return { ...g, plan: planVal, used: useVal };
       }).filter(g => g.plan > 0 || g.used > 0);
 
-  }, [activeVisit, summary.usedExchanges]);
+  }, [activeVisit, summary.usedExchanges, plannedExchanges]);
 
   // --- 5. Save/Load --- 
   const fetchPlans = async () => {
@@ -628,8 +657,8 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
     <div className="max-w-[1920px] mx-auto animate-fade-in space-y-6 pb-12">
       <Toast message={statusMsg || syncMsg} />
 
-      {/* Active Visit Toolbar */}
-      {activeVisit && (
+      {/* Active Visit Toolbar - Hide if embedded (parent usually shows it) */}
+      {!isEmbedded && activeVisit && (
           <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl mb-2 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm no-print">
               <div>
                   <h3 className="font-bold text-blue-800 text-lg">
@@ -651,7 +680,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
       )}
 
       {/* Sticky Header Wrapper to fix overlap issues */}
-      <div className="sticky top-12 z-40 bg-[var(--color-bg)] pt-2 pb-4 -mx-4 px-4 no-print shadow-sm border-b border-gray-100/50">
+      <div className={`sticky top-12 z-40 bg-[var(--color-bg)] pt-2 pb-4 -mx-4 px-4 no-print shadow-sm border-b border-gray-100/50 ${isEmbedded ? 'top-0' : 'top-12'}`}>
           {/* Header & Search */}
           <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-6">
               <div className="text-center xl:text-left">
@@ -711,13 +740,15 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
 
               {/* Actions */}
               <div className="flex items-center gap-2 flex-wrap justify-center">
-                    <button 
-                        onClick={() => onNavigate && onNavigate('meal-planner', undefined, undefined, true)}
-                        className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-lg transition shadow-sm text-sm font-bold flex items-center gap-2"
-                        title="Back to Meal Planner"
-                    >
-                        <span>📅</span> Meal Planner
-                    </button>
+                    {!isEmbedded && (
+                        <button 
+                            onClick={() => onNavigate && onNavigate('meal-planner', undefined, undefined, true)}
+                            className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded-lg transition shadow-sm text-sm font-bold flex items-center gap-2"
+                            title="Back to Meal Planner"
+                        >
+                            <span>📅</span> Meal Planner
+                        </button>
+                    )}
                     {!activeVisit && session && (
                         <>
                         <input 
@@ -773,8 +804,8 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                   
                   {exchangeComparison.length === 0 ? (
                       <div className="text-center py-6 text-gray-400 text-xs italic">
-                          No planned exchanges found in Meal Planner.
-                          {activeVisit ? " Set targets in Meal Planner first." : ""}
+                          No planned exchanges found.
+                          {isEmbedded ? " Set targets in Meal Planner tab." : " Use Meal Planner first."}
                       </div>
                   ) : (
                       <div className="space-y-3">
@@ -1050,7 +1081,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                             />
                             <span className="absolute right-3 top-3 text-gray-400 text-xs font-medium">Kcal</span>
                         </div>
-                        {activeVisit && (
+                        {activeVisit && !isEmbedded && (
                             <button 
                                 onClick={fetchTargetKcal}
                                 className="bg-blue-100 text-blue-700 p-2 rounded-lg hover:bg-blue-200"
