@@ -150,6 +150,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
   // Print State
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [printWeekMode, setPrintWeekMode] = useState(false); // New state for weekly print
   const [printSettings, setPrintSettings] = useState({
       doctorName: '',
       clinicName: 'Diet-Nova Clinic',
@@ -726,6 +727,12 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
   // --- Print Logic ---
   const handlePrintRequest = () => {
+      setPrintWeekMode(false);
+      setShowPrintModal(true);
+  };
+
+  const handlePrintWeekRequest = () => {
+      setPrintWeekMode(true);
       setShowPrintModal(true);
   };
 
@@ -869,9 +876,17 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                     <button 
                         onClick={handlePrintRequest}
                         className="bg-gray-700 hover:bg-gray-800 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm"
-                        title="Print Plan"
+                        title="Print Single Day"
                     >
                         <span className="text-xl">🖨️</span>
+                    </button>
+
+                    <button 
+                        onClick={handlePrintWeekRequest}
+                        className="bg-gray-700 hover:bg-gray-800 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm"
+                        title="Print Weekly Menu"
+                    >
+                        <span className="text-xl font-bold text-xs">WK</span>
                     </button>
                     
                     <button onClick={resetPlanner} className="text-red-500 hover:text-red-700 text-sm font-medium border border-red-200 px-3 py-2 rounded hover:bg-red-50">
@@ -899,8 +914,8 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           <button onClick={clearDay} className="ml-auto text-xs text-red-400 hover:text-red-600 px-3">Clear Day {currentDay}</button>
       </div>
 
-      {/* --- PRINT LAYOUT (Hidden by default, shown on print) --- */}
-      <div className="hidden print:block font-sans text-sm p-4 w-full">
+      {/* --- PRINT LAYOUT: SINGLE DAY --- */}
+      <div className={`hidden print:block font-sans text-sm p-4 w-full ${printWeekMode ? 'hidden print:hidden' : ''}`}>
           {/* Header */}
           <div className="border-b-2 border-gray-800 pb-4 mb-6 flex justify-between items-start">
               <div>
@@ -1037,6 +1052,81 @@ const MealCreator: React.FC<MealCreatorProps> = ({
               <span>Page 1 of 1</span>
           </div>
       </div>
+
+      {/* --- PRINT LAYOUT: WEEKLY TABLE (New Feature) --- */}
+      {printWeekMode && (
+          <div className="hidden print:block font-sans text-xs w-full h-full absolute top-0 left-0 bg-white z-[9999] p-4">
+              {/* Weekly Header */}
+              <div className="border-b-2 border-gray-800 pb-2 mb-4 flex justify-between items-start">
+                  <div>
+                      <h1 className="text-xl font-bold uppercase tracking-wider text-gray-900">{printSettings.clinicName}</h1>
+                      <p className="text-xs text-gray-600">{printSettings.doctorName}</p>
+                  </div>
+                  <div className="text-right">
+                      <h2 className="text-lg font-bold text-[var(--color-primary-dark)]">Weekly Meal Plan</h2>
+                      <div className="text-xs">
+                          {printSettings.patientName && <span>Patient: <strong>{printSettings.patientName}</strong> | </span>}
+                          <span>Date: <strong>{new Date(printSettings.printDate).toLocaleDateString('en-GB')}</strong></span>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Weekly Grid (Columns: Meals, Rows: Days) */}
+              <table className="w-full border-collapse border border-gray-400 text-[10px]">
+                  <thead>
+                      <tr className="bg-gray-200 text-gray-800">
+                          <th className="border border-gray-400 p-1 w-16">Day</th>
+                          {MEAL_TIMES.map(time => (
+                              <th key={time} className="border border-gray-400 p-1">{time}</th>
+                          ))}
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {[1, 2, 3, 4, 5, 6, 7].map(day => {
+                          const dayData = weeklyPlan[day] || { items: {}, meta: {} };
+                          
+                          // Check if day has content
+                          const hasContent = MEAL_TIMES.some(time => (dayData.items[time]?.length || 0) > 0);
+                          if (!hasContent) return null; // Skip empty days to save space
+
+                          return (
+                              <tr key={day} className="break-inside-avoid">
+                                  <td className="border border-gray-400 p-1 font-bold text-center bg-gray-50">Day {day}</td>
+                                  {MEAL_TIMES.map(time => {
+                                      const items = dayData.items[time]?.filter(i => i.selected && i.optionGroup === 'main') || [];
+                                      return (
+                                          <td key={time} className="border border-gray-400 p-1 align-top h-16">
+                                              {items.length > 0 ? (
+                                                  <ul className="list-disc list-inside leading-tight">
+                                                      {items.map((item, idx) => (
+                                                          <li key={idx}>
+                                                              {item.name} <span className="text-gray-500 font-bold">({item.serves} sv)</span>
+                                                          </li>
+                                                      ))}
+                                                  </ul>
+                                              ) : (
+                                                  <span className="text-gray-300">-</span>
+                                              )}
+                                          </td>
+                                      );
+                                  })}
+                              </tr>
+                          );
+                      })}
+                  </tbody>
+              </table>
+
+              {printSettings.notes && (
+                  <div className="mt-4 border border-gray-300 rounded p-2 text-xs">
+                      <strong>Notes:</strong> {printSettings.notes}
+                  </div>
+              )}
+              
+              <div className="mt-4 pt-2 border-t text-[9px] text-gray-400 text-center">
+                  Diet-Nova System
+              </div>
+          </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 no-print">
           
@@ -1414,7 +1504,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm no-print">
               <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl animate-fade-in">
                   <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-bold text-gray-800">🖨️ Print Settings</h3>
+                      <h3 className="text-lg font-bold text-gray-800">🖨️ Print Settings {printWeekMode ? '(Weekly)' : '(Daily)'}</h3>
                       <button onClick={() => setShowPrintModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
                   </div>
                   

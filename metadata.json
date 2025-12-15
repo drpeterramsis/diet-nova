@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova CheckPoint_DayMenuPrint_Check59_v2.0.214",
+  "name": "Diet-Nova CheckPoint_DayMenuPrint_Check59_v2.0.215",
   "description": "Enhanced Day Menu printing with dedicated table layout, metadata inputs (Doctor, Patient, Clinic), and print configuration popup. Improved target calorie synchronization in embedded Day Menu mode.",
   "requestFramePermissions": []
 }

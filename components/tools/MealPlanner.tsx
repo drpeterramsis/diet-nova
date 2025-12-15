@@ -927,7 +927,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                 activeVisit={activeVisit}
                 // Integrated Props
                 isEmbedded={true}
-                externalTargetKcal={calcTotals.kcal > 0 ? calcTotals.kcal : targetKcal}
+                // Using strictly calculated total per user request (instead of fallback to target)
+                externalTargetKcal={calcTotals.kcal}
                 plannedExchanges={servings}
                 externalWeeklyPlan={dayMenuPlan}
                 onWeeklyPlanChange={setDayMenuPlan}
