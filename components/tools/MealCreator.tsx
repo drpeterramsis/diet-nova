@@ -18,11 +18,13 @@ interface MealCreatorProps {
 type MealTime = 'Pre-Breakfast' | 'Breakfast' | 'Morning Snack' | 'Lunch' | 'Afternoon Snack' | 'Dinner' | 'Late Snack';
 const MEAL_TIMES: MealTime[] = ['Pre-Breakfast', 'Breakfast', 'Morning Snack', 'Lunch', 'Afternoon Snack', 'Dinner', 'Late Snack'];
 
+// Generate Alt Options (Main + 10 Alts)
+const ALT_OPTIONS = ['main', ...Array.from({length: 10}, (_, i) => `Alt ${i+1}`)];
+
 // Extended Planner Item
 interface PlannerItem extends FoodItem {
     selected: boolean;
-    optionGroup: string; // Changed from 'A'|'B' to string to support "Main", "Alt 1", "Alt 2"...
-    // Default group ID is 'main'
+    optionGroup: string; 
 }
 
 // Metadata for each meal (Time, Notes)
@@ -280,22 +282,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
       });
   };
 
-  const addNewAlternativeGroup = (mealTime: string) => {
-      const id = `alt-${Date.now()}`;
-      // Just creating a flag or we can rely on moving items to it.
-      // We don't explicitly create empty groups in data, we just render them if items exist OR
-      // we need a UI way to start adding to a new group.
-      // Easiest way: The UI renders groups based on unique 'optionGroup' values found in items.
-      // But adding a new empty group is tricky if there are no items.
-      // workaround: Alert user to select item then move? No.
-      // Let's rely on item movement for now or add a dummy item?
-      // Better: Add next available ID logic.
-      
-      // Actually, let's keep it simple: Items default to 'main'. User can change their group string manually or pick from a list.
-      // Or simply: "Add Alternative" button adds a placeholder item or just allows moving existing items.
-      // Let's implement "Move to New Group" on items.
-  };
-
   const toggleGroupSelection = (mealTime: string, group: string, status: boolean) => {
       setWeeklyPlan(prev => {
           const dayData = prev[currentDay];
@@ -483,6 +469,25 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
     setTimeout(() => setStatusMsg(''), 3000);
   };
 
+  const deletePlan = async (id: string) => {
+      if (!window.confirm("Are you sure you want to delete this plan?")) return;
+      if (!session) return;
+      
+      try {
+          const { error } = await supabase.from('saved_meals').delete().eq('id', id).eq('user_id', session.user.id);
+          if (error) throw error;
+          setSavedPlans(prev => prev.filter(p => p.id !== id));
+          if (loadedPlanId === id) {
+              setLoadedPlanId(null);
+              setPlanName('');
+              setLastSavedName('');
+          }
+      } catch (err: any) {
+          console.error("Error deleting:", err);
+          setStatusMsg("Error deleting plan: " + err.message);
+      }
+  };
+
   // Filter Saved Plans Logic
   const filteredSavedPlans = useMemo(() => {
       if (!loadSearchQuery) return savedPlans;
@@ -531,13 +536,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
       return arr.sort();
   };
 
-  const getNextGroupId = (items: PlannerItem[]) => {
-      const existing = getUniqueGroups(items);
-      let i = 1;
-      while (existing.includes(`Alt ${i}`)) i++;
-      return `Alt ${i}`;
-  };
-
   return (
     <div className="max-w-[1920px] mx-auto animate-fade-in space-y-6 pb-12">
       <Toast message={statusMsg || syncMsg} />
@@ -565,7 +563,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
       )}
 
       {/* Header & Search */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-6 sticky top-20 z-40 no-print">
+      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 flex flex-col xl:flex-row justify-between items-center gap-6 sticky top-20 z-50 no-print">
           <div className="text-center xl:text-left">
               <h1 className="text-3xl font-bold text-[var(--color-heading)] bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-primary-dark)] to-[var(--color-primary)]">
                   Day Food Planner
@@ -714,9 +712,13 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                       const isActive = activeMealTime === time;
                       const uniqueGroups = getUniqueGroups(items);
                       
-                      // Calculate active calories for header (ONLY MAIN group typically, or all selected?)
-                      // Usually Alternatives are OR logic. Let's count selected items.
-                      const sectionKcal = items.filter(i => i.selected).reduce((acc, i) => acc + (i.kcal * i.serves), 0);
+                      // Calculate active nutrients for header (selected items only)
+                      const sectionStats = items.filter(i => i.selected).reduce((acc, i) => ({
+                          kcal: acc.kcal + (i.kcal * i.serves),
+                          cho: acc.cho + (i.cho * i.serves),
+                          protein: acc.protein + (i.protein * i.serves),
+                          fat: acc.fat + (i.fat * i.serves)
+                      }), { kcal: 0, cho: 0, protein: 0, fat: 0 });
 
                       return (
                         <div key={time} className={`rounded-xl shadow-sm border overflow-hidden mb-6 break-inside-avoid transition-all ${isActive ? 'border-yellow-400 ring-2 ring-yellow-100' : 'border-gray-200'}`}>
@@ -750,9 +752,14 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                                             className="p-1 border rounded bg-white w-20"
                                         />
                                     </div>
-                                    <span className="text-xs font-mono font-bold text-gray-500 min-w-[60px] text-right">
-                                        {sectionKcal.toFixed(0)} kcal
-                                    </span>
+                                    <div className="flex flex-col items-end text-xs min-w-[80px]">
+                                        <div className="font-bold text-gray-800">{sectionStats.kcal.toFixed(0)} kcal</div>
+                                        <div className="text-[9px] text-gray-500 font-mono flex gap-1">
+                                            <span className="text-red-500">P:{sectionStats.protein.toFixed(0)}</span>
+                                            <span className="text-blue-500">C:{sectionStats.cho.toFixed(0)}</span>
+                                            <span className="text-yellow-500">F:{sectionStats.fat.toFixed(0)}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -814,10 +821,9 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                                                                                     onChange={(e) => updateItem(time, realIdx, 'optionGroup', e.target.value)}
                                                                                     className="bg-transparent border-b border-gray-300 text-[9px] outline-none hover:border-blue-400 no-print"
                                                                                 >
-                                                                                    <option value="main">Main</option>
-                                                                                    <option value="Alt 1">Alt 1</option>
-                                                                                    <option value="Alt 2">Alt 2</option>
-                                                                                    <option value="Alt 3">Alt 3</option>
+                                                                                    {ALT_OPTIONS.map(opt => (
+                                                                                        <option key={opt} value={opt}>{opt === 'main' ? 'Main' : opt}</option>
+                                                                                    ))}
                                                                                 </select>
                                                                             </div>
                                                                         </div>
@@ -859,9 +865,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({ initialLoadId, autoOpenLoad, 
                                     {items.length > 0 && (
                                         <button 
                                             onClick={() => {
-                                                // Trigger logic to create a new alt group by adding a dummy item? 
-                                                // Or just let user select from dropdown on existing items.
-                                                // Let's scroll to search for adding more.
                                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                                                 setActiveMealTime(time);
                                             }}
