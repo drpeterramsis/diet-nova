@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova CheckPoint_IntegratedPlanner_Check55_v2.0.212",
-  "description": "Unified saving for Meal Planner tools (Exchange, Planner, Day Menu). Added emojis to Exchange Control and sync button for target kcal.",
+  "name": "Diet-Nova CheckPoint_IntegratedPlanner_Check57_v2.0.213",
+  "description": "Added Meal Schedule Summary table to Day Menu. Enabled 'Save as Template' in Client Mode for reusable meal plans. Improved target calorie sync between Calculator and Day Menu.",
   "requestFramePermissions": []
 }

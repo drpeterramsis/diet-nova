@@ -148,17 +148,13 @@ const MealCreator: React.FC<MealCreatorProps> = ({
   const [isLoadingPlans, setIsLoadingPlans] = useState(false);
   const [loadSearchQuery, setLoadSearchQuery] = useState('');
 
-  // Sync external target kcal (Initial only, unless user requests sync)
+  // Sync external target kcal
   useEffect(() => {
-      if (externalTargetKcal && externalTargetKcal > 0 && !isEmbedded) {
-          // In standalone, just take it if available (rare case)
+      if (externalTargetKcal && externalTargetKcal > 0) {
+          // If embedded, we prioritize the external target (Calculator) to keep them equal
           setTargetKcal(externalTargetKcal);
-      } else if (externalTargetKcal && externalTargetKcal > 0 && isEmbedded) {
-          // In embedded, we might want to respect user manual override unless they click sync
-          // But initially, set it.
-          if (targetKcal === 2000) setTargetKcal(externalTargetKcal);
       }
-  }, [externalTargetKcal]);
+  }, [externalTargetKcal, isEmbedded]);
 
   // --- 1. Database Integration ---
   const mapDBToItem = (row: FoodExchangeRow): FoodItem => ({
@@ -261,7 +257,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
   // Hydrate from Active Visit
   const fetchTargetKcal = () => {
-      // Logic for button click
       if (externalTargetKcal && externalTargetKcal > 0) {
           setTargetKcal(externalTargetKcal);
           setStatusMsg(`Synced target: ${externalTargetKcal.toFixed(0)} kcal`);
@@ -471,9 +466,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           planned = plannedExchanges;
       } else if (activeVisit?.visit.meal_plan_data?.servings) {
           planned = activeVisit.visit.meal_plan_data.servings;
-      } else {
-          // If no plan, we still show what we used
-          // No return here, proceed with planned={}
       }
 
       const used = summary.usedExchanges;
@@ -509,6 +501,24 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
   }, [activeVisit, summary.usedExchanges, plannedExchanges]);
 
+  // --- Meal Schedule Calculation ---
+  const daySummaryRows = useMemo(() => {
+      const dayData = weeklyPlan[currentDay] || { items: {}, meta: {} };
+      return MEAL_TIMES.map(time => {
+          const items = dayData.items[time] || [];
+          const meta = dayData.meta[time] || { timeStart: '', timeEnd: '', notes: '' };
+          // Calculate for selected items in this meal
+          const stats = items.filter(i => i.selected).reduce((acc, i) => ({
+              kcal: acc.kcal + (i.kcal * i.serves),
+              cho: acc.cho + (i.cho * i.serves),
+              pro: acc.pro + (i.protein * i.serves),
+              fat: acc.fat + (i.fat * i.serves)
+          }), { kcal: 0, cho: 0, pro: 0, fat: 0 });
+          
+          return { time, meta, stats, hasItems: items.length > 0 };
+      });
+  }, [weeklyPlan, currentDay]);
+
   // --- 5. Save/Load --- 
   const fetchPlans = async () => {
     if (!session) return;
@@ -532,6 +542,31 @@ const MealCreator: React.FC<MealCreatorProps> = ({
     }
   };
 
+  const saveAsTemplate = async () => {
+      const name = prompt("Enter a name for this Meal Plan Template:");
+      if (!name) return;
+      
+      if (!session) return;
+      
+      setStatusMsg("Saving Template...");
+      try {
+          const planData = { weeklyPlan, targetKcal };
+          const { error } = await supabase.from('saved_meals').insert({
+              user_id: session.user.id,
+              name: name,
+              tool_type: 'day-planner',
+              data: planData,
+              created_at: new Date().toISOString()
+          });
+          if (error) throw error;
+          setStatusMsg("Template Saved!");
+          setTimeout(() => setStatusMsg(''), 3000);
+      } catch (err: any) {
+          console.error(err);
+          setStatusMsg("Error: " + err.message);
+      }
+  };
+
   const savePlan = async () => {
     // Mode 1: Save to Visit
     if (activeVisit && !isEmbedded) {
@@ -553,7 +588,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
         return;
     }
 
-    // Mode 2: Save as Template
+    // Mode 2: Save as Template (Standard Mode)
     if (!planName.trim()) {
         alert("Please enter a plan name.");
         return;
@@ -714,6 +749,12 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                   >
                       <span>💾</span> Save to Visit
                   </button>
+                  <button 
+                    onClick={saveAsTemplate}
+                    className="bg-white border border-blue-300 text-blue-700 px-4 py-2 rounded-lg shadow-sm font-bold transition flex items-center gap-2 hover:bg-blue-50"
+                  >
+                      <span>📑</span> Save as Template
+                  </button>
               </div>
           </div>
       )}
@@ -834,7 +875,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
       <div id="print-area" className="grid grid-cols-1 xl:grid-cols-12 gap-6">
           
-          {/* Left Column: Exchange Control (New Feature) */}
+          {/* Left Column: Exchange Control & Schedule */}
           <div className="xl:col-span-3 space-y-6 order-2 xl:order-1">
               <div className="bg-white rounded-xl shadow-lg border border-purple-100 p-4 sticky top-40">
                   <h3 className="font-bold text-purple-800 mb-4 flex items-center gap-2 border-b border-purple-100 pb-2">
@@ -882,6 +923,53 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                       <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> Match</span>
                       <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500"></div> Over</span>
                       <span className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500"></div> Under</span>
+                  </div>
+              </div>
+
+              {/* New Meal Schedule Summary Table */}
+              <div className="bg-white rounded-xl shadow-lg border border-blue-100 p-4">
+                  <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2 border-b border-blue-100 pb-2">
+                      <span>⏰</span> Meal Schedule
+                  </h3>
+                  <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                          <thead className="bg-blue-50 text-blue-900 font-bold">
+                              <tr>
+                                  <th className="p-1 text-left">Meal</th>
+                                  <th className="p-1 text-center">Time</th>
+                                  <th className="p-1 text-center">Kcal</th>
+                                  <th className="p-1 text-center">Macros</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-blue-50">
+                              {daySummaryRows.map(row => (
+                                  row.hasItems && (
+                                      <tr key={row.time} className="hover:bg-gray-50">
+                                          <td className="p-1 font-medium text-gray-700">{row.time}</td>
+                                          <td className="p-1 text-center text-gray-500 font-mono text-[10px]">
+                                              {row.meta.timeStart ? `${row.meta.timeStart}-${row.meta.timeEnd}` : '-'}
+                                          </td>
+                                          <td className="p-1 text-center font-bold text-gray-800">{row.stats.kcal.toFixed(0)}</td>
+                                          <td className="p-1 text-center text-[9px] text-gray-500">
+                                              <span className="text-blue-500">C:{row.stats.cho.toFixed(0)}</span>{' '}
+                                              <span className="text-red-500">P:{row.stats.pro.toFixed(0)}</span>{' '}
+                                              <span className="text-yellow-500">F:{row.stats.fat.toFixed(0)}</span>
+                                          </td>
+                                      </tr>
+                                  )
+                              ))}
+                              <tr className="bg-gray-100 font-bold">
+                                  <td className="p-1 text-left">TOTAL</td>
+                                  <td className="p-1"></td>
+                                  <td className="p-1 text-center">{summary.totalKcal.toFixed(0)}</td>
+                                  <td className="p-1 text-center text-[9px]">
+                                      <span className="text-blue-700">C:{summary.totalCHO.toFixed(0)}</span>{' '}
+                                      <span className="text-red-700">P:{summary.totalProtein.toFixed(0)}</span>{' '}
+                                      <span className="text-yellow-700">F:{summary.totalFat.toFixed(0)}</span>
+                                  </td>
+                              </tr>
+                          </tbody>
+                      </table>
                   </div>
               </div>
           </div>
