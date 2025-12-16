@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova CheckPoint_DayMenuPrint_RichText_Check61_v2.0.217",
-  "description": "Added Rich Text Editing for Meal Items (Bold, Italic, Color). Enhanced Day Menu printing with colors and meal emojis.",
+  "name": "Diet-Nova CheckPoint_DayMenuPrint_RichText_Check63_v2.0.218",
+  "description": "Added Bulk Formatting for Meal Items (Color for numbers in brackets, Bold, Font Size).",
   "requestFramePermissions": []
 }

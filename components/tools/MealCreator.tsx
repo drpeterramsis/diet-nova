@@ -186,6 +186,102 @@ const RichTextEditorModal: React.FC<{
     );
 };
 
+// --- BULK FORMAT MODAL (New) ---
+const BulkFormatModal: React.FC<{
+    onApply: (settings: { bracketColor: string, isBold: boolean, fontSize: string, applyToAllDays: boolean }) => void;
+    onClose: () => void;
+}> = ({ onApply, onClose }) => {
+    const [bracketColor, setBracketColor] = useState('#dc2626'); // Default Red
+    const [isBold, setIsBold] = useState(false);
+    const [fontSize, setFontSize] = useState('14px');
+    const [applyToAllDays, setApplyToAllDays] = useState(false);
+
+    return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm no-print">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+                <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
+                    <h3 className="font-bold text-gray-800 flex items-center gap-2">
+                        <span>🎨</span> Bulk Format Items
+                    </h3>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+                </div>
+                
+                <div className="p-6 space-y-6">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2">Highlight Color (Brackets & Numbers)</label>
+                        <div className="flex gap-3">
+                            {['#dc2626', '#2563eb', '#16a34a', '#d97706', '#9333ea', '#000000'].map(color => (
+                                <button 
+                                    key={color}
+                                    onClick={() => setBracketColor(color)}
+                                    className={`w-8 h-8 rounded-full border-2 transition hover:scale-110 ${bracketColor === color ? 'border-gray-800 scale-110 shadow-md' : 'border-transparent'}`}
+                                    style={{ backgroundColor: color }}
+                                    title={color}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Text Style</label>
+                            <label className="flex items-center gap-2 cursor-pointer bg-gray-50 p-2 rounded border border-gray-200 hover:bg-gray-100">
+                                <input 
+                                    type="checkbox" 
+                                    checked={isBold} 
+                                    onChange={e => setIsBold(e.target.checked)}
+                                    className="w-4 h-4 rounded text-blue-600"
+                                />
+                                <span className="font-bold">Bold Text</span>
+                            </label>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Font Size</label>
+                            <select 
+                                value={fontSize} 
+                                onChange={e => setFontSize(e.target.value)}
+                                className="w-full p-2 border rounded bg-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option value="12px">Small (12px)</option>
+                                <option value="14px">Normal (14px)</option>
+                                <option value="16px">Large (16px)</option>
+                                <option value="18px">XL (18px)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                checked={applyToAllDays} 
+                                onChange={e => setApplyToAllDays(e.target.checked)}
+                                className="w-4 h-4 rounded text-yellow-600 focus:ring-yellow-500"
+                            />
+                            <span className="text-sm font-bold text-yellow-800">Apply to All Days in Plan</span>
+                        </label>
+                        <p className="text-xs text-yellow-700 mt-1 ml-6">
+                            If unchecked, only the current day will be formatted.
+                        </p>
+                    </div>
+
+                    <div className="text-center p-3 border border-dashed border-gray-300 rounded bg-gray-50">
+                        <p className="text-xs text-gray-500 mb-1">Preview:</p>
+                        <div style={{ fontSize: fontSize, fontWeight: isBold ? 'bold' : 'normal', color: '#1f2937' }}>
+                            Chicken Breast <span style={{ color: bracketColor, fontWeight: 'bold' }}>(100g)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="p-4 border-t bg-gray-50 flex gap-2">
+                    <button onClick={onClose} className="flex-1 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded transition">Cancel</button>
+                    <button onClick={() => onApply({ bracketColor, isBold, fontSize, applyToAllDays })} className="flex-1 py-2 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 shadow-sm transition">Apply Formatting</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const MealCreator: React.FC<MealCreatorProps> = ({ 
     initialLoadId, 
     autoOpenLoad, 
@@ -225,6 +321,9 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
   // Editing Item State
   const [editingItem, setEditingItem] = useState<{ day: number, meal: string, index: number, initialHtml: string } | null>(null);
+  
+  // Bulk Format State
+  const [showBulkFormatModal, setShowBulkFormatModal] = useState(false);
 
   // Save/Load State
   const [showLoadModal, setShowLoadModal] = useState(false);
@@ -545,6 +644,53 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           updateItem(editingItem.meal, editingItem.index, 'customDisplayName', html);
           setEditingItem(null);
       }
+  };
+
+  // --- BULK FORMATTING HANDLER ---
+  const handleBulkFormat = (options: { bracketColor: string, isBold: boolean, fontSize: string, applyToAllDays: boolean }) => {
+      setWeeklyPlan(prev => {
+          const newPlan = JSON.parse(JSON.stringify(prev)); // Deep copy
+          const daysToUpdate = options.applyToAllDays ? Object.keys(newPlan).map(Number) : [currentDay];
+
+          daysToUpdate.forEach(day => {
+              if (!newPlan[day]) return;
+              const dayItems = newPlan[day].items;
+              
+              Object.keys(dayItems).forEach(mealTime => {
+                  if(dayItems[mealTime]) {
+                      dayItems[mealTime] = dayItems[mealTime].map((item: PlannerItem) => {
+                          // Use original name as source of truth to regenerate HTML
+                          const name = item.name;
+                          // Split by parentheses that contain something (likely numbers)
+                          // REGEX: capture (anything)
+                          const parts = name.split(/(\(.*?\))/g);
+                          
+                          let html = `<span style="font-size: ${options.fontSize}; ${options.isBold ? 'font-weight: bold;' : ''}">`;
+                          
+                          parts.forEach((part: string) => {
+                              if (part.match(/^\(.*\)$/)) {
+                                  // It is the bracket part - color it
+                                  html += `<span style="color: ${options.bracketColor}; font-weight: bold;">${part}</span>`;
+                              } else {
+                                  html += part;
+                              }
+                          });
+                          html += `</span>`;
+
+                          return {
+                              ...item,
+                              customDisplayName: html
+                          };
+                      });
+                  }
+              });
+          });
+          
+          return newPlan;
+      });
+      setShowBulkFormatModal(false);
+      setStatusMsg("Bulk formatting applied successfully!");
+      setTimeout(() => setStatusMsg(''), 2500);
   };
 
   // --- 4. Calculations (Current Day Only) ---
@@ -874,6 +1020,14 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           />
       )}
 
+      {/* Bulk Format Modal */}
+      {showBulkFormatModal && (
+          <BulkFormatModal 
+              onApply={handleBulkFormat}
+              onClose={() => setShowBulkFormatModal(false)}
+          />
+      )}
+
       {/* Active Visit Toolbar - Hide if embedded (parent usually shows it) */}
       {!isEmbedded && activeVisit && (
           <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl mb-2 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm no-print">
@@ -989,6 +1143,14 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                         </button>
                     )}
                     
+                    <button 
+                        onClick={() => setShowBulkFormatModal(true)}
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm"
+                        title="Bulk Format Items"
+                    >
+                        <span className="text-xl">🎨</span>
+                    </button>
+
                     <button 
                         onClick={handlePrintRequest}
                         className="bg-gray-700 hover:bg-gray-800 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm"
