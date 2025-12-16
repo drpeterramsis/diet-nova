@@ -20,6 +20,10 @@ export const MacroDonut: React.FC<MacroDonutProps> = ({ cho, pro, fat, totalKcal
   const choDeg = (choKcal / totalCalc) * 360;
   const proDeg = (proKcal / totalCalc) * 360;
   const fatDeg = (fatKcal / totalCalc) * 360;
+  
+  const choPerc = ((choKcal / totalCalc) * 100).toFixed(1);
+  const proPerc = ((proKcal / totalCalc) * 100).toFixed(1);
+  const fatPerc = ((fatKcal / totalCalc) * 100).toFixed(1);
 
   return (
     <div className="relative flex flex-col items-center justify-center p-4">
@@ -41,19 +45,39 @@ export const MacroDonut: React.FC<MacroDonutProps> = ({ cho, pro, fat, totalKcal
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex gap-4 mt-4 text-xs font-medium">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-          <span>CHO</span>
+      {/* Legend with Values and Percentages */}
+      <div className="flex flex-col gap-2 mt-4 text-xs w-full max-w-xs">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+             <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+             <span className="font-bold text-gray-700">CHO</span>
+          </div>
+          <div className="flex gap-3">
+             <span className="font-mono">{cho.toFixed(1)}g</span>
+             <span className="font-bold text-blue-600">{choPerc}%</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-full bg-red-500"></div>
-          <span>PRO</span>
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+             <div className="w-3 h-3 rounded-full bg-red-500"></div>
+             <span className="font-bold text-gray-700">PRO</span>
+          </div>
+          <div className="flex gap-3">
+             <span className="font-mono">{pro.toFixed(1)}g</span>
+             <span className="font-bold text-red-600">{proPerc}%</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-          <span>FAT</span>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+             <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+             <span className="font-bold text-gray-700">FAT</span>
+          </div>
+          <div className="flex gap-3">
+             <span className="font-mono">{fat.toFixed(1)}g</span>
+             <span className="font-bold text-yellow-600">{fatPerc}%</span>
+          </div>
         </div>
       </div>
     </div>
@@ -67,12 +91,14 @@ interface ProgressBarProps {
   label: string;
   unit?: string;
   color?: string;
+  showPercent?: boolean;
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({ current, target, label, unit = '', color = 'bg-[var(--color-primary)]' }) => {
+export const ProgressBar: React.FC<ProgressBarProps> = ({ current, target, label, unit = '', color = 'bg-[var(--color-primary)]', showPercent = false }) => {
   const percent = target > 0 ? Math.min((current / target) * 100, 100) : 0;
   const isOver = target > 0 && current > target;
   const barColor = isOver ? 'bg-red-500' : color;
+  const displayPercent = target > 0 ? ((current / target) * 100).toFixed(0) : '0';
 
   return (
     <div className="w-full">
@@ -80,6 +106,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ current, target, label
         <span className="font-medium text-gray-600">{label}</span>
         <span className={`${isOver ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
           {current.toFixed(0)} / {target.toFixed(0)} {unit}
+          {showPercent && <span className="ml-1 text-[10px] opacity-75">({displayPercent}%)</span>}
         </span>
       </div>
       <div className="h-2.5 w-full bg-gray-200 rounded-full overflow-hidden">
