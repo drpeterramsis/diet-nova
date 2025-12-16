@@ -41,7 +41,7 @@ const GROUP_STYLES: Record<string, { bg: string, text: string, border: string, i
   sugar: { bg: 'bg-gray-100', text: 'text-gray-900', border: 'border-gray-300', icon: '🍬' },
   fats: { bg: 'bg-yellow-50', text: 'text-yellow-900', border: 'border-yellow-200', icon: '🥑' },
   fatsPufa: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: '🌻' },
-  fatsMufa: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: '🫒' },
+  fatsMufa: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: '🫒' }, // Fix MUFA emoji visibility
   fatsSat: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300', icon: '🥥' },
 };
 
@@ -300,15 +300,15 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   const rowRemains = useMemo(() => {
     const remains: Record<string, number> = {};
     VISIBLE_GROUPS.forEach(g => {
-        const totalDist = MEALS.reduce((acc, m) => acc + (distribution[g]?.[m] || 0), 0);
+        const totalDist = MEALS.reduce((acc: number, m) => acc + (distribution[g]?.[m] || 0), 0);
         let target = servings[g] || 0;
         
         // Special case for 'fats' in breakdown mode
         if (useFatBreakdown && g === 'fats') {
             target = calculatedFatsSum; // The target is the sum of inputs
-            const distPufa = MEALS.reduce((acc, m) => acc + (distribution['fatsPufa']?.[m] || 0), 0);
-            const distMufa = MEALS.reduce((acc, m) => acc + (distribution['fatsMufa']?.[m] || 0), 0);
-            const distSat = MEALS.reduce((acc, m) => acc + (distribution['fatsSat']?.[m] || 0), 0);
+            const distPufa = MEALS.reduce((acc: number, m) => acc + (distribution['fatsPufa']?.[m] || 0), 0);
+            const distMufa = MEALS.reduce((acc: number, m) => acc + (distribution['fatsMufa']?.[m] || 0), 0);
+            const distSat = MEALS.reduce((acc: number, m) => acc + (distribution['fatsSat']?.[m] || 0), 0);
             const totalDistSpecific = distPufa + distMufa + distSat;
             
             remains[g] = target - totalDistSpecific; 
@@ -347,7 +347,12 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       }
 
       setServings(newServings);
-      setStatusMsg(`Applied Template: ${selectedDistribution.label} (${templateKcal} kcal)`);
+      // Revised Template Notification format
+      // "Diet Type" Bold, Kcal in color
+      const dietName = selectedDiet?.name || "Template";
+      const distName = selectedDistribution.label;
+      const toastContent = `${dietName} (${distName}) - ${templateKcal} kcal`;
+      setStatusMsg(toastContent);
       setTimeout(() => setStatusMsg(''), 3000);
   };
 
@@ -619,6 +624,12 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       return t.mealPlannerTool.groups[group as keyof typeof t.mealPlannerTool.groups] || group;
   }
 
+  // Calculate Target Achievement %
+  const targetAchieved = targetKcal > 0 ? (calcTotals.kcal / targetKcal) * 100 : 0;
+  
+  // Calculate Target Remain
+  const kcalRemain = targetKcal - calcTotals.kcal;
+
   return (
     <div className="max-w-[1920px] mx-auto animate-fade-in">
       <Toast message={statusMsg} />
@@ -887,7 +898,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                      <div className="card bg-white shadow-lg overflow-hidden border border-gray-200">
                         <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
                             <span className="font-bold text-gray-700">Exchanges Calculator</span>
-                            <div className="text-xs text-gray-500">Inputs: {Object.values(servings).reduce((a,b) => a+b, 0)}</div>
+                            <div className="text-xs text-gray-500">Inputs: {Object.values(servings).reduce((a: number, b: number) => a + b, 0)}</div>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm border-collapse">
@@ -976,6 +987,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
                             <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={t.kcal.kcalRequired} />
 
+                            {/* Macro Donut */}
                             <div className="mb-6">
                                  <MacroDonut 
                                     cho={calcTotals.cho} 
@@ -985,34 +997,52 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                  />
                             </div>
 
-                            <div className="space-y-4 mb-6">
+                            {/* Target vs Achieved Progress Bar */}
+                            <div className="space-y-1 mb-6">
                                 <ProgressBar 
                                     current={calcTotals.kcal} 
                                     target={targetKcal} 
-                                    label={t.mealPlannerTool.targetKcal} 
+                                    label="Calorie Goal" 
                                     unit="kcal" 
                                 />
+                                <div className="text-right text-[10px] text-gray-500 font-bold">
+                                    {targetAchieved.toFixed(1)}% Achieved
+                                </div>
                             </div>
 
-                            {/* UPDATED: Added Percentages to Summary Grid */}
-                            <div className="grid grid-cols-2 gap-2 text-sm bg-gray-50 p-3 rounded-lg border border-gray-200">
-                                <div className="text-gray-500">Total CHO</div>
-                                <div className="text-right">
-                                    <span className="font-bold text-blue-600 block">{calcTotals.cho.toFixed(1)}g</span>
-                                    <span className="text-[10px] text-blue-400">({totalPerc.cho}%)</span>
-                                </div>
-                                <div className="text-gray-500">Total PRO</div>
-                                <div className="text-right">
-                                    <span className="font-bold text-red-600 block">{calcTotals.pro.toFixed(1)}g</span>
-                                    <span className="text-[10px] text-red-400">({totalPerc.pro}%)</span>
-                                </div>
-                                <div className="text-gray-500">Total FAT</div>
-                                <div className="text-right">
-                                    <span className="font-bold text-yellow-600 block">{calcTotals.fat.toFixed(1)}g</span>
-                                    <span className="text-[10px] text-yellow-400">({totalPerc.fat}%)</span>
-                                </div>
-                                <div className="text-gray-500">Total Fiber</div>
-                                <div className="text-right font-bold text-green-600">{calcTotals.fiber.toFixed(1)}g</div>
+                            {/* NEW: Totals Table (Item | Total g | Total %) */}
+                            <div className="overflow-hidden border border-gray-200 rounded-lg">
+                                <table className="w-full text-xs">
+                                    <thead className="bg-gray-100 text-gray-600 font-bold uppercase">
+                                        <tr>
+                                            <th className="p-2 text-left">Item</th>
+                                            <th className="p-2 text-center">Total (g)</th>
+                                            <th className="p-2 text-center">Total (%)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 bg-white">
+                                        <tr>
+                                            <td className="p-2 font-bold text-blue-700">Total CHO</td>
+                                            <td className="p-2 text-center font-bold text-gray-800">{calcTotals.cho.toFixed(1)}</td>
+                                            <td className="p-2 text-center text-blue-600 font-bold">{totalPerc.cho}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-2 font-bold text-red-700">Total PRO</td>
+                                            <td className="p-2 text-center font-bold text-gray-800">{calcTotals.pro.toFixed(1)}</td>
+                                            <td className="p-2 text-center text-red-600 font-bold">{totalPerc.pro}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-2 font-bold text-yellow-700">Total FAT</td>
+                                            <td className="p-2 text-center font-bold text-gray-800">{calcTotals.fat.toFixed(1)}</td>
+                                            <td className="p-2 text-center text-yellow-600 font-bold">{totalPerc.fat}%</td>
+                                        </tr>
+                                        <tr>
+                                            <td className="p-2 font-bold text-green-700">Total Fiber</td>
+                                            <td className="p-2 text-center font-bold text-green-800">{calcTotals.fiber.toFixed(1)}</td>
+                                            <td className="p-2 text-center text-gray-400">-</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
 
                             {/* Fat Breakdown Section */}
@@ -1052,7 +1082,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             <div className="mt-6 pt-4 border-t border-gray-100">
                                  <div className="flex justify-center gap-2 mb-4">
                                      <button 
-                                        onClick={() => setActiveTab('gm')}
+                                        onClick={() => setActiveTargetTab(activeTargetTab === 'gm' ? 'none' : 'gm')}
                                         className={`px-3 py-1 rounded text-xs font-bold ${activeTargetTab === 'gm' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}
                                      >
                                          Target (g)
@@ -1065,12 +1095,22 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                      </button>
                                  </div>
 
+                                 {/* Fix: Conditional Rendering Logic for Targets */}
                                  {activeTargetTab === 'gm' && (
-                                     <div className="space-y-2 animate-fade-in">
+                                     <div className="space-y-2 animate-fade-in bg-gray-50 p-2 rounded">
                                          <div className="flex justify-between items-center"><span className="text-xs">CHO (g)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm" value={manualGm.cho} onChange={e => setManualGm({...manualGm, cho: parseFloat(e.target.value)})} /></div>
                                          <div className="flex justify-between items-center"><span className="text-xs">PRO (g)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm" value={manualGm.pro} onChange={e => setManualGm({...manualGm, pro: parseFloat(e.target.value)})} /></div>
                                          <div className="flex justify-between items-center"><span className="text-xs">FAT (g)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm" value={manualGm.fat} onChange={e => setManualGm({...manualGm, fat: parseFloat(e.target.value)})} /></div>
                                          <div className="text-xs text-center text-gray-400 mt-1">Remain: {(manualGm.cho*4 + manualGm.pro*4 + manualGm.fat*9 - calcTotals.kcal).toFixed(0)} kcal</div>
+                                     </div>
+                                 )}
+
+                                 {activeTargetTab === 'perc' && (
+                                     <div className="space-y-2 animate-fade-in bg-gray-50 p-2 rounded">
+                                         <div className="flex justify-between items-center"><span className="text-xs">CHO (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm" value={manualPerc.cho} onChange={e => setManualPerc({...manualPerc, cho: parseFloat(e.target.value)})} /></div>
+                                         <div className="flex justify-between items-center"><span className="text-xs">PRO (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm" value={manualPerc.pro} onChange={e => setManualPerc({...manualPerc, pro: parseFloat(e.target.value)})} /></div>
+                                         <div className="flex justify-between items-center"><span className="text-xs">FAT (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm" value={manualPerc.fat} onChange={e => setManualPerc({...manualPerc, fat: parseFloat(e.target.value)})} /></div>
+                                         <div className="text-xs text-center text-gray-400 mt-1">Total: {manualPerc.cho + manualPerc.pro + manualPerc.fat}%</div>
                                      </div>
                                  )}
                             </div>
@@ -1089,13 +1129,19 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                         <table className="w-full text-xs sm:text-sm border-collapse">
                             <thead className="bg-gray-800 text-white sticky top-0 z-10">
                                 <tr>
-                                    <th className="p-2 text-left min-w-[140px]">{t.mealPlannerTool.foodGroup}</th>
+                                    <th className="p-2 text-left min-w-[140px] bg-gray-900 border-b border-gray-700">Food Group</th>
                                     {MEALS.map(m => (
-                                        <th key={m} className="p-2 text-center min-w-[60px]">
+                                        <th key={m} className="p-2 text-center min-w-[60px] border-b border-gray-700">
                                             {t.mealPlannerTool.meals[m as keyof typeof t.mealPlannerTool.meals]}
                                         </th>
                                     ))}
-                                    <th className="p-2 text-center bg-gray-700 min-w-[60px]">{t.mealPlannerTool.meals.remain}</th>
+                                    <th className="p-2 text-center bg-gray-700 min-w-[60px] border-b border-gray-600 font-bold">Remain</th>
+                                </tr>
+                                {/* Title Row */}
+                                <tr>
+                                    <th colSpan={MEALS.length + 2} className="p-1 bg-blue-100 text-blue-900 text-center text-xs font-bold uppercase tracking-widest border-b border-blue-200">
+                                        Serves Day Distribution
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -1113,7 +1159,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                     }
 
                                     const target = isAutoFat ? calculatedFatsSum : (servings[group] || 0);
-                                    const totalDist = MEALS.reduce((acc: number, m) => acc + (displayDistributions[m] || 0), 0);
+                                    // FIX: Explicitly cast m to string for indexing, and ensure accumulator/value are numbers
+                                    const totalDist = MEALS.reduce((acc: number, m: string) => acc + (Number(displayDistributions[m]) || 0), 0);
                                     const rem = target - totalDist;
                                     
                                     const isOver = rem < 0;
@@ -1147,7 +1194,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                                         <input 
                                                             type="number"
                                                             className={`w-full h-8 text-center bg-transparent focus:bg-blue-50 outline-none rounded hover:bg-gray-100 transition ${
-                                                                (displayDistributions?.[meal] || 0) === 0 ? 'text-red-300' : 'text-black font-bold'
+                                                                (displayDistributions?.[meal] || 0) === 0 ? 'text-gray-300' : 'text-black font-bold'
                                                             }`}
                                                             placeholder="-"
                                                             value={displayDistributions?.[meal] || ''}
@@ -1156,15 +1203,15 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                                     )}
                                                 </td>
                                             ))}
-                                            {/* UPDATED: Remain Cell Styling for 0 */}
+                                            {/* UPDATED: Remain Cell Styling */}
                                             <td className={`p-2 text-center font-bold border-l-2 ${
                                                 isOver 
                                                 ? 'bg-red-50 text-red-600 border-red-200' 
                                                 : isComplete 
-                                                    ? 'bg-gray-100 text-gray-400 border-gray-200' 
-                                                    : 'bg-gray-50 text-gray-600 border-gray-200'
+                                                    ? 'bg-gray-50 text-gray-300 border-gray-100' // Pale for 0
+                                                    : 'bg-white text-gray-600 border-gray-200'
                                             }`}>
-                                                {rem.toFixed(1)}
+                                                {rem === 0 ? '-' : rem.toFixed(1)}
                                             </td>
                                         </tr>
                                     );

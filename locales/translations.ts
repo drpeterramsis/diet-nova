@@ -286,7 +286,7 @@ export const en: Translation = {
       starch: "Starch",
       veg: "Vegetables",
       fruit: "Fruits",
-      meatLean: "Meat Lean",
+      meatLean: "Meat Lean (low)",
       meatMed: "Meat Medium",
       meatHigh: "Meat High",
       milkSkim: "Milk Skimmed (low)",

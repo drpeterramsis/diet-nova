@@ -7,16 +7,16 @@ export interface DietPlanRow {
         veg: number;
         fruit: number;
         legumes: number;
-        milkLow: number;
+        milkLow: number; // Mapped to Skimmed/Low in app
         milkMed: number;
-        milkFull: number;
-        meatLow: number;
+        milkFull: number; // Mapped to Whole/High in app
+        meatLow: number;  // Mapped to Lean/Low in app
         meatMed: number;
         meatHigh: number;
         fatsSat: number; // SFA
         fatsMufa: number; // MUFA
         fatsPufa: number; // PUFA
-        sugar: number; // Others
+        sugar: number; // Mapped from 'Other'
     };
 }
 
@@ -32,9 +32,19 @@ export interface DietType {
     distributions: DietDistribution[];
 }
 
-// Data Transcription from User Provided Images
-// Image 1: Balanced (50% Carb / 20% protein / 30% fat)
-// Image 2: Balanced (45% Carb / 20% protein / 35% fat)
+// Data Transcription from User Provided Images/Tables
+// Mappings:
+// Milk Low -> milkLow
+// Milk Medium -> milkMed
+// Milk Full -> milkFull
+// Meat Low -> meatLow
+// Meat Medium -> meatMed
+// Meat High -> meatHigh
+// SFA -> fatsSat
+// MUFA -> fatsMufa
+// PUFA -> fatsPufa
+// Other -> sugar
+
 export const dietTemplates: DietType[] = [
     {
         id: 'balanced',
