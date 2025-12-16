@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { SavedMeal, Client, ClientVisit } from '../../types';
 import Toast from '../Toast';
 import MealCreator, { WeeklyPlan, DEFAULT_WEEKLY_PLAN } from './MealCreator';
+import { dietTemplates, DietType, DietDistribution } from '../../data/dietTemplates';
 
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; fiber: number; kcal: number }> = {
   starch: { cho: 15, pro: 3, fat: 1, fiber: 1.75, kcal: 80 },
@@ -111,10 +112,26 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   // State for Day Menu (Unified State)
   const [dayMenuPlan, setDayMenuPlan] = useState<WeeklyPlan>(DEFAULT_WEEKLY_PLAN);
 
+  // --- NEW: Template & Advanced Calculator State ---
+  const [selectedDietId, setSelectedDietId] = useState<string>(dietTemplates[0].id);
+  const [selectedDistId, setSelectedDistId] = useState<string>(dietTemplates[0].distributions[0].id);
+  const [templateKcal, setTemplateKcal] = useState<number>(1200);
+  
+  const [showMacroCalc, setShowMacroCalc] = useState(false);
+  const [advCalc, setAdvCalc] = useState({
+      kcal: 2000,
+      carbPerc: 50,
+      weight: 70,
+      proteinFactor: 1.2
+  });
+  const [advResults, setAdvResults] = useState<{choG: number, proG: number, fatG: number, proP: number, fatP: number, sfaG: number, mufaG: number, pufaG: number} | null>(null);
+
   // Initialize target if provided prop updates
   useEffect(() => {
     if (initialTargetKcal && initialTargetKcal > 0) {
       setTargetKcal(initialTargetKcal);
+      setTemplateKcal(initialTargetKcal); // Sync with template selector
+      setAdvCalc(prev => ({ ...prev, kcal: initialTargetKcal })); // Sync with advanced calc
     }
   }, [initialTargetKcal]);
 
@@ -154,7 +171,11 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
           const data = activeVisit.visit.meal_plan_data;
           if (data.servings) setServings(data.servings);
           if (data.distribution) setDistribution(data.distribution);
-          if (data.targetKcal) setTargetKcal(data.targetKcal);
+          if (data.targetKcal) {
+              setTargetKcal(data.targetKcal);
+              setTemplateKcal(data.targetKcal);
+              setAdvCalc(prev => ({ ...prev, kcal: data.targetKcal }));
+          }
           if (data.manualGm) setManualGm(data.manualGm);
           if (data.manualPerc) setManualPerc(data.manualPerc);
           if (data.dayMenuPlan) setDayMenuPlan(data.dayMenuPlan); // Hydrate Day Menu
@@ -162,6 +183,11 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
           // Check if detailed fats are used
           const hasDetails = (data.servings?.fatsPufa || 0) > 0 || (data.servings?.fatsMufa || 0) > 0 || (data.servings?.fatsSat || 0) > 0;
           if (hasDetails) setUseFatBreakdown(true);
+      }
+      
+      // Pre-fill Advanced Calc Weight from visit
+      if (activeVisit?.visit.weight) {
+          setAdvCalc(prev => ({ ...prev, weight: activeVisit.visit.weight || 70 }));
       }
   }, [activeVisit]);
 
@@ -282,6 +308,92 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
     });
     return remains;
   }, [servings, distribution, useFatBreakdown, calculatedFatsSum, VISIBLE_GROUPS]);
+
+  // --- Template Handlers ---
+  const selectedDiet = dietTemplates.find(d => d.id === selectedDietId);
+  const selectedDistribution = selectedDiet?.distributions.find(d => d.id === selectedDistId);
+
+  const applyTemplate = () => {
+      if (!selectedDistribution) return;
+      const plan = selectedDistribution.rows.find(r => r.kcal === templateKcal);
+      if (!plan) {
+          setStatusMsg(`No template found for ${templateKcal} kcal.`);
+          setTimeout(() => setStatusMsg(''), 2000);
+          return;
+      }
+
+      setTargetKcal(templateKcal);
+      setUseFatBreakdown(true); // Templates usually have breakdown
+      
+      const newServings = { ...servings };
+      // Map template keys to servings keys
+      Object.keys(plan.exchanges).forEach(key => {
+          newServings[key] = (plan.exchanges as any)[key];
+      });
+      
+      // Clear generic fats if using specific
+      if (plan.exchanges.fatsSat || plan.exchanges.fatsMufa || plan.exchanges.fatsPufa) {
+          newServings['fats'] = 0;
+      }
+
+      setServings(newServings);
+      setStatusMsg(`Applied Template: ${selectedDistribution.label} (${templateKcal} kcal)`);
+      setTimeout(() => setStatusMsg(''), 3000);
+  };
+
+  // --- Advanced Macro Calculator Logic ---
+  const calculateAdvancedMacros = () => {
+      const { kcal, carbPerc, weight, proteinFactor } = advCalc;
+      
+      // 1. Calculate Carb (g) from %
+      const carbG = (kcal * (carbPerc / 100)) / 4;
+      
+      // 2. Calculate Protein (g) from Weight * Factor
+      const proG = weight * proteinFactor;
+      const proKcal = proG * 4;
+      const proPerc = (proKcal / kcal) * 100;
+      
+      // 3. Calculate Fat
+      const fatPerc = 100 - carbPerc - proPerc;
+      const fatKcal = kcal * (fatPerc / 100);
+      const fatG = fatKcal / 9;
+      
+      // 4. Fat Breakdown Precautions
+      // SFA Max 10% of total Kcal
+      const sfaMaxKcal = kcal * 0.10;
+      const sfaG = sfaMaxKcal / 9; // Max allowed, lets target this or slightly less? Using max for safe upper limit plan.
+      
+      // Remaining Fat
+      const remainingFatG = Math.max(0, fatG - sfaG);
+      
+      // Ratio PUFA : MUFA = 1 : 2
+      const pufaG = remainingFatG * (1/3);
+      const mufaG = remainingFatG * (2/3);
+      
+      setAdvResults({
+          choG: Math.round(carbG),
+          proG: Math.round(proG),
+          fatG: Math.round(fatG),
+          proP: parseFloat(proPerc.toFixed(1)),
+          fatP: parseFloat(fatPerc.toFixed(1)),
+          sfaG: parseFloat(sfaG.toFixed(1)),
+          mufaG: parseFloat(mufaG.toFixed(1)),
+          pufaG: parseFloat(pufaG.toFixed(1))
+      });
+  };
+
+  const applyAdvancedTargets = () => {
+      if (!advResults) return;
+      setManualGm({
+          cho: advResults.choG,
+          pro: advResults.proG,
+          fat: advResults.fatG
+      });
+      setActiveTargetTab('gm');
+      setShowMacroCalc(false);
+      setStatusMsg("Macro targets updated from calculator.");
+      setTimeout(() => setStatusMsg(''), 3000);
+  };
 
   // --- Handlers ---
   const updateServing = (group: string, val: number) => {
@@ -606,6 +718,73 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
             </button>
         </div>
       </div>
+
+      {/* Advanced Tools Section */}
+      {viewMode === 'calculator' && (
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-6 no-print">
+              {/* Template Loader */}
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-blue-100">
+                  <h3 className="font-bold text-blue-800 mb-3 text-sm uppercase">Quick Diet Templates</h3>
+                  <div className="flex flex-wrap gap-2 items-end">
+                      <div className="flex-grow min-w-[120px]">
+                          <label className="text-[10px] text-gray-500 font-bold block mb-1">Diet Type</label>
+                          <select 
+                              className="w-full p-2 border rounded text-xs bg-gray-50"
+                              value={selectedDietId}
+                              onChange={(e) => {
+                                  setSelectedDietId(e.target.value);
+                                  // Reset dist ID to first of new diet
+                                  const d = dietTemplates.find(dt => dt.id === e.target.value);
+                                  if(d && d.distributions.length > 0) setSelectedDistId(d.distributions[0].id);
+                              }}
+                          >
+                              {dietTemplates.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                          </select>
+                      </div>
+                      <div className="flex-grow min-w-[180px]">
+                          <label className="text-[10px] text-gray-500 font-bold block mb-1">Distribution</label>
+                          <select 
+                              className="w-full p-2 border rounded text-xs bg-gray-50"
+                              value={selectedDistId}
+                              onChange={(e) => setSelectedDistId(e.target.value)}
+                          >
+                              {selectedDiet?.distributions.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+                          </select>
+                      </div>
+                      <div className="w-24">
+                          <label className="text-[10px] text-gray-500 font-bold block mb-1">Kcal</label>
+                          <select 
+                              className="w-full p-2 border rounded text-xs bg-gray-50"
+                              value={templateKcal}
+                              onChange={(e) => setTemplateKcal(Number(e.target.value))}
+                          >
+                              {[1200, 1400, 1600, 1800, 2000, 2200, 2400].map(k => <option key={k} value={k}>{k}</option>)}
+                          </select>
+                      </div>
+                      <button 
+                          onClick={applyTemplate}
+                          className="bg-blue-600 text-white px-3 py-2 rounded text-xs font-bold hover:bg-blue-700"
+                      >
+                          Load
+                      </button>
+                  </div>
+              </div>
+
+              {/* Advanced Macro Calc Toggle */}
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-green-100 flex items-center justify-between">
+                  <div>
+                      <h3 className="font-bold text-green-800 text-sm uppercase">Precision Macro Calc</h3>
+                      <p className="text-[10px] text-gray-500 mt-1">Calculate exact grams based on weight & precautions.</p>
+                  </div>
+                  <button 
+                      onClick={() => setShowMacroCalc(true)}
+                      className="bg-green-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-green-700"
+                  >
+                      Open Calculator
+                  </button>
+              </div>
+          </div>
+      )}
 
       {/* Main Layout Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -977,6 +1156,111 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                 </div>
             </div>
         </div>
+      )}
+
+      {/* Advanced Macro Calculator Modal */}
+      {showMacroCalc && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm no-print">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in">
+                  <div className="p-4 border-b bg-green-50 flex justify-between items-center">
+                      <h3 className="font-bold text-green-900 flex items-center gap-2">
+                          <span>🧮</span> Precision Macro Calculator
+                      </h3>
+                      <button onClick={() => setShowMacroCalc(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                  </div>
+                  
+                  <div className="p-6 space-y-4">
+                      {/* Inputs */}
+                      <div className="grid grid-cols-2 gap-4">
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Total Kcal</label>
+                              <input 
+                                  type="number" 
+                                  value={advCalc.kcal} 
+                                  onChange={e => setAdvCalc({...advCalc, kcal: Number(e.target.value)})}
+                                  className="w-full p-2 border rounded font-bold text-blue-800"
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Carb %</label>
+                              <input 
+                                  type="number" 
+                                  value={advCalc.carbPerc} 
+                                  onChange={e => setAdvCalc({...advCalc, carbPerc: Number(e.target.value)})}
+                                  className="w-full p-2 border rounded font-bold text-blue-600"
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Weight (kg)</label>
+                              <input 
+                                  type="number" 
+                                  value={advCalc.weight} 
+                                  onChange={e => setAdvCalc({...advCalc, weight: Number(e.target.value)})}
+                                  className="w-full p-2 border rounded font-bold text-gray-800"
+                              />
+                          </div>
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Prot Factor (g/kg)</label>
+                              <div className="flex gap-1">
+                                  <input 
+                                      type="number" step="0.1"
+                                      value={advCalc.proteinFactor} 
+                                      onChange={e => setAdvCalc({...advCalc, proteinFactor: Number(e.target.value)})}
+                                      className="w-full p-2 border rounded font-bold text-red-600"
+                                  />
+                              </div>
+                          </div>
+                      </div>
+
+                      <button 
+                          onClick={calculateAdvancedMacros}
+                          className="w-full py-2 bg-gray-800 text-white font-bold rounded hover:bg-gray-900 transition"
+                      >
+                          Calculate Breakdown
+                      </button>
+
+                      {/* Results Display */}
+                      {advResults && (
+                          <div className="mt-4 bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm">
+                              <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                                  <div className="bg-blue-100 p-2 rounded">
+                                      <div className="font-bold text-blue-800">{advResults.choG}g</div>
+                                      <div className="text-[10px] text-blue-600">Carb ({advCalc.carbPerc}%)</div>
+                                  </div>
+                                  <div className="bg-red-100 p-2 rounded">
+                                      <div className="font-bold text-red-800">{advResults.proG}g</div>
+                                      <div className="text-[10px] text-red-600">Prot ({advResults.proP}%)</div>
+                                  </div>
+                                  <div className="bg-yellow-100 p-2 rounded">
+                                      <div className="font-bold text-yellow-800">{advResults.fatG}g</div>
+                                      <div className="text-[10px] text-yellow-600">Fat ({advResults.fatP}%)</div>
+                                  </div>
+                              </div>
+                              
+                              <div className="border-t border-gray-200 pt-2">
+                                  <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Fat Quality (Ratio 1:2:1 approx)</p>
+                                  <div className="flex justify-between text-xs">
+                                      <span>SFA (10%): <span className="font-bold text-orange-700">{advResults.sfaG}g</span></span>
+                                      <span>MUFA: <span className="font-bold text-yellow-700">{advResults.mufaG}g</span></span>
+                                      <span>PUFA: <span className="font-bold text-yellow-600">{advResults.pufaG}g</span></span>
+                                  </div>
+                              </div>
+                          </div>
+                      )}
+                  </div>
+
+                  <div className="p-4 border-t bg-gray-50 flex gap-2">
+                      <button onClick={() => setShowMacroCalc(false)} className="flex-1 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded transition">Cancel</button>
+                      <button 
+                          onClick={applyAdvancedTargets} 
+                          disabled={!advResults}
+                          className="flex-1 py-2 bg-green-600 text-white font-bold rounded hover:bg-green-700 shadow-sm transition disabled:opacity-50"
+                      >
+                          Apply to Targets
+                      </button>
+                  </div>
+              </div>
+          </div>
       )}
 
     </div>

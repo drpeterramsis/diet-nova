@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova CheckPoint_MealFix_BulkFormat_Check65_v2.0.219",
-  "description": "Fixed Save As Template logic to update existing plans and fixed Bulk Format to preserve custom text edits.",
+  "name": "Diet-Nova Check67_v2.0.220",
+  "description": "Added Ready Distributed Diet Plans (Templates) and Advanced Macro Calculator with precaution logic.",
   "requestFramePermissions": []
 }
