@@ -33,6 +33,8 @@ export interface DietType {
 }
 
 // Data Transcription from User Provided Images
+// Image 1: Balanced (50% Carb / 20% protein / 30% fat)
+// Image 2: Balanced (45% Carb / 20% protein / 35% fat)
 export const dietTemplates: DietType[] = [
     {
         id: 'balanced',
@@ -73,7 +75,7 @@ export const dietTemplates: DietType[] = [
             {
                 id: 'dash_std',
                 label: 'Standard DASH',
-                rows: [] // To be added later as per instructions
+                rows: [] // Placeholder for DASH specific rows
             }
         ]
     }
