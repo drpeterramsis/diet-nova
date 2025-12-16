@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova CheckPoint_DayMenuPrint_RichText_Check63_v2.0.218",
-  "description": "Added Bulk Formatting for Meal Items (Color for numbers in brackets, Bold, Font Size).",
+  "name": "Diet-Nova CheckPoint_MealFix_BulkFormat_Check65_v2.0.219",
+  "description": "Fixed Save As Template logic to update existing plans and fixed Bulk Format to preserve custom text edits.",
   "requestFramePermissions": []
 }

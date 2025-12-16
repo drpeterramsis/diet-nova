@@ -82,7 +82,7 @@ export const FoodQuestionnaire: React.FC<FoodQuestionnaireProps> = ({ initialDat
                                 </th>
                                 {FREQUENCY_KEYS.map(fk => (
                                     <th key={fk} className="p-3 text-center min-w-[80px] border-r border-green-500 last:border-0 font-medium sticky top-0 z-30 bg-green-600 shadow-sm">
-                                        {t.foodFreq[fk as keyof typeof t.foodFreq]}
+                                        {t.foodFreq[fk as keyof typeof t.foodFreq] as string}
                                     </th>
                                 ))}
                                 <th className="p-3 text-center min-w-[150px] border-r border-green-500 last:border-0 font-medium sticky top-0 z-30 bg-green-600 shadow-sm">

@@ -456,9 +456,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       if (activeTab === 'visits' && editingClient && !editingVisitId) {
           const lastVisit = visits.length > 0 ? visits[0] : null;
           // Try to extract body fat from kcal_data if available
-          let lastBF = '';
+          let lastBF: number | '' = '';
           if (lastVisit?.kcal_data?.inputs?.bodyFatPercent) {
-              lastBF = lastVisit.kcal_data.inputs.bodyFatPercent;
+              lastBF = Number(lastVisit.kcal_data.inputs.bodyFatPercent);
           }
 
           setNewVisitData(prev => ({
@@ -469,7 +469,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
               hip: lastVisit?.hip || editingClient.hip || '',
               miac: lastVisit?.miac || editingClient.miac || '',
               head_circumference: lastVisit?.head_circumference || editingClient.head_circumference || '',
-              body_fat: lastBF || '',
+              body_fat: lastBF,
               notes: ''
           }));
       }
@@ -793,9 +793,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       setEditingVisitId(visit.id);
       
       // Extract body fat from kcal_data
-      let bf = '';
+      let bf: number | '' = '';
       if (visit.kcal_data?.inputs?.bodyFatPercent) {
-          bf = visit.kcal_data.inputs.bodyFatPercent;
+          bf = Number(visit.kcal_data.inputs.bodyFatPercent);
       }
 
       setNewVisitData({
@@ -817,9 +817,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       setEditingVisitId(null);
       // Reset form to last visit defaults or blank
       const lastVisit = visits.length > 0 ? visits[0] : null;
-      let lastBF = '';
+      let lastBF: number | '' = '';
       if (lastVisit?.kcal_data?.inputs?.bodyFatPercent) {
-          lastBF = lastVisit.kcal_data.inputs.bodyFatPercent;
+          lastBF = Number(lastVisit.kcal_data.inputs.bodyFatPercent);
       }
       setNewVisitData({
           visit_date: new Date().toISOString().split('T')[0],
@@ -829,7 +829,7 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
           hip: lastVisit?.hip || '',
           miac: lastVisit?.miac || '',
           head_circumference: lastVisit?.head_circumference || '',
-          body_fat: lastBF || '',
+          body_fat: lastBF,
           notes: ''
       });
   };
@@ -1173,6 +1173,9 @@ const ClientManager: React.FC<ClientManagerProps> = ({ initialClientId, onAnalyz
       setIsSavingTool(false);
     }
   };
+
+  // ... (rest of the render methods remain the same) ...
+  // Returning rest of file unchanged except fixes
 
   // --- RENDER: INSTRUCTIONS VIEW ---
   if (viewMode === 'instructions') {

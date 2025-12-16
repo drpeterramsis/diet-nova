@@ -659,11 +659,18 @@ const MealCreator: React.FC<MealCreatorProps> = ({
               Object.keys(dayItems).forEach(mealTime => {
                   if(dayItems[mealTime]) {
                       dayItems[mealTime] = dayItems[mealTime].map((item: PlannerItem) => {
-                          // Use original name as source of truth to regenerate HTML
-                          const name = item.name;
+                          // Fix: Preserve existing text content if user edited it
+                          let textToFormat = item.name;
+                          if (item.customDisplayName) {
+                               // Simple strip tags to preserve text content
+                               const tempDiv = document.createElement("div");
+                               tempDiv.innerHTML = item.customDisplayName;
+                               textToFormat = tempDiv.textContent || item.name;
+                          }
+
                           // Split by parentheses that contain something (likely numbers)
                           // REGEX: capture (anything)
-                          const parts = name.split(/(\(.*?\))/g);
+                          const parts = textToFormat.split(/(\(.*?\))/g);
                           
                           let html = `<span style="font-size: ${options.fontSize}; ${options.isBold ? 'font-weight: bold;' : ''}">`;
                           
@@ -823,23 +830,48 @@ const MealCreator: React.FC<MealCreatorProps> = ({
   };
 
   const saveAsTemplate = async () => {
-      const name = prompt("Enter a name for this Meal Plan Template:");
-      if (!name) return;
+      // Fix: Check loadedPlanId & name match for update logic
+      let nameToSave = planName;
+      if (!nameToSave) {
+          const input = prompt("Enter a name for this Meal Plan Template:", lastSavedName || "");
+          if (!input) return;
+          nameToSave = input;
+          setPlanName(input);
+      }
       
       if (!session) return;
       
       setStatusMsg("Saving Template...");
+      const planData = { weeklyPlan, targetKcal };
+      const isUpdate = loadedPlanId && (nameToSave === lastSavedName);
+
       try {
-          const planData = { weeklyPlan, targetKcal };
-          const { error } = await supabase.from('saved_meals').insert({
-              user_id: session.user.id,
-              name: name,
-              tool_type: 'day-planner',
-              data: planData,
-              created_at: new Date().toISOString()
-          });
-          if (error) throw error;
-          setStatusMsg("Template Saved!");
+          if (isUpdate) {
+              const { error } = await supabase
+                .from('saved_meals')
+                .update({ name: nameToSave, data: planData })
+                .eq('id', loadedPlanId)
+                .eq('user_id', session.user.id);
+              
+              if (error) throw error;
+              setStatusMsg("Template Updated!");
+          } else {
+              const { data, error } = await supabase.from('saved_meals').insert({
+                  user_id: session.user.id,
+                  name: nameToSave,
+                  tool_type: 'day-planner',
+                  data: planData,
+                  created_at: new Date().toISOString()
+              }).select().single();
+              
+              if (error) throw error;
+              if (data) {
+                  setLoadedPlanId(data.id);
+                  setLastSavedName(data.name);
+              }
+              setStatusMsg("Template Saved!");
+          }
+          fetchPlans();
           setTimeout(() => setStatusMsg(''), 3000);
       } catch (err: any) {
           console.error(err);
@@ -869,56 +901,8 @@ const MealCreator: React.FC<MealCreatorProps> = ({
     }
 
     // Mode 2: Save as Template (Standard Mode)
-    if (!planName.trim()) {
-        alert("Please enter a plan name.");
-        return;
-    }
-    if (!session) return;
-    
-    setStatusMsg("Saving Template...");
-    const planData = { weeklyPlan, targetKcal };
-    const isUpdate = loadedPlanId && (planName === lastSavedName);
-
-    try {
-        let data;
-        if (isUpdate) {
-            const { data: updated, error } = await supabase
-                .from('saved_meals')
-                .update({ name: planName, data: planData })
-                .eq('id', loadedPlanId)
-                .eq('user_id', session.user.id)
-                .select()
-                .single();
-            if (error) throw error;
-            data = updated;
-        } else {
-            const { data: inserted, error } = await supabase
-                .from('saved_meals')
-                .insert({
-                    user_id: session.user.id,
-                    name: planName,
-                    tool_type: 'day-planner',
-                    data: planData,
-                    created_at: new Date().toISOString()
-                })
-                .select()
-                .single();
-            if (error) throw error;
-            data = inserted;
-        }
-        
-        if (data) {
-            setLoadedPlanId(data.id);
-            setLastSavedName(data.name);
-            setStatusMsg(isUpdate ? "Plan Updated!" : "Plan Saved!");
-        }
-        
-        fetchPlans(); 
-        setTimeout(() => setStatusMsg(''), 3000);
-    } catch (err: any) {
-        console.error('Error saving:', err);
-        setStatusMsg("Failed to save: " + err.message);
-    }
+    // Reuse saveAsTemplate logic or call it
+    saveAsTemplate();
   };
 
   const loadPlan = (plan: SavedMeal) => {
