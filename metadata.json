@@ -1,6 +1,5 @@
-
 {
   "name": "Diet-Nova Check72_v2.0.230",
-  "description": "UI Layout Fix: Resolved component duplication in Meal Planner and updated versioning.",
+  "description": "UI Fix for duplicated tool layout and improved stability.",
   "requestFramePermissions": []
 }
