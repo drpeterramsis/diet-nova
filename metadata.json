@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova Check_cloud_73_v2.0.226",
-  "description": "v2.0.226: Fixed cloud mapping for diet templates to ensure all fields are filed. v2.0.225: Migrated Diet Templates to Supabase cloud database.",
+  "name": "Diet-Nova Check_cloud_75_v2.0.227",
+  "description": "v2.0.227: Dynamic Quick Diet Templates from cloud DB with status indicator. v2.0.226: Fixed cloud mapping for diet templates to ensure all fields are filed. v2.0.225: Migrated Diet Templates to Supabase cloud database.",
   "requestFramePermissions": []
 }
