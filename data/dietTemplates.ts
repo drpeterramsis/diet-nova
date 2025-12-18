@@ -1,6 +1,6 @@
 
 // Diet Templates Definitions
-// Note: Primary data now loads from Supabase table 'diet_templates'
+// Note: Data is now EXCLUSIVELY loaded from Supabase table 'diet_templates'
 // Mapping documented in README.md
 
 export interface DietPlanRow {
@@ -12,8 +12,8 @@ export interface DietPlanRow {
         legumes: number;
         milkSkim: number; // Mapped from milk_skimmed_low
         milkLow: number;  // Mapped from milk_medium
-        milkWhole: number; // CORRECTED: Mapped from milk_high_whole to match calculator state
-        meatLean: number;  // CORRECTED: Mapped from meat_lean_low to match calculator state
+        milkWhole: number; // Mapped from milk_high_whole to match calculator state
+        meatLean: number;  // Mapped from meat_lean_low to match calculator state
         meatMed: number;  // Mapped from meat_medium
         meatHigh: number; // Mapped from meat_high
         fatsSat: number; 
@@ -38,6 +38,7 @@ export interface DietType {
 /**
  * Maps raw database rows to the DietPlanRow interface.
  * Logic: Ensure keys here match the keys used in MealPlanner.tsx GROUP_FACTORS
+ * Verified Mapping for v2.0.228
  */
 export const mapDBRowToTemplate = (row: any): DietPlanRow => ({
     kcal: Number(row.kcal),
@@ -59,20 +60,8 @@ export const mapDBRowToTemplate = (row: any): DietPlanRow => ({
     }
 });
 
-// Fallback Static Data (used if DB fetch fails or is empty)
-export const fallbackTemplates: DietType[] = [
-    {
-        id: 'balanced',
-        name: 'Balanced Diet (Local Fallback)',
-        distributions: [
-            {
-                id: 'balanced_50_20_30',
-                label: '50% Carb - 20% protein - 30% fat',
-                rows: [
-                    { kcal: 1200, exchanges: { starch: 4, veg: 6, fruit: 2, legumes: 1, milkSkim: 0, milkLow: 1, milkWhole: 0, meatLean: 1, meatMed: 2, meatHigh: 0, fatsSat: 0, fatsMufa: 3, fatsPufa: 1.5, sugar: 0 } },
-                    { kcal: 2000, exchanges: { starch: 6, veg: 6, fruit: 4, legumes: 2, milkSkim: 0, milkLow: 1, milkWhole: 1, meatLean: 3, meatMed: 3, meatHigh: 0, fatsSat: 0, fatsMufa: 3, fatsPufa: 2, sugar: 1 } }
-                ]
-            }
-        ]
-    }
-];
+/**
+ * Fallback Templates are removed in v2.0.228 to ensure strict database sync.
+ * If Supabase is empty, the UI will reflect no data.
+ */
+export const fallbackTemplates: DietType[] = [];

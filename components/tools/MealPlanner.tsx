@@ -105,7 +105,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   const [selectedDistId, setSelectedDistId] = useState<string>('');
   const [templateKcal, setTemplateKcal] = useState<number>(1200);
 
-  // Fetch Templates from Supabase
+  // Fetch Templates from Supabase (v2.0.228: Strict Cloud Sync)
   useEffect(() => {
     const fetchTemplates = async () => {
         setIsLoadingTemplates(true);
@@ -120,7 +120,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
             if (error) throw error;
 
             if (data && data.length > 0) {
-                // Hierarchical Grouping: Diet Type -> Macro Ratio (Distribution) -> Kcal (Row)
+                // Grouping Logic: Diet Type -> Distribution Ratio -> Calories
                 const typesMap: Record<string, DietType> = {};
 
                 data.forEach(row => {
@@ -142,7 +142,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                 const sortedTypes = Object.values(typesMap);
                 setCloudTemplates(sortedTypes);
                 
-                // Initialize selection
+                // Set default selections based on fresh data
                 if (sortedTypes.length > 0) {
                     setSelectedDietId(sortedTypes[0].id);
                     if (sortedTypes[0].distributions.length > 0) {
@@ -150,15 +150,14 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                     }
                 }
             } else {
-                setCloudTemplates(fallbackTemplates);
-                setSelectedDietId(fallbackTemplates[0].id);
-                setSelectedDistId(fallbackTemplates[0].distributions[0].id);
+                // v2.0.228: Strict policy - if DB is empty, we show no templates
+                setCloudTemplates([]);
+                setStatusMsg("Templates table is empty in cloud.");
             }
         } catch (err) {
-            console.warn("Failed to fetch cloud templates, using fallback.", err);
-            setCloudTemplates(fallbackTemplates);
-            setSelectedDietId(fallbackTemplates[0].id);
-            setSelectedDistId(fallbackTemplates[0].distributions[0].id);
+            console.error("Supabase Templates Sync Failed:", err);
+            setCloudTemplates([]);
+            setStatusMsg("Cloud Sync Failed. Verify database connection.");
         } finally {
             setIsLoadingTemplates(false);
         }
@@ -180,7 +179,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   // State for Day Menu (Unified State)
   const [dayMenuPlan, setDayMenuPlan] = useState<WeeklyPlan>(DEFAULT_WEEKLY_PLAN);
   
-  // Precision Macro Calc is now always visible in Column 1, no modal
+  // Precision Macro Calc state
   const [advCalc, setAdvCalc] = useState({
       kcal: 2000,
       carbPerc: 50,
@@ -193,8 +192,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   useEffect(() => {
     if (initialTargetKcal && initialTargetKcal > 0) {
       setTargetKcal(initialTargetKcal);
-      setTemplateKcal(initialTargetKcal); // Sync with template selector
-      setAdvCalc(prev => ({ ...prev, kcal: initialTargetKcal })); // Sync with advanced calc
+      setTemplateKcal(initialTargetKcal); 
+      setAdvCalc(prev => ({ ...prev, kcal: initialTargetKcal })); 
     }
   }, [initialTargetKcal]);
 
@@ -241,10 +240,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   // Determine visible groups based on mode
   const VISIBLE_GROUPS = useMemo(() => {
       if (useFatBreakdown) {
-          // Include sub-fats, include 'fats' but it will be handled specially
           return BASE_GROUPS;
       } else {
-          // Exclude sub-fats
           return BASE_GROUPS.filter(g => !['fatsPufa', 'fatsMufa', 'fatsSat'].includes(g));
       }
   }, [useFatBreakdown]);
@@ -672,12 +669,12 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         {viewMode === 'calculator' && (
             <>
                 <div className="lg:col-span-3 space-y-6 no-print">
-                    {/* Template Loader (DB Driven) */}
+                    {/* Template Loader (DB Driven - Strictly Cloud v2.0.228) */}
                     <div className="bg-white p-4 rounded-xl shadow-md border border-blue-100">
                         <h3 className="font-bold text-blue-800 mb-3 text-sm uppercase">Cloud Diet Templates</h3>
                         {isLoadingTemplates ? (
                             <div className="text-center py-4 text-xs text-gray-400 animate-pulse">Fetching cloud data...</div>
-                        ) : (
+                        ) : cloudTemplates.length > 0 ? (
                             <div className="space-y-3">
                                 <div>
                                     <label className="text-[10px] text-gray-500 font-bold block mb-1">Diet Type</label>
@@ -711,16 +708,19 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                             value={templateKcal}
                                             onChange={(e) => setTemplateKcal(Number(e.target.value))}
                                         >
-                                            {/* Get unique Kcal from the specific selected distribution */}
                                             {selectedDistribution?.rows.map(r => r.kcal).filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b).map(k => (
                                                 <option key={k} value={k}>{k}</option>
                                             ))}
-                                            {/* Fallback list if no rows */}
-                                            {(!selectedDistribution || selectedDistribution.rows.length === 0) && [1200, 1400, 1600, 1800, 2000, 2200, 2400].map(k => <option key={k} value={k}>{k}</option>)}
+                                            {(!selectedDistribution || selectedDistribution.rows.length === 0) && <option value="">N/A</option>}
                                         </select>
                                     </div>
-                                    <button onClick={applyTemplate} className="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-blue-700">Load</button>
+                                    <button onClick={applyTemplate} disabled={!selectedDistribution} className="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-blue-700 disabled:opacity-50">Load</button>
                                 </div>
+                            </div>
+                        ) : (
+                            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 text-center">
+                                <p className="text-xs text-orange-800 font-bold mb-2">No Cloud Templates Found</p>
+                                <p className="text-[10px] text-orange-700">Database connection required or table is empty.</p>
                             </div>
                         )}
                     </div>
