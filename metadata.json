@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova Check72_v2.0.229",
-  "description": "Enhanced Error Reporting for Cloud Diet Templates and improved sync reliability.",
+  "name": "Diet-Nova Check72_v2.0.230",
+  "description": "UI Layout Fix: Resolved component duplication in Meal Planner and updated versioning.",
   "requestFramePermissions": []
 }

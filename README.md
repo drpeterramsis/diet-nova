@@ -3,7 +3,7 @@
 
 Expert-level web application for clinical nutritionists and dietitians.
 
-## Version 2.0.229
+## Version 2.0.230
 
 ### Key Features
 - **Exchange Calculator**: Precision macro planning based on standardized food exchanges.
@@ -16,9 +16,10 @@ Expert-level web application for clinical nutritionists and dietitians.
 ---
 
 ## Update History
+- **v2.0.230**: Fixed layout duplication bug in the Meal Planner tool where the calculator and summary panels were rendering multiple times. Optimized JSX structure for better performance.
 - **v2.0.229**: Fixed "No Cloud Templates Found" visibility issues. Added specific error reporting to help debug connection or table configuration issues. Added a manual "Retry Sync" button to the template loader.
 - **v2.0.228**: Removed local fallback templates. The Meal Planner now relies exclusively on Supabase cloud sync for Diet Templates. Improved sync reliability for initial data load.
-- **v2.0.227**: Fixed template mapping logic where cloud data wasn't populating the calculator fields properly (mapped `meat_lean_low` -> `meatLean` and `milk_high_whole` -> `milkWhole`).
+- **v2.0.227**: Fixed template mapping logic where cloud data wasn't populating the calculator fields properly.
 - **v2.0.226**: Initial Supabase integration for diet templates.
 
 ---
@@ -58,7 +59,7 @@ ALTER TABLE diet_templates ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read access" ON diet_templates FOR SELECT USING (true);
 ```
 
-### Mapping Logic (Verified v2.0.229)
+### Mapping Logic (Verified v2.0.230)
 The application maps the database columns to the following internal exchange keys:
 - `starch` -> `starch`
 - `vegetables` -> `veg`
