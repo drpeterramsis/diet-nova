@@ -101,67 +101,73 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   // --- NEW: Diet Templates State (Cloud) ---
   const [cloudTemplates, setCloudTemplates] = useState<DietType[]>([]);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(false);
+  const [templateError, setTemplateError] = useState<string | null>(null);
   const [selectedDietId, setSelectedDietId] = useState<string>('');
   const [selectedDistId, setSelectedDistId] = useState<string>('');
   const [templateKcal, setTemplateKcal] = useState<number>(1200);
 
-  // Fetch Templates from Supabase (v2.0.228: Strict Cloud Sync)
-  useEffect(() => {
-    const fetchTemplates = async () => {
-        setIsLoadingTemplates(true);
-        try {
-            const { data, error } = await supabase
-                .from('diet_templates')
-                .select('*')
-                .order('diet_type', { ascending: true })
-                .order('macro_ratios', { ascending: true })
-                .order('kcal', { ascending: true });
+  // Fetch Templates from Supabase (v2.0.229: Enhanced Error Reporting)
+  const fetchTemplates = async () => {
+    setIsLoadingTemplates(true);
+    setTemplateError(null);
+    try {
+        const { data, error } = await supabase
+            .from('diet_templates')
+            .select('*')
+            .order('diet_type', { ascending: true })
+            .order('macro_ratios', { ascending: true })
+            .order('kcal', { ascending: true });
 
-            if (error) throw error;
-
-            if (data && data.length > 0) {
-                // Grouping Logic: Diet Type -> Distribution Ratio -> Calories
-                const typesMap: Record<string, DietType> = {};
-
-                data.forEach(row => {
-                    const typeId = row.diet_type.toLowerCase().replace(/\s+/g, '_');
-                    if (!typesMap[typeId]) {
-                        typesMap[typeId] = { id: typeId, name: row.diet_type, distributions: [] };
-                    }
-
-                    const distId = `${typeId}_${row.macro_ratios.toLowerCase().replace(/\s+/g, '_')}`;
-                    let dist = typesMap[typeId].distributions.find(d => d.id === distId);
-                    if (!dist) {
-                        dist = { id: distId, label: row.macro_ratios, rows: [] };
-                        typesMap[typeId].distributions.push(dist);
-                    }
-
-                    dist.rows.push(mapDBRowToTemplate(row));
-                });
-
-                const sortedTypes = Object.values(typesMap);
-                setCloudTemplates(sortedTypes);
-                
-                // Set default selections based on fresh data
-                if (sortedTypes.length > 0) {
-                    setSelectedDietId(sortedTypes[0].id);
-                    if (sortedTypes[0].distributions.length > 0) {
-                        setSelectedDistId(sortedTypes[0].distributions[0].id);
-                    }
-                }
-            } else {
-                // v2.0.228: Strict policy - if DB is empty, we show no templates
-                setCloudTemplates([]);
-                setStatusMsg("Templates table is empty in cloud.");
-            }
-        } catch (err) {
-            console.error("Supabase Templates Sync Failed:", err);
-            setCloudTemplates([]);
-            setStatusMsg("Cloud Sync Failed. Verify database connection.");
-        } finally {
-            setIsLoadingTemplates(false);
+        if (error) {
+            // Check for common Supabase errors (e.g. missing table)
+            if (error.code === '42P01') throw new Error("Table 'diet_templates' not found in database.");
+            throw error;
         }
-    };
+
+        if (data && data.length > 0) {
+            const typesMap: Record<string, DietType> = {};
+
+            data.forEach(row => {
+                const typeId = row.diet_type.toLowerCase().replace(/\s+/g, '_');
+                if (!typesMap[typeId]) {
+                    typesMap[typeId] = { id: typeId, name: row.diet_type, distributions: [] };
+                }
+
+                const distId = `${typeId}_${row.macro_ratios.toLowerCase().replace(/\s+/g, '_')}`;
+                let dist = typesMap[typeId].distributions.find(d => d.id === distId);
+                if (!dist) {
+                    dist = { id: distId, label: row.macro_ratios, rows: [] };
+                    typesMap[typeId].distributions.push(dist);
+                }
+
+                dist.rows.push(mapDBRowToTemplate(row));
+            });
+
+            const sortedTypes = Object.values(typesMap);
+            setCloudTemplates(sortedTypes);
+            
+            // Auto-select first available options
+            if (sortedTypes.length > 0) {
+                setSelectedDietId(sortedTypes[0].id);
+                if (sortedTypes[0].distributions.length > 0) {
+                    setSelectedDistId(sortedTypes[0].distributions[0].id);
+                }
+            }
+        } else {
+            // v2.0.229: If query succeeded but no rows returned
+            setCloudTemplates([]);
+            setTemplateError("Cloud database is connected, but the 'diet_templates' table is empty.");
+        }
+    } catch (err: any) {
+        console.error("Supabase Templates Sync Failed:", err);
+        setCloudTemplates([]);
+        setTemplateError(err.message || "Failed to connect to cloud templates.");
+    } finally {
+        setIsLoadingTemplates(false);
+    }
+  };
+
+  useEffect(() => {
     fetchTemplates();
   }, []);
 
@@ -669,11 +675,17 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         {viewMode === 'calculator' && (
             <>
                 <div className="lg:col-span-3 space-y-6 no-print">
-                    {/* Template Loader (DB Driven - Strictly Cloud v2.0.228) */}
+                    {/* Template Loader (DB Driven - Strictly Cloud v2.0.229) */}
                     <div className="bg-white p-4 rounded-xl shadow-md border border-blue-100">
                         <h3 className="font-bold text-blue-800 mb-3 text-sm uppercase">Cloud Diet Templates</h3>
                         {isLoadingTemplates ? (
                             <div className="text-center py-4 text-xs text-gray-400 animate-pulse">Fetching cloud data...</div>
+                        ) : templateError ? (
+                            <div className="bg-red-50 p-4 rounded-lg border border-red-200 text-center">
+                                <p className="text-xs text-red-800 font-bold mb-2">Sync Error</p>
+                                <p className="text-[10px] text-red-700 mb-3 leading-relaxed">{templateError}</p>
+                                <button onClick={fetchTemplates} className="text-[10px] font-bold text-blue-600 hover:underline">Retry Connection</button>
+                            </div>
                         ) : cloudTemplates.length > 0 ? (
                             <div className="space-y-3">
                                 <div>
@@ -719,8 +731,9 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             </div>
                         ) : (
                             <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 text-center">
-                                <p className="text-xs text-orange-800 font-bold mb-2">No Cloud Templates Found</p>
-                                <p className="text-[10px] text-orange-700">Database connection required or table is empty.</p>
+                                <p className="text-xs text-orange-800 font-bold mb-2">No Templates Available</p>
+                                <p className="text-[10px] text-orange-700">Either database is empty or connection is offline.</p>
+                                <button onClick={fetchTemplates} className="mt-3 text-[10px] font-bold text-orange-800 border border-orange-300 px-2 py-1 rounded bg-white hover:bg-orange-50">Check Again</button>
                             </div>
                         )}
                     </div>
@@ -745,6 +758,240 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                     <div className="border-t border-gray-200 pt-2"><p className="text-[9px] font-bold text-gray-500 uppercase mb-1">Fat Quality (Approx 1:2:1)</p><div className="flex justify-between text-[10px]"><span>SFA (10%): <b className="text-orange-700">{advResults.sfaG}g</b></span><span>MUFA: <b className="text-yellow-700">{advResults.mufaG}g</b></span></div><div className="text-[10px] text-right mt-1"><span>PUFA: <b className="text-yellow-600">{advResults.pufaG}g</b></span></div></div>
                                     <button onClick={applyAdvancedTargets} className="mt-3 w-full py-1.5 bg-green-600 text-white font-bold rounded text-xs hover:bg-green-700 shadow-sm transition">Apply Targets</button>
                                 </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="lg:col-span-6">
+                     <div className="card bg-white shadow-lg overflow-hidden border border-gray-200">
+                        <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center"><span className="font-bold text-gray-700">Exchanges Calculator</span><div className="text-xs text-gray-500">Inputs: {Object.values(servings).reduce((a: number, b: number) => a + b, 0)}</div></div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm border-collapse">
+                                <thead className="bg-[var(--color-primary)] text-white">
+                                    <tr><th className="p-3 text-left w-1/3">{t.mealPlannerTool.foodGroup}</th><th className="p-3 text-center w-24">{t.mealPlannerTool.serves}</th><th className="p-3 text-center">{t.mealPlannerTool.cho}</th><th className="p-3 text-center">{t.mealPlannerTool.pro}</th><th className="p-3 text-center">{t.mealPlannerTool.fat}</th><th className="p-3 text-center bg-green-700">Fiber</th><th className="p-3 text-center bg-[var(--color-primary-dark)]">{t.mealPlannerTool.kcal}</th></tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {VISIBLE_GROUPS.map(group => {
+                                        const isAutoFat = useFatBreakdown && group === 'fats';
+                                        const target = isAutoFat ? calculatedFatsSum : (servings[group] || 0);
+                                        const s = target; 
+                                        const f = GROUP_FACTORS[group];
+                                        const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
+                                        return (
+                                            <tr key={group} className={`${style.bg} border-b ${style.border} bg-opacity-30`}>
+                                                <td className={`p-3 font-medium transition-colors`}><div className={`flex items-center gap-2 text-base ${style.text}`}><span className="text-xl">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className={`ml-2 text-[10px] px-2 py-0.5 rounded border transition font-bold ${useFatBreakdown ? 'bg-yellow-200 border-yellow-300 text-yellow-800' : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200'}`} title="Toggle detailed fat types (SFA, MUFA, PUFA)">{useFatBreakdown ? 'Hide Details' : 'Show Breakdown'}</button>)}{isAutoFat && <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded ml-2">Auto-Sum</span>}</div></td>
+                                                <td className="p-3 text-center bg-white/50"><input type="number" min="0" step="0.5" disabled={isAutoFat} className={`w-20 p-2 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all ${isAutoFat ? 'bg-gray-100 font-bold text-gray-500 cursor-not-allowed' : s === 0 ? 'text-red-300 bg-white' : 'font-bold text-lg text-gray-800 bg-white shadow-sm'}`} value={s || ''} placeholder="0" onChange={(e) => updateServing(group, parseFloat(e.target.value) || 0)} /></td>
+                                                <RenderCell val={s * f.cho} factor={f.cho} label="CHO" /><RenderCell val={s * f.pro} factor={f.pro} label="PRO" /><RenderCell val={s * f.fat} factor={f.fat} label="FAT" /><RenderCell val={s * f.fiber} factor={f.fiber} label="g" /><RenderCell val={s * f.kcal} factor={f.kcal} label="Kcal" />
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                     </div>
+                </div>
+
+                <div className="lg:col-span-3 space-y-6 no-print">
+                    <div className="card bg-white shadow-xl sticky top-24 border-t-4 border-t-[var(--color-primary)]">
+                        <div className="p-4">
+                            <h3 className="font-bold text-lg text-gray-800 mb-6 flex items-center gap-2"><span className="text-2xl">📊</span> Smart Summary</h3>
+                            <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={t.kcal.kcalRequired} />
+                            <div className="mb-6"><MacroDonut cho={calcTotals.cho} pro={calcTotals.pro} fat={calcTotals.fat} totalKcal={calcTotals.kcal} /></div>
+                            <div className="space-y-1 mb-6"><ProgressBar current={calcTotals.kcal} target={targetKcal} label="Calorie Goal" unit="kcal" showPercent={true}/></div>
+                            <div className="overflow-hidden border border-gray-200 rounded-lg mb-4">
+                                <table className="w-full text-[10px]">
+                                    <thead className="bg-gray-100 text-gray-600 font-bold uppercase"><tr><th className="p-2 text-left">Item</th><th className="p-2 text-center">Total (g)</th><th className="p-2 text-center bg-gray-50">Target</th><th className="p-2 text-center">Achieved</th></tr></thead>
+                                    <tbody className="divide-y divide-gray-100 bg-white">
+                                        <tr><td className="p-2 font-bold text-blue-700">Total CHO</td><td className="p-2 text-center font-bold text-gray-800">{calcTotals.cho.toFixed(1)}</td><td className="p-2 text-center text-gray-500 font-mono bg-gray-50/50">{activeTargetTab !== 'none' ? targetMacros.cho.toFixed(0) : '-'}</td><td className="p-2 text-center font-bold text-blue-600">{activeTargetTab !== 'none' ? `${getAchievedPct(calcTotals.cho, targetMacros.cho).toFixed(0)}%` : `${totalPerc.cho}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-red-700">Total PRO</td><td className="p-2 text-center font-bold text-gray-800">{calcTotals.pro.toFixed(1)}</td><td className="p-2 text-center text-gray-500 font-mono bg-gray-50/50">{activeTargetTab !== 'none' ? targetMacros.pro.toFixed(0) : '-'}</td><td className="p-2 text-center font-bold text-red-600">{activeTargetTab !== 'none' ? `${getAchievedPct(calcTotals.pro, targetMacros.pro).toFixed(0)}%` : `${totalPerc.pro}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-yellow-700">Total FAT</td><td className="p-2 text-center font-bold text-gray-800">{calcTotals.fat.toFixed(1)}</td><td className="p-2 text-center text-gray-500 font-mono bg-gray-50/50">{activeTargetTab !== 'none' ? targetMacros.fat.toFixed(0) : '-'}</td><td className="p-2 text-center font-bold text-yellow-600">{activeTargetTab !== 'none' ? `${getAchievedPct(calcTotals.fat, targetMacros.fat).toFixed(0)}%` : `${totalPerc.fat}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-green-700">Total Fiber</td><td className="p-2 text-center font-bold text-green-800">{calcTotals.fiber.toFixed(1)}</td><td className="p-2 text-center text-gray-400 bg-gray-50/50">-</td><td className="p-2 text-center text-gray-400">-</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            {activeTargetTab !== 'none' && (
+                                <div className="space-y-2 mb-4 animate-fade-in">
+                                    <ProgressBar current={calcTotals.cho} target={targetMacros.cho} label="CHO" unit="g" color="bg-blue-500" />
+                                    <ProgressBar current={calcTotals.pro} target={targetMacros.pro} label="PRO" unit="g" color="bg-red-500" />
+                                    <ProgressBar current={calcTotals.fat} target={targetMacros.fat} label="FAT" unit="g" color="bg-yellow-500" />
+                                </div>
+                            )}
+                            <div className="mt-4 pt-4 border-t border-gray-100 bg-gray-50 p-3 rounded-lg">
+                                 <div className="flex justify-center gap-2 mb-3">
+                                     <button onClick={() => setActiveTargetTab(activeTargetTab === 'gm' ? 'none' : 'gm')} className={`flex-1 px-3 py-1.5 rounded text-xs font-bold border transition ${activeTargetTab === 'gm' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200'}`}>Target (g)</button>
+                                     <button onClick={() => setActiveTargetTab(activeTargetTab === 'perc' ? 'none' : 'perc')} className={`flex-1 px-3 py-1.5 rounded text-xs font-bold border transition ${activeTargetTab === 'perc' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200'}`}>Target (%)</button>
+                                 </div>
+                                 {activeTargetTab === 'gm' && (
+                                     <div className="space-y-2 animate-fade-in">
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">CHO (g)</span> <input type="number" className="w-20 p-1 border rounded text-center text-sm font-bold text-blue-700" value={manualGm.cho} onChange={e => setManualGm({...manualGm, cho: parseFloat(e.target.value)})} /> <span className="text-[9px] text-gray-400">Rem: {(manualGm.cho - calcTotals.cho).toFixed(0)}g</span></div>
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">PRO (g)</span> <input type="number" className="w-20 p-1 border rounded text-center text-sm font-bold text-red-700" value={manualGm.pro} onChange={e => setManualGm({...manualGm, pro: parseFloat(e.target.value)})} /> <span className="text-[9px] text-gray-400">Rem: {(manualGm.pro - calcTotals.pro).toFixed(0)}g</span></div>
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">FAT (g)</span> <input type="number" className="w-20 p-1 border rounded text-center text-sm font-bold text-yellow-700" value={manualGm.fat} onChange={e => setManualGm({...manualGm, fat: parseFloat(e.target.value)})} /> <span className="text-[9px] text-gray-400">Rem: {(manualGm.fat - calcTotals.fat).toFixed(0)}g</span></div>
+                                         <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-center text-gray-500"><div>Target Sum: <strong>{(manualGm.cho*4 + manualGm.pro*4 + manualGm.fat*9).toFixed(0)}</strong> kcal</div><div className="text-[10px]">(Diff from Target Kcal: {((manualGm.cho*4 + manualGm.pro*4 + manualGm.fat*9) - targetKcal).toFixed(0)} kcal)</div></div>
+                                     </div>
+                                 )}
+                                 {activeTargetTab === 'perc' && (
+                                     <div className="space-y-2 animate-fade-in"><div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">CHO (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm font-bold text-blue-700" value={manualPerc.cho} onChange={e => setManualPerc({...manualPerc, cho: parseFloat(e.target.value)})} /></div><div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">PRO (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm font-bold text-red-700" value={manualPerc.pro} onChange={e => setManualPerc({...manualPerc, pro: parseFloat(e.target.value)})} /></div><div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">FAT (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm font-bold text-yellow-700" value={manualPerc.fat} onChange={e => setManualPerc({...manualPerc, fat: parseFloat(e.target.value)})} /></div><div className="text-xs text-center font-bold mt-1 text-gray-700">Total: {manualPerc.cho + manualPerc.pro + manualPerc.fat}%</div></div>
+                                 )}
+                            </div>
+                            {calcTotals.kcal > 0 && (
+                                <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200"><h4 className="font-bold text-xs text-yellow-800 uppercase mb-2 border-b border-yellow-200 pb-1">Fat Quality Breakdown</h4><div className="space-y-1 text-xs"><div className="flex justify-between items-center"><span className="text-orange-700">SFA (Sat)</span><div><span className="font-bold text-orange-900">{((calcTotals.kcalSat / calcTotals.kcal) * 100).toFixed(1)}%</span><span className="text-orange-600 ml-1">(&lt;10%)</span></div></div><div className="flex justify-between items-center"><span className="text-yellow-700">PUFA</span><div><span className="font-bold text-yellow-900">{((calcTotals.kcalPufa / calcTotals.kcal) * 100).toFixed(1)}%</span><span className="text-yellow-600 ml-1">(Up to 10%)</span></div></div><div className="flex justify-between items-center"><span className="text-yellow-700">MUFA</span><div><span className="font-bold text-yellow-900">{((calcTotals.kcalMufa / calcTotals.kcal) * 100).toFixed(1)}%</span><span className="text-yellow-600 ml-1">(Up to 20%)</span></div></div><div className="border-t border-yellow-200 mt-1 pt-1 flex justify-between font-bold"><span>Total Fat</span><span>{((calcTotals.fat * 9 / calcTotals.kcal) * 100).toFixed(1)}% <span className="text-[10px] font-normal text-gray-500">(20-25%)</span></span></div></div></div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="lg:col-span-6">
+                     <div className="card bg-white shadow-lg overflow-hidden border border-gray-200">
+                        <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center"><span className="font-bold text-gray-700">Exchanges Calculator</span><div className="text-xs text-gray-500">Inputs: {Object.values(servings).reduce((a: number, b: number) => a + b, 0)}</div></div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm border-collapse">
+                                <thead className="bg-[var(--color-primary)] text-white">
+                                    <tr><th className="p-3 text-left w-1/3">{t.mealPlannerTool.foodGroup}</th><th className="p-3 text-center w-24">{t.mealPlannerTool.serves}</th><th className="p-3 text-center">{t.mealPlannerTool.cho}</th><th className="p-3 text-center">{t.mealPlannerTool.pro}</th><th className="p-3 text-center">{t.mealPlannerTool.fat}</th><th className="p-3 text-center bg-green-700">Fiber</th><th className="p-3 text-center bg-[var(--color-primary-dark)]">{t.mealPlannerTool.kcal}</th></tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {VISIBLE_GROUPS.map(group => {
+                                        const isAutoFat = useFatBreakdown && group === 'fats';
+                                        const target = isAutoFat ? calculatedFatsSum : (servings[group] || 0);
+                                        const s = target; 
+                                        const f = GROUP_FACTORS[group];
+                                        const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
+                                        return (
+                                            <tr key={group} className={`${style.bg} border-b ${style.border} bg-opacity-30`}>
+                                                <td className={`p-3 font-medium transition-colors`}><div className={`flex items-center gap-2 text-base ${style.text}`}><span className="text-xl">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className={`ml-2 text-[10px] px-2 py-0.5 rounded border transition font-bold ${useFatBreakdown ? 'bg-yellow-200 border-yellow-300 text-yellow-800' : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200'}`} title="Toggle detailed fat types (SFA, MUFA, PUFA)">{useFatBreakdown ? 'Hide Details' : 'Show Breakdown'}</button>)}{isAutoFat && <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded ml-2">Auto-Sum</span>}</div></td>
+                                                <td className="p-3 text-center bg-white/50"><input type="number" min="0" step="0.5" disabled={isAutoFat} className={`w-20 p-2 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all ${isAutoFat ? 'bg-gray-100 font-bold text-gray-500 cursor-not-allowed' : s === 0 ? 'text-red-300 bg-white' : 'font-bold text-lg text-gray-800 bg-white shadow-sm'}`} value={s || ''} placeholder="0" onChange={(e) => updateServing(group, parseFloat(e.target.value) || 0)} /></td>
+                                                <RenderCell val={s * f.cho} factor={f.cho} label="CHO" /><RenderCell val={s * f.pro} factor={f.pro} label="PRO" /><RenderCell val={s * f.fat} factor={f.fat} label="FAT" /><RenderCell val={s * f.fiber} factor={f.fiber} label="g" /><RenderCell val={s * f.kcal} factor={f.kcal} label="Kcal" />
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                     </div>
+                </div>
+
+                <div className="lg:col-span-3 space-y-6 no-print">
+                    <div className="card bg-white shadow-xl sticky top-24 border-t-4 border-t-[var(--color-primary)]">
+                        <div className="p-4">
+                            <h3 className="font-bold text-lg text-gray-800 mb-6 flex items-center gap-2"><span className="text-2xl">📊</span> Smart Summary</h3>
+                            <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={t.kcal.kcalRequired} />
+                            <div className="mb-6"><MacroDonut cho={calcTotals.cho} pro={calcTotals.pro} fat={calcTotals.fat} totalKcal={calcTotals.kcal} /></div>
+                            <div className="space-y-1 mb-6"><ProgressBar current={calcTotals.kcal} target={targetKcal} label="Calorie Goal" unit="kcal" showPercent={true}/></div>
+                            <div className="overflow-hidden border border-gray-200 rounded-lg mb-4">
+                                <table className="w-full text-[10px]">
+                                    <thead className="bg-gray-100 text-gray-600 font-bold uppercase"><tr><th className="p-2 text-left">Item</th><th className="p-2 text-center">Total (g)</th><th className="p-2 text-center bg-gray-50">Target</th><th className="p-2 text-center">Achieved</th></tr></thead>
+                                    <tbody className="divide-y divide-gray-100 bg-white">
+                                        <tr><td className="p-2 font-bold text-blue-700">Total CHO</td><td className="p-2 text-center font-bold text-gray-800">{calcTotals.cho.toFixed(1)}</td><td className="p-2 text-center text-gray-500 font-mono bg-gray-50/50">{activeTargetTab !== 'none' ? targetMacros.cho.toFixed(0) : '-'}</td><td className="p-2 text-center font-bold text-blue-600">{activeTargetTab !== 'none' ? `${getAchievedPct(calcTotals.cho, targetMacros.cho).toFixed(0)}%` : `${totalPerc.cho}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-red-700">Total PRO</td><td className="p-2 text-center font-bold text-gray-800">{calcTotals.pro.toFixed(1)}</td><td className="p-2 text-center text-gray-500 font-mono bg-gray-50/50">{activeTargetTab !== 'none' ? targetMacros.pro.toFixed(0) : '-'}</td><td className="p-2 text-center font-bold text-red-600">{activeTargetTab !== 'none' ? `${getAchievedPct(calcTotals.pro, targetMacros.pro).toFixed(0)}%` : `${totalPerc.pro}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-yellow-700">Total FAT</td><td className="p-2 text-center font-bold text-gray-800">{calcTotals.fat.toFixed(1)}</td><td className="p-2 text-center text-gray-500 font-mono bg-gray-50/50">{activeTargetTab !== 'none' ? targetMacros.fat.toFixed(0) : '-'}</td><td className="p-2 text-center font-bold text-yellow-600">{activeTargetTab !== 'none' ? `${getAchievedPct(calcTotals.fat, targetMacros.fat).toFixed(0)}%` : `${totalPerc.fat}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-green-700">Total Fiber</td><td className="p-2 text-center font-bold text-green-800">{calcTotals.fiber.toFixed(1)}</td><td className="p-2 text-center text-gray-400 bg-gray-50/50">-</td><td className="p-2 text-center text-gray-400">-</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            {activeTargetTab !== 'none' && (
+                                <div className="space-y-2 mb-4 animate-fade-in">
+                                    <ProgressBar current={calcTotals.cho} target={targetMacros.cho} label="CHO" unit="g" color="bg-blue-500" />
+                                    <ProgressBar current={calcTotals.pro} target={targetMacros.pro} label="PRO" unit="g" color="bg-red-500" />
+                                    <ProgressBar current={calcTotals.fat} target={targetMacros.fat} label="FAT" unit="g" color="bg-yellow-500" />
+                                </div>
+                            )}
+                            <div className="mt-4 pt-4 border-t border-gray-100 bg-gray-50 p-3 rounded-lg">
+                                 <div className="flex justify-center gap-2 mb-3">
+                                     <button onClick={() => setActiveTargetTab(activeTargetTab === 'gm' ? 'none' : 'gm')} className={`flex-1 px-3 py-1.5 rounded text-xs font-bold border transition ${activeTargetTab === 'gm' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200'}`}>Target (g)</button>
+                                     <button onClick={() => setActiveTargetTab(activeTargetTab === 'perc' ? 'none' : 'perc')} className={`flex-1 px-3 py-1.5 rounded text-xs font-bold border transition ${activeTargetTab === 'perc' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200'}`}>Target (%)</button>
+                                 </div>
+                                 {activeTargetTab === 'gm' && (
+                                     <div className="space-y-2 animate-fade-in">
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">CHO (g)</span> <input type="number" className="w-20 p-1 border rounded text-center text-sm font-bold text-blue-700" value={manualGm.cho} onChange={e => setManualGm({...manualGm, cho: parseFloat(e.target.value)})} /> <span className="text-[9px] text-gray-400">Rem: {(manualGm.cho - calcTotals.cho).toFixed(0)}g</span></div>
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">PRO (g)</span> <input type="number" className="w-20 p-1 border rounded text-center text-sm font-bold text-red-700" value={manualGm.pro} onChange={e => setManualGm({...manualGm, pro: parseFloat(e.target.value)})} /> <span className="text-[9px] text-gray-400">Rem: {(manualGm.pro - calcTotals.pro).toFixed(0)}g</span></div>
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">FAT (g)</span> <input type="number" className="w-20 p-1 border rounded text-center text-sm font-bold text-yellow-700" value={manualGm.fat} onChange={e => setManualGm({...manualGm, fat: parseFloat(e.target.value)})} /> <span className="text-[9px] text-gray-400">Rem: {(manualGm.fat - calcTotals.fat).toFixed(0)}g</span></div>
+                                         <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-center text-gray-500"><div>Target Sum: <strong>{(manualGm.cho*4 + manualGm.pro*4 + manualGm.fat*9).toFixed(0)}</strong> kcal</div><div className="text-[10px]">(Diff from Target Kcal: {((manualGm.cho*4 + manualGm.pro*4 + manualGm.fat*9) - targetKcal).toFixed(0)} kcal)</div></div>
+                                     </div>
+                                 )}
+                                 {activeTargetTab === 'perc' && (
+                                     <div className="space-y-2 animate-fade-in"><div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">CHO (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm font-bold text-blue-700" value={manualPerc.cho} onChange={e => setManualPerc({...manualPerc, cho: parseFloat(e.target.value)})} /></div><div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">PRO (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm font-bold text-red-700" value={manualPerc.pro} onChange={e => setManualPerc({...manualPerc, pro: parseFloat(e.target.value)})} /></div><div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">FAT (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm font-bold text-yellow-700" value={manualPerc.fat} onChange={e => setManualPerc({...manualPerc, fat: parseFloat(e.target.value)})} /></div><div className="text-xs text-center font-bold mt-1 text-gray-700">Total: {manualPerc.cho + manualPerc.pro + manualPerc.fat}%</div></div>
+                                 )}
+                            </div>
+                            {calcTotals.kcal > 0 && (
+                                <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200"><h4 className="font-bold text-xs text-yellow-800 uppercase mb-2 border-b border-yellow-200 pb-1">Fat Quality Breakdown</h4><div className="space-y-1 text-xs"><div className="flex justify-between items-center"><span className="text-orange-700">SFA (Sat)</span><div><span className="font-bold text-orange-900">{((calcTotals.kcalSat / calcTotals.kcal) * 100).toFixed(1)}%</span><span className="text-orange-600 ml-1">(&lt;10%)</span></div></div><div className="flex justify-between items-center"><span className="text-yellow-700">PUFA</span><div><span className="font-bold text-yellow-900">{((calcTotals.kcalPufa / calcTotals.kcal) * 100).toFixed(1)}%</span><span className="text-yellow-600 ml-1">(Up to 10%)</span></div></div><div className="flex justify-between items-center"><span className="text-yellow-700">MUFA</span><div><span className="font-bold text-yellow-900">{((calcTotals.kcalMufa / calcTotals.kcal) * 100).toFixed(1)}%</span><span className="text-yellow-600 ml-1">(Up to 20%)</span></div></div><div className="border-t border-yellow-200 mt-1 pt-1 flex justify-between font-bold"><span>Total Fat</span><span>{((calcTotals.fat * 9 / calcTotals.kcal) * 100).toFixed(1)}% <span className="text-[10px] font-normal text-gray-500">(20-25%)</span></span></div></div></div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="lg:col-span-6">
+                     <div className="card bg-white shadow-lg overflow-hidden border border-gray-200">
+                        <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center"><span className="font-bold text-gray-700">Exchanges Calculator</span><div className="text-xs text-gray-500">Inputs: {Object.values(servings).reduce((a: number, b: number) => a + b, 0)}</div></div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm border-collapse">
+                                <thead className="bg-[var(--color-primary)] text-white">
+                                    <tr><th className="p-3 text-left w-1/3">{t.mealPlannerTool.foodGroup}</th><th className="p-3 text-center w-24">{t.mealPlannerTool.serves}</th><th className="p-3 text-center">{t.mealPlannerTool.cho}</th><th className="p-3 text-center">{t.mealPlannerTool.pro}</th><th className="p-3 text-center">{t.mealPlannerTool.fat}</th><th className="p-3 text-center bg-green-700">Fiber</th><th className="p-3 text-center bg-[var(--color-primary-dark)]">{t.mealPlannerTool.kcal}</th></tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {VISIBLE_GROUPS.map(group => {
+                                        const isAutoFat = useFatBreakdown && group === 'fats';
+                                        const target = isAutoFat ? calculatedFatsSum : (servings[group] || 0);
+                                        const s = target; 
+                                        const f = GROUP_FACTORS[group];
+                                        const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
+                                        return (
+                                            <tr key={group} className={`${style.bg} border-b ${style.border} bg-opacity-30`}>
+                                                <td className={`p-3 font-medium transition-colors`}><div className={`flex items-center gap-2 text-base ${style.text}`}><span className="text-xl">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className={`ml-2 text-[10px] px-2 py-0.5 rounded border transition font-bold ${useFatBreakdown ? 'bg-yellow-200 border-yellow-300 text-yellow-800' : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200'}`} title="Toggle detailed fat types (SFA, MUFA, PUFA)">{useFatBreakdown ? 'Hide Details' : 'Show Breakdown'}</button>)}{isAutoFat && <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded ml-2">Auto-Sum</span>}</div></td>
+                                                <td className="p-3 text-center bg-white/50"><input type="number" min="0" step="0.5" disabled={isAutoFat} className={`w-20 p-2 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all ${isAutoFat ? 'bg-gray-100 font-bold text-gray-500 cursor-not-allowed' : s === 0 ? 'text-red-300 bg-white' : 'font-bold text-lg text-gray-800 bg-white shadow-sm'}`} value={s || ''} placeholder="0" onChange={(e) => updateServing(group, parseFloat(e.target.value) || 0)} /></td>
+                                                <RenderCell val={s * f.cho} factor={f.cho} label="CHO" /><RenderCell val={s * f.pro} factor={f.pro} label="PRO" /><RenderCell val={s * f.fat} factor={f.fat} label="FAT" /><RenderCell val={s * f.fiber} factor={f.fiber} label="g" /><RenderCell val={s * f.kcal} factor={f.kcal} label="Kcal" />
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                     </div>
+                </div>
+
+                <div className="lg:col-span-3 space-y-6 no-print">
+                    <div className="card bg-white shadow-xl sticky top-24 border-t-4 border-t-[var(--color-primary)]">
+                        <div className="p-4">
+                            <h3 className="font-bold text-lg text-gray-800 mb-6 flex items-center gap-2"><span className="text-2xl">📊</span> Smart Summary</h3>
+                            <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={t.kcal.kcalRequired} />
+                            <div className="mb-6"><MacroDonut cho={calcTotals.cho} pro={calcTotals.pro} fat={calcTotals.fat} totalKcal={calcTotals.kcal} /></div>
+                            <div className="space-y-1 mb-6"><ProgressBar current={calcTotals.kcal} target={targetKcal} label="Calorie Goal" unit="kcal" showPercent={true}/></div>
+                            <div className="overflow-hidden border border-gray-200 rounded-lg mb-4">
+                                <table className="w-full text-[10px]">
+                                    <thead className="bg-gray-100 text-gray-600 font-bold uppercase"><tr><th className="p-2 text-left">Item</th><th className="p-2 text-center">Total (g)</th><th className="p-2 text-center bg-gray-50">Target</th><th className="p-2 text-center">Achieved</th></tr></thead>
+                                    <tbody className="divide-y divide-gray-100 bg-white">
+                                        <tr><td className="p-2 font-bold text-blue-700">Total CHO</td><td className="p-2 text-center font-bold text-gray-800">{calcTotals.cho.toFixed(1)}</td><td className="p-2 text-center text-gray-500 font-mono bg-gray-50/50">{activeTargetTab !== 'none' ? targetMacros.cho.toFixed(0) : '-'}</td><td className="p-2 text-center font-bold text-blue-600">{activeTargetTab !== 'none' ? `${getAchievedPct(calcTotals.cho, targetMacros.cho).toFixed(0)}%` : `${totalPerc.cho}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-red-700">Total PRO</td><td className="p-2 text-center font-bold text-gray-800">{calcTotals.pro.toFixed(1)}</td><td className="p-2 text-center text-gray-500 font-mono bg-gray-50/50">{activeTargetTab !== 'none' ? targetMacros.pro.toFixed(0) : '-'}</td><td className="p-2 text-center font-bold text-red-600">{activeTargetTab !== 'none' ? `${getAchievedPct(calcTotals.pro, targetMacros.pro).toFixed(0)}%` : `${totalPerc.pro}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-yellow-700">Total FAT</td><td className="p-2 text-center font-bold text-gray-800">{calcTotals.fat.toFixed(1)}</td><td className="p-2 text-center text-gray-500 font-mono bg-gray-50/50">{activeTargetTab !== 'none' ? targetMacros.fat.toFixed(0) : '-'}</td><td className="p-2 text-center font-bold text-yellow-600">{activeTargetTab !== 'none' ? `${getAchievedPct(calcTotals.fat, targetMacros.fat).toFixed(0)}%` : `${totalPerc.fat}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-green-700">Total Fiber</td><td className="p-2 text-center font-bold text-green-800">{calcTotals.fiber.toFixed(1)}</td><td className="p-2 text-center text-gray-400 bg-gray-50/50">-</td><td className="p-2 text-center text-gray-400">-</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            {activeTargetTab !== 'none' && (
+                                <div className="space-y-2 mb-4 animate-fade-in">
+                                    <ProgressBar current={calcTotals.cho} target={targetMacros.cho} label="CHO" unit="g" color="bg-blue-500" />
+                                    <ProgressBar current={calcTotals.pro} target={targetMacros.pro} label="PRO" unit="g" color="bg-red-500" />
+                                    <ProgressBar current={calcTotals.fat} target={targetMacros.fat} label="FAT" unit="g" color="bg-yellow-500" />
+                                </div>
+                            )}
+                            <div className="mt-4 pt-4 border-t border-gray-100 bg-gray-50 p-3 rounded-lg">
+                                 <div className="flex justify-center gap-2 mb-3">
+                                     <button onClick={() => setActiveTargetTab(activeTargetTab === 'gm' ? 'none' : 'gm')} className={`flex-1 px-3 py-1.5 rounded text-xs font-bold border transition ${activeTargetTab === 'gm' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200'}`}>Target (g)</button>
+                                     <button onClick={() => setActiveTargetTab(activeTargetTab === 'perc' ? 'none' : 'perc')} className={`flex-1 px-3 py-1.5 rounded text-xs font-bold border transition ${activeTargetTab === 'perc' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200'}`}>Target (%)</button>
+                                 </div>
+                                 {activeTargetTab === 'gm' && (
+                                     <div className="space-y-2 animate-fade-in">
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">CHO (g)</span> <input type="number" className="w-20 p-1 border rounded text-center text-sm font-bold text-blue-700" value={manualGm.cho} onChange={e => setManualGm({...manualGm, cho: parseFloat(e.target.value)})} /> <span className="text-[9px] text-gray-400">Rem: {(manualGm.cho - calcTotals.cho).toFixed(0)}g</span></div>
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">PRO (g)</span> <input type="number" className="w-20 p-1 border rounded text-center text-sm font-bold text-red-700" value={manualGm.pro} onChange={e => setManualGm({...manualGm, pro: parseFloat(e.target.value)})} /> <span className="text-[9px] text-gray-400">Rem: {(manualGm.pro - calcTotals.pro).toFixed(0)}g</span></div>
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">FAT (g)</span> <input type="number" className="w-20 p-1 border rounded text-center text-sm font-bold text-yellow-700" value={manualGm.fat} onChange={e => setManualGm({...manualGm, fat: parseFloat(e.target.value)})} /> <span className="text-[9px] text-gray-400">Rem: {(manualGm.fat - calcTotals.fat).toFixed(0)}g</span></div>
+                                         <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-center text-gray-500"><div>Target Sum: <strong>{(manualGm.cho*4 + manualGm.pro*4 + manualGm.fat*9).toFixed(0)}</strong> kcal</div><div className="text-[10px]">(Diff from Target Kcal: {((manualGm.cho*4 + manualGm.pro*4 + manualGm.fat*9) - targetKcal).toFixed(0)} kcal)</div></div>
+                                     </div>
+                                 )}
+                                 {activeTargetTab === 'perc' && (
+                                     <div className="space-y-2 animate-fade-in"><div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">CHO (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm font-bold text-blue-700" value={manualPerc.cho} onChange={e => setManualPerc({...manualPerc, cho: parseFloat(e.target.value)})} /></div><div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">PRO (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm font-bold text-red-700" value={manualPerc.pro} onChange={e => setManualPerc({...manualPerc, pro: parseFloat(e.target.value)})} /></div><div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">FAT (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm font-bold text-yellow-700" value={manualPerc.fat} onChange={e => setManualPerc({...manualPerc, fat: parseFloat(e.target.value)})} /></div><div className="text-xs text-center font-bold mt-1 text-gray-700">Total: {manualPerc.cho + manualPerc.pro + manualPerc.fat}%</div></div>
+                                 )}
+                            </div>
+                            {calcTotals.kcal > 0 && (
+                                <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200"><h4 className="font-bold text-xs text-yellow-800 uppercase mb-2 border-b border-yellow-200 pb-1">Fat Quality Breakdown</h4><div className="space-y-1 text-xs"><div className="flex justify-between items-center"><span className="text-orange-700">SFA (Sat)</span><div><span className="font-bold text-orange-900">{((calcTotals.kcalSat / calcTotals.kcal) * 100).toFixed(1)}%</span><span className="text-orange-600 ml-1">(&lt;10%)</span></div></div><div className="flex justify-between items-center"><span className="text-yellow-700">PUFA</span><div><span className="font-bold text-yellow-900">{((calcTotals.kcalPufa / calcTotals.kcal) * 100).toFixed(1)}%</span><span className="text-yellow-600 ml-1">(Up to 10%)</span></div></div><div className="flex justify-between items-center"><span className="text-yellow-700">MUFA</span><div><span className="font-bold text-yellow-900">{((calcTotals.kcalMufa / calcTotals.kcal) * 100).toFixed(1)}%</span><span className="text-yellow-600 ml-1">(Up to 20%)</span></div></div><div className="border-t border-yellow-200 mt-1 pt-1 flex justify-between font-bold"><span>Total Fat</span><span>{((calcTotals.fat * 9 / calcTotals.kcal) * 100).toFixed(1)}% <span className="text-[10px] font-normal text-gray-500">(20-25%)</span></span></div></div></div>
                             )}
                         </div>
                     </div>
