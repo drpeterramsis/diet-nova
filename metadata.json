@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova *** IMP_Check71_v2.0.224",
-  "description": "Updated Smart Summary Targets, Macro Bars, Donut Legend, and Planner Table Layout.",
+  "name": "Diet-Nova Check_cloud_72_v2.0.225",
+  "description": "v2.0.225: Migrated Diet Templates to Supabase cloud database. v2.0.224: Updated Smart Summary Targets, Macro Bars, Donut Legend, and Planner Table Layout.",
   "requestFramePermissions": []
 }
