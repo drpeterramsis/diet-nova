@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova Check72_v2.0.226",
-  "description": "Integrated Cloud Diet Templates loading from Supabase diet_templates table.",
+  "name": "Diet-Nova Check72_v2.0.227",
+  "description": "Fixed Cloud Template mapping logic and nutrient key alignment.",
   "requestFramePermissions": []
 }

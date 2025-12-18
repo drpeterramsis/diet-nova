@@ -3,7 +3,7 @@
 
 Expert-level web application for clinical nutritionists and dietitians.
 
-## Version 2.0.226
+## Version 2.0.227
 
 ### Key Features
 - **Exchange Calculator**: Precision macro planning based on standardized food exchanges.
@@ -12,6 +12,12 @@ Expert-level web application for clinical nutritionists and dietitians.
 - **NFPE**: Nutrition-Focused Physical Examination checklist.
 - **Food Composition**: Detailed database for custom meal building.
 - **Cloud Diet Templates**: Diet templates are now managed via Supabase.
+
+---
+
+## Update History
+- **v2.0.227**: Fixed template mapping logic where cloud data wasn't populating the calculator fields properly (mapped `meat_lean_low` -> `meatLean` and `milk_high_whole` -> `milkWhole`).
+- **v2.0.226**: Initial Supabase integration for diet templates.
 
 ---
 
@@ -50,7 +56,7 @@ ALTER TABLE diet_templates ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public read access" ON diet_templates FOR SELECT USING (true);
 ```
 
-### Mapping Logic
+### Mapping Logic (Verified v2.0.227)
 The application maps the database columns to the following internal exchange keys:
 - `starch` -> `starch`
 - `vegetables` -> `veg`
