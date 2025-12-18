@@ -1,7 +1,8 @@
+
 {
   "name": "diet-nova",
   "private": true,
-  "version": "2.0.59",
+  "version": "2.0.226",
   "type": "module",
   "scripts": {
     "dev": "vite",

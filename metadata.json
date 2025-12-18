@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova Check72_v2.0.225",
-  "description": "Updated Exchange Library with full Balanced Diet CSV data and aligned serving keys.",
+  "name": "Diet-Nova Check72_v2.0.226",
+  "description": "Integrated Cloud Diet Templates loading from Supabase diet_templates table.",
   "requestFramePermissions": []
 }
