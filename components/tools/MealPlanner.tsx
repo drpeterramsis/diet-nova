@@ -143,7 +143,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         if (error) throw error;
 
         if (data) {
-          // Transform flat rows into DietType hierarchy
+          // Transform flat SQL rows into DietType hierarchy
           const transformed: Record<string, DietType> = {};
           data.forEach(row => {
             const dietTypeId = row.diet_type.toLowerCase().replace(/\s+/g, '_');
@@ -158,23 +158,25 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
               transformed[dietTypeId].distributions.push(dist);
             }
             
+            // MAP ALL FIELDS EXPLICITLY TO INTERNAL KEYS
             dist.rows.push({
               kcal: row.kcal,
               exchanges: {
-                starch: Number(row.starch),
-                veg: Number(row.vegetables),
-                fruit: Number(row.fruits),
-                legumes: Number(row.legumes),
-                milkLow: Number(row.milk_skimmed_low),
-                milkMed: Number(row.milk_medium),
-                milkFull: Number(row.milk_high_whole),
-                meatLow: Number(row.meat_lean_low),
-                meatMed: Number(row.meat_medium),
-                meatHigh: Number(row.meat_high),
-                fatsSat: Number(row.fat_sat),
-                fatsMufa: Number(row.fat_mufa),
-                fatsPufa: Number(row.fat_pufa),
-                sugar: Number(row.sugar)
+                starch: Number(row.starch || 0),
+                veg: Number(row.vegetables || 0),
+                fruit: Number(row.fruits || 0),
+                legumes: Number(row.legumes || 0),
+                // Standardizing naming conventions:
+                milkSkim: Number(row.milk_skimmed_low || 0),
+                milkLow: Number(row.milk_medium || 0),
+                milkWhole: Number(row.milk_high_whole || 0),
+                meatLean: Number(row.meat_lean_low || 0),
+                meatMed: Number(row.meat_medium || 0),
+                meatHigh: Number(row.meat_high || 0),
+                fatsSat: Number(row.fat_sat || 0),
+                fatsMufa: Number(row.fat_mufa || 0),
+                fatsPufa: Number(row.fat_pufa || 0),
+                sugar: Number(row.sugar || 0)
               }
             });
           });
@@ -377,22 +379,26 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       }
 
       setTargetKcal(templateKcal);
-      setUseFatBreakdown(true); 
       
-      const newServings = { ...servings };
+      // Initialize with zeros to ensure previous manual fields are cleared
+      const newServings = BASE_GROUPS.reduce((acc, group) => ({ ...acc, [group]: 0 }), {});
+      
       Object.keys(plan.exchanges).forEach(key => {
-          newServings[key] = (plan.exchanges as any)[key];
+          (newServings as any)[key] = (plan.exchanges as any)[key];
       });
       
+      // Auto-toggle breakdown if template uses specific fats
       if (plan.exchanges.fatsSat || plan.exchanges.fatsMufa || plan.exchanges.fatsPufa) {
-          newServings['fats'] = 0;
+          setUseFatBreakdown(true);
+          newServings['fats'] = 0; // Total fats is calculated from breakdown
+      } else {
+          setUseFatBreakdown(false);
       }
 
       setServings(newServings);
       const dietName = selectedDiet?.name || "Template";
       const distName = selectedDistribution.label;
-      const toastContent = `${dietName} (${distName}) - ${templateKcal} kcal`;
-      setStatusMsg(toastContent);
+      setStatusMsg(`${dietName} (${distName}) - ${templateKcal} kcal applied.`);
       setTimeout(() => setStatusMsg(''), 3000);
   };
 
@@ -631,7 +637,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                 <div className="flex-grow">
                                     <label className="text-[10px] text-gray-500 font-bold block mb-1">Kcal</label>
                                     <select className="w-full p-2 border rounded text-xs bg-gray-50" value={templateKcal} onChange={(e) => setTemplateKcal(Number(e.target.value))}>
-                                        {[1200, 1400, 1600, 1800, 2000, 2200, 2400].map(k => <option key={k} value={k}>{k}</option>)}
+                                        {[1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800, 3000].map(k => <option key={k} value={k}>{k}</option>)}
                                     </select>
                                 </div>
                                 <button onClick={applyTemplate} className="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-blue-700">Load</button>

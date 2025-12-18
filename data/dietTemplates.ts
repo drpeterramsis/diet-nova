@@ -1,8 +1,7 @@
 
 /**
  * Diet Template Data Structure
- * v2.0.225 - Data migrated to Supabase 'diet_templates' table.
- * Local fallback removed.
+ * v2.0.226 - Standardized exchange keys to match MealPlanner constants.
  */
 
 export interface DietPlanRow {
@@ -12,10 +11,10 @@ export interface DietPlanRow {
         veg: number;
         fruit: number;
         legumes: number;
-        milkLow: number;
-        milkMed: number;
-        milkFull: number;
-        meatLow: number;
+        milkSkim: number; // Mapped from milk_skimmed_low
+        milkLow: number;  // Mapped from milk_medium
+        milkWhole: number; // Mapped from milk_high_whole
+        meatLean: number; // Mapped from meat_lean_low
         meatMed: number;
         meatHigh: number;
         fatsSat: number;
@@ -36,6 +35,3 @@ export interface DietType {
     name: string;
     distributions: DietDistribution[];
 }
-
-// Previously held local dietTemplates array. 
-// Now managed via fetch in MealPlanner.tsx from 'diet_templates' table.
