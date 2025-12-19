@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ProgressBar, MacroDonut } from '../Visuals';
@@ -295,10 +294,10 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       return (servings['fatsPufa'] || 0) + (servings['fatsMufa'] || 0) + (servings['fatsSat'] || 0);
   }, [servings]);
 
-  // Fix: Explicitly handle arithmetic with verified number types to avoid arithmetic operation errors on line 381
+  // Fix: Explicitly handle arithmetic with verified number types to avoid arithmetic operation errors
   const calcTotals = useMemo(() => {
-    let cho = 0, pro = 0, fat = 0, fiber = 0, kcal = 0;
-    let kcalPufa = 0, kcalMufa = 0, kcalSat = 0;
+    let cho: number = 0, pro: number = 0, fat: number = 0, fiber: number = 0, kcal: number = 0;
+    let kcalPufa: number = 0, kcalMufa: number = 0, kcalSat: number = 0;
 
     for (const g of BASE_GROUPS) {
       let s = servings[g] || 0;
@@ -310,7 +309,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
       const factor = GROUP_FACTORS[g];
       if (factor) {
-          const sNum = Number(s);
+          const sNum: number = Number(s);
           cho += sNum * Number(factor.cho);
           pro += sNum * Number(factor.pro);
           fat += sNum * Number(factor.fat);
@@ -333,29 +332,30 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       }
   }, [calcTotals]);
 
-  // Fix for Error in file components/tools/MealPlanner.tsx on line 381: Explicitly handle arithmetic with verified number types using for...of loops and explicit Number casting for better narrowing
+  // Fix for Error in file components/tools/MealPlanner.tsx: Explicitly handle arithmetic with verified number types using for...of loops and explicit Number casting for better narrowing
   const distTotals = useMemo(() => {
-      let cho = 0, pro = 0, fat = 0, fiber = 0, kcal = 0;
+      let cho: number = 0, pro: number = 0, fat: number = 0, fiber: number = 0, kcal: number = 0;
       for (const g of VISIBLE_GROUPS) {
           const factor = GROUP_FACTORS[g];
           if (factor) {
-              const f_cho = Number(factor.cho);
-              const f_pro = Number(factor.pro);
-              const f_fat = Number(factor.fat);
-              const f_fiber = Number(factor.fiber);
-              const f_kcal = Number(factor.kcal);
+              const f_cho: number = Number(factor.cho);
+              const f_pro: number = Number(factor.pro);
+              const f_fat: number = Number(factor.fat);
+              const f_fiber: number = Number(factor.fiber);
+              const f_kcal: number = Number(factor.kcal);
 
               for (const m of MEALS) {
                   const groupDist = (distribution as Record<string, Record<string, number>>)[g];
                   let s = groupDist ? Number(groupDist[m] || 0) : 0;
                   if (useFatBreakdown && g === 'fats') s = 0; 
                   
-                  const sNum = Number(s);
-                  cho += sNum * f_cho;
-                  pro += sNum * f_pro;
-                  fat += sNum * f_fat;
-                  fiber += sNum * f_fiber;
-                  kcal += sNum * f_kcal;
+                  const sNum: number = Number(s);
+                  // Added explicit parens and type safety for arithmetic
+                  cho += (sNum * f_cho);
+                  pro += (sNum * f_pro);
+                  fat += (sNum * f_fat);
+                  fiber += (sNum * f_fiber);
+                  kcal += (sNum * f_kcal);
               }
           }
       }
@@ -822,7 +822,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             <tbody className="divide-y divide-gray-100">
                                 {VISIBLE_GROUPS.map(group => {
                                     const isAutoFat = useFatBreakdown && group === 'fats';
-                                    let displayDistributions: Record<string, number> = distribution[group] || {};
+                                    let displayDistributions: Record<string, number> = (distribution as any)[group] || {};
                                     if (isAutoFat) {
                                         displayDistributions = {};
                                         MEALS.forEach(m => { displayDistributions[m] = (distribution['fatsPufa']?.[m] || 0) + (distribution['fatsMufa']?.[m] || 0) + (distribution['fatsSat']?.[m] || 0); });

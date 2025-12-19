@@ -1,6 +1,6 @@
-
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useLanguage } from "../../contexts/LanguageContext";
+// Fixed incorrect import path from "../../data/mealCreatorDatabase" to "../../data/mealCreatorData"
 import { mealCreatorDatabase, FoodItem } from "../../data/mealCreatorData";
 import { MacroDonut, ProgressBar } from "../Visuals";
 import { supabase } from "../../lib/supabase";
@@ -73,7 +73,9 @@ const ALT_OPTIONS = ['main', ...Array.from({length: 10}, (_, i) => `Alt ${i+1}`)
 // v2.0.229: Refined Regex to detect text like "/" or "(150 gm)" or "(1)"
 const REGEX_HIGHLIGHT = /(\/|\(.*?\))/g;
 
-// v2.0.229: Updated render highlighted text to include red color for "/" and brackets in search results
+/**
+ * v2.0.229: Updated render highlighted text to include red color for "/" and brackets in search results
+ */
 const renderHighlightedText = (text: string) => {
     const parts = text.split(REGEX_HIGHLIGHT);
     return (
@@ -159,7 +161,7 @@ const RichTextEditorModal: React.FC<{
                 {/* Toolbar */}
                 <div className="p-2 border-b flex gap-1 flex-wrap bg-gray-50">
                     <button onClick={() => execCmd('bold')} className="p-1.5 min-w-[30px] rounded hover:bg-gray-200 font-bold border border-gray-300" title="Bold">B</button>
-                    <button onClick={() => execCmd('italic')} className="p-1.5 min-w-[30px] rounded hover:bg-gray-200 italic border border-gray-300" title="Italic">I</button>
+                    <button onClick={() => execCmd('italic')} className="p-1.5 min-w-[30px] rounded hover:bg-gray-200 italic border border-gray-300" title="Underline">I</button>
                     <button onClick={() => execCmd('underline')} className="p-1.5 min-w-[30px] rounded hover:bg-gray-200 underline border border-gray-300" title="Underline">U</button>
                     <div className="w-px h-6 bg-gray-300 mx-1"></div>
                     {/* Colors */}
@@ -279,6 +281,82 @@ const BulkFormatModal: React.FC<{
     );
 };
 
+// --- PRINT OPTIONS MODAL (NEW v2.0.230) ---
+const PrintOptionsModal: React.FC<{
+    onConfirm: (options: PrintOptions) => void;
+    onClose: () => void;
+    isWeek: boolean;
+}> = ({ onConfirm, onClose, isWeek }) => {
+    const [options, setOptions] = useState<PrintOptions>({
+        showServes: true,
+        showKcal: true,
+        showNutritionTable: true,
+        showAlternativesInTable: true
+    });
+
+    return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[110] p-4 backdrop-blur-sm no-print">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in border border-blue-100">
+                <div className="p-5 bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex justify-between items-center">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                        <span>🖨️</span> {isWeek ? 'Weekly' : 'Daily'} Print Options
+                    </h3>
+                    <button onClick={onClose} className="text-white/70 hover:text-white transition">✕</button>
+                </div>
+                
+                <div className="p-6 space-y-4">
+                    <p className="text-sm text-gray-500 font-medium border-b border-gray-100 pb-2">Select items to display in the printed report:</p>
+                    
+                    <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm cursor-pointer transition">
+                        <input type="checkbox" checked={options.showServes} onChange={e => setOptions({...options, showServes: e.target.checked})} className="w-5 h-5 rounded text-blue-600" />
+                        <div>
+                            <span className="block font-bold text-gray-800">Serves Amount</span>
+                            <span className="text-[10px] text-gray-500">Display "1.0 sv" next to items</span>
+                        </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-sm cursor-pointer transition">
+                        <input type="checkbox" checked={options.showKcal} onChange={e => setOptions({...options, showKcal: e.target.checked})} className="w-5 h-5 rounded text-blue-600" />
+                        <div>
+                            <span className="block font-bold text-gray-800">Calories (per item)</span>
+                            <span className="text-[10px] text-gray-500">Display item kcal in list</span>
+                        </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-3 rounded-xl border border-blue-50 bg-blue-50/30 hover:bg-white hover:shadow-sm cursor-pointer transition">
+                        <input type="checkbox" checked={options.showNutritionTable} onChange={e => setOptions({...options, showNutritionTable: e.target.checked})} className="w-5 h-5 rounded text-blue-600" />
+                        <div>
+                            <span className="block font-bold text-blue-900">Detailed Nutrition Table</span>
+                            <span className="text-[10px] text-blue-600/70">Show breakdown of Calories, Carbs, Protein, Fat per meal</span>
+                        </div>
+                    </label>
+
+                    {options.showNutritionTable && (
+                        <label className="flex items-center gap-3 ml-8 p-2 rounded-lg bg-gray-50 hover:bg-white cursor-pointer transition border border-dashed border-gray-200">
+                            <input type="checkbox" checked={options.showAlternativesInTable} onChange={e => setOptions({...options, showAlternativesInTable: e.target.checked})} className="w-4 h-4 rounded text-blue-600" />
+                            <div>
+                                <span className="block font-medium text-xs text-gray-700">Include Alternatives in Table</span>
+                            </div>
+                        </label>
+                    )}
+                </div>
+
+                <div className="p-4 bg-gray-50 border-t flex gap-3">
+                    <button onClose={onClose} className="flex-1 py-3 text-gray-600 font-bold hover:bg-gray-200 rounded-xl transition">Cancel</button>
+                    <button onClick={() => onConfirm(options)} className="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-200 transition transform active:scale-95">Prepare Print</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+interface PrintOptions {
+    showServes: boolean;
+    showKcal: boolean;
+    showNutritionTable: boolean;
+    showAlternativesInTable: boolean;
+}
+
 const MealCreator: React.FC<MealCreatorProps> = ({ 
     initialLoadId, 
     autoOpenLoad, 
@@ -325,6 +403,13 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printWeekMode, setPrintWeekMode] = useState(false); 
+  const [printOptions, setPrintOptions] = useState<PrintOptions>({
+      showServes: true,
+      showKcal: true,
+      showNutritionTable: true,
+      showAlternativesInTable: true
+  });
+  
   const [printSettings, setPrintSettings] = useState({
       doctorName: '',
       clinicName: 'Diet-Nova Clinic',
@@ -546,19 +631,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({
       });
   };
 
-  const toggleGroupSelection = (mealTime: string, group: string, status: boolean) => {
-      setWeeklyPlan(prev => {
-          const dayData = prev[currentDay];
-          const newList = dayData.items[mealTime].map(item => 
-              item.optionGroup === group ? { ...item, selected: status } : item
-          );
-          return {
-              ...prev,
-              [currentDay]: { ...dayData, items: { ...dayData.items, [mealTime]: newList } }
-          };
-      });
-  };
-
   const resetPlanner = () => {
       if(!confirm("Clear all days?")) return;
       setWeeklyPlan({ 1: { items: MEAL_TIMES.reduce((acc, time) => ({ ...acc, [time]: [] }), {}), meta: {} } });
@@ -592,7 +664,9 @@ const MealCreator: React.FC<MealCreatorProps> = ({
       }
   };
 
-  // v2.0.229: Synchronized bulk formatting for brackets and slashes
+  /**
+   * v2.0.229: Synchronized bulk formatting for brackets and slashes
+   */
   const handleBulkFormat = (options: { bracketColor: string, isBold: boolean, fontSize: string, applyToAllDays: boolean }) => {
       setWeeklyPlan(prev => {
           const newPlan = JSON.parse(JSON.stringify(prev)); 
@@ -641,15 +715,15 @@ const MealCreator: React.FC<MealCreatorProps> = ({
         if (Array.isArray(mealList)) {
             mealList.forEach((item: PlannerItem) => {
                 if (item.selected) { 
-                    const s = item.serves;
+                    const s = Number(item.serves);
                     totalServes += s;
-                    totalCHO += item.cho * s;
-                    totalProtein += item.protein * s;
-                    totalFat += item.fat * s;
-                    totalFiber += item.fiber * s;
-                    totalKcal += item.kcal * s;
+                    totalCHO += Number(item.cho) * s;
+                    totalProtein += Number(item.protein) * s;
+                    totalFat += Number(item.fat) * s;
+                    totalFiber += Number(item.fiber) * s;
+                    totalKcal += Number(item.kcal) * s;
                     let key = GROUP_MAPPING[item.group] || item.group;
-                    if (item.group.includes("Fat")) key = 'fats';
+                    if (item.group && typeof item.group === 'string' && item.group.includes("Fat")) key = 'fats';
                     usedExchanges[key] = (usedExchanges[key] || 0) + s;
                 }
             });
@@ -679,6 +753,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           { key: 'starch', label: 'Starch' }, { key: 'fruit', label: 'Fruits' }, { key: 'veg', label: 'Vegetables' },
           { key: 'meatLean', label: 'Lean Meat' }, { key: 'meatMed', label: 'Med Meat' }, { key: 'meatHigh', label: 'High Meat' },
           { key: 'milkSkim', label: 'Skim Milk' }, { key: 'milkLow', label: 'Low Milk' }, { key: 'milkWhole', label: 'Full Milk' },
+          { key: 'milkSkim', label: 'Skim Milk' }, { key: 'milkLow', label: 'Low Milk' }, { key: 'milkWhole', label: 'Full Milk' },
           { key: 'legumes', label: 'Legumes' }, { key: 'sugar', label: 'Sugar' }, { key: 'fats', label: 'Fats' },
       ];
       return groups.map(g => {
@@ -697,10 +772,10 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           const items = dayData.items[time] || [];
           const meta = dayData.meta[time] || { timeStart: '', timeEnd: '', notes: '' };
           const stats = items.filter(i => i.selected).reduce((acc, i) => ({
-              kcal: acc.kcal + (i.kcal * i.serves),
-              cho: acc.cho + (i.cho * i.serves),
-              pro: acc.pro + (i.protein * i.serves),
-              fat: acc.fat + (i.fat * i.serves)
+              kcal: acc.kcal + (Number(i.kcal) * Number(i.serves)),
+              cho: acc.cho + (Number(i.cho) * Number(i.serves)),
+              pro: acc.pro + (Number(i.protein) * Number(i.serves)),
+              fat: acc.fat + (Number(i.fat) * Number(i.serves))
           }), { kcal: 0, cho: 0, pro: 0, fat: 0 });
           return { time, meta, stats, hasItems: items.length > 0 };
       });
@@ -791,9 +866,28 @@ const MealCreator: React.FC<MealCreatorProps> = ({
       return savedPlans.filter(plan => plan.name.toLowerCase().includes(q));
   }, [savedPlans, loadSearchQuery]);
 
-  const confirmPrint = () => {
+  /**
+   * v2.0.230: Enhanced Print logic to include options confirmation
+   */
+  const confirmPrint = (options: PrintOptions) => {
+      setPrintOptions(options);
       setShowPrintModal(false);
-      setTimeout(() => { window.print(); }, 300);
+      // Wait for React to update the DOM before triggering print
+      setTimeout(() => { 
+          window.print(); 
+      }, 300);
+  };
+
+  /**
+   * v2.0.230: Helper to calculate nutrient totals for a list of items
+   */
+  const calculateNutrientsForItems = (items: PlannerItem[]) => {
+      return items.reduce((acc, i) => ({
+          kcal: acc.kcal + (Number(i.kcal) * Number(i.serves)),
+          cho: acc.cho + (Number(i.cho) * Number(i.serves)),
+          pro: acc.pro + (Number(i.protein) * Number(i.serves)),
+          fat: acc.fat + (Number(i.fat) * Number(i.serves))
+      }), { kcal: 0, cho: 0, pro: 0, fat: 0 });
   };
 
   return (
@@ -801,6 +895,9 @@ const MealCreator: React.FC<MealCreatorProps> = ({
       <Toast message={statusMsg || syncMsg} />
       {editingItem && <RichTextEditorModal initialHtml={editingItem.initialHtml} onSave={saveEditorContent} onClose={() => setEditingItem(null)} />}
       {showBulkFormatModal && <BulkFormatModal onApply={handleBulkFormat} onClose={() => setShowBulkFormatModal(false)} />}
+      
+      {/* v2.0.230: Print Options Modal */}
+      {showPrintModal && <PrintOptionsModal isWeek={printWeekMode} onClose={() => setShowPrintModal(false)} onConfirm={confirmPrint} />}
 
       {!isEmbedded && activeVisit && (
           <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl mb-2 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm no-print">
@@ -854,8 +951,8 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           <button onClick={clearDay} className="ml-auto text-xs text-red-400 hover:text-red-600 px-3">Clear Day {currentDay}</button>
       </div>
 
-      {/* SINGLE DAY PRINT */}
-      <div className={`hidden print:block font-sans text-sm p-4 w-full ${printWeekMode ? 'hidden print:hidden' : ''}`}>
+      {/* SINGLE DAY PRINT (v2.0.230 REFINED) */}
+      <div className={`hidden print:block font-sans text-sm p-4 w-full h-full bg-white relative ${printWeekMode ? 'hidden print:hidden' : ''}`}>
           <div className="border-b-2 border-gray-800 pb-4 mb-6 flex justify-between items-start">
               <div><h1 className="text-2xl font-bold uppercase tracking-wider text-gray-900">{printSettings.clinicName}</h1><p className="text-sm text-gray-600 mt-1">{printSettings.doctorName}</p></div>
               <div className="text-right"><h2 className="text-xl font-bold text-[var(--color-primary-dark)]">Daily Meal Plan</h2><div className="text-sm mt-1">{printSettings.patientName && <div>Patient: <strong>{printSettings.patientName}</strong></div>}<div>Date: <strong>{new Date(printSettings.printDate).toLocaleDateString('en-GB')}</strong></div><div>Day: <strong>{currentDay}</strong></div></div></div>
@@ -868,57 +965,156 @@ const MealCreator: React.FC<MealCreatorProps> = ({
               <div><span className="block text-[10px] uppercase text-yellow-600 font-bold">Fat</span><span className="font-bold">{summary.totalFat.toFixed(0)}g</span></div>
           </div>
           <table className="w-full border-collapse border border-gray-300 mb-6">
-              <thead className="bg-gray-100 text-gray-800 print-color-exact"><tr><th className="p-2 border border-gray-300 text-left w-1/5">Meal Time</th><th className="p-2 border border-gray-300 text-left w-1/2">Menu Item</th><th className="p-2 border border-gray-300 text-center w-24">Amount</th><th className="p-2 border border-gray-300 text-center w-20">Kcal</th><th className="p-2 border border-gray-300 text-left">Notes</th></tr></thead>
+              <thead className="bg-gray-100 text-gray-800 print-color-exact">
+                <tr>
+                    <th className="p-2 border border-gray-300 text-left w-1/4">Meal Time</th>
+                    <th className="p-2 border border-gray-300 text-left">Menu Item</th>
+                    {printOptions.showServes && <th className="p-2 border border-gray-300 text-center w-20">Serves</th>}
+                    {printOptions.showKcal && <th className="p-2 border border-gray-300 text-center w-20">Kcal</th>}
+                    <th className="p-2 border border-gray-300 text-left w-1/4">Notes</th>
+                </tr>
+              </thead>
               <tbody>
                   {MEAL_TIMES.map(time => {
-                      const dayData = weeklyPlan[currentDay] || { items: {}, meta: {} };
+                      const dayData: DayPlan = weeklyPlan[currentDay] || { items: {} as Record<string, PlannerItem[]>, meta: {} as Record<string, MealMeta> };
                       const items = dayData.items[time]?.filter(i => i.selected && i.optionGroup === 'main') || [];
                       const meta = dayData.meta[time];
                       if (items.length === 0 && !meta?.notes) return null;
                       const altGroups = Array.from(new Set(dayData.items[time]?.map(i => i.optionGroup))).filter(g => g !== 'main');
+                      
+                      const durationStr = meta?.timeStart ? ` (${meta.timeStart}${meta.timeEnd ? ' - ' + meta.timeEnd : ''})` : '';
+
                       return (
                           <React.Fragment key={time}>
                               <tr className={`${MEAL_COLORS[time]?.split(' ')[0] || 'bg-gray-50'} print-color-exact`}>
-                                  <td className="p-2 border border-gray-300 font-bold align-top text-gray-900" rowSpan={items.length + (altGroups.length > 0 ? 1 : 0) + 1}><span className="mr-2 text-lg">{MEAL_ICONS[time]}</span> {time}</td>
+                                  <td className="p-2 border border-gray-300 font-bold align-top text-gray-900" rowSpan={items.length + (altGroups.length > 0 ? 1 : 0) + 1}>
+                                      <span className="mr-2 text-lg">{MEAL_ICONS[time]}</span> 
+                                      {time}
+                                      <span className="block text-[10px] font-normal text-gray-600 mt-1">{durationStr}</span>
+                                  </td>
                               </tr>
                               {items.map((item, idx) => (
                                   <tr key={`${time}-${idx}`}>
                                       <td className="p-2 border border-gray-300">{item.customDisplayName ? (<div dangerouslySetInnerHTML={{ __html: item.customDisplayName }} />) : (<span>{item.name}</span>)}</td>
-                                      <td className="p-2 border border-gray-300 text-center">{item.serves} sv</td>
-                                      <td className="p-2 border border-gray-300 text-center text-xs">{(item.kcal * item.serves).toFixed(0)}</td>
+                                      {printOptions.showServes && <td className="p-2 border border-gray-300 text-center">{item.serves} sv</td>}
+                                      {printOptions.showKcal && <td className="p-2 border border-gray-300 text-center text-xs">{(Number(item.kcal) * Number(item.serves)).toFixed(0)}</td>}
                                       {idx === 0 && (<td className="p-2 border border-gray-300 text-xs italic align-top" rowSpan={items.length}>{meta?.notes}</td>)}
                                   </tr>
                               ))}
-                              {altGroups.length > 0 && (<tr className="bg-yellow-50 print-color-exact"><td colSpan={4} className="p-2 border border-gray-300 text-xs"><strong>Alts:</strong> {altGroups.map(g => dayData.items[time].filter(i => i.optionGroup === g && i.selected).map(i => i.name).join(', ')).join(' | ')}</td></tr>)}
+                              {altGroups.length > 0 && (<tr className="bg-yellow-50 print-color-exact"><td colSpan={1 + (printOptions.showServes ? 1 : 0) + (printOptions.showKcal ? 1 : 0)} className="p-2 border border-gray-300 text-xs"><strong>Alts:</strong> {altGroups.map(g => dayData.items[time].filter(i => i.optionGroup === g && i.selected).map(i => i.name).join(', ')).join(' | ')}</td></tr>)}
                           </React.Fragment>
                       );
                   })}
               </tbody>
           </table>
+          
+          {/* v2.0.230: Detailed Nutrition Summary Table for Day Print */}
+          {printOptions.showNutritionTable && (
+              <div className="mb-6 break-inside-avoid">
+                  <h3 className="font-bold text-blue-800 text-sm mb-2 border-b-2 border-blue-100 pb-1 uppercase tracking-wider">Nutrition & Alternative Calculations</h3>
+                  <table className="w-full border-collapse border border-blue-200 text-xs text-center">
+                      <thead className="bg-blue-600 text-white print-color-exact">
+                          <tr>
+                              <th className="p-2 border border-blue-300 text-left">Meal / Option</th>
+                              <th className="p-2 border border-blue-300">Calories</th>
+                              <th className="p-2 border border-blue-300">CHO (g)</th>
+                              <th className="p-2 border border-blue-300">Prot (g)</th>
+                              <th className="p-2 border border-blue-300">Fat (g)</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                          {MEAL_TIMES.map(time => {
+                              const dayData: DayPlan = weeklyPlan[currentDay] || { items: {} as Record<string, PlannerItem[]>, meta: {} as Record<string, MealMeta> };
+                              const items = dayData.items[time] || [];
+                              if (items.length === 0) return null;
+                              
+                              const mainItems = items.filter(i => i.optionGroup === 'main' && i.selected);
+                              const mainStats = calculateNutrientsForItems(mainItems);
+                              
+                              const altGroups = Array.from(new Set(items.map(i => i.optionGroup))).filter(g => g !== 'main');
+
+                              return (
+                                  <React.Fragment key={time}>
+                                      <tr className="bg-gray-50 font-bold border-t-2 border-gray-300 print-color-exact">
+                                          <td className="p-1 border border-gray-300 text-left text-blue-800" colSpan={5}>{time}</td>
+                                      </tr>
+                                      <tr className="hover:bg-blue-50/50">
+                                          <td className="p-1 border border-gray-200 text-left pl-3 text-gray-500 font-medium">Main Option</td>
+                                          <td className="p-1 border border-gray-200 font-bold text-gray-700">{mainStats.kcal.toFixed(0)}</td>
+                                          <td className="p-1 border border-gray-200">{mainStats.cho.toFixed(1)}</td>
+                                          <td className="p-1 border border-gray-200">{mainStats.pro.toFixed(1)}</td>
+                                          <td className="p-1 border border-gray-200">{mainStats.fat.toFixed(1)}</td>
+                                      </tr>
+                                      {printOptions.showAlternativesInTable && altGroups.map(group => {
+                                          const altItems = items.filter(i => i.optionGroup === group && i.selected);
+                                          if (altItems.length === 0) return null;
+                                          const altStats = calculateNutrientsForItems(altItems);
+                                          return (
+                                              <tr key={group} className="text-gray-600 bg-white italic">
+                                                  <td className="p-1 border border-gray-100 text-left pl-6">↳ {group}</td>
+                                                  <td className="p-1 border border-gray-100">{altStats.kcal.toFixed(0)}</td>
+                                                  <td className="p-1 border border-gray-100">{altStats.cho.toFixed(1)}</td>
+                                                  <td className="p-1 border border-gray-100">{altStats.pro.toFixed(1)}</td>
+                                                  <td className="p-1 border border-gray-100">{altStats.fat.toFixed(1)}</td>
+                                              </tr>
+                                          );
+                                      })}
+                                  </React.Fragment>
+                              );
+                          })}
+                      </tbody>
+                  </table>
+              </div>
+          )}
+
           {printSettings.notes && (<div className="border border-gray-300 rounded p-3 mb-6 bg-white"><p className="text-sm whitespace-pre-wrap">{printSettings.notes}</p></div>)}
+          <div className="text-center text-[10px] text-gray-400 mt-10 border-t pt-2">Generated by Diet-Nova System</div>
       </div>
 
-      {/* WEEKLY TABLE PRINT */}
+      {/* WEEKLY TABLE PRINT (v2.0.230 REFINED) */}
       {printWeekMode && (
           <div className="hidden print:block font-sans text-xs w-full h-full absolute top-0 left-0 bg-white z-[9999] p-4">
               <div className="border-b-2 border-gray-800 pb-2 mb-4 flex justify-between items-start">
                   <div><h1 className="text-xl font-bold uppercase tracking-wider text-gray-900">{printSettings.clinicName}</h1><p className="text-xs text-gray-600">{printSettings.doctorName}</p></div>
                   <div className="text-right"><h2 className="text-lg font-bold text-[var(--color-primary-dark)]">Weekly Plan</h2><div className="text-xs">Date: <strong>{new Date(printSettings.printDate).toLocaleDateString('en-GB')}</strong></div></div>
               </div>
-              <table className="w-full border-collapse border border-gray-400 text-[10px]">
-                  <thead><tr className="bg-gray-200 text-gray-800 print-color-exact"><th className="border border-gray-400 p-1 w-16">Day</th>{MEAL_TIMES.map(time => (<th key={time} className={`border border-gray-400 p-1 ${MEAL_COLORS[time]?.split(' ')[0] || ''}`}>{MEAL_ICONS[time]} {time}</th>))}</tr></thead>
+              <table className="w-full border-collapse border border-gray-400 text-[9px] mb-8">
+                  <thead>
+                    <tr className="bg-gray-200 text-gray-800 print-color-exact">
+                        <th className="border border-gray-400 p-1 w-12">Day</th>
+                        {MEAL_TIMES.map(time => (<th key={time} className={`border border-gray-400 p-1 ${MEAL_COLORS[time]?.split(' ')[0] || ''}`}>{MEAL_ICONS[time]} {time}</th>))}
+                    </tr>
+                  </thead>
                   <tbody>
                       {[1, 2, 3, 4, 5, 6, 7].map(day => {
-                          const dayData = weeklyPlan[day] || { items: {}, meta: {} };
+                          const dayData: DayPlan = weeklyPlan[day] || { items: {} as Record<string, PlannerItem[]>, meta: {} as Record<string, MealMeta> };
                           if (!MEAL_TIMES.some(time => (dayData.items[time]?.length || 0) > 0)) return null;
                           return (
                               <tr key={day}>
-                                  <td className="border border-gray-400 p-1 font-bold text-center bg-gray-50 print-color-exact">Day {day}</td>
+                                  <td className="border border-gray-400 p-1 font-bold text-center bg-gray-50 print-color-exact">D{day}</td>
                                   {MEAL_TIMES.map(time => {
                                       const items = dayData.items[time]?.filter(i => i.selected && i.optionGroup === 'main') || [];
+                                      const meta = dayData.meta[time];
+                                      const duration = meta?.timeStart ? ` (${meta.timeStart}${meta.timeEnd ? '-' + meta.timeEnd : ''})` : '';
+                                      
                                       return (
-                                          <td key={time} className="border border-gray-400 p-1 align-top h-16">
-                                              {items.length > 0 ? (<ul className="list-disc list-inside leading-tight">{items.map((item, idx) => (<li key={idx} dangerouslySetInnerHTML={{ __html: item.customDisplayName || item.name }} />))}</ul>) : (<span className="text-gray-300">-</span>)}
+                                          <td key={time} className="border border-gray-400 p-1 align-top h-20">
+                                              {duration && <div className="text-[7px] text-gray-500 font-bold mb-1 border-b border-gray-100">{duration}</div>}
+                                              {items.length > 0 ? (
+                                                <ul className="list-none leading-tight space-y-1">
+                                                    {items.map((item, idx) => (
+                                                        <li key={idx}>
+                                                            <div className="font-bold" dangerouslySetInnerHTML={{ __html: item.customDisplayName || item.name }} />
+                                                            {(printOptions.showServes || printOptions.showKcal) && (
+                                                                <div className="text-[7px] text-blue-600 opacity-80 italic">
+                                                                    {printOptions.showServes && <span>{item.serves}sv </span>}
+                                                                    {printOptions.showKcal && <span>({(Number(item.kcal) * Number(item.serves)).toFixed(0)}kcal)</span>}
+                                                                </div>
+                                                            )}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                              ) : (<span className="text-gray-300">-</span>)}
                                           </td>
                                       );
                                   })}
@@ -927,6 +1123,57 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                       })}
                   </tbody>
               </table>
+
+              {/* v2.0.230: Weekly Macro Table */}
+              {printOptions.showNutritionTable && (
+                  <div className="break-inside-avoid">
+                       <h3 className="font-bold text-blue-900 text-xs mb-2 uppercase border-b-2 border-blue-900 pb-1">Weekly Macro Analysis (Main Selection)</h3>
+                       <table className="w-full border-collapse border border-gray-400 text-[8px] text-center">
+                           <thead>
+                               <tr className="bg-gray-800 text-white print-color-exact">
+                                   <th className="p-1 border border-gray-400">Day</th>
+                                   <th className="p-1 border border-gray-400">Total Kcal</th>
+                                   <th className="p-1 border border-gray-400">Avg CHO (g)</th>
+                                   <th className="p-1 border border-gray-400">Avg Prot (g)</th>
+                                   <th className="p-1 border border-gray-400">Avg Fat (g)</th>
+                               </tr>
+                           </thead>
+                           <tbody>
+                               {[1, 2, 3, 4, 5, 6, 7].map(day => {
+                                   const dayData = weeklyPlan[day];
+                                   if (!dayData) return null;
+                                   
+                                   let dKcal = 0, dCho = 0, dPro = 0, dFat = 0;
+                                   let hasItems = false;
+                                   
+                                   Object.values(dayData.items).forEach(list => {
+                                       const mains = list.filter(i => i.selected && i.optionGroup === 'main');
+                                       if(mains.length > 0) hasItems = true;
+                                       mains.forEach(i => {
+                                           dKcal += Number(i.kcal) * Number(i.serves);
+                                           dCho += Number(i.cho) * Number(i.serves);
+                                           dPro += Number(i.protein) * Number(i.serves);
+                                           dFat += Number(i.fat) * Number(i.serves);
+                                       });
+                                   });
+
+                                   if(!hasItems) return null;
+
+                                   return (
+                                       <tr key={day} className="hover:bg-gray-50">
+                                           <td className="p-1 border border-gray-300 font-bold bg-gray-50">Day {day}</td>
+                                           <td className="p-1 border border-gray-300 font-bold text-blue-800">{dKcal.toFixed(0)}</td>
+                                           <td className="p-1 border border-gray-300">{dCho.toFixed(1)}</td>
+                                           <td className="p-1 border border-gray-300">{dPro.toFixed(1)}</td>
+                                           <td className="p-1 border border-gray-300">{dFat.toFixed(1)}</td>
+                                       </tr>
+                                   );
+                               })}
+                           </tbody>
+                       </table>
+                  </div>
+              )}
+              <div className="text-center text-[8px] text-gray-400 mt-10 border-t pt-2">Generated by Diet-Nova System • All Rights Reserved</div>
           </div>
       )}
 
@@ -970,11 +1217,11 @@ const MealCreator: React.FC<MealCreatorProps> = ({
               <div>
                   <div className="mb-4 text-center"><h2 className="text-2xl font-bold">Daily Meal Plan - Day {currentDay}</h2></div>
                   {MEAL_TIMES.map((time) => {
-                      const dayData = weeklyPlan[currentDay] || { items: {}, meta: {} };
+                      const dayData: DayPlan = weeklyPlan[currentDay] || { items: {} as Record<string, PlannerItem[]>, meta: {} as Record<string, MealMeta> };
                       const items = dayData.items[time] || [];
                       const meta = dayData.meta[time] || { timeStart: '', timeEnd: '', notes: '' };
                       const isActive = activeMealTime === time;
-                      const sectionStats = items.filter(i => i.selected).reduce((acc, i) => ({ kcal: acc.kcal + (i.kcal * i.serves), cho: acc.cho + (i.cho * i.serves), protein: acc.protein + (i.protein * i.serves), fat: acc.fat + (i.fat * i.serves) }), { kcal: 0, cho: 0, protein: 0, fat: 0 });
+                      const sectionStats = items.filter(i => i.selected).reduce((acc, i) => ({ kcal: acc.kcal + (Number(i.kcal) * Number(i.serves)), cho: acc.cho + (Number(i.cho) * Number(i.serves)), protein: acc.protein + (Number(i.protein) * Number(i.serves)), fat: acc.fat + (Number(i.fat) * Number(i.serves)) }), { kcal: 0, cho: 0, protein: 0, fat: 0 });
                       const uniqueGroups = Array.from(new Set(items.map(i => i.optionGroup)));
                       return (
                         <div key={time} className={`rounded-xl shadow-sm border overflow-hidden mb-6 transition-all ${isActive ? 'border-yellow-400 ring-2 ring-yellow-100' : 'border-gray-200'}`}>
@@ -1001,7 +1248,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                                                                 <div className="text-[10px] text-gray-500 flex gap-2"><span>{item.group}</span><select value={item.optionGroup} onChange={(e) => updateItem(time, realIdx, 'optionGroup', e.target.value)} className="bg-transparent text-[9px] outline-none no-print">{ALT_OPTIONS.map(opt => (<option key={opt} value={opt}>{opt === 'main' ? 'Main' : opt}</option>))}</select></div>
                                                             </div>
                                                             <div className="flex items-center gap-1"><input type="number" step="0.25" value={item.serves} onChange={(e) => updateItem(time, realIdx, 'serves', Number(e.target.value))} className="w-12 p-1 border rounded text-center text-sm font-bold" /><span className="text-[10px] text-gray-500">sv</span></div>
-                                                            <div className="text-right w-16 font-mono font-bold text-gray-700 text-xs">{(item.kcal * item.serves).toFixed(0)}</div>
+                                                            <div className="text-right w-16 font-mono font-bold text-gray-700 text-xs">{(Number(item.kcal) * Number(item.serves)).toFixed(0)}</div>
                                                             <button onClick={() => removeFromPlan(time, realIdx)} className="text-red-400 text-lg no-print">×</button>
                                                         </div>
                                                     );
