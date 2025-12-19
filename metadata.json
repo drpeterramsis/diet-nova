@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova Check_cloud_75_v2.0.227",
-  "description": "v2.0.227: Dynamic Quick Diet Templates from cloud DB with status indicator. v2.0.226: Fixed cloud mapping for diet templates to ensure all fields are filed. v2.0.225: Migrated Diet Templates to Supabase cloud database.",
+  "name": "Diet-Nova Check_cloud_79_v2.0.229",
+  "description": "v2.0.229: Unified red highlighting for '/' and brackets in search, bulk format, and print. v2.0.228: Enhanced auto rich text bulk formatting to include forward slashes '/' along with bracketed numbers for better visual clarity in meal plans. v2.0.227: Dynamic Quick Diet Templates from cloud DB with status indicator. v2.0.226: Fixed cloud mapping for diet templates to ensure all fields are filed. v2.0.225: Migrated Diet Templates to Supabase cloud database.",
   "requestFramePermissions": []
 }

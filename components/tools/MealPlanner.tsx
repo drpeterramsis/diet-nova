@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ProgressBar, MacroDonut } from '../Visuals';
@@ -294,11 +295,12 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       return (servings['fatsPufa'] || 0) + (servings['fatsMufa'] || 0) + (servings['fatsSat'] || 0);
   }, [servings]);
 
+  // Fix: Explicitly handle arithmetic with verified number types to avoid arithmetic operation errors on line 381
   const calcTotals = useMemo(() => {
     let cho = 0, pro = 0, fat = 0, fiber = 0, kcal = 0;
     let kcalPufa = 0, kcalMufa = 0, kcalSat = 0;
 
-    BASE_GROUPS.forEach(g => {
+    for (const g of BASE_GROUPS) {
       let s = servings[g] || 0;
       if (useFatBreakdown) {
           if (g === 'fats') s = 0;
@@ -308,16 +310,17 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
       const factor = GROUP_FACTORS[g];
       if (factor) {
-          cho += s * factor.cho;
-          pro += s * factor.pro;
-          fat += s * factor.fat;
-          fiber += s * factor.fiber;
-          kcal += s * factor.kcal;
-          if (g === 'fatsPufa') kcalPufa += s * factor.fat * 9;
-          if (g === 'fatsMufa') kcalMufa += s * factor.fat * 9;
-          if (g === 'fatsSat') kcalSat += s * factor.fat * 9;
+          const sNum = Number(s);
+          cho += sNum * Number(factor.cho);
+          pro += sNum * Number(factor.pro);
+          fat += sNum * Number(factor.fat);
+          fiber += sNum * Number(factor.fiber);
+          kcal += sNum * Number(factor.kcal);
+          if (g === 'fatsPufa') kcalPufa += sNum * Number(factor.fat) * 9;
+          if (g === 'fatsMufa') kcalMufa += sNum * Number(factor.fat) * 9;
+          if (g === 'fatsSat') kcalSat += sNum * Number(factor.fat) * 9;
       }
-    });
+    }
     return { cho, pro, fat, fiber, kcal, kcalPufa, kcalMufa, kcalSat };
   }, [servings, useFatBreakdown]);
 
@@ -330,26 +333,32 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       }
   }, [calcTotals]);
 
+  // Fix for Error in file components/tools/MealPlanner.tsx on line 381: Explicitly handle arithmetic with verified number types using for...of loops and explicit Number casting for better narrowing
   const distTotals = useMemo(() => {
       let cho = 0, pro = 0, fat = 0, fiber = 0, kcal = 0;
-      VISIBLE_GROUPS.forEach(g => {
-          // Use a local factor variable to help TypeScript narrowing and resolve index access issues
+      for (const g of VISIBLE_GROUPS) {
           const factor = GROUP_FACTORS[g];
           if (factor) {
-              MEALS.forEach(m => {
-                  // Explicitly treat s as number to resolve arithmetic type ambiguity on nested lookups
-                  let s = Number(distribution[g]?.[m] || 0);
+              const f_cho = Number(factor.cho);
+              const f_pro = Number(factor.pro);
+              const f_fat = Number(factor.fat);
+              const f_fiber = Number(factor.fiber);
+              const f_kcal = Number(factor.kcal);
+
+              for (const m of MEALS) {
+                  const groupDist = (distribution as Record<string, Record<string, number>>)[g];
+                  let s = groupDist ? Number(groupDist[m] || 0) : 0;
                   if (useFatBreakdown && g === 'fats') s = 0; 
                   
-                  cho += s * factor.cho;
-                  pro += s * factor.pro;
-                  // Fix arithmetic errors on line 377
-                  fat += s * factor.fat;
-                  fiber += s * factor.fiber;
-                  kcal += s * factor.kcal;
-              });
+                  const sNum = Number(s);
+                  cho += sNum * f_cho;
+                  pro += sNum * f_pro;
+                  fat += sNum * f_fat;
+                  fiber += sNum * f_fiber;
+                  kcal += sNum * f_kcal;
+              }
           }
-      });
+      }
       return { cho, pro, fat, fiber, kcal };
   }, [distribution, useFatBreakdown, VISIBLE_GROUPS]);
 
