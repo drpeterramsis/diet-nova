@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova Check_cloud_80_v2.0.230",
-  "description": "v2.0.230: Fixed Day/Week print layouts. Added customizable print options for Serves, Kcal, and detailed Macro/Alternative tables. Added meal duration to printed output. v2.0.229: Unified red highlighting for '/' and brackets in search, bulk format, and print. v2.0.228: Enhanced auto rich text bulk formatting to include forward slashes '/' along with bracketed numbers for better visual clarity in meal plans. v2.0.227: Dynamic Quick Diet Templates from cloud DB with status indicator. v2.0.226: Fixed cloud mapping for diet templates to ensure all fields are filed. v2.0.225: Migrated Diet Templates to Supabase cloud database.",
+  "name": "Diet-Nova Check_cloud_81_v2.0.231",
+  "description": "v2.0.231: Added Select/Unselect All (Main only) for Day Menu. Added macro nutrient details for individual meals/alternatives for comparison. Added a General Instructions tab with rich text editing. Enhanced print options to show/hide planned kcal and include all alternatives even if unselected. Fixed planned kcal calculation to only include main meals.",
   "requestFramePermissions": []
 }

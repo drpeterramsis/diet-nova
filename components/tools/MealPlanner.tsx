@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ProgressBar, MacroDonut } from '../Visuals';
@@ -295,7 +296,16 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   }, [servings]);
 
   // Fix: Explicitly handle arithmetic with verified number types to avoid arithmetic operation errors
-  const calcTotals = useMemo(() => {
+  const calcTotals = useMemo<{
+    cho: number;
+    pro: number;
+    fat: number;
+    fiber: number;
+    kcal: number;
+    kcalPufa: number;
+    kcalMufa: number;
+    kcalSat: number;
+  }>(() => {
     let cho: number = 0, pro: number = 0, fat: number = 0, fiber: number = 0, kcal: number = 0;
     let kcalPufa: number = 0, kcalMufa: number = 0, kcalSat: number = 0;
 
@@ -332,8 +342,14 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       }
   }, [calcTotals]);
 
-  // Fix for Error in file components/tools/MealPlanner.tsx: Explicitly handle arithmetic with verified number types using for...of loops and explicit Number casting for better narrowing
-  const distTotals = useMemo(() => {
+  // Fix for Error: Explicitly handle arithmetic with verified number types using explicit type hints for useMemo
+  const distTotals = useMemo<{
+    cho: number;
+    pro: number;
+    fat: number;
+    fiber: number;
+    kcal: number;
+  }>(() => {
       let cho: number = 0, pro: number = 0, fat: number = 0, fiber: number = 0, kcal: number = 0;
       for (const g of VISIBLE_GROUPS) {
           const factor = GROUP_FACTORS[g];
@@ -834,7 +850,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                     const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
                                     return (
                                         <tr key={group} className={`${style.bg} bg-opacity-30 border-b border-gray-100`}>
-                                            <td className="p-2 font-medium border-r border-gray-200 sticky left-0 z-10 bg-white"><div className={`flex items-center gap-1.5 ${style.text}`}><span className="text-sm">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className={`ml-2 text-[8px] px-1.5 py-0.5 rounded border font-bold ${useFatBreakdown ? 'bg-yellow-200 text-yellow-800 border-yellow-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>{useFatBreakdown ? 'Hide' : 'Show'}</button>)}{isAutoFat && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded ml-1">Sum</span>}</div><div className="text-[10px] text-gray-500 font-normal no-print mt-1 ml-5 border-t border-black/10 pt-0.5">Total: <span className="font-bold">{target}</span></div></td>
+                                            <td className="p-2 font-medium border-r border-gray-200 sticky left-0 z-10 bg-white"><div className={`flex items-center gap-1.5 ${style.text}`}><span className="text-sm">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className={`ml-2 text-[8px] px-1.5 py-0.5 rounded border font-bold ${useFatBreakdown ? 'bg-yellow-200 text-yellow-800 border-yellow-300' : 'bg-gray-100 border-gray-200 text-gray-500 border-gray-200'}`}>{useFatBreakdown ? 'Hide' : 'Show'}</button>)}{isAutoFat && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded ml-1">Sum</span>}</div><div className="text-[10px] text-gray-500 font-normal no-print mt-1 ml-5 border-t border-black/10 pt-0.5">Total: <span className="font-bold">{target}</span></div></td>
                                             <td className={`p-2 text-center font-bold border-r-2 border-gray-300 ${isOver ? 'bg-red-50 text-red-600' : isComplete ? 'bg-gray-50 text-gray-300' : 'bg-white text-gray-600'}`}>{rem === 0 ? '-' : rem.toFixed(1)}</td>
                                             {MEALS.map(meal => (<td key={meal} className="p-1 text-center border-r border-gray-100">{isAutoFat ? (<div className="text-gray-500 font-bold text-xs">{displayDistributions[meal] > 0 ? displayDistributions[meal] : '-'}</div>) : (<input type="number" className={`w-full h-8 text-center bg-transparent focus:bg-blue-50 outline-none rounded hover:bg-gray-100 transition ${(displayDistributions?.[meal] || 0) === 0 ? 'text-gray-300' : 'text-black font-bold'}`} placeholder="-" value={displayDistributions?.[meal] || ''} onChange={(e) => updateDistribution(group, meal, parseFloat(e.target.value) || 0)} />)}</td>))}
                                         </tr>
