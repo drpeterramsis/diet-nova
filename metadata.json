@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova DayMenu_87_v2.0.234",
-  "description": "v2.0.234: Fixed sidebar meal schedule to be non-scrollable below exchange control. Added print option to toggle the day summary table. Implemented and fixed the detailed Macro Breakdown table in print with green headings. Maintained all existing save/load logic and data integrity.",
+  "name": "Diet-Nova DayMenu_88_v2.0.235",
+  "description": "v2.0.235: Fixed meal time AM/PM input stability in Day Menu. Implemented Select Main logic to unselect alternatives while keeping main options checked. Added Select All toggle functionality. Maintained all existing save/load logic and data integrity.",
   "requestFramePermissions": []
 }

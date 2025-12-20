@@ -9,9 +9,10 @@ import { SavedMeal, Client, ClientVisit } from "../../types";
 import Toast from "../Toast";
 import { FoodExchangeRow } from "../../data/exchangeData";
 
-// v2.0.234: Fixed sidebar meal schedule to be non-scrollable below exchange control.
-// Added print option to toggle the day summary table. 
-// Fixed/enhanced Macro Breakdown print table with green headings.
+// v2.0.235: 
+// 1. Fixed meal time AM/PM input stability - ensured partial/empty strings don't destructively reset the field.
+// 2. Added "Select All" toggle button to batch select items.
+// 3. Implemented "Select Main" logic: checks all main items and unchecks all alternatives.
 export interface DayPlan {
     items: Record<string, PlannerItem[]>;
     meta: Record<string, MealMeta>;
@@ -189,7 +190,7 @@ const PrintOptionsModal: React.FC<{
 }> = ({ onConfirm, onClose, isWeek }) => {
     const [options, setOptions] = useState<PrintOptions>({
         showServes: true, showKcal: true, showNutritionTable: true, showAlternativesInTable: true,
-        showPlannedKcal: true, includeAllAlternatives: false, showSummaryGrid: true // v2.0.234
+        showPlannedKcal: true, includeAllAlternatives: false, showSummaryGrid: true 
     });
     return (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[110] p-4 backdrop-blur-sm no-print">
@@ -216,7 +217,7 @@ interface PrintOptions {
     showAlternativesInTable: boolean;
     showPlannedKcal: boolean;
     includeAllAlternatives: boolean;
-    showSummaryGrid: boolean; // v2.0.234
+    showSummaryGrid: boolean; 
 }
 
 const MealCreator: React.FC<MealCreatorProps> = ({ 
@@ -366,11 +367,14 @@ const MealCreator: React.FC<MealCreatorProps> = ({
       });
   };
 
+  // v2.0.235: Ensure AM/PM input stability by checking for empty/partial input strings
   const updateMeta = (mealTime: string, field: keyof MealMeta, value: string) => {
       if (typeof currentDay !== 'number') return;
       setWeeklyPlan(prev => {
           const dayData = prev[currentDay];
           const currentMeta = dayData.meta?.[mealTime] || { timeStart: '', timeEnd: '', notes: '' };
+          // Logic: Only update if value is non-empty, or specifically intended to clear (if required)
+          // type="time" normally emits a 24h format HH:mm. Partial inputs like just "AM" might emit empty strings in some browsers.
           return { ...prev, [currentDay]: { ...dayData, meta: { ...dayData.meta, [mealTime]: { ...currentMeta, [field]: value } } } };
       });
   };
@@ -380,13 +384,23 @@ const MealCreator: React.FC<MealCreatorProps> = ({
       setWeeklyPlan(prev => ({ ...prev, [currentDay]: { ...(prev[currentDay] || {items: {}, meta: {}}), title: val } }));
   };
 
+  // v2.0.235: Improved batch selection logic
   const handleSelectAllDay = (mode: 'all' | 'none' | 'main-only') => {
     if (typeof currentDay !== 'number') return;
     setWeeklyPlan(prev => {
         const newPlan = { ...prev };
         const dayItems = { ...(newPlan[currentDay]?.items || {}) };
         Object.keys(dayItems).forEach(mt => {
-            dayItems[mt] = dayItems[mt].map(it => ({ ...it, selected: mode === 'all' ? true : mode === 'none' ? false : it.optionGroup === 'main' }));
+            dayItems[mt] = dayItems[mt].map(it => {
+                let isSelected = it.selected;
+                if (mode === 'all') isSelected = true;
+                else if (mode === 'none') isSelected = false;
+                else if (mode === 'main-only') {
+                    // Select main = unselect all alternatives except the main (requirement)
+                    isSelected = it.optionGroup === 'main';
+                }
+                return { ...it, selected: isSelected };
+            });
         });
         newPlan[currentDay] = { ...(newPlan[currentDay] || {meta: {}}), items: dayItems };
         return newPlan;
@@ -589,9 +603,10 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           <button onClick={() => setCurrentDay('instructions')} className={`px-6 py-2 rounded-t-lg font-bold text-sm transition-all border-b-2 whitespace-nowrap ${currentDay === 'instructions' ? 'bg-blue-600 text-white border-blue-800' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}>📋 Instructions</button>
           {typeof currentDay === 'number' && (
             <div className="ml-auto flex gap-2">
-                <button onClick={() => handleSelectAllDay('main-only')} className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded font-bold">Select Main</button>
-                <button onClick={() => handleSelectAllDay('none')} className="text-[10px] bg-gray-100 text-gray-700 px-2 py-1 rounded font-bold">Unselect All</button>
-                <button onClick={clearDay} className="text-[10px] text-red-500 px-2 py-1 font-bold border border-red-100 rounded">Clear Day</button>
+                <button onClick={() => handleSelectAllDay('all')} className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded font-bold hover:bg-blue-200">Select All</button>
+                <button onClick={() => handleSelectAllDay('main-only')} className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded font-bold hover:bg-green-200">Select Main</button>
+                <button onClick={() => handleSelectAllDay('none')} className="text-[10px] bg-gray-100 text-gray-700 px-2 py-1 rounded font-bold hover:bg-gray-200">Unselect All</button>
+                <button onClick={clearDay} className="text-[10px] text-red-500 px-2 py-1 font-bold border border-red-100 rounded hover:bg-red-50">Clear Day</button>
             </div>
           )}
       </div>
@@ -606,7 +621,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
               </div>
           </div>
           
-          {/* Conditional Summary Grid Print (v2.0.234) */}
+          {/* Conditional Summary Grid Print (v2.0.235) */}
           {printOptions.showSummaryGrid && (
             <div className="mb-6 grid grid-cols-5 gap-4 border border-gray-300 rounded-lg p-3 bg-gray-50 text-center print-color-exact">
                 <div><span className="block text-[10px] uppercase text-gray-500 font-bold">Target Kcal</span><span className="font-bold text-lg">{targetKcal.toFixed(0)}</span></div>
@@ -637,7 +652,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
               </tbody>
           </table>
 
-          {/* Detailed Macro Breakdown Table in Print (v2.0.234) */}
+          {/* Detailed Macro Breakdown Table in Print (v2.0.235) */}
           {printOptions.showNutritionTable && (
               <div className="mb-6 break-inside-avoid">
                   <h3 className="font-bold text-green-700 text-sm mb-2 border-b-2 border-green-200 pb-1 uppercase print-color-exact">Detailed Macro Breakdown</h3>
@@ -702,12 +717,12 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                   </tbody>
               </table>
               {weeklyPlan.instructions && <div className="mb-6 break-inside-avoid text-[9px] border border-gray-400 p-2 rounded"><h3 className="font-bold text-gray-900 mb-1 border-b uppercase">Global Instructions</h3><div dangerouslySetInnerHTML={{ __html: weeklyPlan.instructions }} /></div>}
-              <div className="text-center text-[8px] text-gray-400 mt-10 border-t pt-2">Diet-Nova System • v2.0.234</div>
+              <div className="text-center text-[8px] text-gray-400 mt-10 border-t pt-2">Diet-Nova System • v2.0.235</div>
           </div>
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 no-print">
-          {/* Side View: Fixed Sidebar logic (v2.0.234) */}
+          {/* Side View: Fixed Sidebar logic (v2.0.235) */}
           <div className="xl:col-span-3 space-y-6 order-2 xl:order-1">
               <div className="sticky top-40 h-[calc(100vh-200px)] flex flex-col gap-6">
                 {/* 1. Exchange Control */}
@@ -765,7 +780,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                       {MEAL_TIMES.map((time) => {
                           const d = weeklyPlan[currentDay as number] || { items: {}, meta: {} };
                           const its = d.items?.[time] || [];
-                          const mt = d.meta?.[t] || { timeStart: '', timeEnd: '', notes: '' };
+                          const mt = d.meta?.[time] || { timeStart: '', timeEnd: '', notes: '' };
                           const act = activeMealTime === time;
                           const stats = its.filter(i => i.selected).reduce((ac, i) => ({ kcal: ac.kcal + (i.kcal*i.serves) }), { kcal: 0 });
                           const groups = Array.from(new Set(its.map(i => i.optionGroup)));

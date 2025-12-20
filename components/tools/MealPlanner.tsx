@@ -333,11 +333,16 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   }, [servings, useFatBreakdown]);
 
   const totalPerc = useMemo(() => {
+      // Fix: Ensured kcal and values are treated as explicit numbers for arithmetic safety
       const k = Number(calcTotals.kcal) || 1;
+      const cNum = Number(calcTotals.cho);
+      const pNum = Number(calcTotals.pro);
+      const fNum = Number(calcTotals.fat);
+      
       return {
-          cho: ((Number(calcTotals.cho) * 4) / k * 100).toFixed(1),
-          pro: ((Number(calcTotals.pro) * 4) / k * 100).toFixed(1),
-          fat: ((Number(calcTotals.fat) * 9) / k * 100).toFixed(1),
+          cho: ((cNum * 4) / k * 100).toFixed(1),
+          pro: ((pNum * 4) / k * 100).toFixed(1),
+          fat: ((fNum * 9) / k * 100).toFixed(1),
       }
   }, [calcTotals]);
 
