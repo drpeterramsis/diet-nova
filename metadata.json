@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova DayMenu_85_v2.0.233",
-  "description": "v2.0.233: Added integrated Template Name field and Load button (📂) in Day Menu header to support saving/loading the full 7-day plan including global instructions. Fixed the 'Uncaught TypeError: Cannot read properties of undefined (reading Pre-Breakfast)' by implementing multi-layered optional chaining and fallback empty objects during state transitions. Preserved previous features: custom day titles (v2.0.232) and sidebar fixes.",
+  "name": "Diet-Nova DayMenu_87_v2.0.234",
+  "description": "v2.0.234: Fixed sidebar meal schedule to be non-scrollable below exchange control. Added print option to toggle the day summary table. Implemented and fixed the detailed Macro Breakdown table in print with green headings. Maintained all existing save/load logic and data integrity.",
   "requestFramePermissions": []
 }
