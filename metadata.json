@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova DayMenu_83_v2.0.232",
-  "description": "v2.0.232: Fixed Instructions page crash on Day Menu. Added a new Day Title field for each day in Day Menu, allowing custom labeling (e.g., 'Workout Day') which saves to templates and client visits. Fixed Meal Schedule sidebar table to prevent unwanted scrolling. Added Day Title to both single-day and weekly print reports.",
+  "name": "Diet-Nova DayMenu_85_v2.0.233",
+  "description": "v2.0.233: Added integrated Template Name field and Load button (📂) in Day Menu header to support saving/loading the full 7-day plan including global instructions. Fixed the 'Uncaught TypeError: Cannot read properties of undefined (reading Pre-Breakfast)' by implementing multi-layered optional chaining and fallback empty objects during state transitions. Preserved previous features: custom day titles (v2.0.232) and sidebar fixes.",
   "requestFramePermissions": []
 }

@@ -8,7 +8,7 @@ import { SavedMeal, Client, ClientVisit } from "../../types";
 import Toast from "../Toast";
 import { FoodExchangeRow } from "../../data/exchangeData";
 
-// v2.0.233: Updated DayPlan to include a custom title and added safety for undefined items/meta
+// v2.0.233: Full Day-Menu Save/Load integration & robust crash protection
 export interface DayPlan {
     items: Record<string, PlannerItem[]>;
     meta: Record<string, MealMeta>;
@@ -417,13 +417,13 @@ const MealCreator: React.FC<MealCreatorProps> = ({
       setShowBulkFormatModal(false);
   };
 
-  // v2.0.233: Fixed potential crash by ensuring currentDay is numeric for calculations and adding safety checks
+  // v2.0.233: Fixed crash by ensuring currentDay is numeric and adding safety checks for items access
   const summary = useMemo(() => {
     let totalServes = 0, totalCHO = 0, totalProtein = 0, totalFat = 0, totalFiber = 0, totalKcal = 0, mainOnlyKcal = 0;
     const usedExchanges: Record<string, number> = {};
     if (typeof currentDay !== 'number' || !weeklyPlan[currentDay]) return { totalServes, totalCHO, totalProtein, totalFat, totalFiber, totalKcal, mainOnlyKcal, usedExchanges };
     const dayData = weeklyPlan[currentDay];
-    if (!dayData.items) return { totalServes, totalCHO, totalProtein, totalFat, totalFiber, totalKcal, mainOnlyKcal, usedExchanges };
+    if (!dayData?.items) return { totalServes, totalCHO, totalProtein, totalFat, totalFiber, totalKcal, mainOnlyKcal, usedExchanges };
     
     Object.values(dayData.items).forEach((ml: any) => {
         if (!ml || !Array.isArray(ml)) return;
@@ -475,23 +475,56 @@ const MealCreator: React.FC<MealCreatorProps> = ({
   }, [weeklyPlan, currentDay]);
 
   const fetchPlans = async () => { if (!session) return; setIsLoadingPlans(true); try { const { data } = await supabase.from('saved_meals').select('*').eq('tool_type', 'day-planner').eq('user_id', session.user.id).order('created_at', { ascending: false }); if (data) setSavedPlans(data); } finally { setIsLoadingPlans(false); } };
+  
+  // v2.0.233: Comprehensive Save for Full Day-Menu
   const savePlan = async () => {
     if (activeVisit && !isEmbedded) {
-        setStatusMsg("Saving...");
-        try { await supabase.from('client_visits').update({ day_plan_data: { weeklyPlan, targetKcal } }).eq('id', activeVisit.visit.id); setStatusMsg("Visit Saved!"); } catch (err: any) { setStatusMsg("Err: " + err.message); }
+        setStatusMsg("Saving to Client Visit...");
+        try { 
+            await supabase.from('client_visits').update({ day_plan_data: { weeklyPlan, targetKcal } }).eq('id', activeVisit.visit.id); 
+            setStatusMsg("Visit Saved!"); 
+        } catch (err: any) { 
+            setStatusMsg("Err: " + err.message); 
+        }
         return;
     }
-    let n = planName;
-    if (!n) { n = prompt("Template name:", lastSavedName) || ''; if (!n) return; setPlanName(n); }
+    
+    if (!planName.trim()) {
+        const n = prompt("Enter a label for this Day-Menu Template:", lastSavedName);
+        if (!n) return;
+        setPlanName(n);
+    }
+    
     if (!session) return;
+    setStatusMsg("Saving Template...");
     try {
-        if (loadedPlanId && n === lastSavedName) { await supabase.from('saved_meals').update({ name: n, data: { weeklyPlan, targetKcal } }).eq('id', loadedPlanId); }
-        else { const { data } = await supabase.from('saved_meals').insert({ user_id: session.user.id, name: n, tool_type: 'day-planner', data: { weeklyPlan, targetKcal }, created_at: new Date().toISOString() }).select().single(); if (data) { setLoadedPlanId(data.id); setLastSavedName(data.name); } }
-        fetchPlans(); setStatusMsg("Saved!");
-    } catch (err: any) { setStatusMsg("Err: " + err.message); }
+        const isUpdate = loadedPlanId && (planName === lastSavedName);
+        if (isUpdate) { 
+            await supabase.from('saved_meals').update({ name: planName, data: { weeklyPlan, targetKcal } }).eq('id', loadedPlanId); 
+        } else { 
+            const { data } = await supabase.from('saved_meals').insert({ user_id: session.user.id, name: planName, tool_type: 'day-planner', data: { weeklyPlan, targetKcal }, created_at: new Date().toISOString() }).select().single(); 
+            if (data) { setLoadedPlanId(data.id); setLastSavedName(data.name); } 
+        }
+        fetchPlans(); 
+        setStatusMsg("Template Saved!");
+        setTimeout(() => setStatusMsg(''), 3000);
+    } catch (err: any) { 
+        setStatusMsg("Err: " + err.message); 
+    }
   };
-  const loadPlan = (p: SavedMeal) => { if (p.data?.weeklyPlan) setWeeklyPlan(p.data.weeklyPlan); if (p.data?.targetKcal) setTargetKcal(p.data.targetKcal); setPlanName(p.name); setLoadedPlanId(p.id); setLastSavedName(p.name); setShowLoadModal(false); };
-  const deletePlan = async (id: string) => { if (confirm("Delete?") && session) { await supabase.from('saved_meals').delete().eq('id', id); setSavedPlans(prev => prev.filter(p => p.id !== id)); } };
+
+  const loadPlan = (p: SavedMeal) => { 
+    if (p.data?.weeklyPlan) setWeeklyPlan(p.data.weeklyPlan); 
+    if (p.data?.targetKcal) setTargetKcal(p.data.targetKcal); 
+    setPlanName(p.name); 
+    setLoadedPlanId(p.id); 
+    setLastSavedName(p.name); 
+    setShowLoadModal(false); 
+    setStatusMsg("Menu Loaded!");
+    setTimeout(() => setStatusMsg(''), 3000);
+  };
+
+  const deletePlan = async (id: string) => { if (confirm("Delete template?") && session) { await supabase.from('saved_meals').delete().eq('id', id); setSavedPlans(prev => prev.filter(p => p.id !== id)); } };
   const confirmPrint = (o: PrintOptions) => { setPrintOptions(o); setShowPrintModal(false); setTimeout(() => window.print(), 300); };
   const calculateNutrientsForItems = (its: PlannerItem[]) => its.reduce((ac, i) => ({ kcal: ac.kcal + (i.kcal*i.serves), cho: ac.cho + (i.cho*i.serves), pro: ac.pro + (i.protein*i.serves), fat: ac.fat + (i.fat*i.serves) }), { kcal: 0, cho: 0, pro: 0, fat: 0 });
 
@@ -511,25 +544,41 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                     {typeof currentDay === 'number' ? `Day ${currentDay}: Build the menu plan.` : 'Edit global plan instructions.'}
                   </p>
               </div>
-              <div className="relative w-full max-w-xl">
+
+              {/* v2.0.233: Save/Load UI Integrated into Header */}
+              <div className="flex-grow max-w-4xl flex gap-3 items-center w-full px-4">
                   {typeof currentDay === 'number' ? (
-                    <>
+                    <div className="relative flex-grow">
                         <input type="text" className="w-full px-6 py-3 rounded-full border-2 border-[var(--color-primary)] ring-2 ring-[var(--color-primary-light)] outline-none shadow-sm text-lg transition-colors bg-white" placeholder={`Adding to: ${activeMealTime}`} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} dir={isRTL ? 'rtl' : 'ltr'} />
                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--color-primary)] bg-white px-2">{activeMealTime}</span>
-                    </>
-                  ) : <div className="bg-blue-50 p-3 rounded-full border border-blue-200 text-blue-800 font-bold text-center uppercase tracking-widest">Global Instructions Mode</div>}
-                  {searchQuery && filteredFoods.length > 0 && (
-                    <ul className="absolute w-full bg-white mt-2 rounded-xl shadow-2xl max-h-80 overflow-y-auto z-50 border border-gray-100 text-right">
-                      {filteredFoods.map((f, i) => (<li key={i} className="px-4 py-3 hover:bg-green-50 border-b border-gray-50 last:border-0 cursor-pointer flex justify-between items-center group" onClick={() => addToPlan(f)}><div className="text-left"><div className="font-medium text-[var(--color-text)]">{renderHighlightedText(f.name)}</div><div className="text-xs text-gray-500 flex gap-2"><span>{f.group}</span><span className="font-bold text-blue-600">{f.kcal} kcal</span></div></div><div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-bold group-hover:bg-green-200">+ Add</div></li>))}
-                    </ul>
+                        {searchQuery && filteredFoods.length > 0 && (
+                            <ul className="absolute w-full bg-white mt-2 rounded-xl shadow-2xl max-h-80 overflow-y-auto z-50 border border-gray-100 text-right">
+                            {filteredFoods.map((f, i) => (<li key={i} className="px-4 py-3 hover:bg-green-50 border-b border-gray-50 last:border-0 cursor-pointer flex justify-between items-center group" onClick={() => addToPlan(f)}><div className="text-left"><div className="font-medium text-[var(--color-text)]">{renderHighlightedText(f.name)}</div><div className="text-xs text-gray-500 flex gap-2"><span>{f.group}</span><span className="font-bold text-blue-600">{f.kcal} kcal</span></div></div><div className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-bold group-hover:bg-green-200">+ Add</div></li>))}
+                            </ul>
+                        )}
+                    </div>
+                  ) : <div className="flex-grow bg-blue-50 p-3 rounded-full border border-blue-200 text-blue-800 font-bold text-center uppercase tracking-widest">Global Instructions Mode</div>}
+
+                  {session && (
+                      <div className="flex gap-1 bg-gray-50 p-1 rounded-xl border border-gray-200 shadow-inner">
+                         <input 
+                            type="text" 
+                            placeholder="Menu Template Label..." 
+                            value={planName} 
+                            onChange={e => setPlanName(e.target.value)}
+                            className="w-40 px-3 py-2 text-xs border rounded-lg focus:ring-1 focus:ring-blue-400 outline-none bg-white"
+                         />
+                         <button onClick={savePlan} className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition shadow-sm" title="Save Full Menu">💾</button>
+                         <button onClick={() => { fetchPlans(); setShowLoadModal(true); }} className="bg-purple-600 text-white p-2 rounded-lg hover:bg-purple-700 transition shadow-sm" title="Load Full Menu">📂</button>
+                      </div>
                   )}
               </div>
+
               <div className="flex items-center gap-2 flex-wrap justify-center">
                     {!isEmbedded && <button onClick={() => onNavigate?.('meal-planner', undefined, undefined, true)} className="bg-orange-600 text-white px-3 py-2 rounded-lg font-bold text-sm">📅 Meal Planner</button>}
                     <button onClick={() => { setPrintWeekMode(false); setShowPrintModal(true); }} className="bg-gray-700 text-white w-10 h-10 rounded-lg flex items-center justify-center shadow-sm" title="Print Day">🖨️</button>
                     <button onClick={() => { setPrintWeekMode(true); setShowPrintModal(true); }} className="bg-gray-700 text-white w-10 h-10 rounded-lg flex items-center justify-center shadow-sm font-bold text-xs" title="Print Week">WK</button>
-                    {session && <button onClick={savePlan} className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold text-sm shadow-md transition transform active:scale-95">💾 Save Plan</button>}
-                    <button onClick={resetPlanner} className="text-red-500 text-xs font-bold border border-red-200 px-3 py-2 rounded">Clear All</button>
+                    <button onClick={resetPlanner} className="text-red-500 text-xs font-bold border border-red-200 px-3 py-2 rounded hover:bg-red-50 transition">Clear All</button>
               </div>
           </div>
       </div>
