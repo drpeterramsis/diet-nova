@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -52,7 +51,7 @@ const Header: React.FC<HeaderProps> = ({ onNavigateHome, onNavigateTools, onNavi
             <h1 className="text-lg font-bold tracking-wide flex items-center mb-0">
               Diet<span className="text-[var(--color-primary-light)]">Nova</span>
               <span className="ml-2 text-[10px] bg-white/20 px-2 py-0.5 rounded-full hidden sm:inline-block font-normal">
-                v2.0.231
+                v2.0.232
               </span>
             </h1>
           </div>

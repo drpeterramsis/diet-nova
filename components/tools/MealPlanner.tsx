@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ProgressBar, MacroDonut } from '../Visuals';
@@ -295,7 +294,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       return (servings['fatsPufa'] || 0) + (servings['fatsMufa'] || 0) + (servings['fatsSat'] || 0);
   }, [servings]);
 
-  // Fix: Explicitly handle arithmetic with verified number types to avoid arithmetic operation errors
+  // Fix: Explicitly handle arithmetic with verified number types to avoid arithmetic operation errors.
   const calcTotals = useMemo<{
     cho: number;
     pro: number;
@@ -306,8 +305,14 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
     kcalMufa: number;
     kcalSat: number;
   }>(() => {
-    let cho: number = 0, pro: number = 0, fat: number = 0, fiber: number = 0, kcal: number = 0;
-    let kcalPufa: number = 0, kcalMufa: number = 0, kcalSat: number = 0;
+    let total_cho: number = 0;
+    let total_pro: number = 0;
+    let total_fat: number = 0;
+    let total_fiber: number = 0;
+    let total_kcal: number = 0;
+    let total_kcalPufa: number = 0;
+    let total_kcalMufa: number = 0;
+    let total_kcalSat: number = 0;
 
     for (const g of BASE_GROUPS) {
       let s = servings[g] || 0;
@@ -320,17 +325,17 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       const factor = GROUP_FACTORS[g];
       if (factor) {
           const sNum: number = Number(s);
-          cho += sNum * Number(factor.cho);
-          pro += sNum * Number(factor.pro);
-          fat += sNum * Number(factor.fat);
-          fiber += sNum * Number(factor.fiber);
-          kcal += sNum * Number(factor.kcal);
-          if (g === 'fatsPufa') kcalPufa += sNum * Number(factor.fat) * 9;
-          if (g === 'fatsMufa') kcalMufa += sNum * Number(factor.fat) * 9;
-          if (g === 'fatsSat') kcalSat += sNum * Number(factor.fat) * 9;
+          total_cho = total_cho + (sNum * Number(factor.cho));
+          total_pro = total_pro + (sNum * Number(factor.pro));
+          total_fat = total_fat + (sNum * Number(factor.fat));
+          total_fiber = total_fiber + (sNum * Number(factor.fiber));
+          total_kcal = total_kcal + (sNum * Number(factor.kcal));
+          if (g === 'fatsPufa') total_kcalPufa = total_kcalPufa + (sNum * Number(factor.fat) * 9);
+          if (g === 'fatsMufa') total_kcalMufa = total_kcalMufa + (sNum * Number(factor.fat) * 9);
+          if (g === 'fatsSat') total_kcalSat = total_kcalSat + (sNum * Number(factor.fat) * 9);
       }
     }
-    return { cho, pro, fat, fiber, kcal, kcalPufa, kcalMufa, kcalSat };
+    return { cho: total_cho, pro: total_pro, fat: total_fat, fiber: total_fiber, kcal: total_kcal, kcalPufa: total_kcalPufa, kcalMufa: total_kcalMufa, kcalSat: total_kcalSat };
   }, [servings, useFatBreakdown]);
 
   const totalPerc = useMemo(() => {
@@ -342,7 +347,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       }
   }, [calcTotals]);
 
-  // Fix for Error: Explicitly handle arithmetic with verified number types using explicit type hints for useMemo
+  // Fix: Unified calculation loop and moved Number conversions to be more explicit to resolve build errors on line 405.
+  // Using explicit Number casting and ensuring all operands are recognized as numbers by the TS compiler.
   const distTotals = useMemo<{
     cho: number;
     pro: number;
@@ -350,7 +356,12 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
     fiber: number;
     kcal: number;
   }>(() => {
-      let cho: number = 0, pro: number = 0, fat: number = 0, fiber: number = 0, kcal: number = 0;
+      let t_cho: number = 0;
+      let t_pro: number = 0;
+      let t_fat: number = 0;
+      let t_fiber: number = 0;
+      let t_kcal: number = 0;
+      
       for (const g of VISIBLE_GROUPS) {
           const factor = GROUP_FACTORS[g];
           if (factor) {
@@ -362,20 +373,24 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
               for (const m of MEALS) {
                   const groupDist = (distribution as Record<string, Record<string, number>>)[g];
-                  let s = groupDist ? Number(groupDist[m] || 0) : 0;
-                  if (useFatBreakdown && g === 'fats') s = 0; 
+                  const sVal = groupDist ? groupDist[m] : 0;
+                  let s: number = Number(sVal || 0);
+                  
+                  if (useFatBreakdown && g === 'fats') {
+                      s = 0;
+                  }
                   
                   const sNum: number = Number(s);
-                  // Added explicit parens and type safety for arithmetic
-                  cho += (sNum * f_cho);
-                  pro += (sNum * f_pro);
-                  fat += (sNum * f_fat);
-                  fiber += (sNum * f_fiber);
-                  kcal += (sNum * f_kcal);
+                  // Fixed arithmetic types via explicit Number casts inside the loops to avoid arithmetic operation errors.
+                  t_cho = t_cho + (sNum * f_cho);
+                  t_pro = t_pro + (sNum * f_pro);
+                  t_fat = t_fat + (sNum * f_fat);
+                  t_fiber = t_fiber + (sNum * f_fiber);
+                  t_kcal = t_kcal + (sNum * f_kcal);
               }
           }
       }
-      return { cho, pro, fat, fiber, kcal };
+      return { cho: t_cho, pro: t_pro, fat: t_fat, fiber: t_fiber, kcal: t_kcal };
   }, [distribution, useFatBreakdown, VISIBLE_GROUPS]);
 
   const rowRemains = useMemo(() => {

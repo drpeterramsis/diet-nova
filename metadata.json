@@ -1,5 +1,5 @@
 {
-  "name": "Diet-Nova Check_cloud_82_v2.0.231",
-  "description": "v2.0.231: Added Select/Unselect All (Main only) for Day Menu. Added macro nutrient details for individual meals/alternatives for comparison. Added a General Instructions tab with rich text editing. Enhanced print options to show/hide planned kcal and include all alternatives even if unselected. Fixed planned kcal calculation to only include main meals.",
+  "name": "Diet-Nova DayMenu_83_v2.0.232",
+  "description": "v2.0.232: Fixed Instructions page crash on Day Menu. Added a new Day Title field for each day in Day Menu, allowing custom labeling (e.g., 'Workout Day') which saves to templates and client visits. Fixed Meal Schedule sidebar table to prevent unwanted scrolling. Added Day Title to both single-day and weekly print reports.",
   "requestFramePermissions": []
 }
