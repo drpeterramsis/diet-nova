@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova Check_cloud_81_v2.0.231",
-  "description": "v2.0.231: Added Select/Unselect All (Main only) for Day Menu. Added macro nutrient details for individual meals/alternatives for comparison. Added a General Instructions tab with rich text editing. Enhanced print options to show/hide planned kcal and include all alternatives even if unselected. Fixed planned kcal calculation to only include main meals.",
+  "name": "Diet-Nova Check_cloud_83_v2.0.232",
+  "description": "v2.0.232: Added Day Naming for Day Menu (saved with plans). Added print option to show/hide macro summary table. Styled print breakdown table headings green. Fixed sidebar layout to group Exchange Control and Meal Schedule correctly.",
   "requestFramePermissions": []
 }

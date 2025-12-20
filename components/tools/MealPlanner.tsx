@@ -295,19 +295,16 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       return (servings['fatsPufa'] || 0) + (servings['fatsMufa'] || 0) + (servings['fatsSat'] || 0);
   }, [servings]);
 
-  // Fix: Explicitly handle arithmetic with verified number types to avoid arithmetic operation errors
-  const calcTotals = useMemo<{
-    cho: number;
-    pro: number;
-    fat: number;
-    fiber: number;
-    kcal: number;
-    kcalPufa: number;
-    kcalMufa: number;
-    kcalSat: number;
-  }>(() => {
-    let cho: number = 0, pro: number = 0, fat: number = 0, fiber: number = 0, kcal: number = 0;
-    let kcalPufa: number = 0, kcalMufa: number = 0, kcalSat: number = 0;
+  // Fixed Error: Explicitly handle arithmetic with verified number types to avoid arithmetic operation errors
+  const calcTotals = useMemo(() => {
+    let c_cho = 0;
+    let c_pro = 0;
+    let c_fat = 0;
+    let c_fiber = 0;
+    let c_kcal = 0;
+    let c_kcalPufa = 0;
+    let c_kcalMufa = 0;
+    let c_kcalSat = 0;
 
     for (const g of BASE_GROUPS) {
       let s = servings[g] || 0;
@@ -319,18 +316,18 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
       const factor = GROUP_FACTORS[g];
       if (factor) {
-          const sNum: number = Number(s);
-          cho += sNum * Number(factor.cho);
-          pro += sNum * Number(factor.pro);
-          fat += sNum * Number(factor.fat);
-          fiber += sNum * Number(factor.fiber);
-          kcal += sNum * Number(factor.kcal);
-          if (g === 'fatsPufa') kcalPufa += sNum * Number(factor.fat) * 9;
-          if (g === 'fatsMufa') kcalMufa += sNum * Number(factor.fat) * 9;
-          if (g === 'fatsSat') kcalSat += sNum * Number(factor.fat) * 9;
+          const sNum = Number(s);
+          c_cho += sNum * Number(factor.cho);
+          c_pro += sNum * Number(factor.pro);
+          c_fat += sNum * Number(factor.fat);
+          c_fiber += sNum * Number(factor.fiber);
+          c_kcal += sNum * Number(factor.kcal);
+          if (g === 'fatsPufa') c_kcalPufa += sNum * Number(factor.fat) * 9;
+          if (g === 'fatsMufa') c_kcalMufa += sNum * Number(factor.fat) * 9;
+          if (g === 'fatsSat') c_kcalSat += sNum * Number(factor.fat) * 9;
       }
     }
-    return { cho, pro, fat, fiber, kcal, kcalPufa, kcalMufa, kcalSat };
+    return { cho: c_cho, pro: c_pro, fat: c_fat, fiber: c_fiber, kcal: c_kcal, kcalPufa: c_kcalPufa, kcalMufa: c_kcalMufa, kcalSat: c_kcalSat };
   }, [servings, useFatBreakdown]);
 
   const totalPerc = useMemo(() => {
@@ -342,40 +339,43 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       }
   }, [calcTotals]);
 
-  // Fix for Error: Explicitly handle arithmetic with verified number types using explicit type hints for useMemo
-  const distTotals = useMemo<{
-    cho: number;
-    pro: number;
-    fat: number;
-    fiber: number;
-    kcal: number;
-  }>(() => {
-      let cho: number = 0, pro: number = 0, fat: number = 0, fiber: number = 0, kcal: number = 0;
+  // Fixed Error: Explicitly handle arithmetic with unique variable names to avoid any potential shadowing or operand type ambiguity
+  const distTotals = useMemo(() => {
+      let d_cho = 0;
+      let d_pro = 0;
+      let d_fat = 0;
+      let d_fiber = 0;
+      let d_kcal = 0;
+      
       for (const g of VISIBLE_GROUPS) {
           const factor = GROUP_FACTORS[g];
           if (factor) {
-              const f_cho: number = Number(factor.cho);
-              const f_pro: number = Number(factor.pro);
-              const f_fat: number = Number(factor.fat);
-              const f_fiber: number = Number(factor.fiber);
-              const f_kcal: number = Number(factor.kcal);
+              const f_cho = Number(factor.cho);
+              const f_pro = Number(factor.pro);
+              const f_fat = Number(factor.fat);
+              const f_fiber = Number(factor.fiber);
+              const f_kcal = Number(factor.kcal);
 
               for (const m of MEALS) {
-                  const groupDist = (distribution as Record<string, Record<string, number>>)[g];
-                  let s = groupDist ? Number(groupDist[m] || 0) : 0;
-                  if (useFatBreakdown && g === 'fats') s = 0; 
+                  const groupDist = (distribution as any)[g];
+                  const sValue = groupDist ? Number(groupDist[m] || 0) : 0;
+                  const sNum = (useFatBreakdown && g === 'fats') ? 0 : sValue;
                   
-                  const sNum: number = Number(s);
-                  // Added explicit parens and type safety for arithmetic
-                  cho += (sNum * f_cho);
-                  pro += (sNum * f_pro);
-                  fat += (sNum * f_fat);
-                  fiber += (sNum * f_fiber);
-                  kcal += (sNum * f_kcal);
+                  d_cho += (sNum * f_cho);
+                  d_pro += (sNum * f_pro);
+                  d_fat += (sNum * f_fat);
+                  d_fiber += (sNum * f_fiber);
+                  d_kcal += (sNum * f_kcal);
               }
           }
       }
-      return { cho, pro, fat, fiber, kcal };
+      return { 
+          cho: d_cho, 
+          pro: d_pro, 
+          fat: d_fat, 
+          fiber: d_fiber, 
+          kcal: d_kcal 
+      };
   }, [distribution, useFatBreakdown, VISIBLE_GROUPS]);
 
   const rowRemains = useMemo(() => {

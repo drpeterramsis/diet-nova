@@ -1,20 +1,20 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
 
-# Run and deploy your AI Studio app
+# Diet-Nova Professional Nutrition System
 
-This contains everything you need to run your app locally.
+## Version History
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Q5MfMyI4CBcnGGaeDHIuPKEG3Z66RnV2
+### [v2.0.232] - 2024-05-24
+- **Day Naming:** Users can now label individual days in the Day Menu (e.g., "Post-Workout", "Cheat Day"). Labels are persistent and saved with plans.
+- **Enhanced Print Options:** Added a toggle to show/hide the whole macro/kcal summary header box in print reports.
+- **Improved Print Aesthetics:** Breakdown table headings in print view are now styled in clinical green for better visual hierarchy.
+- **Sidebar Layout Optimization:** The "Meal Schedule" summary table in the Day Menu tool is now fixed directly below the "Exchange Control" in a unified sticky container, improving accessibility while scrolling.
+- **Version Tracking:** Updated version number in header and footer.
 
-## Run Locally
+### [v2.0.231]
+- Added Select/Unselect All (Main only) for Day Menu.
+- Added macro nutrient details for individual meals/alternatives for comparison.
+- Added a General Instructions tab with rich text editing.
+- Enhanced print options to show/hide planned kcal and include all alternatives.
+- Fixed planned kcal calculation to only include main meals.
 
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+... (previous history)
