@@ -119,7 +119,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   // --- Template & Advanced Calculator State ---
   const [selectedDietId, setSelectedDietId] = useState<string>('');
   const [selectedDistId, setSelectedDistId] = useState<string>('');
-  const [templateKcal, setTemplateKcal] = useState<number>(0);
+  const [selectedPlanName, setSelectedPlanName] = useState<string>(''); // v2.0.236: Changed from templateKcal
   
   const [advCalc, setAdvCalc] = useState({
       kcal: 2000,
@@ -129,7 +129,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   });
   const [advResults, setAdvResults] = useState<{choG: number, proG: number, fatG: number, proP: number, fatP: number, sfaG: number, mufaG: number, pufaG: number} | null>(null);
 
-  // --- 1. Fetch Cloud Diet Templates ---
+  // --- 1. Fetch Cloud Diet Templates (v2.0.236: Added diet_name) ---
   useEffect(() => {
     const fetchDietTemplates = async () => {
       setIsTemplatesLoading(true);
@@ -137,7 +137,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       try {
         const { data, error } = await supabase
           .from('diet_templates')
-          .select('*')
+          .select('*, diet_name') // Explicitly select new column
           .order('diet_type', { ascending: true })
           .order('kcal', { ascending: true });
 
@@ -159,15 +159,15 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
               transformed[dietTypeId].distributions.push(dist);
             }
             
-            // MAP ALL FIELDS EXPLICITLY TO INTERNAL KEYS
+            // v2.0.236: Map diet_name from DB
             dist.rows.push({
               kcal: row.kcal,
+              dietName: row.diet_name,
               exchanges: {
                 starch: Number(row.starch || 0),
                 veg: Number(row.vegetables || 0),
                 fruit: Number(row.fruits || 0),
                 legumes: Number(row.legumes || 0),
-                // Standardizing naming conventions:
                 milkSkim: Number(row.milk_skimmed_low || 0),
                 milkLow: Number(row.milk_medium || 0),
                 milkWhole: Number(row.milk_high_whole || 0),
@@ -333,7 +333,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   }, [servings, useFatBreakdown]);
 
   const totalPerc = useMemo(() => {
-      // Fix: Ensured kcal and values are treated as explicit numbers for arithmetic safety
       const k = Number(calcTotals.kcal) || 1;
       const cNum = Number(calcTotals.cho);
       const pNum = Number(calcTotals.pro);
@@ -346,7 +345,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       }
   }, [calcTotals]);
 
-  // Fix: Adding explicit types and number casts for arithmetic safety to fix line 405 error area.
+  // Dist Totals
   const distTotals = useMemo<{ 
     cho: number; pro: number; fat: number; fiber: number; kcal: number; 
   }>(() => {
@@ -369,11 +368,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                   const groupDist = (distribution as Record<string, Record<string, number>>)[g];
                   const sVal = groupDist ? groupDist[m] : 0;
                   let s = Number(sVal || 0);
-                  
-                  if (useFatBreakdown && g === 'fats') {
-                      s = 0;
-                  }
-                  
+                  if (useFatBreakdown && g === 'fats') s = 0;
                   const sNum = Number(s);
                   t_cho += (sNum * f_cho);
                   t_pro += (sNum * f_pro);
@@ -404,45 +399,50 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
     return remains;
   }, [servings, distribution, useFatBreakdown, calculatedFatsSum, VISIBLE_GROUPS]);
 
-  // --- Template Handlers ---
+  // --- Template Handlers (v2.0.236 Update) ---
   const selectedDiet = dietTemplates.find(d => d.id === selectedDietId);
   const selectedDistribution = selectedDiet?.distributions.find(d => d.id === selectedDistId);
 
-  // Dynamic Kcal Options based on Selection (Requirement)
-  const kcalOptions = useMemo(() => {
+  // v2.0.236: Plan Name Options instead of kcal options
+  const planNameOptions = useMemo(() => {
       if (!selectedDistribution) return [];
-      return [...new Set(selectedDistribution.rows.map(r => r.kcal))].sort((a,b) => a - b);
+      // Return list of diet names, filter out undefineds and dedupe
+      return [...new Set(selectedDistribution.rows.map(r => r.dietName || `Plan (${r.kcal} kcal)`))].sort();
   }, [selectedDistribution]);
 
-  // Sync templateKcal to valid option when selection changes
+  // v2.0.236: Auto-select first plan when distribution changes
   useEffect(() => {
-      if (kcalOptions.length > 0 && (!templateKcal || !kcalOptions.includes(templateKcal))) {
-          setTemplateKcal(kcalOptions[0]);
+      if (planNameOptions.length > 0 && (!selectedPlanName || !planNameOptions.includes(selectedPlanName))) {
+          setSelectedPlanName(planNameOptions[0]);
       }
-  }, [kcalOptions]);
+  }, [planNameOptions]);
+
+  // v2.0.236: Derived Kcal for display only
+  const derivedKcal = useMemo(() => {
+      if (!selectedDistribution || !selectedPlanName) return 0;
+      const plan = selectedDistribution.rows.find(r => (r.dietName || `Plan (${r.kcal} kcal)`) === selectedPlanName);
+      return plan ? plan.kcal : 0;
+  }, [selectedDistribution, selectedPlanName]);
 
   const applyTemplate = () => {
-      if (!selectedDistribution) return;
-      const plan = selectedDistribution.rows.find(r => r.kcal === templateKcal);
+      if (!selectedDistribution || !selectedPlanName) return;
+      const plan = selectedDistribution.rows.find(r => (r.dietName || `Plan (${r.kcal} kcal)`) === selectedPlanName);
       if (!plan) {
-          setStatusMsg(`No template found for ${templateKcal} kcal.`);
+          setStatusMsg(`No template found matching "${selectedPlanName}".`);
           setTimeout(() => setStatusMsg(''), 2000);
           return;
       }
 
-      setTargetKcal(templateKcal);
+      setTargetKcal(plan.kcal);
       
-      // Initialize with zeros to ensure previous manual fields are cleared
       const newServings = BASE_GROUPS.reduce((acc, group) => ({ ...acc, [group]: 0 }), {});
-      
       Object.keys(plan.exchanges).forEach(key => {
           (newServings as any)[key] = (plan.exchanges as any)[key];
       });
       
-      // Auto-toggle breakdown if template uses specific fats
       if (plan.exchanges.fatsSat || plan.exchanges.fatsMufa || plan.exchanges.fatsPufa) {
           setUseFatBreakdown(true);
-          newServings['fats'] = 0; // Total fats is calculated from breakdown
+          newServings['fats'] = 0; 
       } else {
           setUseFatBreakdown(false);
       }
@@ -450,7 +450,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       setServings(newServings);
       const dietName = selectedDiet?.name || "Template";
       const distName = selectedDistribution.label;
-      setStatusMsg(`${dietName} (${distName}) - ${templateKcal} kcal applied.`);
+      setStatusMsg(`${dietName} (${distName}) - ${plan.kcal} kcal applied.`);
       setTimeout(() => setStatusMsg(''), 3000);
   };
 
@@ -663,7 +663,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         {viewMode === 'calculator' && (
             <>
                 <div className="lg:col-span-3 space-y-6 no-print">
-                    {/* QUICK DIET TEMPLATES (Cloud Exclusive) */}
+                    {/* QUICK DIET TEMPLATES (Cloud Exclusive - Updated v2.0.236) */}
                     <div className="bg-white p-6 rounded-xl shadow-md border border-blue-50 flex flex-col gap-4">
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="font-bold text-blue-800 text-sm uppercase tracking-wide">Quick Diet Templates</h3>
@@ -691,14 +691,18 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                     {selectedDiet?.distributions.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
                                 </select>
                             </div>
-                            <div className="flex gap-2 items-end">
+                            <div className="flex flex-col gap-2">
                                 <div className="flex-grow">
-                                    <label className="text-[11px] text-gray-500 font-bold block mb-1.5 uppercase">Kcal</label>
-                                    <select className="w-full p-2.5 border rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" value={templateKcal} onChange={(e) => setTemplateKcal(Number(e.target.value))}>
-                                        {kcalOptions.map(k => <option key={k} value={k}>{k}</option>)}
+                                    <label className="text-[11px] text-gray-500 font-bold block mb-1.5 uppercase">Diet Plan Name</label>
+                                    <select className="w-full p-2.5 border rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-gray-800" value={selectedPlanName} onChange={(e) => setSelectedPlanName(e.target.value)}>
+                                        {planNameOptions.map(name => <option key={name} value={name}>{name}</option>)}
                                     </select>
                                 </div>
-                                <button onClick={applyTemplate} className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm h-[42px]">Load</button>
+                                <div className="p-2 bg-blue-50 rounded border border-blue-100 flex justify-between items-center">
+                                    <span className="text-[10px] font-bold text-blue-600 uppercase">Target Result:</span>
+                                    <span className="font-mono font-black text-blue-800">{derivedKcal} kcal</span>
+                                </div>
+                                <button onClick={applyTemplate} className="w-full bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm h-[42px] mt-1">Load Template</button>
                             </div>
                           </div>
                         )}

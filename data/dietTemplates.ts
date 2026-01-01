@@ -1,11 +1,12 @@
 
 /**
  * Diet Template Data Structure
- * v2.0.226 - Standardized exchange keys to match MealPlanner constants.
+ * v2.0.236 - Added dietName to support selection by specific label.
  */
 
 export interface DietPlanRow {
     kcal: number;
+    dietName?: string; // New field for specific label in database
     exchanges: {
         starch: number;
         veg: number;

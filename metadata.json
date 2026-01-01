@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova DayMenu_90_v2.0.235",
-  "description": "v2.0.235: Fixed meal time AM/PM input stability in Day Menu. Implemented Select Main logic to unselect alternatives while keeping main options checked. Added Select All toggle functionality. Maintained all existing save/load logic and data integrity.",
+  "name": "Diet-Nova DayMenu_91_v2.0.236",
+  "description": "v2.0.236: Updated Meal Planner Quick Templates to select by diet_name instead of kcal. Calorie target is now derived automatically from the selected diet name and displayed as read-only context. Maintained all existing save/load logic and data integrity.",
   "requestFramePermissions": []
 }
