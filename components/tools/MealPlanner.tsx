@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ProgressBar, MacroDonut } from '../Visuals';
@@ -7,40 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { SavedMeal, Client, ClientVisit } from '../../types';
 import Toast from '../Toast';
 import MealCreator, { WeeklyPlan, DEFAULT_WEEKLY_PLAN } from './MealCreator';
-
-// Extended Internal Interface for Diet Templates to include diet_name
-interface DietPlanRowExt {
-    kcal: number;
-    dietName: string;
-    exchanges: {
-        starch: number;
-        veg: number;
-        fruit: number;
-        legumes: number;
-        milkSkim: number;
-        milkLow: number;
-        milkWhole: number;
-        meatLean: number;
-        meatMed: number;
-        meatHigh: number;
-        fatsSat: number;
-        fatsMufa: number;
-        fatsPufa: number;
-        sugar: number;
-    };
-}
-
-interface DietDistributionExt {
-    id: string;
-    label: string;
-    rows: DietPlanRowExt[];
-}
-
-interface DietTypeExt {
-    id: string;
-    name: string;
-    distributions: DietDistributionExt[];
-}
+import { DietType, DietPlanRow } from '../../data/dietTemplates';
 
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; fiber: number; kcal: number }> = {
   starch: { cho: 15, pro: 3, fat: 1, fiber: 1.75, kcal: 80 },
@@ -81,6 +47,7 @@ const GROUP_STYLES: Record<string, { bg: string, text: string, border: string, i
 const MEALS = ['snack1', 'breakfast', 'snack2', 'lunch', 'snack3', 'dinner', 'snack4'];
 const BASE_GROUPS = Object.keys(GROUP_FACTORS);
 
+// --- Extracted Component to prevent re-renders/focus loss ---
 interface TargetKcalInputProps {
   value: number;
   onChange: (val: number) => void;
@@ -121,7 +88,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   const [useFatBreakdown, setUseFatBreakdown] = useState(false);
   
   // --- Diet Templates Cloud State ---
-  const [dietTemplates, setDietTemplates] = useState<DietTypeExt[]>([]);
+  const [dietTemplates, setDietTemplates] = useState<DietType[]>([]);
   const [isTemplatesLoading, setIsTemplatesLoading] = useState(true);
   const [templateStatus, setTemplateStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
@@ -140,19 +107,19 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
     BASE_GROUPS.reduce((acc, group) => ({ ...acc, [group]: 0 }), {})
   );
 
-  // State for Targets
+  // State for Targets - Default to 2000 if not provided
   const [targetKcal, setTargetKcal] = useState<number>(initialTargetKcal || 2000);
   const [manualGm, setManualGm] = useState({ cho: 0, pro: 0, fat: 0 });
   const [manualPerc, setManualPerc] = useState({ cho: 0, pro: 0, fat: 0 });
   const [activeTargetTab, setActiveTargetTab] = useState<'none' | 'gm' | 'perc'>('none');
 
-  // State for Day Menu
+  // State for Day Menu (Unified State)
   const [dayMenuPlan, setDayMenuPlan] = useState<WeeklyPlan>(DEFAULT_WEEKLY_PLAN);
 
-  // --- Template Selection State (v2.0.236) ---
+  // --- Template & Advanced Calculator State ---
   const [selectedDietId, setSelectedDietId] = useState<string>('');
   const [selectedDistId, setSelectedDistId] = useState<string>('');
-  const [selectedDietName, setSelectedDietName] = useState<string>(''); // New selector for the row
+  const [templateKcal, setTemplateKcal] = useState<number>(0);
   
   const [advCalc, setAdvCalc] = useState({
       kcal: 2000,
@@ -162,21 +129,23 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   });
   const [advResults, setAdvResults] = useState<{choG: number, proG: number, fatG: number, proP: number, fatP: number, sfaG: number, mufaG: number, pufaG: number} | null>(null);
 
-  // --- 1. Fetch Cloud Diet Templates (v2.0.236 includes diet_name) ---
+  // --- 1. Fetch Cloud Diet Templates ---
   useEffect(() => {
     const fetchDietTemplates = async () => {
       setIsTemplatesLoading(true);
+      setTemplateStatus('idle');
       try {
         const { data, error } = await supabase
           .from('diet_templates')
           .select('*')
           .order('diet_type', { ascending: true })
-          .order('diet_name', { ascending: true }); // Primary order by name for consistency
+          .order('kcal', { ascending: true });
 
         if (error) throw error;
 
         if (data) {
-          const transformed: Record<string, DietTypeExt> = {};
+          // Transform flat SQL rows into DietType hierarchy
+          const transformed: Record<string, DietType> = {};
           data.forEach(row => {
             const dietTypeId = row.diet_type.toLowerCase().replace(/\s+/g, '_');
             if (!transformed[dietTypeId]) {
@@ -190,14 +159,15 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
               transformed[dietTypeId].distributions.push(dist);
             }
             
+            // MAP ALL FIELDS EXPLICITLY TO INTERNAL KEYS
             dist.rows.push({
-              kcal: Number(row.kcal || 0),
-              dietName: row.diet_name || `Unnamed Plan (${row.kcal} kcal)`, // Handle missing names
+              kcal: row.kcal,
               exchanges: {
                 starch: Number(row.starch || 0),
                 veg: Number(row.vegetables || 0),
                 fruit: Number(row.fruits || 0),
                 legumes: Number(row.legumes || 0),
+                // Standardizing naming conventions:
                 milkSkim: Number(row.milk_skimmed_low || 0),
                 milkLow: Number(row.milk_medium || 0),
                 milkWhole: Number(row.milk_high_whole || 0),
@@ -215,13 +185,11 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
           const finalArray = Object.values(transformed);
           setDietTemplates(finalArray);
           
+          // Set initial selection
           if (finalArray.length > 0) {
             setSelectedDietId(finalArray[0].id);
             if (finalArray[0].distributions.length > 0) {
               setSelectedDistId(finalArray[0].distributions[0].id);
-              if (finalArray[0].distributions[0].rows.length > 0) {
-                  setSelectedDietName(finalArray[0].distributions[0].rows[0].dietName);
-              }
             }
           }
           setTemplateStatus('success');
@@ -237,18 +205,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
     fetchDietTemplates();
   }, []);
 
-  // Update selection when parent categories change
-  useEffect(() => {
-      const diet = dietTemplates.find(d => d.id === selectedDietId);
-      const dist = diet?.distributions.find(d => d.id === selectedDistId);
-      if (dist && dist.rows.length > 0) {
-          // If current selection is not in new distribution, reset to first
-          if (!dist.rows.some(r => r.dietName === selectedDietName)) {
-              setSelectedDietName(dist.rows[0].dietName);
-          }
-      }
-  }, [selectedDietId, selectedDistId, dietTemplates]);
-
+  // Initialize target if provided prop updates
   useEffect(() => {
     if (initialTargetKcal && initialTargetKcal > 0) {
       setTargetKcal(initialTargetKcal);
@@ -256,12 +213,14 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
     }
   }, [initialTargetKcal]);
 
+  // Filter Saved Plans Logic
   const filteredSavedPlans = useMemo(() => {
     if (!loadSearchQuery) return savedPlans;
     const q = loadSearchQuery.toLowerCase();
     return savedPlans.filter(plan => plan.name.toLowerCase().includes(q));
   }, [savedPlans, loadSearchQuery]);
 
+  // Auto-load effect
   useEffect(() => {
       const autoLoad = async () => {
           if (initialLoadId && session) {
@@ -284,6 +243,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       autoLoad();
   }, [initialLoadId, session]);
 
+  // --- Hydrate from Visit Data ---
   useEffect(() => {
       if (activeVisit?.visit.meal_plan_data) {
           const data = activeVisit.visit.meal_plan_data;
@@ -306,6 +266,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       }
   }, [activeVisit]);
 
+  // Handle Auto Open
   useEffect(() => {
       if (autoOpenLoad && session) {
           fetchPlans();
@@ -316,6 +277,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       }
   }, [autoOpenLoad, autoOpenNew, session]);
 
+  // State for Planner Distribution
   const [distribution, setDistribution] = useState<Record<string, Record<string, number>>>(
     BASE_GROUPS.reduce((acc, group) => ({
       ...acc,
@@ -332,13 +294,19 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       return (Number(servings['fatsPufa']) || 0) + (Number(servings['fatsMufa']) || 0) + (Number(servings['fatsSat']) || 0);
   }, [servings]);
 
-  // v2.0.236: Reinforced arithmetic safety with Number() casts
+  // Explicitly typing calculation returns to avoid arithmetic operation errors on inferred objects.
   const calcTotals = useMemo<{ 
     cho: number; pro: number; fat: number; fiber: number; kcal: number; 
     kcalPufa: number; kcalMufa: number; kcalSat: number; 
   }>(() => {
-    let total_cho = 0, total_pro = 0, total_fat = 0, total_fiber = 0, total_kcal = 0;
-    let total_kcalPufa = 0, total_kcalMufa = 0, total_kcalSat = 0;
+    let total_cho = 0;
+    let total_pro = 0;
+    let total_fat = 0;
+    let total_fiber = 0;
+    let total_kcal = 0;
+    let total_kcalPufa = 0;
+    let total_kcalMufa = 0;
+    let total_kcalSat = 0;
 
     for (const g of BASE_GROUPS) {
       let s = Number(servings[g]) || 0;
@@ -350,7 +318,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
       const factor = GROUP_FACTORS[g];
       if (factor) {
-          const sNum = Number(s);
+          const sNum: number = Number(s);
           total_cho += (sNum * Number(factor.cho));
           total_pro += (sNum * Number(factor.pro));
           total_fat += (sNum * Number(factor.fat));
@@ -365,6 +333,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   }, [servings, useFatBreakdown]);
 
   const totalPerc = useMemo(() => {
+      // Fix: Ensured kcal and values are treated as explicit numbers for arithmetic safety
       const k = Number(calcTotals.kcal) || 1;
       const cNum = Number(calcTotals.cho);
       const pNum = Number(calcTotals.pro);
@@ -377,10 +346,15 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       }
   }, [calcTotals]);
 
+  // Fix: Adding explicit types and number casts for arithmetic safety to fix line 405 error area.
   const distTotals = useMemo<{ 
     cho: number; pro: number; fat: number; fiber: number; kcal: number; 
   }>(() => {
-      let t_cho = 0, t_pro = 0, t_fat = 0, t_fiber = 0, t_kcal = 0;
+      let t_cho = 0;
+      let t_pro = 0;
+      let t_fat = 0;
+      let t_fiber = 0;
+      let t_kcal = 0;
       
       for (const g of VISIBLE_GROUPS) {
           const factor = GROUP_FACTORS[g];
@@ -392,11 +366,15 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
               const f_kcal = Number(factor.kcal);
 
               for (const m of MEALS) {
-                  const sVal = distribution[g]?.[m] || 0;
-                  let sNum = Number(sVal);
+                  const groupDist = (distribution as Record<string, Record<string, number>>)[g];
+                  const sVal = groupDist ? groupDist[m] : 0;
+                  let s = Number(sVal || 0);
                   
-                  if (useFatBreakdown && g === 'fats') sNum = 0;
+                  if (useFatBreakdown && g === 'fats') {
+                      s = 0;
+                  }
                   
+                  const sNum = Number(s);
                   t_cho += (sNum * f_cho);
                   t_pro += (sNum * f_pro);
                   t_fat += (sNum * f_fat);
@@ -411,13 +389,13 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   const rowRemains = useMemo(() => {
     const remains: Record<string, number> = {};
     VISIBLE_GROUPS.forEach(g => {
-        const totalDist = MEALS.reduce((acc, m) => acc + (Number(distribution[g]?.[m]) || 0), 0);
+        const totalDist = MEALS.reduce((acc: number, m: string) => acc + (Number(distribution[g]?.[m]) || 0), 0);
         let target = Number(servings[g]) || 0;
         if (useFatBreakdown && g === 'fats') {
             target = Number(calculatedFatsSum);
-            const distPufa = MEALS.reduce((acc, m) => acc + (Number(distribution['fatsPufa']?.[m]) || 0), 0);
-            const distMufa = MEALS.reduce((acc, m) => acc + (Number(distribution['fatsMufa']?.[m]) || 0), 0);
-            const distSat = MEALS.reduce((acc, m) => acc + (Number(distribution['fatsSat']?.[m]) || 0), 0);
+            const distPufa = MEALS.reduce((acc: number, m: string) => acc + (Number(distribution['fatsPufa']?.[m]) || 0), 0);
+            const distMufa = MEALS.reduce((acc: number, m: string) => acc + (Number(distribution['fatsMufa']?.[m]) || 0), 0);
+            const distSat = MEALS.reduce((acc: number, m: string) => acc + (Number(distribution['fatsSat']?.[m]) || 0), 0);
             remains[g] = target - (distPufa + distMufa + distSat); 
         } else {
             remains[g] = target - totalDist;
@@ -426,35 +404,53 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
     return remains;
   }, [servings, distribution, useFatBreakdown, calculatedFatsSum, VISIBLE_GROUPS]);
 
-  // --- v2.0.236: Template Logic with diet_name selection ---
+  // --- Template Handlers ---
   const selectedDiet = dietTemplates.find(d => d.id === selectedDietId);
   const selectedDistribution = selectedDiet?.distributions.find(d => d.id === selectedDistId);
-  
-  // Row derived from the selected name
-  const selectedTemplateRow = useMemo(() => {
-      if (!selectedDistribution) return null;
-      return selectedDistribution.rows.find(r => r.dietName === selectedDietName) || null;
-  }, [selectedDistribution, selectedDietName]);
+
+  // Dynamic Kcal Options based on Selection (Requirement)
+  const kcalOptions = useMemo(() => {
+      if (!selectedDistribution) return [];
+      return [...new Set(selectedDistribution.rows.map(r => r.kcal))].sort((a,b) => a - b);
+  }, [selectedDistribution]);
+
+  // Sync templateKcal to valid option when selection changes
+  useEffect(() => {
+      if (kcalOptions.length > 0 && (!templateKcal || !kcalOptions.includes(templateKcal))) {
+          setTemplateKcal(kcalOptions[0]);
+      }
+  }, [kcalOptions]);
 
   const applyTemplate = () => {
-      if (!selectedTemplateRow) return;
-      const row = selectedTemplateRow;
-      setTargetKcal(row.kcal);
+      if (!selectedDistribution) return;
+      const plan = selectedDistribution.rows.find(r => r.kcal === templateKcal);
+      if (!plan) {
+          setStatusMsg(`No template found for ${templateKcal} kcal.`);
+          setTimeout(() => setStatusMsg(''), 2000);
+          return;
+      }
+
+      setTargetKcal(templateKcal);
       
+      // Initialize with zeros to ensure previous manual fields are cleared
       const newServings = BASE_GROUPS.reduce((acc, group) => ({ ...acc, [group]: 0 }), {});
-      Object.keys(row.exchanges).forEach(key => {
-          (newServings as any)[key] = (row.exchanges as any)[key];
+      
+      Object.keys(plan.exchanges).forEach(key => {
+          (newServings as any)[key] = (plan.exchanges as any)[key];
       });
       
-      if (row.exchanges.fatsSat || row.exchanges.fatsMufa || row.exchanges.fatsPufa) {
+      // Auto-toggle breakdown if template uses specific fats
+      if (plan.exchanges.fatsSat || plan.exchanges.fatsMufa || plan.exchanges.fatsPufa) {
           setUseFatBreakdown(true);
-          newServings['fats'] = 0; 
+          newServings['fats'] = 0; // Total fats is calculated from breakdown
       } else {
           setUseFatBreakdown(false);
       }
 
       setServings(newServings);
-      setStatusMsg(`${selectedDietName} applied: ${row.kcal} kcal.`);
+      const dietName = selectedDiet?.name || "Template";
+      const distName = selectedDistribution.label;
+      setStatusMsg(`${dietName} (${distName}) - ${templateKcal} kcal applied.`);
       setTimeout(() => setStatusMsg(''), 3000);
   };
 
@@ -483,7 +479,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       if (!advResults) return;
       setManualGm({ cho: advResults.choG, pro: advResults.proG, fat: advResults.fatG });
       setActiveTargetTab('gm');
-      setStatusMsg("Macro targets updated.");
+      setStatusMsg("Macro targets updated from calculator.");
       setTimeout(() => setStatusMsg(''), 3000);
   };
 
@@ -503,6 +499,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   const fetchPlans = async () => {
       if (!session) return;
       setIsLoadingPlans(true);
+      setLoadSearchQuery('');
       try {
           const { data, error } = await supabase
             .from('saved_meals')
@@ -512,40 +509,44 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
             .order('created_at', { ascending: false });
           if (error) throw error;
           if (data) setSavedPlans(data);
-      } catch (err) { setStatusMsg("Error loading plans."); } finally { setIsLoadingPlans(false); }
+      } catch (err) {
+          setStatusMsg("Error loading plans.");
+      } finally {
+          setIsLoadingPlans(false);
+      }
   };
 
   const savePlan = async () => {
-      if (!planName.trim()) { alert("Please enter a name."); return; }
+      if (!planName.trim()) { alert("Please enter a name for the meal plan."); return; }
       if (!session) return;
       setStatusMsg("Saving...");
       const planData = { servings, distribution, targetKcal, manualGm, manualPerc, dayMenuPlan };
       const isUpdate = loadedPlanId && (planName === lastSavedName);
       try {
           if (isUpdate) {
-             await supabase.from('saved_meals').update({ name: planName, data: planData }).eq('id', loadedPlanId);
-             setStatusMsg("Plan Updated!");
+             await supabase.from('saved_meals').update({ name: planName, data: planData }).eq('id', loadedPlanId).eq('user_id', session.user.id);
+             setStatusMsg("Plan Updated Successfully!");
           } else {
-             const { data, error } = await supabase.from('saved_meals').insert({ user_id: session.user.id, name: planName, tool_type: 'meal-planner', data: planData }).select().single();
+             const { data, error } = await supabase.from('saved_meals').insert({ user_id: session.user.id, name: planName, tool_type: 'meal-planner', data: planData, created_at: new Date().toISOString() }).select().single();
              if (error) throw error;
              if (data) { setLoadedPlanId(data.id); setLastSavedName(data.name); }
-             setStatusMsg("Plan Saved!");
+             setStatusMsg("Plan Saved as New Entry!");
           }
           fetchPlans();
           setTimeout(() => setStatusMsg(''), 3000);
-      } catch (err: any) { setStatusMsg("Failed: " + err.message); }
+      } catch (err: any) { setStatusMsg("Failed to save: " + err.message); }
   };
 
   const handleSaveToVisit = async () => {
       if (!activeVisit) return;
-      setStatusMsg('Saving to Visit...');
+      setStatusMsg('Saving to Client Visit...');
       const planData = { servings, distribution, targetKcal, manualGm, manualPerc, dayMenuPlan };
       try {
           const { error } = await supabase.from('client_visits').update({ meal_plan_data: planData }).eq('id', activeVisit.visit.id);
           if (error) throw error;
-          setStatusMsg('Saved to Visit!');
+          setStatusMsg('Saved to Client Visit Record!');
           setTimeout(() => setStatusMsg(''), 3000);
-      } catch (err: any) { setStatusMsg('Error: ' + err.message); }
+      } catch (err: any) { setStatusMsg('Error Saving to Visit: ' + err.message); }
   };
 
   const loadPlan = (plan: SavedMeal) => {
@@ -567,13 +568,19 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   };
 
   const deletePlan = async (id: string) => {
-      if (!window.confirm("Delete?")) return;
-      try { await supabase.from('saved_meals').delete().eq('id', id); setSavedPlans(prev => prev.filter(p => p.id !== id)); } catch (err) { }
+      if (!window.confirm("Are you sure you want to delete this plan?")) return;
+      try {
+          await supabase.from('saved_meals').delete().eq('id', id).eq('user_id', session?.user.id);
+          setSavedPlans(prev => prev.filter(p => p.id !== id));
+      } catch (err) { console.error("Error deleting:", err); }
   };
 
   const resetAll = () => {
       setServings(BASE_GROUPS.reduce((acc, group) => ({ ...acc, [group]: 0 }), {}));
-      setDistribution(BASE_GROUPS.reduce((acc, group) => ({ ...acc, [group]: MEALS.reduce((mAcc, meal) => ({ ...mAcc, [meal]: 0 }), {}) }), {}));
+      setDistribution(BASE_GROUPS.reduce((acc, group) => ({
+          ...acc,
+          [group]: MEALS.reduce((mAcc, meal) => ({ ...mAcc, [meal]: 0 }), {})
+      }), {}));
       setTargetKcal(2000);
       setPlanName('');
       setLoadedPlanId(null);
@@ -590,8 +597,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   }
 
   const targetMacros = useMemo(() => {
-      if (activeTargetTab === 'gm') return { cho: Number(manualGm.cho), pro: Number(manualGm.pro), fat: Number(manualGm.fat), source: 'Manual' };
-      if (activeTargetTab === 'perc') return { cho: (targetKcal * (Number(manualPerc.cho) / 100)) / 4, pro: (targetKcal * (Number(manualPerc.pro) / 100)) / 4, fat: (targetKcal * (Number(manualPerc.fat) / 100)) / 9, source: 'Manual' };
+      if (activeTargetTab === 'gm') return { cho: Number(manualGm.cho), pro: Number(manualGm.pro), fat: Number(manualGm.fat), source: 'Manual Grams' };
+      if (activeTargetTab === 'perc') return { cho: (targetKcal * (Number(manualPerc.cho) / 100)) / 4, pro: (targetKcal * (Number(manualPerc.pro) / 100)) / 4, fat: (targetKcal * (Number(manualPerc.fat) / 100)) / 9, source: 'Manual %' };
       return { cho: 0, pro: 0, fat: 0, source: 'None' };
   }, [activeTargetTab, manualGm, manualPerc, targetKcal]);
 
@@ -643,10 +650,12 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         </div>
 
         <div className="flex gap-2 items-center">
-             <button onClick={() => savePlan()} className="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm" title="Save"><span className="text-xl">💾</span></button>
-             <button onClick={() => { fetchPlans(); setShowLoadModal(true); }} className="bg-purple-500 hover:bg-purple-600 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm" title="Load"><span className="text-xl">📂</span></button>
-             <button onClick={handlePrint} className="bg-gray-700 hover:bg-gray-800 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm" title="Print"><span className="text-xl">🖨️</span></button>
-             <button onClick={resetAll} className="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-lg text-sm font-medium transition">{t.common.reset}</button>
+            {session && (
+                <><button onClick={() => savePlan()} className="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm" title={t.common.save + " (As Template)"}><span className="text-xl">💾</span></button>
+                <button onClick={() => { fetchPlans(); setShowLoadModal(true); }} className="bg-purple-500 hover:bg-purple-600 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm" title={t.common.load + " (Template)"}><span className="text-xl">📂</span></button></>
+            )}
+             <button onClick={handlePrint} className="bg-gray-700 hover:bg-gray-800 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm" title="Print Plan"><span className="text-xl">🖨️</span></button>
+            <button onClick={resetAll} className="bg-red-100 hover:bg-red-200 text-red-600 px-4 py-2 rounded-lg text-sm font-medium transition">{t.common.reset}</button>
         </div>
       </div>
 
@@ -654,63 +663,66 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         {viewMode === 'calculator' && (
             <>
                 <div className="lg:col-span-3 space-y-6 no-print">
-                    {/* v2.0.236: Quick Diet Templates with diet_name selection */}
+                    {/* QUICK DIET TEMPLATES (Cloud Exclusive) */}
                     <div className="bg-white p-6 rounded-xl shadow-md border border-blue-50 flex flex-col gap-4">
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="font-bold text-blue-800 text-sm uppercase tracking-wide">Quick Diet Templates</h3>
-                            <div className={`text-xl transition-colors duration-500 ${templateStatus === 'success' ? 'text-green-500' : 'text-gray-300'}`}>☁️</div>
+                            <div className={`text-xl transition-colors duration-500 ${templateStatus === 'success' ? 'text-green-500' : templateStatus === 'error' ? 'text-red-500' : 'text-gray-300 animate-pulse'}`} title={templateStatus === 'success' ? 'Database Connected' : 'Cloud Not Fetched'}>
+                                ☁️
+                            </div>
                         </div>
                         {isTemplatesLoading ? (
-                            <div className="text-center py-6 text-gray-400 text-xs animate-pulse font-bold">📡 Fetching...</div>
+                            <div className="text-center py-6 text-gray-400 text-xs animate-pulse font-bold">📡 Fetching Cloud Templates...</div>
                         ) : (
                           <div className="space-y-4">
                             <div>
                                 <label className="text-[11px] text-gray-500 font-bold block mb-1.5 uppercase">Diet Type</label>
-                                <select className="w-full p-2.5 border rounded-lg text-sm bg-gray-50 outline-none" value={selectedDietId} onChange={(e) => setSelectedDietId(e.target.value)}>
+                                <select className="w-full p-2.5 border rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" value={selectedDietId} onChange={(e) => {
+                                        setSelectedDietId(e.target.value);
+                                        const d = dietTemplates.find(dt => dt.id === e.target.value);
+                                        if(d && d.distributions.length > 0) setSelectedDistId(d.distributions[0].id);
+                                    }}>
                                     {dietTemplates.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                                 </select>
                             </div>
                             <div>
                                 <label className="text-[11px] text-gray-500 font-bold block mb-1.5 uppercase">Distribution</label>
-                                <select className="w-full p-2.5 border rounded-lg text-sm bg-gray-50 outline-none" value={selectedDistId} onChange={(e) => setSelectedDistId(e.target.value)}>
+                                <select className="w-full p-2.5 border rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" value={selectedDistId} onChange={(e) => setSelectedDistId(e.target.value)}>
                                     {selectedDiet?.distributions.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
                                 </select>
                             </div>
-                            <div>
-                                <label className="text-[11px] text-gray-500 font-bold block mb-1.5 uppercase">Plan Name</label>
-                                <select className="w-full p-2.5 border rounded-lg text-sm bg-gray-50 outline-none font-bold text-blue-800" value={selectedDietName} onChange={(e) => setSelectedDietName(e.target.value)}>
-                                    {selectedDistribution?.rows.map(r => <option key={r.dietName} value={r.dietName}>{r.dietName}</option>)}
-                                </select>
-                            </div>
-                            <div className="flex gap-2 items-center bg-blue-50 p-2 rounded-lg border border-blue-100 justify-between">
-                                <div className="flex flex-col">
-                                    <span className="text-[9px] text-blue-500 font-bold uppercase">Resulted Kcal</span>
-                                    <span className="text-lg font-black text-blue-900">{selectedTemplateRow?.kcal || '-'}</span>
+                            <div className="flex gap-2 items-end">
+                                <div className="flex-grow">
+                                    <label className="text-[11px] text-gray-500 font-bold block mb-1.5 uppercase">Kcal</label>
+                                    <select className="w-full p-2.5 border rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none" value={templateKcal} onChange={(e) => setTemplateKcal(Number(e.target.value))}>
+                                        {kcalOptions.map(k => <option key={k} value={k}>{k}</option>)}
+                                    </select>
                                 </div>
-                                <button onClick={applyTemplate} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm h-[42px]">Apply</button>
+                                <button onClick={applyTemplate} className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700 transition shadow-sm h-[42px]">Load</button>
                             </div>
                           </div>
                         )}
                     </div>
 
                     <div className="bg-white rounded-xl shadow-md border border-green-100 overflow-hidden">
-                        <div className="p-4 border-b bg-green-50"><h3 className="font-bold text-green-900 flex items-center gap-2 text-sm uppercase"><span>🧮</span> Precision Calc</h3></div>
+                        <div className="p-4 border-b bg-green-50"><h3 className="font-bold text-green-900 flex items-center gap-2 text-sm uppercase"><span>🧮</span> Precision Macro Calc</h3></div>
                         <div className="p-4 space-y-4">
                             <div className="grid grid-cols-2 gap-3">
-                                <div><label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Total Kcal</label><input type="number" value={advCalc.kcal} onChange={e => setAdvCalc({...advCalc, kcal: Number(e.target.value)})} className="w-full p-1.5 border rounded text-sm font-bold" /></div>
-                                <div><label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Carb %</label><input type="number" value={advCalc.carbPerc} onChange={e => setAdvCalc({...advCalc, carbPerc: Number(e.target.value)})} className="w-full p-1.5 border rounded text-sm font-bold" /></div>
-                                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Weight (kg)</label><input type="number" value={advCalc.weight} onChange={e => setAdvCalc({...advCalc, weight: Number(e.target.value)})} className="w-full p-1.5 border rounded text-sm font-bold" /></div>
-                                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Prot Fac</label><input type="number" step="0.1" value={advCalc.proteinFactor} onChange={e => setAdvCalc({...advCalc, proteinFactor: Number(e.target.value)})} className="w-full p-1.5 border rounded text-sm font-bold" /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Total Kcal</label><input type="number" value={advCalc.kcal} onChange={e => setAdvCalc({...advCalc, kcal: Number(e.target.value)})} className="w-full p-1.5 border rounded text-sm font-bold text-blue-800" /></div>
+                                <div><label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Carb %</label><input type="number" value={advCalc.carbPerc} onChange={e => setAdvCalc({...advCalc, carbPerc: Number(e.target.value)})} className="w-full p-1.5 border rounded text-sm font-bold text-blue-600" /></div>
+                                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Weight (kg)</label><input type="number" value={advCalc.weight} onChange={e => setAdvCalc({...advCalc, weight: Number(e.target.value)})} className="w-full p-1.5 border rounded text-sm font-bold text-gray-800" /></div>
+                                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Prot Fac (g/kg)</label><input type="number" step="0.1" value={advCalc.proteinFactor} onChange={e => setAdvCalc({...advCalc, proteinFactor: Number(e.target.value)})} className="w-full p-1.5 border rounded text-sm font-bold text-red-600" /></div>
                             </div>
-                            <button onClick={calculateAdvancedMacros} className="w-full py-2 bg-gray-800 text-white font-bold rounded text-xs">Calculate</button>
+                            <button onClick={calculateAdvancedMacros} className="w-full py-2 bg-gray-800 text-white font-bold rounded text-xs hover:bg-gray-900 transition">Calculate Breakdown</button>
                             {advResults && (
                                 <div className="mt-2 bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs">
                                     <div className="grid grid-cols-3 gap-2 text-center mb-3">
-                                        <div className="bg-blue-100 p-1.5 rounded"><div className="font-bold text-blue-800">{advResults.choG}g</div><div className="text-[9px]">C ({advCalc.carbPerc}%)</div></div>
-                                        <div className="bg-red-100 p-1.5 rounded"><div className="font-bold text-red-800">{advResults.proG}g</div><div className="text-[9px]">P ({advResults.proP}%)</div></div>
-                                        <div className="bg-yellow-100 p-1.5 rounded"><div className="font-bold text-yellow-800">{advResults.fatG}g</div><div className="text-[9px]">F ({advResults.fatP}%)</div></div>
+                                        <div className="bg-blue-100 p-1.5 rounded"><div className="font-bold text-blue-800">{advResults.choG}g</div><div className="text-[9px] text-blue-600">C ({advCalc.carbPerc}%)</div></div>
+                                        <div className="bg-red-100 p-1.5 rounded"><div className="font-bold text-red-800">{advResults.proG}g</div><div className="text-[9px] text-red-600">P ({advResults.proP}%)</div></div>
+                                        <div className="bg-yellow-100 p-1.5 rounded"><div className="font-bold text-yellow-800">{advResults.fatG}g</div><div className="text-[9px] text-yellow-600">F ({advResults.fatP}%)</div></div>
                                     </div>
-                                    <button onClick={applyAdvancedTargets} className="w-full py-1.5 bg-green-600 text-white font-bold rounded text-xs">Apply Targets</button>
+                                    <div className="border-t border-gray-200 pt-2"><p className="text-[9px] font-bold text-gray-500 uppercase mb-1">Fat Quality (Approx 1:2:1)</p><div className="flex justify-between text-[10px]"><span>SFA (10%): <b className="text-orange-700">{advResults.sfaG}g</b></span><span>MUFA: <b className="text-yellow-700">{advResults.mufaG}g</b></span></div><div className="text-[10px] text-right mt-1"><span>PUFA: <b className="text-yellow-600">{advResults.pufaG}g</b></span></div></div>
+                                    <button onClick={applyAdvancedTargets} className="mt-3 w-full py-1.5 bg-green-600 text-white font-bold rounded text-xs hover:bg-green-700 shadow-sm transition">Apply Targets</button>
                                 </div>
                             )}
                         </div>
@@ -719,33 +731,36 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
                 <div className="lg:col-span-6">
                      <div className="card bg-white shadow-lg overflow-hidden border border-gray-200">
-                        <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center"><span className="font-bold text-gray-700">Exchanges Calculator</span></div>
+                        <div className="p-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center"><span className="font-bold text-gray-700">Exchanges Calculator</span><div className="text-xs text-gray-500">Inputs: {Object.values(servings).reduce((a: number, b: number) => a + b, 0)}</div></div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm border-collapse">
                                 <thead className="bg-[var(--color-primary)] text-white">
                                     <tr>
-                                        <th className="p-3 text-left">{t.mealPlannerTool.foodGroup}</th>
+                                        <th className="p-3 text-left w-1/3">{t.mealPlannerTool.foodGroup}</th>
                                         <th className="p-3 text-center w-24">{t.mealPlannerTool.serves}</th>
                                         <th className="p-3 text-center">{t.mealPlannerTool.cho}</th>
                                         <th className="p-3 text-center">{t.mealPlannerTool.pro}</th>
                                         <th className="p-3 text-center">{t.mealPlannerTool.fat}</th>
+                                        <th className="p-3 text-center bg-green-700">Fiber</th>
                                         <th className="p-3 text-center bg-[var(--color-primary-dark)]">{t.mealPlannerTool.kcal}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {VISIBLE_GROUPS.map(group => {
                                         const isAutoFat = useFatBreakdown && group === 'fats';
-                                        const s = isAutoFat ? Number(calculatedFatsSum) : (Number(servings[group]) || 0);
+                                        const target = isAutoFat ? Number(calculatedFatsSum) : (Number(servings[group]) || 0);
+                                        const s = target;
                                         const f = GROUP_FACTORS[group];
                                         const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
                                         return (
                                             <tr key={group} className={`${style.bg} border-b ${style.border} bg-opacity-30`}>
-                                                <td className="p-3 font-medium"><div className={`flex items-center gap-2 text-base ${style.text}`}><span className="text-xl">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className="ml-2 text-[10px] px-2 py-0.5 rounded border bg-white">{useFatBreakdown ? 'Hide' : 'Show'}</button>)}</div></td>
-                                                <td className="p-3 text-center"><input type="number" min="0" step="0.5" disabled={isAutoFat} className="w-20 p-2 border border-gray-300 rounded text-center font-bold text-lg" value={s || ''} placeholder="0" onChange={(e) => updateServing(group, parseFloat(e.target.value) || 0)} /></td>
-                                                <td className="p-3 text-center font-mono font-bold text-gray-700">{(s*Number(f.cho)).toFixed(1)}</td>
-                                                <td className="p-3 text-center font-mono font-bold text-gray-700">{(s*Number(f.pro)).toFixed(1)}</td>
-                                                <td className="p-3 text-center font-mono font-bold text-gray-700">{(s*Number(f.fat)).toFixed(1)}</td>
-                                                <td className="p-3 text-center font-mono font-bold text-gray-700">{(s*Number(f.kcal)).toFixed(1)}</td>
+                                                <td className="p-3 font-medium transition-colors"><div className={`flex items-center gap-2 text-base ${style.text}`}><span className="text-xl">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className={`ml-2 text-[10px] px-2 py-0.5 rounded border transition font-bold ${useFatBreakdown ? 'bg-yellow-200 border-yellow-300 text-yellow-800' : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200'}`} title="Toggle detailed fat types">{useFatBreakdown ? 'Hide Details' : 'Show Breakdown'}</button>)}{isAutoFat && <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded ml-2">Auto-Sum</span>}</div></td>
+                                                <td className="p-3 text-center bg-white/50"><input type="number" min="0" step="0.5" disabled={isAutoFat} className={`w-20 p-2 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all ${isAutoFat ? 'bg-gray-100 font-bold text-gray-500 cursor-not-allowed' : s === 0 ? 'text-red-300 bg-white' : 'font-bold text-lg text-gray-800 bg-white shadow-sm'}`} value={s || ''} placeholder="0" onChange={(e) => updateServing(group, parseFloat(e.target.value) || 0)} /></td>
+                                                <td className="p-3 text-center"><div className={`font-mono text-base ${s*Number(f.cho) === 0 ? 'text-red-300' : 'text-gray-700 font-bold'}`}>{(s*Number(f.cho)).toFixed(1)}</div><div className="text-[10px] text-gray-400 font-medium">{f.cho}g</div></td>
+                                                <td className="p-3 text-center"><div className={`font-mono text-base ${s*Number(f.pro) === 0 ? 'text-red-300' : 'text-gray-700 font-bold'}`}>{(s*Number(f.pro)).toFixed(1)}</div><div className="text-[10px] text-gray-400 font-medium">{f.pro}g</div></td>
+                                                <td className="p-3 text-center"><div className={`font-mono text-base ${s*Number(f.fat) === 0 ? 'text-red-300' : 'text-gray-700 font-bold'}`}>{(s*Number(f.fat)).toFixed(1)}</div><div className="text-[10px] text-gray-400 font-medium">{f.fat}g</div></td>
+                                                <td className="p-3 text-center"><div className={`font-mono text-base ${s*Number(f.fiber) === 0 ? 'text-red-300' : 'text-gray-700 font-bold'}`}>{(s*Number(f.fiber)).toFixed(1)}</div><div className="text-[10px] text-gray-400 font-medium">{f.fiber}g</div></td>
+                                                <td className="p-3 text-center"><div className={`font-mono text-base ${s*Number(f.kcal) === 0 ? 'text-red-300' : 'text-gray-700 font-bold'}`}>{(s*Number(f.kcal)).toFixed(1)}</div><div className="text-[10px] text-gray-400 font-medium">{f.kcal}kcal</div></td>
                                             </tr>
                                         );
                                     })}
@@ -758,33 +773,61 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                 <div className="lg:col-span-3 space-y-6 no-print">
                     <div className="card bg-white shadow-xl sticky top-24 border-t-4 border-t-[var(--color-primary)]">
                         <div className="p-4">
-                            <h3 className="font-bold text-lg text-gray-800 mb-6 flex items-center gap-2">📊 Smart Summary</h3>
+                            <h3 className="font-bold text-lg text-gray-800 mb-6 flex items-center gap-2"><span className="text-2xl">📊</span> Smart Summary</h3>
                             <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={t.kcal.kcalRequired} />
                             <div className="mb-6"><MacroDonut cho={Number(calcTotals.cho)} pro={Number(calcTotals.pro)} fat={Number(calcTotals.fat)} totalKcal={Number(calcTotals.kcal)} /></div>
                             <div className="space-y-1 mb-6"><ProgressBar current={Number(calcTotals.kcal)} target={targetKcal} label="Calorie Goal" unit="kcal" showPercent={true}/></div>
                             <div className="overflow-hidden border border-gray-200 rounded-lg mb-4">
                                 <table className="w-full text-[10px]">
-                                    <thead className="bg-gray-100 text-gray-600 font-bold uppercase"><tr><th className="p-2 text-left">Item</th><th className="p-2 text-center">Total (g)</th><th className="p-2 text-center">Achieved</th></tr></thead>
+                                    <thead className="bg-gray-100 text-gray-600 font-bold uppercase"><tr><th className="p-2 text-left">Item</th><th className="p-2 text-center">Total (g)</th><th className="p-2 text-center bg-gray-50">Target</th><th className="p-2 text-center">Achieved</th></tr></thead>
                                     <tbody className="divide-y divide-gray-100 bg-white">
-                                        <tr><td className="p-2 font-bold text-blue-700">Total CHO</td><td className="p-2 text-center font-bold">{Number(calcTotals.cho).toFixed(1)}</td><td className="p-2 text-center font-bold text-blue-600">{activeTargetTab !== 'none' ? `${getAchievedPct(Number(calcTotals.cho), Number(targetMacros.cho)).toFixed(0)}%` : `${totalPerc.cho}%`}</td></tr>
-                                        <tr><td className="p-2 font-bold text-red-700">Total PRO</td><td className="p-2 text-center font-bold">{Number(calcTotals.pro).toFixed(1)}</td><td className="p-2 text-center font-bold text-red-600">{activeTargetTab !== 'none' ? `${getAchievedPct(Number(calcTotals.pro), Number(targetMacros.pro)).toFixed(0)}%` : `${totalPerc.pro}%`}</td></tr>
-                                        <tr><td className="p-2 font-bold text-yellow-700">Total FAT</td><td className="p-2 text-center font-bold">{Number(calcTotals.fat).toFixed(1)}</td><td className="p-2 text-center font-bold text-yellow-600">{activeTargetTab !== 'none' ? `${getAchievedPct(Number(calcTotals.fat), Number(targetMacros.fat)).toFixed(0)}%` : `${totalPerc.fat}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-blue-700">Total CHO</td><td className="p-2 text-center font-bold text-gray-800">{Number(calcTotals.cho).toFixed(1)}</td><td className="p-2 text-center text-gray-500 font-mono bg-gray-50/50">{activeTargetTab !== 'none' ? Number(targetMacros.cho).toFixed(0) : '-'}</td><td className="p-2 text-center font-bold text-blue-600">{activeTargetTab !== 'none' ? `${getAchievedPct(Number(calcTotals.cho), Number(targetMacros.cho)).toFixed(0)}%` : `${totalPerc.cho}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-red-700">Total PRO</td><td className="p-2 text-center font-bold text-gray-800">{Number(calcTotals.pro).toFixed(1)}</td><td className="p-2 text-center text-gray-500 font-mono bg-gray-50/50">{activeTargetTab !== 'none' ? Number(targetMacros.pro).toFixed(0) : '-'}</td><td className="p-2 text-center font-bold text-red-600">{activeTargetTab !== 'none' ? `${getAchievedPct(Number(calcTotals.pro), Number(targetMacros.pro)).toFixed(0)}%` : `${totalPerc.pro}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-yellow-700">Total FAT</td><td className="p-2 text-center font-bold text-gray-800">{Number(calcTotals.fat).toFixed(1)}</td><td className="p-2 text-center text-gray-500 font-mono bg-gray-50/50">{activeTargetTab !== 'none' ? Number(targetMacros.fat).toFixed(0) : '-'}</td><td className="p-2 text-center font-bold text-yellow-600">{activeTargetTab !== 'none' ? `${getAchievedPct(Number(calcTotals.fat), Number(targetMacros.fat)).toFixed(0)}%` : `${totalPerc.fat}%`}</td></tr>
+                                        <tr><td className="p-2 font-bold text-green-700">Total Fiber</td><td className="p-2 text-center font-bold text-green-800">{Number(calcTotals.fiber).toFixed(1)}</td><td className="p-2 text-center text-gray-400 bg-gray-50/50">-</td><td className="p-2 text-center text-gray-400">-</td></tr>
                                     </tbody>
                                 </table>
                             </div>
+                            {activeTargetTab !== 'none' && (
+                                <div className="space-y-2 mb-4 animate-fade-in">
+                                    <ProgressBar current={Number(calcTotals.cho)} target={Number(targetMacros.cho)} label="CHO" unit="g" color="bg-blue-500" />
+                                    <ProgressBar current={Number(calcTotals.pro)} target={Number(targetMacros.pro)} label="PRO" unit="g" color="bg-red-500" />
+                                    <ProgressBar current={Number(calcTotals.fat)} target={Number(targetMacros.fat)} label="FAT" unit="g" color="bg-yellow-500" />
+                                </div>
+                            )}
                             <div className="mt-4 pt-4 border-t border-gray-100 bg-gray-50 p-3 rounded-lg">
                                  <div className="flex justify-center gap-2 mb-3">
-                                     <button onClick={() => setActiveTargetTab(activeTargetTab === 'gm' ? 'none' : 'gm')} className={`flex-1 px-3 py-1.5 rounded text-xs font-bold border transition ${activeTargetTab === 'gm' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Target (g)</button>
-                                     <button onClick={() => setActiveTargetTab(activeTargetTab === 'perc' ? 'none' : 'perc')} className={`flex-1 px-3 py-1.5 rounded text-xs font-bold border transition ${activeTargetTab === 'perc' ? 'bg-blue-600 text-white' : 'bg-white'}`}>Target (%)</button>
+                                     <button onClick={() => setActiveTargetTab(activeTargetTab === 'gm' ? 'none' : 'gm')} className={`flex-1 px-3 py-1.5 rounded text-xs font-bold border transition ${activeTargetTab === 'gm' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200'}`}>Target (g)</button>
+                                     <button onClick={() => setActiveTargetTab(activeTargetTab === 'perc' ? 'none' : 'perc')} className={`flex-1 px-3 py-1.5 rounded text-xs font-bold border transition ${activeTargetTab === 'perc' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200'}`}>Target (%)</button>
                                  </div>
                                  {activeTargetTab === 'gm' && (
-                                     <div className="space-y-2">
-                                         <div className="flex justify-between items-center text-xs"><span>CHO (g)</span> <input type="number" className="w-20 p-1 border rounded text-center font-bold" value={manualGm.cho} onChange={e => setManualGm({...manualGm, cho: parseFloat(e.target.value)})} /></div>
-                                         <div className="flex justify-between items-center text-xs"><span>PRO (g)</span> <input type="number" className="w-20 p-1 border rounded text-center font-bold" value={manualGm.pro} onChange={e => setManualGm({...manualGm, pro: parseFloat(e.target.value)})} /></div>
-                                         <div className="flex justify-between items-center text-xs"><span>FAT (g)</span> <input type="number" className="w-20 p-1 border rounded text-center font-bold" value={manualGm.fat} onChange={e => setManualGm({...manualGm, fat: parseFloat(e.target.value)})} /></div>
+                                     <div className="space-y-2 animate-fade-in">
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">CHO (g)</span> <input type="number" className="w-20 p-1 border rounded text-center text-sm font-bold text-blue-700" value={manualGm.cho} onChange={e => setManualGm({...manualGm, cho: parseFloat(e.target.value)})} /> <span className="text-[9px] text-gray-400">Rem: {(Number(manualGm.cho) - Number(calcTotals.cho)).toFixed(0)}g</span></div>
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">PRO (g)</span> <input type="number" className="w-20 p-1 border rounded text-center text-sm font-bold text-red-700" value={manualGm.pro} onChange={e => setManualGm({...manualGm, pro: parseFloat(e.target.value)})} /> <span className="text-[9px] text-gray-400">Rem: {(Number(manualGm.pro) - Number(calcTotals.pro)).toFixed(0)}g</span></div>
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">FAT (g)</span> <input type="number" className="w-20 p-1 border rounded text-center text-sm font-bold text-yellow-700" value={manualGm.fat} onChange={e => setManualGm({...manualGm, fat: parseFloat(e.target.value)})} /> <span className="text-[9px] text-gray-400">Rem: {(Number(manualGm.fat) - Number(calcTotals.fat)).toFixed(0)}g</span></div>
+                                         <div className="mt-2 pt-2 border-t border-gray-200 text-xs text-center text-gray-500"><div>Target Sum: <strong>{(Number(manualGm.cho)*4 + Number(manualGm.pro)*4 + Number(manualGm.fat)*9).toFixed(0)}</strong> kcal</div><div className="text-[10px]">(Diff from Target Kcal: {((Number(manualGm.cho)*4 + Number(manualGm.pro)*4 + Number(manualGm.fat)*9) - targetKcal).toFixed(0)} kcal)</div></div>
+                                     </div>
+                                 )}
+                                 {activeTargetTab === 'perc' && (
+                                     <div className="space-y-2 animate-fade-in">
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">CHO (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm font-bold text-blue-700" value={manualPerc.cho} onChange={e => setManualPerc({...manualPerc, cho: parseFloat(e.target.value)})} /></div>
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">PRO (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm font-bold text-red-700" value={manualPerc.pro} onChange={e => setManualPerc({...manualPerc, pro: parseFloat(e.target.value)})} /></div>
+                                         <div className="flex justify-between items-center"><span className="text-xs font-bold text-gray-600">FAT (%)</span> <input type="number" className="w-16 p-1 border rounded text-center text-sm font-bold text-yellow-700" value={manualPerc.fat} onChange={e => setManualPerc({...manualPerc, fat: parseFloat(e.target.value)})} /></div>
+                                         <div className="text-xs text-center font-bold mt-1 text-gray-700">Total: {Number(manualPerc.cho) + Number(manualPerc.pro) + Number(manualPerc.fat)}%</div>
                                      </div>
                                  )}
                             </div>
+                            {calcTotals.kcal > 0 && (
+                                <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                                    <h4 className="font-bold text-xs text-yellow-800 uppercase mb-2 border-b border-yellow-200 pb-1">Fat Quality Breakdown</h4>
+                                    <div className="space-y-1 text-xs">
+                                        <div className="flex justify-between items-center"><span className="text-orange-700">SFA (Sat)</span><div><span className="font-bold text-orange-900">{((Number(calcTotals.kcalSat) / Number(calcTotals.kcal)) * 100).toFixed(1)}%</span><span className="text-orange-600 ml-1">(&lt;10%)</span></div></div>
+                                        <div className="flex justify-between items-center"><span className="text-yellow-700">PUFA</span><div><span className="font-bold text-yellow-900">{((Number(calcTotals.kcalPufa) / Number(calcTotals.kcal)) * 100).toFixed(1)}%</span><span className="text-yellow-600 ml-1">(Up to 10%)</span></div></div>
+                                        <div className="flex justify-between items-center"><span className="text-yellow-700">MUFA</span><div><span className="font-bold text-yellow-900">{((Number(calcTotals.kcalMufa) / Number(calcTotals.kcal)) * 100).toFixed(1)}%</span><span className="text-yellow-600 ml-1">(Up to 20%)</span></div></div>
+                                        <div className="border-t border-yellow-200 mt-1 pt-1 flex justify-between font-bold"><span>Total Fat</span><span>{((Number(calcTotals.fat) * 9 / Number(calcTotals.kcal)) * 100).toFixed(1)}% <span className="text-[10px] font-normal text-gray-500">(20-25%)</span></span></div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -797,7 +840,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                     <div className="overflow-x-auto">
                         <table className="w-full text-xs sm:text-sm border-collapse">
                             <thead className="bg-gray-800 text-white sticky top-0 z-10">
-                                <tr><th className="p-2 text-left min-w-[140px]">Food Group</th><th className="p-2 text-center bg-gray-700 min-w-[60px] border-r border-gray-600">Remain</th>{MEALS.map(m => (<th key={m} className="p-2 text-center min-w-[60px]">{t.mealPlannerTool.meals[m as keyof typeof t.mealPlannerTool.meals]}</th>))}</tr>
+                                <tr><th className="p-2 text-left min-w-[140px] bg-gray-900 border-b border-gray-700">Food Group</th><th className="p-2 text-center bg-gray-700 min-w-[60px] border-b border-gray-600 font-bold border-r border-gray-600">Remain</th>{MEALS.map(m => (<th key={m} className="p-2 text-center min-w-[60px] border-b border-gray-700">{t.mealPlannerTool.meals[m as keyof typeof t.mealPlannerTool.meals]}</th>))}</tr>
+                                <tr><th colSpan={MEALS.length + 2} className="p-1 bg-blue-100 text-blue-900 text-center text-xs font-bold uppercase tracking-widest border-b border-blue-200">Serves Day Distribution</th></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {VISIBLE_GROUPS.map(group => {
@@ -810,12 +854,13 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                     const target = isAutoFat ? Number(calculatedFatsSum) : (Number(servings[group]) || 0);
                                     const totalDist = MEALS.reduce((acc: number, m: string) => acc + (Number(displayDistributions[m]) || 0), 0);
                                     const rem = target - totalDist;
+                                    const isOver = rem < 0, isComplete = rem === 0 && target > 0;
                                     const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
                                     return (
                                         <tr key={group} className={`${style.bg} bg-opacity-30 border-b border-gray-100`}>
-                                            <td className="p-2 font-medium border-r border-gray-200"><div className={`flex items-center gap-1.5 ${style.text}`}><span className="text-sm">{style.icon}</span> {getGroupLabel(group)}</div></td>
-                                            <td className={`p-2 text-center font-bold border-r-2 border-gray-300 ${rem < 0 ? 'text-red-600' : 'text-gray-600'}`}>{rem === 0 ? '-' : rem.toFixed(1)}</td>
-                                            {MEALS.map(meal => (<td key={meal} className="p-1 text-center border-r border-gray-100">{isAutoFat ? (<div className="text-gray-500 font-bold text-xs">{Number(displayDistributions[meal]) > 0 ? displayDistributions[meal] : '-'}</div>) : (<input type="number" className="w-full h-8 text-center bg-transparent focus:bg-blue-50 outline-none rounded font-bold" placeholder="-" value={displayDistributions?.[meal] || ''} onChange={(e) => updateDistribution(group, meal, parseFloat(e.target.value) || 0)} />)}</td>))}
+                                            <td className="p-2 font-medium border-r border-gray-200 sticky left-0 z-10 bg-white"><div className={`flex items-center gap-1.5 ${style.text}`}><span className="text-sm">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className={`ml-2 text-[8px] px-1.5 py-0.5 rounded border font-bold ${useFatBreakdown ? 'bg-yellow-200 text-yellow-800 border-yellow-300' : 'bg-gray-100 border-gray-200 text-gray-500 border-gray-200'}`}>{useFatBreakdown ? 'Hide' : 'Show'}</button>)}{isAutoFat && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded ml-1">Sum</span>}</div><div className="text-[10px] text-gray-500 font-normal no-print mt-1 ml-5 border-t border-black/10 pt-0.5">Total: <span className="font-bold">{target}</span></div></td>
+                                            <td className={`p-2 text-center font-bold border-r-2 border-gray-300 ${isOver ? 'bg-red-50 text-red-600' : isComplete ? 'bg-gray-50 text-gray-300' : 'bg-white text-gray-600'}`}>{rem === 0 ? '-' : rem.toFixed(1)}</td>
+                                            {MEALS.map(meal => (<td key={meal} className="p-1 text-center border-r border-gray-100">{isAutoFat ? (<div className="text-gray-500 font-bold text-xs">{Number(displayDistributions[meal]) > 0 ? displayDistributions[meal] : '-'}</div>) : (<input type="number" className={`w-full h-8 text-center bg-transparent focus:bg-blue-50 outline-none rounded hover:bg-gray-100 transition ${(Number(displayDistributions?.[meal]) || 0) === 0 ? 'text-gray-300' : 'text-black font-bold'}`} placeholder="-" value={displayDistributions?.[meal] || ''} onChange={(e) => updateDistribution(group, meal, parseFloat(e.target.value) || 0)} />)}</td>))}
                                         </tr>
                                     );
                                 })}
@@ -824,17 +869,28 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                     </div>
                 </div>
                 <div className="w-full lg:w-80 flex-shrink-0 space-y-4 no-print">
-                     <div className="card bg-white p-4 sticky top-24 shadow-md">
+                     <div className="card bg-white p-4 sticky top-24">
                         <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">Planner Snapshot</h3>
                         <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={t.kcal.kcalRequired} />
                         <div className="mb-6"><MacroDonut cho={Number(distTotals.cho)} pro={Number(distTotals.pro)} fat={Number(distTotals.fat)} totalKcal={Number(distTotals.kcal)} /></div>
+                        {activeTargetTab !== 'none' && (
+                            <div className="mb-4 bg-gray-50 p-2 rounded border border-gray-100 text-xs">
+                                <div className="font-bold text-gray-600 mb-1 uppercase text-[10px]">Macro Progress</div>
+                                <div className="space-y-1.5">
+                                    <ProgressBar current={Number(distTotals.cho)} target={Number(targetMacros.cho)} label="CHO" unit="g" color="bg-blue-500" showPercent={true} />
+                                    <ProgressBar current={Number(distTotals.pro)} target={Number(targetMacros.pro)} label="PRO" unit="g" color="bg-red-500" showPercent={true} />
+                                    <ProgressBar current={Number(distTotals.fat)} target={Number(targetMacros.fat)} label="FAT" unit="g" color="bg-yellow-500" showPercent={true} />
+                                </div>
+                            </div>
+                        )}
                         <div className="space-y-3">
                             <ProgressBar current={Number(distTotals.kcal)} target={targetKcal} label="Calories" unit="kcal" showPercent={true} />
                             <div className="grid grid-cols-3 gap-2 text-xs text-center mt-4">
-                                <div className="p-2 bg-blue-50 rounded"><div className="font-bold text-blue-700">{Number(distTotals.cho).toFixed(0)}g</div><div>CHO</div></div>
-                                <div className="p-2 bg-red-50 rounded"><div className="font-bold text-red-700">{Number(distTotals.pro).toFixed(0)}g</div><div>PRO</div></div>
-                                <div className="p-2 bg-yellow-50 rounded"><div className="font-bold text-yellow-700">{Number(distTotals.fat).toFixed(0)}g</div><div>FAT</div></div>
+                                <div className="p-2 bg-blue-50 rounded"><div className="font-bold text-blue-700">{Number(distTotals.cho).toFixed(0)}g</div><div className="text-blue-400">CHO</div></div>
+                                <div className="p-2 bg-red-50 rounded"><div className="font-bold text-red-700">{Number(distTotals.pro).toFixed(0)}g</div><div className="text-red-400">PRO</div></div>
+                                <div className="p-2 bg-yellow-50 rounded"><div className="font-bold text-yellow-700">{Number(distTotals.fat).toFixed(0)}g</div><div className="text-yellow-400">FAT</div></div>
                             </div>
+                            <div className="p-2 bg-green-50 rounded text-center text-xs"><div className="font-bold text-green-700">{Number(distTotals.fiber).toFixed(1)}g</div><div className="text-green-500">Fiber</div></div>
                         </div>
                      </div>
                 </div>
@@ -851,9 +907,10 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm no-print">
             <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-2xl h-[80vh] flex flex-col">
                 <div className="flex justify-between items-center mb-4"><h3 className="text-xl font-bold">{t.common.load}</h3><button onClick={() => setShowLoadModal(false)} className="text-gray-400 hover:text-gray-600">✕</button></div>
-                <div className="mb-4"><input type="text" placeholder={t.common.search} value={loadSearchQuery} onChange={(e) => setLoadSearchQuery(e.target.value)} className="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none" /></div>
+                <div className="mb-4"><input type="text" placeholder={t.common.search} value={loadSearchQuery} onChange={(e) => setLoadSearchQuery(e.target.value)} className="w-full p-3 border border-gray-200 rounded-lg bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-[var(--color-primary)]" /></div>
                 <div className="flex-grow overflow-y-auto space-y-2 pr-2">
                     {isLoadingPlans ? ( <div className="text-center py-10 text-gray-400">Loading...</div>
+                    ) : filteredSavedPlans.length === 0 ? ( <div className="text-center py-10 text-gray-400">No saved plans found.</div>
                     ) : (
                         filteredSavedPlans.map(plan => (
                             <div key={plan.id} className="flex justify-between items-center p-3 bg-gray-50 hover:bg-blue-50 rounded-lg border border-gray-100 group">

@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova Update_91_v2.0.236",
-  "description": "v2.0.236: Updated Meal Planner Quick Diet Templates to use the new 'diet_name' column for selection. Kcal is now automatically derived and displayed as read-only based on the selected diet name. Reinforced arithmetic safety in macro calculation memos to prevent potential runtime errors. Maintained previous v2.0.235 fixes (Day Menu AM/PM stability and selection logic).",
+  "name": "Diet-Nova DayMenu_90_v2.0.235",
+  "description": "v2.0.235: Fixed meal time AM/PM input stability in Day Menu. Implemented Select Main logic to unselect alternatives while keeping main options checked. Added Select All toggle functionality. Maintained all existing save/load logic and data integrity.",
   "requestFramePermissions": []
 }
