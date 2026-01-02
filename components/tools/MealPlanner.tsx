@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { ProgressBar, MacroDonut } from '../Visuals';
@@ -40,7 +41,8 @@ const GROUP_STYLES: Record<string, { bg: string, text: string, border: string, i
   sugar: { bg: 'bg-gray-100', text: 'text-gray-900', border: 'border-gray-300', icon: '🍬' },
   fats: { bg: 'bg-yellow-50', text: 'text-yellow-900', border: 'border-yellow-200', icon: '🥑' },
   fatsPufa: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: '🌻' },
-  fatsMufa: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: '🫒' },
+  // v2.0.238: Fixed Fat MUFA Emoji visibility
+  fatsMufa: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: '🥜' },
   fatsSat: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300', icon: '🥥' },
 };
 
@@ -129,7 +131,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   });
   const [advResults, setAdvResults] = useState<{choG: number, proG: number, fatG: number, proP: number, fatP: number, sfaG: number, mufaG: number, pufaG: number} | null>(null);
 
-  // --- 1. Fetch Cloud Diet Templates (v2.0.237: Added diet_notes) ---
+  // --- 1. Fetch Cloud Diet Templates ---
   useEffect(() => {
     const fetchDietTemplates = async () => {
       setIsTemplatesLoading(true);
@@ -137,7 +139,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       try {
         const { data, error } = await supabase
           .from('diet_templates')
-          .select('*, diet_name, diet_notes') // v2.0.237: Added diet_notes
+          .select('*, diet_name, diet_notes') 
           .order('diet_type', { ascending: true })
           .order('kcal', { ascending: true });
 
@@ -159,7 +161,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
               transformed[dietTypeId].distributions.push(dist);
             }
             
-            // v2.0.237: Map diet_name and diet_notes from DB
             dist.rows.push({
               kcal: row.kcal,
               dietName: row.diet_name,
@@ -317,31 +318,31 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       return { cho: t_cho, pro: t_pro, fat: t_fat, fiber: t_fiber, kcal: t_kcal };
   }, [distribution, useFatBreakdown, VISIBLE_GROUPS]);
 
-  // --- Template Handlers (v2.0.237 Update: Added derivedNotes) ---
+  // --- Template Handlers ---
   const selectedDiet = dietTemplates.find(d => d.id === selectedDietId);
   const selectedDistribution = selectedDiet?.distributions.find(d => d.id === selectedDistId);
 
-  // v2.0.236: Plan Name Options instead of kcal options
+  // Plan Name Options instead of kcal options
   const planNameOptions = useMemo(() => {
       if (!selectedDistribution) return [];
       return [...new Set(selectedDistribution.rows.map(r => r.dietName || `Plan (${r.kcal} kcal)`))].sort();
   }, [selectedDistribution]);
 
-  // v2.0.236: Auto-select first plan when distribution changes
+  // Auto-select first plan when distribution changes
   useEffect(() => {
       if (planNameOptions.length > 0 && (!selectedPlanName || !planNameOptions.includes(selectedPlanName))) {
           setSelectedPlanName(planNameOptions[0]);
       }
   }, [planNameOptions]);
 
-  // v2.0.236: Derived Kcal for display only
+  // Derived Kcal for display only
   const derivedKcal = useMemo(() => {
       if (!selectedDistribution || !selectedPlanName) return 0;
       const plan = selectedDistribution.rows.find(r => (r.dietName || `Plan (${r.kcal} kcal)`) === selectedPlanName);
       return plan ? plan.kcal : 0;
   }, [selectedDistribution, selectedPlanName]);
 
-  // v2.0.237: Derived Notes for display throughout tool
+  // Derived Notes for display throughout tool
   const derivedNotes = useMemo(() => {
       if (!selectedDistribution || !selectedPlanName) return null;
       const plan = selectedDistribution.rows.find(r => (r.dietName || `Plan (${r.kcal} kcal)`) === selectedPlanName);
@@ -511,6 +512,10 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       setLastSavedName('');
       setUseFatBreakdown(false);
       setDayMenuPlan(DEFAULT_WEEKLY_PLAN);
+      // v2.0.238: Reset template selection to hide diet notes
+      setSelectedDietId(dietTemplates.length > 0 ? dietTemplates[0].id : '');
+      setSelectedDistId(dietTemplates.length > 0 && dietTemplates[0].distributions.length > 0 ? dietTemplates[0].distributions[0].id : '');
+      setSelectedPlanName('');
   };
 
   const getGroupLabel = (group: string) => {
@@ -587,7 +592,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         {viewMode === 'calculator' && (
             <>
                 <div className="lg:col-span-3 space-y-6 no-print">
-                    {/* QUICK DIET TEMPLATES (Cloud Exclusive - Updated v2.0.237) */}
+                    {/* QUICK DIET TEMPLATES (Cloud Exclusive) */}
                     <div className="bg-white p-6 rounded-xl shadow-md border border-blue-50 flex flex-col gap-4">
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="font-bold text-blue-800 text-sm uppercase tracking-wide">Quick Diet Templates</h3>
@@ -619,6 +624,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                 <div className="flex-grow">
                                     <label className="text-[11px] text-gray-500 font-bold block mb-1.5 uppercase">Diet Plan Name</label>
                                     <select className="w-full p-2.5 border rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none font-bold text-gray-800" value={selectedPlanName} onChange={(e) => setSelectedPlanName(e.target.value)}>
+                                        <option value="" disabled>-- Select Plan --</option>
                                         {planNameOptions.map(name => <option key={name} value={name}>{name}</option>)}
                                     </select>
                                 </div>
@@ -703,20 +709,22 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                         <div className="p-4">
                             <h3 className="font-bold text-lg text-gray-800 mb-6 flex items-center gap-2"><span className="text-2xl">📊</span> Smart Summary</h3>
                             
-                            {/* v2.0.237: Template Instructions Display (visible when a template with notes is active) */}
+                            {/* v2.0.238: Template Instructions with bold blue formatting for '/ week' entries */}
                             {derivedNotes && (
                                 <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded shadow-sm animate-fade-in">
                                     <div className="flex items-center gap-2 mb-2 text-yellow-800 font-bold text-xs uppercase tracking-wider">
                                         <span>💡</span> Template Instructions
                                     </div>
                                     <div className="text-xs text-yellow-900 space-y-1.5 leading-relaxed">
-                                        {/* Rich format: splitting by ";" for new lines as requested */}
-                                        {derivedNotes.split(';').map((line, idx) => (
-                                            <div key={idx} className="flex gap-2">
-                                                <span className="text-yellow-500 mt-1">•</span>
-                                                <span>{line.trim()}</span>
-                                            </div>
-                                        ))}
+                                        {derivedNotes.split(';').map((line, idx) => {
+                                            const isWeekly = line.toLowerCase().includes('/ week');
+                                            return (
+                                                <div key={idx} className={`flex gap-2 ${isWeekly ? 'text-blue-700 font-bold' : ''}`}>
+                                                    <span className={`${isWeekly ? 'text-blue-500' : 'text-yellow-500'} mt-1`}>•</span>
+                                                    <span>{line.trim()}</span>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
@@ -808,19 +816,22 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                      <div className="card bg-white p-4 sticky top-24">
                         <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">Planner Snapshot</h3>
                         
-                        {/* v2.0.237: Shared Template Instructions for Planner Mode */}
+                        {/* v2.0.238: Shared Template Instructions with bold blue formatting for '/ week' entries */}
                         {derivedNotes && (
                             <div className="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-2.5 rounded shadow-sm animate-fade-in text-[11px] leading-relaxed">
                                 <div className="font-bold text-yellow-800 mb-1 flex items-center gap-1.5">
                                     <span>💡</span> Plan Notes
                                 </div>
                                 <div className="text-yellow-900 space-y-1">
-                                    {derivedNotes.split(';').map((line, idx) => (
-                                        <div key={idx} className="flex gap-1.5">
-                                            <span className="text-yellow-400">•</span>
-                                            <span>{line.trim()}</span>
-                                        </div>
-                                    ))}
+                                    {derivedNotes.split(';').map((line, idx) => {
+                                        const isWeekly = line.toLowerCase().includes('/ week');
+                                        return (
+                                            <div key={idx} className={`flex gap-1.5 ${isWeekly ? 'text-blue-700 font-bold' : ''}`}>
+                                                <span className={`${isWeekly ? 'text-blue-500' : 'text-yellow-400'}`}>•</span>
+                                                <span>{line.trim()}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         )}

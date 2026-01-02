@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova DayMenu_94_v2.0.237",
-  "description": "v2.0.237: Added support for diet_notes in Meal Planner templates. Notes are fetched from the cloud, mapped to selected plans, and displayed in a formatted block (using ';' as a line break). Maintained all existing layout and tool logic.",
+  "name": "Diet-Nova DayMenu_95_v2.0.238",
+  "description": "v2.0.238: Enhanced Meal Planner Reset to hide diet_notes. Implemented conditional bold blue styling for '/ week' entries in diet_notes. Fixed Fat MUFA emoji visibility by changing to '🥜'. Maintained full system structure and design.",
   "requestFramePermissions": []
 }
