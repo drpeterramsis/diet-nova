@@ -1,12 +1,13 @@
 
 /**
  * Diet Template Data Structure
- * v2.0.236 - Added dietName to support selection by specific label.
+ * v2.0.237 - Added dietNotes to support rich formatted plan-specific instructions.
  */
 
 export interface DietPlanRow {
     kcal: number;
-    dietName?: string; // New field for specific label in database
+    dietName?: string; // Field for specific label in database
+    dietNotes?: string; // v2.0.237: Field for rich notes (using ";" as separator)
     exchanges: {
         starch: number;
         veg: number;

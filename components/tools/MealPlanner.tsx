@@ -119,7 +119,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   // --- Template & Advanced Calculator State ---
   const [selectedDietId, setSelectedDietId] = useState<string>('');
   const [selectedDistId, setSelectedDistId] = useState<string>('');
-  const [selectedPlanName, setSelectedPlanName] = useState<string>(''); // v2.0.236: Changed from templateKcal
+  const [selectedPlanName, setSelectedPlanName] = useState<string>(''); 
   
   const [advCalc, setAdvCalc] = useState({
       kcal: 2000,
@@ -129,7 +129,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   });
   const [advResults, setAdvResults] = useState<{choG: number, proG: number, fatG: number, proP: number, fatP: number, sfaG: number, mufaG: number, pufaG: number} | null>(null);
 
-  // --- 1. Fetch Cloud Diet Templates (v2.0.236: Added diet_name) ---
+  // --- 1. Fetch Cloud Diet Templates (v2.0.237: Added diet_notes) ---
   useEffect(() => {
     const fetchDietTemplates = async () => {
       setIsTemplatesLoading(true);
@@ -137,7 +137,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       try {
         const { data, error } = await supabase
           .from('diet_templates')
-          .select('*, diet_name') // Explicitly select new column
+          .select('*, diet_name, diet_notes') // v2.0.237: Added diet_notes
           .order('diet_type', { ascending: true })
           .order('kcal', { ascending: true });
 
@@ -159,10 +159,11 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
               transformed[dietTypeId].distributions.push(dist);
             }
             
-            // v2.0.236: Map diet_name from DB
+            // v2.0.237: Map diet_name and diet_notes from DB
             dist.rows.push({
               kcal: row.kcal,
               dietName: row.diet_name,
+              dietNotes: row.diet_notes,
               exchanges: {
                 starch: Number(row.starch || 0),
                 veg: Number(row.vegetables || 0),
@@ -205,77 +206,12 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
     fetchDietTemplates();
   }, []);
 
-  // Initialize target if provided prop updates
-  useEffect(() => {
-    if (initialTargetKcal && initialTargetKcal > 0) {
-      setTargetKcal(initialTargetKcal);
-      setAdvCalc(prev => ({ ...prev, kcal: initialTargetKcal }));
-    }
-  }, [initialTargetKcal]);
-
   // Filter Saved Plans Logic
   const filteredSavedPlans = useMemo(() => {
     if (!loadSearchQuery) return savedPlans;
     const q = loadSearchQuery.toLowerCase();
     return savedPlans.filter(plan => plan.name.toLowerCase().includes(q));
   }, [savedPlans, loadSearchQuery]);
-
-  // Auto-load effect
-  useEffect(() => {
-      const autoLoad = async () => {
-          if (initialLoadId && session) {
-              try {
-                  const { data, error } = await supabase
-                    .from('saved_meals')
-                    .select('*')
-                    .eq('id', initialLoadId)
-                    .eq('user_id', session.user.id)
-                    .single();
-                  
-                  if (data && !error) {
-                      loadPlan(data);
-                  }
-              } catch (err) {
-                  console.error("Auto-load failed", err);
-              }
-          }
-      };
-      autoLoad();
-  }, [initialLoadId, session]);
-
-  // --- Hydrate from Visit Data ---
-  useEffect(() => {
-      if (activeVisit?.visit.meal_plan_data) {
-          const data = activeVisit.visit.meal_plan_data;
-          if (data.servings) setServings(data.servings);
-          if (data.distribution) setDistribution(data.distribution);
-          if (data.targetKcal) {
-              setTargetKcal(data.targetKcal);
-              setAdvCalc(prev => ({ ...prev, kcal: data.targetKcal }));
-          }
-          if (data.manualGm) setManualGm(data.manualGm);
-          if (data.manualPerc) setManualPerc(data.manualPerc);
-          if (data.dayMenuPlan) setDayMenuPlan(data.dayMenuPlan);
-          
-          const hasDetails = (data.servings?.fatsPufa || 0) > 0 || (data.servings?.fatsMufa || 0) > 0 || (data.servings?.fatsSat || 0) > 0;
-          if (hasDetails) setUseFatBreakdown(true);
-      }
-      
-      if (activeVisit?.visit.weight) {
-          setAdvCalc(prev => ({ ...prev, weight: activeVisit.visit.weight || 70 }));
-      }
-  }, [activeVisit]);
-
-  // Handle Auto Open
-  useEffect(() => {
-      if (autoOpenLoad && session) {
-          fetchPlans();
-          setShowLoadModal(true);
-      }
-      if (autoOpenNew) {
-          resetAll();
-      }
-  }, [autoOpenLoad, autoOpenNew, session]);
 
   // State for Planner Distribution
   const [distribution, setDistribution] = useState<Record<string, Record<string, number>>>(
@@ -381,32 +317,13 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       return { cho: t_cho, pro: t_pro, fat: t_fat, fiber: t_fiber, kcal: t_kcal };
   }, [distribution, useFatBreakdown, VISIBLE_GROUPS]);
 
-  const rowRemains = useMemo(() => {
-    const remains: Record<string, number> = {};
-    VISIBLE_GROUPS.forEach(g => {
-        const totalDist = MEALS.reduce((acc: number, m: string) => acc + (Number(distribution[g]?.[m]) || 0), 0);
-        let target = Number(servings[g]) || 0;
-        if (useFatBreakdown && g === 'fats') {
-            target = Number(calculatedFatsSum);
-            const distPufa = MEALS.reduce((acc: number, m: string) => acc + (Number(distribution['fatsPufa']?.[m]) || 0), 0);
-            const distMufa = MEALS.reduce((acc: number, m: string) => acc + (Number(distribution['fatsMufa']?.[m]) || 0), 0);
-            const distSat = MEALS.reduce((acc: number, m: string) => acc + (Number(distribution['fatsSat']?.[m]) || 0), 0);
-            remains[g] = target - (distPufa + distMufa + distSat); 
-        } else {
-            remains[g] = target - totalDist;
-        }
-    });
-    return remains;
-  }, [servings, distribution, useFatBreakdown, calculatedFatsSum, VISIBLE_GROUPS]);
-
-  // --- Template Handlers (v2.0.236 Update) ---
+  // --- Template Handlers (v2.0.237 Update: Added derivedNotes) ---
   const selectedDiet = dietTemplates.find(d => d.id === selectedDietId);
   const selectedDistribution = selectedDiet?.distributions.find(d => d.id === selectedDistId);
 
   // v2.0.236: Plan Name Options instead of kcal options
   const planNameOptions = useMemo(() => {
       if (!selectedDistribution) return [];
-      // Return list of diet names, filter out undefineds and dedupe
       return [...new Set(selectedDistribution.rows.map(r => r.dietName || `Plan (${r.kcal} kcal)`))].sort();
   }, [selectedDistribution]);
 
@@ -422,6 +339,13 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       if (!selectedDistribution || !selectedPlanName) return 0;
       const plan = selectedDistribution.rows.find(r => (r.dietName || `Plan (${r.kcal} kcal)`) === selectedPlanName);
       return plan ? plan.kcal : 0;
+  }, [selectedDistribution, selectedPlanName]);
+
+  // v2.0.237: Derived Notes for display throughout tool
+  const derivedNotes = useMemo(() => {
+      if (!selectedDistribution || !selectedPlanName) return null;
+      const plan = selectedDistribution.rows.find(r => (r.dietName || `Plan (${r.kcal} kcal)`) === selectedPlanName);
+      return plan?.dietNotes || null;
   }, [selectedDistribution, selectedPlanName]);
 
   const applyTemplate = () => {
@@ -663,7 +587,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         {viewMode === 'calculator' && (
             <>
                 <div className="lg:col-span-3 space-y-6 no-print">
-                    {/* QUICK DIET TEMPLATES (Cloud Exclusive - Updated v2.0.236) */}
+                    {/* QUICK DIET TEMPLATES (Cloud Exclusive - Updated v2.0.237) */}
                     <div className="bg-white p-6 rounded-xl shadow-md border border-blue-50 flex flex-col gap-4">
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="font-bold text-blue-800 text-sm uppercase tracking-wide">Quick Diet Templates</h3>
@@ -778,6 +702,25 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                     <div className="card bg-white shadow-xl sticky top-24 border-t-4 border-t-[var(--color-primary)]">
                         <div className="p-4">
                             <h3 className="font-bold text-lg text-gray-800 mb-6 flex items-center gap-2"><span className="text-2xl">📊</span> Smart Summary</h3>
+                            
+                            {/* v2.0.237: Template Instructions Display (visible when a template with notes is active) */}
+                            {derivedNotes && (
+                                <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded shadow-sm animate-fade-in">
+                                    <div className="flex items-center gap-2 mb-2 text-yellow-800 font-bold text-xs uppercase tracking-wider">
+                                        <span>💡</span> Template Instructions
+                                    </div>
+                                    <div className="text-xs text-yellow-900 space-y-1.5 leading-relaxed">
+                                        {/* Rich format: splitting by ";" for new lines as requested */}
+                                        {derivedNotes.split(';').map((line, idx) => (
+                                            <div key={idx} className="flex gap-2">
+                                                <span className="text-yellow-500 mt-1">•</span>
+                                                <span>{line.trim()}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={t.kcal.kcalRequired} />
                             <div className="mb-6"><MacroDonut cho={Number(calcTotals.cho)} pro={Number(calcTotals.pro)} fat={Number(calcTotals.fat)} totalKcal={Number(calcTotals.kcal)} /></div>
                             <div className="space-y-1 mb-6"><ProgressBar current={Number(calcTotals.kcal)} target={targetKcal} label="Calorie Goal" unit="kcal" showPercent={true}/></div>
@@ -821,17 +764,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                      </div>
                                  )}
                             </div>
-                            {calcTotals.kcal > 0 && (
-                                <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                                    <h4 className="font-bold text-xs text-yellow-800 uppercase mb-2 border-b border-yellow-200 pb-1">Fat Quality Breakdown</h4>
-                                    <div className="space-y-1 text-xs">
-                                        <div className="flex justify-between items-center"><span className="text-orange-700">SFA (Sat)</span><div><span className="font-bold text-orange-900">{((Number(calcTotals.kcalSat) / Number(calcTotals.kcal)) * 100).toFixed(1)}%</span><span className="text-orange-600 ml-1">(&lt;10%)</span></div></div>
-                                        <div className="flex justify-between items-center"><span className="text-yellow-700">PUFA</span><div><span className="font-bold text-yellow-900">{((Number(calcTotals.kcalPufa) / Number(calcTotals.kcal)) * 100).toFixed(1)}%</span><span className="text-yellow-600 ml-1">(Up to 10%)</span></div></div>
-                                        <div className="flex justify-between items-center"><span className="text-yellow-700">MUFA</span><div><span className="font-bold text-yellow-900">{((Number(calcTotals.kcalMufa) / Number(calcTotals.kcal)) * 100).toFixed(1)}%</span><span className="text-yellow-600 ml-1">(Up to 20%)</span></div></div>
-                                        <div className="border-t border-yellow-200 mt-1 pt-1 flex justify-between font-bold"><span>Total Fat</span><span>{((Number(calcTotals.fat) * 9 / Number(calcTotals.kcal)) * 100).toFixed(1)}% <span className="text-[10px] font-normal text-gray-500">(20-25%)</span></span></div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -875,6 +807,24 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                 <div className="w-full lg:w-80 flex-shrink-0 space-y-4 no-print">
                      <div className="card bg-white p-4 sticky top-24">
                         <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">Planner Snapshot</h3>
+                        
+                        {/* v2.0.237: Shared Template Instructions for Planner Mode */}
+                        {derivedNotes && (
+                            <div className="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-2.5 rounded shadow-sm animate-fade-in text-[11px] leading-relaxed">
+                                <div className="font-bold text-yellow-800 mb-1 flex items-center gap-1.5">
+                                    <span>💡</span> Plan Notes
+                                </div>
+                                <div className="text-yellow-900 space-y-1">
+                                    {derivedNotes.split(';').map((line, idx) => (
+                                        <div key={idx} className="flex gap-1.5">
+                                            <span className="text-yellow-400">•</span>
+                                            <span>{line.trim()}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={t.kcal.kcalRequired} />
                         <div className="mb-6"><MacroDonut cho={Number(distTotals.cho)} pro={Number(distTotals.pro)} fat={Number(distTotals.fat)} totalKcal={Number(distTotals.kcal)} /></div>
                         {activeTargetTab !== 'none' && (
