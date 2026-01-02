@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova DayMenu_95_v2.0.238",
-  "description": "v2.0.238: Enhanced Meal Planner Reset to hide diet_notes. Implemented conditional bold blue styling for '/ week' entries in diet_notes. Fixed Fat MUFA emoji visibility by changing to '🥜'. Maintained full system structure and design.",
+  "name": "Diet-Nova DayMenu_96_v2.0.239",
+  "description": "v2.0.239: Added alert tags for servings < 1 in Meal Planner (Weekly Limit warning). Enabled template instructions visibility in the Day Menu tab for improved planning context. Maintained system structure and formatting.",
   "requestFramePermissions": []
 }

@@ -689,7 +689,17 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                         return (
                                             <tr key={group} className={`${style.bg} border-b ${style.border} bg-opacity-30`}>
                                                 <td className="p-3 font-medium transition-colors"><div className={`flex items-center gap-2 text-base ${style.text}`}><span className="text-xl">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className={`ml-2 text-[10px] px-2 py-0.5 rounded border transition font-bold ${useFatBreakdown ? 'bg-yellow-200 border-yellow-300 text-yellow-800' : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200'}`} title="Toggle detailed fat types">{useFatBreakdown ? 'Hide Details' : 'Show Breakdown'}</button>)}{isAutoFat && <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded ml-2">Auto-Sum</span>}</div></td>
-                                                <td className="p-3 text-center bg-white/50"><input type="number" min="0" step="0.5" disabled={isAutoFat} className={`w-20 p-2 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all ${isAutoFat ? 'bg-gray-100 font-bold text-gray-500 cursor-not-allowed' : s === 0 ? 'text-red-300 bg-white' : 'font-bold text-lg text-gray-800 bg-white shadow-sm'}`} value={s || ''} placeholder="0" onChange={(e) => updateServing(group, parseFloat(e.target.value) || 0)} /></td>
+                                                <td className="p-3 text-center bg-white/50">
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <input type="number" min="0" step="0.5" disabled={isAutoFat} className={`w-20 p-2 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all ${isAutoFat ? 'bg-gray-100 font-bold text-gray-500 cursor-not-allowed' : s === 0 ? 'text-red-300 bg-white' : 'font-bold text-lg text-gray-800 bg-white shadow-sm'}`} value={s || ''} placeholder="0" onChange={(e) => updateServing(group, parseFloat(e.target.value) || 0)} />
+                                                        {/* v2.0.239: Weekly limit alert for fractional serves */}
+                                                        {s > 0 && s < 1 && (
+                                                            <div className="text-[9px] bg-red-100 text-red-600 px-1.5 rounded font-bold animate-pulse whitespace-nowrap" title="This serve is less than 1 daily unit - likely restricted to specific times per week. See Plan Notes.">
+                                                                ⚠️ Weekly Limit
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
                                                 <td className="p-3 text-center"><div className={`font-mono text-base ${s*Number(f.cho) === 0 ? 'text-red-300' : 'text-gray-700 font-bold'}`}>{(s*Number(f.cho)).toFixed(1)}</div><div className="text-[10px] text-gray-400 font-medium">{f.cho}g</div></td>
                                                 <td className="p-3 text-center"><div className={`font-mono text-base ${s*Number(f.pro) === 0 ? 'text-red-300' : 'text-gray-700 font-bold'}`}>{(s*Number(f.pro)).toFixed(1)}</div><div className="text-[10px] text-gray-400 font-medium">{f.pro}g</div></td>
                                                 <td className="p-3 text-center"><div className={`font-mono text-base ${s*Number(f.fat) === 0 ? 'text-red-300' : 'text-gray-700 font-bold'}`}>{(s*Number(f.fat)).toFixed(1)}</div><div className="text-[10px] text-gray-400 font-medium">{f.fat}g</div></td>
@@ -863,7 +873,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         )}
 
         <div className={`col-span-12 ${viewMode === 'day-menu' ? 'block' : 'hidden'}`}>
-            <MealCreator initialLoadId={initialLoadId} autoOpenLoad={autoOpenLoad} autoOpenNew={autoOpenNew} activeVisit={activeVisit} isEmbedded={true} externalTargetKcal={targetKcal} plannedExchanges={servings} externalWeeklyPlan={dayMenuPlan} onWeeklyPlanChange={setDayMenuPlan} />
+            <MealCreator initialLoadId={initialLoadId} autoOpenLoad={autoOpenLoad} autoOpenNew={autoOpenNew} activeVisit={activeVisit} isEmbedded={true} externalTargetKcal={targetKcal} plannedExchanges={servings} externalWeeklyPlan={dayMenuPlan} onWeeklyPlanChange={setDayMenuPlan} externalNotes={derivedNotes} />
         </div>
 
       </div>

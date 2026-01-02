@@ -9,10 +9,7 @@ import { SavedMeal, Client, ClientVisit } from "../../types";
 import Toast from "../Toast";
 import { FoodExchangeRow } from "../../data/exchangeData";
 
-// v2.0.235: 
-// 1. Fixed meal time AM/PM input stability - ensured partial/empty strings don't destructively reset the field.
-// 2. Added "Select All" toggle button to batch select items.
-// 3. Implemented "Select Main" logic: checks all main items and unchecks all alternatives.
+// v2.0.239: Added support for externalNotes prop to display template instructions in embedded view.
 export interface DayPlan {
     items: Record<string, PlannerItem[]>;
     meta: Record<string, MealMeta>;
@@ -47,6 +44,7 @@ interface MealCreatorProps {
     plannedExchanges?: Record<string, number>;
     externalWeeklyPlan?: WeeklyPlan;
     onWeeklyPlanChange?: React.Dispatch<React.SetStateAction<WeeklyPlan>>;
+    externalNotes?: string | null; // v2.0.239: New prop for template instructions
 }
 
 type MealTime = 'Pre-Breakfast' | 'Breakfast' | 'Morning Snack' | 'Lunch' | 'Afternoon Snack' | 'Dinner' | 'Late Snack';
@@ -222,7 +220,7 @@ interface PrintOptions {
 
 const MealCreator: React.FC<MealCreatorProps> = ({ 
     initialLoadId, autoOpenLoad, autoOpenNew, activeVisit, onNavigate,
-    isEmbedded, externalTargetKcal, plannedExchanges, externalWeeklyPlan, onWeeklyPlanChange
+    isEmbedded, externalTargetKcal, plannedExchanges, externalWeeklyPlan, onWeeklyPlanChange, externalNotes
 }) => {
   const { t, isRTL } = useLanguage();
   const { session, profile } = useAuth();
@@ -598,6 +596,28 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           </div>
       </div>
 
+      {/* v2.0.239: Show template instructions at the top if embedded */}
+      {isEmbedded && externalNotes && (
+          <div className="no-print mx-4">
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow-sm">
+                  <div className="flex items-center gap-2 mb-2 text-yellow-800 font-bold text-sm uppercase tracking-wider">
+                      <span>💡</span> Plan Instructions (Weekly Targets)
+                  </div>
+                  <div className="text-xs text-yellow-900 space-y-1.5 leading-relaxed">
+                      {externalNotes.split(';').map((line, idx) => {
+                          const isWeekly = line.toLowerCase().includes('/ week');
+                          return (
+                              <div key={idx} className={`flex gap-2 ${isWeekly ? 'text-blue-700 font-bold' : ''}`}>
+                                  <span className={`${isWeekly ? 'text-blue-500' : 'text-yellow-500'} mt-1`}>•</span>
+                                  <span>{line.trim()}</span>
+                              </div>
+                          );
+                      })}
+                  </div>
+              </div>
+          </div>
+      )}
+
       <div className="flex gap-2 overflow-x-auto pb-2 no-print items-center">
           {[1, 2, 3, 4, 5, 6, 7].map(d => (<button key={d} onClick={() => setCurrentDay(d)} className={`px-6 py-2 rounded-t-lg font-bold text-sm transition-all border-b-2 whitespace-nowrap ${currentDay === d ? 'bg-white text-blue-600 border-blue-600 shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>Day {d}</button>))}
           <button onClick={() => setCurrentDay('instructions')} className={`px-6 py-2 rounded-t-lg font-bold text-sm transition-all border-b-2 whitespace-nowrap ${currentDay === 'instructions' ? 'bg-blue-600 text-white border-blue-800' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}>📋 Instructions</button>
@@ -828,7 +848,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
 
       {showLoadModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm no-print">
-            <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-2xl h-[80vh] flex flex-col">
+            <div className="bg-white p-6 rounded-xl w-full max-w-lg shadow-2xl h-[80vh] flex flex-col animate-fade-in">
                 <div className="flex justify-between items-center mb-4"><h3 className="text-xl font-bold">Load Plan</h3><button onClick={() => setShowLoadModal(false)} className="text-gray-400">✕</button></div>
                 <div className="mb-4"><input type="text" placeholder="Search..." value={loadSearchQuery} onChange={(e) => setLoadSearchQuery(e.target.value)} className="w-full p-3 border rounded-lg" /></div>
                 <div className="flex-grow overflow-y-auto space-y-2 pr-2">
