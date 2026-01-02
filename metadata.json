@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova DayMenu_96_v2.0.239",
-  "description": "v2.0.239: Added alert tags for servings < 1 in Meal Planner (Weekly Limit warning). Enabled template instructions visibility in the Day Menu tab for improved planning context. Maintained system structure and formatting.",
+  "name": "Diet-Nova DayMenu_97_v2.0.240",
+  "description": "v2.0.240: Relocated 'Plan Instructions' in Day Menu tab from top position to below the Day Summary card in the right sidebar. Renamed from 'Plan Instructions (Weekly Targets)' to 'Plan Instructions'. v2.0.239: Added alert tags for servings < 1 in Meal Planner (Weekly Limit warning).",
   "requestFramePermissions": []
 }

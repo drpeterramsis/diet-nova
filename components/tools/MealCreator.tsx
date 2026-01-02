@@ -9,7 +9,7 @@ import { SavedMeal, Client, ClientVisit } from "../../types";
 import Toast from "../Toast";
 import { FoodExchangeRow } from "../../data/exchangeData";
 
-// v2.0.239: Added support for externalNotes prop to display template instructions in embedded view.
+// v2.0.240: Updated instructions layout - moved externalNotes to the sidebar below summary.
 export interface DayPlan {
     items: Record<string, PlannerItem[]>;
     meta: Record<string, MealMeta>;
@@ -596,28 +596,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           </div>
       </div>
 
-      {/* v2.0.239: Show template instructions at the top if embedded */}
-      {isEmbedded && externalNotes && (
-          <div className="no-print mx-4">
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded shadow-sm">
-                  <div className="flex items-center gap-2 mb-2 text-yellow-800 font-bold text-sm uppercase tracking-wider">
-                      <span>💡</span> Plan Instructions (Weekly Targets)
-                  </div>
-                  <div className="text-xs text-yellow-900 space-y-1.5 leading-relaxed">
-                      {externalNotes.split(';').map((line, idx) => {
-                          const isWeekly = line.toLowerCase().includes('/ week');
-                          return (
-                              <div key={idx} className={`flex gap-2 ${isWeekly ? 'text-blue-700 font-bold' : ''}`}>
-                                  <span className={`${isWeekly ? 'text-blue-500' : 'text-yellow-500'} mt-1`}>•</span>
-                                  <span>{line.trim()}</span>
-                              </div>
-                          );
-                      })}
-                  </div>
-              </div>
-          </div>
-      )}
-
       <div className="flex gap-2 overflow-x-auto pb-2 no-print items-center">
           {[1, 2, 3, 4, 5, 6, 7].map(d => (<button key={d} onClick={() => setCurrentDay(d)} className={`px-6 py-2 rounded-t-lg font-bold text-sm transition-all border-b-2 whitespace-nowrap ${currentDay === d ? 'bg-white text-blue-600 border-blue-600 shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>Day {d}</button>))}
           <button onClick={() => setCurrentDay('instructions')} className={`px-6 py-2 rounded-t-lg font-bold text-sm transition-all border-b-2 whitespace-nowrap ${currentDay === 'instructions' ? 'bg-blue-600 text-white border-blue-800' : 'bg-blue-50 text-blue-600 hover:bg-blue-100'}`}>📋 Instructions</button>
@@ -800,7 +778,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                       {MEAL_TIMES.map((time) => {
                           const d = weeklyPlan[currentDay as number] || { items: {}, meta: {} };
                           const its = d.items?.[time] || [];
-                          const mt = d.meta?.[time] || { timeStart: '', timeEnd: '', notes: '' };
+                          const mt = d.meta?.[t] || { timeStart: '', timeEnd: '', notes: '' };
                           const act = activeMealTime === time;
                           const stats = its.filter(i => i.selected).reduce((ac, i) => ({ kcal: ac.kcal + (i.kcal*i.serves) }), { kcal: 0 });
                           const groups = Array.from(new Set(its.map(i => i.optionGroup)));
@@ -842,6 +820,28 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                     <ProgressBar current={summary.totalKcal} target={targetKcal} label="Total (Selected)" unit="kcal" color="bg-blue-500" />
                     <ProgressBar current={summary.mainOnlyKcal} target={targetKcal} label="Planned (Main)" unit="kcal" color="bg-green-600" />
                   </div>
+
+                  {/* v2.0.240: Moved Plan Instructions below Day Summary here */}
+                  {isEmbedded && externalNotes && (
+                      <div className="mt-8 pt-4 border-t border-gray-100">
+                          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded shadow-sm">
+                              <div className="flex items-center gap-2 mb-2 text-yellow-800 font-bold text-xs uppercase tracking-wider">
+                                  <span>💡</span> Plan Instructions
+                              </div>
+                              <div className="text-[11px] text-yellow-900 space-y-1.5 leading-relaxed">
+                                  {externalNotes.split(';').map((line, idx) => {
+                                      const isWeekly = line.toLowerCase().includes('/ week');
+                                      return (
+                                          <div key={idx} className={`flex gap-2 ${isWeekly ? 'text-blue-700 font-bold' : ''}`}>
+                                              <span className={`${isWeekly ? 'text-blue-500' : 'text-yellow-500'} mt-1`}>•</span>
+                                              <span>{line.trim()}</span>
+                                          </div>
+                                      );
+                                  })}
+                              </div>
+                          </div>
+                      </div>
+                  )}
               </div>
           </div>
       </div>
