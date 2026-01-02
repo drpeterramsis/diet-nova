@@ -719,26 +719,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                         <div className="p-4">
                             <h3 className="font-bold text-lg text-gray-800 mb-6 flex items-center gap-2"><span className="text-2xl">📊</span> Smart Summary</h3>
                             
-                            {/* v2.0.238: Template Instructions with bold blue formatting for '/ week' entries */}
-                            {derivedNotes && (
-                                <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded shadow-sm animate-fade-in">
-                                    <div className="flex items-center gap-2 mb-2 text-yellow-800 font-bold text-xs uppercase tracking-wider">
-                                        <span>💡</span> Template Instructions
-                                    </div>
-                                    <div className="text-xs text-yellow-900 space-y-1.5 leading-relaxed">
-                                        {derivedNotes.split(';').map((line, idx) => {
-                                            const isWeekly = line.toLowerCase().includes('/ week');
-                                            return (
-                                                <div key={idx} className={`flex gap-2 ${isWeekly ? 'text-blue-700 font-bold' : ''}`}>
-                                                    <span className={`${isWeekly ? 'text-blue-500' : 'text-yellow-500'} mt-1`}>•</span>
-                                                    <span>{line.trim()}</span>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
                             <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={t.kcal.kcalRequired} />
                             <div className="mb-6"><MacroDonut cho={Number(calcTotals.cho)} pro={Number(calcTotals.pro)} fat={Number(calcTotals.fat)} totalKcal={Number(calcTotals.kcal)} /></div>
                             <div className="space-y-1 mb-6"><ProgressBar current={Number(calcTotals.kcal)} target={targetKcal} label="Calorie Goal" unit="kcal" showPercent={true}/></div>
@@ -782,6 +762,26 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                      </div>
                                  )}
                             </div>
+
+                            {/* v2.0.241: Relocated Template Instructions to the bottom of the calculator summary column */}
+                            {derivedNotes && (
+                                <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded shadow-sm animate-fade-in">
+                                    <div className="flex items-center gap-2 mb-2 text-yellow-800 font-bold text-xs uppercase tracking-wider">
+                                        <span>💡</span> Template Instructions
+                                    </div>
+                                    <div className="text-xs text-yellow-900 space-y-1.5 leading-relaxed">
+                                        {derivedNotes.split(';').map((line, idx) => {
+                                            const isWeekly = line.toLowerCase().includes('/ week');
+                                            return (
+                                                <div key={idx} className={`flex gap-2 ${isWeekly ? 'text-blue-700 font-bold' : ''}`}>
+                                                    <span className={`${isWeekly ? 'text-blue-500' : 'text-yellow-500'} mt-1`}>•</span>
+                                                    <span>{line.trim()}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -826,26 +826,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                      <div className="card bg-white p-4 sticky top-24">
                         <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">Planner Snapshot</h3>
                         
-                        {/* v2.0.238: Shared Template Instructions with bold blue formatting for '/ week' entries */}
-                        {derivedNotes && (
-                            <div className="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-2.5 rounded shadow-sm animate-fade-in text-[11px] leading-relaxed">
-                                <div className="font-bold text-yellow-800 mb-1 flex items-center gap-1.5">
-                                    <span>💡</span> Plan Notes
-                                </div>
-                                <div className="text-yellow-900 space-y-1">
-                                    {derivedNotes.split(';').map((line, idx) => {
-                                        const isWeekly = line.toLowerCase().includes('/ week');
-                                        return (
-                                            <div key={idx} className={`flex gap-1.5 ${isWeekly ? 'text-blue-700 font-bold' : ''}`}>
-                                                <span className={`${isWeekly ? 'text-blue-500' : 'text-yellow-400'}`}>•</span>
-                                                <span>{line.trim()}</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
                         <TargetKcalInput value={targetKcal} onChange={setTargetKcal} label={t.kcal.kcalRequired} />
                         <div className="mb-6"><MacroDonut cho={Number(distTotals.cho)} pro={Number(distTotals.pro)} fat={Number(distTotals.fat)} totalKcal={Number(distTotals.kcal)} /></div>
                         {activeTargetTab !== 'none' && (
@@ -867,6 +847,26 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             </div>
                             <div className="p-2 bg-green-50 rounded text-center text-xs"><div className="font-bold text-green-700">{Number(distTotals.fiber).toFixed(1)}g</div><div className="text-green-500">Fiber</div></div>
                         </div>
+
+                        {/* v2.0.241: Relocated Plan Notes to the bottom of the Planner Snapshot sidebar */}
+                        {derivedNotes && (
+                            <div className="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-2.5 rounded shadow-sm animate-fade-in text-[11px] leading-relaxed">
+                                <div className="font-bold text-yellow-800 mb-1 flex items-center gap-1.5">
+                                    <span>💡</span> Plan Notes
+                                </div>
+                                <div className="text-yellow-900 space-y-1">
+                                    {derivedNotes.split(';').map((line, idx) => {
+                                        const isWeekly = line.toLowerCase().includes('/ week');
+                                        return (
+                                            <div key={idx} className={`flex gap-1.5 ${isWeekly ? 'text-blue-700 font-bold' : ''}`}>
+                                                <span className={`${isWeekly ? 'text-blue-500' : 'text-yellow-400'}`}>•</span>
+                                                <span>{line.trim()}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
                      </div>
                 </div>
             </div>

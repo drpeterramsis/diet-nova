@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova DayMenu_97_v2.0.240",
-  "description": "v2.0.240: Relocated 'Plan Instructions' in Day Menu tab from top position to below the Day Summary card in the right sidebar. Renamed from 'Plan Instructions (Weekly Targets)' to 'Plan Instructions'. v2.0.239: Added alert tags for servings < 1 in Meal Planner (Weekly Limit warning).",
+  "name": "Diet-Nova DayMenu_99_v2.0.241",
+  "description": "v2.0.241: Relocated 'Template Instructions' and 'Plan Notes' in Meal Planner tool from the top of the sidebars to the bottom, below the summary and calculation stats. v2.0.240: Relocated 'Plan Instructions' in Day Menu tab from top position to below the Day Summary card.",
   "requestFramePermissions": []
 }
