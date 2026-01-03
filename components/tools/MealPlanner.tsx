@@ -96,19 +96,31 @@ const TargetKcalInput: React.FC<TargetKcalInputProps> = ({ value, onChange, labe
 // v2.0.254 - New Meal Plan Summary Table Component
 const MealPlanSummaryTable: React.FC<{ distribution: any, visibleGroups: string[], targetKcal: number }> = ({ distribution, visibleGroups, targetKcal }) => {
     // Helper to get friendly name
-    // v2.0.255: Updated to show full meat names
+    // v2.0.258: Updated to show full names for food groups as per user request
     const getFriendlyGroupName = (g: string) => {
+        // Basic Groups
         if(g === 'starch') return 'Starch';
-        if(g === 'veg') return 'Veg';
-        if(g === 'fruit') return 'Fruit';
-        if(g === 'legumes') return 'Leg';
+        if(g === 'veg') return 'Vegetables';
+        if(g === 'fruit') return 'Fruits';
+        if(g === 'legumes') return 'Legumes';
+        if(g === 'sugar') return 'Sugar';
+        
+        // Meat Groups
         if(g === 'meatLean') return 'Meat Lean';
-        if(g === 'meatMed') return 'Meat Med';
+        if(g === 'meatMed') return 'Meat Medium';
         if(g === 'meatHigh') return 'Meat High';
-        if(g.startsWith('meat')) return 'Meat'; // Fallback
-        if(g.startsWith('milk')) return 'Milk';
-        if(g === 'sugar') return 'Sug';
-        if(g.startsWith('fat')) return 'Fat';
+        
+        // Milk Groups
+        if(g === 'milkSkim') return 'Milk Skimmed';
+        if(g === 'milkLow') return 'Milk Medium';
+        if(g === 'milkWhole') return 'Milk High (Whole)';
+        
+        // Fat Groups
+        if(g === 'fats') return 'Fats (General)';
+        if(g === 'fatsSat') return 'Fat SFA';
+        if(g === 'fatsMufa') return 'Fat MUFA';
+        if(g === 'fatsPufa') return 'Fat PUFA';
+        
         return g;
     };
 

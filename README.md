@@ -5,7 +5,21 @@ Diet-Nova is a comprehensive web application for nutritionists and dietitians, o
 
 ## Version History
 
-### v2.0.257 (Current)
+### v2.0.258 (Current)
+*   **Meal Planner Update:**
+    *   **Full Food Group Names:** The "Meal Breakdown" summary table now displays full descriptive names for food groups instead of shortened codes.
+    *   **Specific Updates:**
+        *   "Meat Lean" -> "Meat Lean"
+        *   "Meat Med" -> "Meat Medium"
+        *   "Meat High" -> "Meat High"
+        *   "Milk Skim" -> "Milk Skimmed"
+        *   "Milk Low" -> "Milk Medium"
+        *   "Milk Whole" -> "Milk High (Whole)"
+        *   "Fats Sat" -> "Fat SFA"
+        *   "Fats Mufa" -> "Fat MUFA"
+        *   "Fats Pufa" -> "Fat PUFA"
+
+### v2.0.257
 *   **Meal Planner Enhancements:**
     *   **New Advanced Tab:** Added a dedicated tab for the "Advanced Day Menu" tool within the Meal Planner interface.
     *   **Analysis Modal:** The "Check Analysis" button in the Day Menu (Meal Creator) now opens the Food Composition tool in a modal overlay, allowing quick reference without navigating away from the plan.
