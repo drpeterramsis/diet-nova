@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { foodCompositionData, FoodCompositionItem } from '../../data/foodCompositionData';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -90,19 +90,55 @@ const NUTRIENT_OPTS: Array<{label: string, value: keyof FoodCompositionItem}> = 
     { label: 'Refuse %', value: 'refuse' },
 ];
 
+// --- Rich Text Editor (Duplicated from MealCreator to maintain isolation) ---
+const RichTextEditorModal: React.FC<{
+    initialHtml: string;
+    onSave: (html: string) => void;
+    onClose: () => void;
+    title?: string;
+}> = ({ initialHtml, onSave, onClose, title = "Edit Instructions" }) => {
+    const editorRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (editorRef.current) { editorRef.current.innerHTML = initialHtml; }
+    }, []);
+    const execCmd = (command: string, value: string | undefined = undefined) => {
+        document.execCommand(command, false, value);
+        editorRef.current?.focus();
+    };
+    const handleSave = () => { if (editorRef.current) { onSave(editorRef.current.innerHTML); } };
+    return (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm no-print">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-fade-in border border-gray-100">
+                <div className="p-4 border-b bg-gray-50 flex justify-between items-center"><h3 className="font-bold text-gray-800">{title}</h3><button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">✕</button></div>
+                <div className="p-2 border-b flex gap-1 flex-wrap bg-gray-50">
+                    <button onClick={() => execCmd('bold')} className="p-1.5 min-w-[30px] rounded hover:bg-gray-200 font-bold border border-gray-300">B</button>
+                    <button onClick={() => execCmd('italic')} className="p-1.5 min-w-[30px] rounded hover:bg-gray-200 italic border border-gray-300">I</button>
+                    <button onClick={() => execCmd('underline')} className="p-1.5 min-w-[30px] rounded hover:bg-gray-200 underline border border-gray-300">U</button>
+                    <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                    <button onClick={() => execCmd('insertUnorderedList')} className="p-1.5 min-w-[30px] rounded hover:bg-gray-200 border border-gray-300">•</button>
+                </div>
+                <div ref={editorRef} className="p-4 min-h-[200px] max-h-[400px] overflow-y-auto outline-none text-sm leading-relaxed bg-white" contentEditable suppressContentEditableWarning />
+                <div className="p-4 border-t bg-gray-50 flex justify-end gap-2"><button onClick={onClose} className="px-4 py-2 text-gray-600 font-medium hover:bg-gray-200 rounded transition">Cancel</button><button onClick={handleSave} className="px-6 py-2 bg-purple-600 text-white font-bold rounded hover:bg-purple-700 shadow-sm transition">Save Changes</button></div>
+            </div>
+        </div>
+    );
+};
+
 export const AdvancedMealCreator: React.FC = () => {
     const { session } = useAuth();
     
     // Data State
     const [activeData, setActiveData] = useState<FoodCompositionItem[]>(foodCompositionData);
+    const [dataSource, setDataSource] = useState<'local' | 'cloud'>('local'); // Track source
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState<string>('All'); // New Category Filter
     
     // Advanced Filter State
     const [showFilters, setShowFilters] = useState(false);
     const [compositionFilters, setCompositionFilters] = useState<Array<{ id: number; key: keyof FoodCompositionItem; op: '>' | '<' | '='; val: number }>>([]);
 
     // Planning State (Weekly Structure)
-    const [currentDay, setCurrentDay] = useState<number>(1);
+    const [currentDay, setCurrentDay] = useState<number | 'instructions'>(1);
     const [weeklyPlan, setWeeklyPlan] = useState<AdvancedWeeklyPlan>(DEFAULT_ADV_WEEKLY_PLAN);
     const [activeMealTime, setActiveMealTime] = useState<MealTime>('Lunch');
     
@@ -111,6 +147,7 @@ export const AdvancedMealCreator: React.FC = () => {
     const [saveStatus, setSaveStatus] = useState('');
     const [criteria, setCriteria] = useState<WarningCriteria[]>(DEFAULT_CRITERIA);
     const [showCriteriaPanel, setShowCriteriaPanel] = useState(false);
+    const [showInstructionsEditor, setShowInstructionsEditor] = useState(false);
 
     // Initial Data Fetch (Same as FoodComposition)
     useEffect(() => {
@@ -146,9 +183,13 @@ export const AdvancedMealCreator: React.FC = () => {
                         refuse: row.refuse_percent
                     }));
                     setActiveData(mapped);
+                    setDataSource('cloud');
+                } else {
+                    setDataSource('local');
                 }
             } catch (err) {
                 console.warn("Using local data for Advanced Creator");
+                setDataSource('local');
             } finally {
                 setIsLoading(false);
             }
@@ -165,17 +206,28 @@ export const AdvancedMealCreator: React.FC = () => {
   
     useEffect(() => { if (typeof currentDay === 'number') ensureDayExists(currentDay); }, [currentDay]);
 
+    // --- Memos ---
+    const categories = useMemo(() => {
+        const cats = new Set(activeData.map(d => d.category));
+        return ['All', ...Array.from(cats)];
+    }, [activeData]);
+
     // --- Filter Logic ---
     const filteredFoods = useMemo(() => {
         let data = activeData;
 
-        // 1. Text Search
+        // 1. Category Filter
+        if (selectedCategory !== 'All') {
+            data = data.filter(f => f.category === selectedCategory);
+        }
+
+        // 2. Text Search
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             data = data.filter(f => f.food.toLowerCase().includes(q) || String(f.code).includes(q));
         }
 
-        // 2. Composition Filters
+        // 3. Composition Filters
         if (compositionFilters.length > 0) {
             data = data.filter(item => {
                 return compositionFilters.every(filter => {
@@ -191,7 +243,7 @@ export const AdvancedMealCreator: React.FC = () => {
         }
 
         return data;
-    }, [searchQuery, compositionFilters, activeData]);
+    }, [searchQuery, compositionFilters, activeData, selectedCategory]);
 
     const addFilter = () => {
         setCompositionFilters(prev => [
@@ -233,6 +285,7 @@ export const AdvancedMealCreator: React.FC = () => {
 
     // Calculate totals for Current Day (Based on Selection)
     const dailyTotals = useMemo(() => {
+        if (typeof currentDay !== 'number') return { energy: 0, protein: 0, fat: 0, carb: 0, sodium: 0, potassium: 0, phosphorus: 0, calcium: 0, iron: 0 };
         const dayData = weeklyPlan[currentDay];
         if (!dayData?.items) return { energy: 0, protein: 0, fat: 0, carb: 0, sodium: 0, potassium: 0, phosphorus: 0, calcium: 0, iron: 0 };
 
@@ -257,6 +310,7 @@ export const AdvancedMealCreator: React.FC = () => {
     }, [weeklyPlan, currentDay]);
 
     const addItem = (food: FoodCompositionItem) => {
+        if (typeof currentDay !== 'number') return;
         setWeeklyPlan(prev => {
             const dayData = prev[currentDay] || { items: {}, meta: {}, title: '' };
             const currentList = dayData.items?.[activeMealTime] || [];
@@ -273,6 +327,7 @@ export const AdvancedMealCreator: React.FC = () => {
     };
 
     const updateItem = (mealTime: string, index: number, field: keyof AdvancedPlannerItem, value: any) => {
+        if (typeof currentDay !== 'number') return;
         setWeeklyPlan(prev => {
             const dayData = prev[currentDay];
             const newList = [...(dayData.items?.[mealTime] || [])];
@@ -284,12 +339,18 @@ export const AdvancedMealCreator: React.FC = () => {
     };
 
     const removeItem = (mealTime: string, index: number) => {
+        if (typeof currentDay !== 'number') return;
         setWeeklyPlan(prev => {
             const dayData = prev[currentDay];
             const newList = [...(dayData.items?.[mealTime] || [])];
             newList.splice(index, 1);
             return { ...prev, [currentDay]: { ...dayData, items: { ...dayData.items, [mealTime]: newList } } };
         });
+    };
+
+    const handleSaveInstructions = (html: string) => { 
+        setWeeklyPlan(prev => ({ ...prev, instructions: html })); 
+        setShowInstructionsEditor(false); 
     };
 
     const getWarningStatus = (c: WarningCriteria) => {
@@ -304,6 +365,7 @@ export const AdvancedMealCreator: React.FC = () => {
     return (
         <div className="max-w-[1920px] mx-auto animate-fade-in pb-12">
             <Toast message={saveStatus} />
+            {showInstructionsEditor && <RichTextEditorModal title="Plan Instructions" initialHtml={weeklyPlan.instructions || ''} onSave={handleSaveInstructions} onClose={() => setShowInstructionsEditor(false)} />}
 
             {/* Header */}
             <div className="bg-gradient-to-r from-purple-800 to-indigo-900 p-6 rounded-xl shadow-lg mb-6 text-white flex justify-between items-center">
@@ -311,7 +373,12 @@ export const AdvancedMealCreator: React.FC = () => {
                     <h1 className="text-2xl font-bold flex items-center gap-2">
                         <span>🧪</span> Advanced Day Menu
                     </h1>
-                    <p className="text-purple-200 text-sm opacity-90">Precision planning (by grams) with clinical warning limits.</p>
+                    <div className="flex items-center gap-2">
+                        <p className="text-purple-200 text-sm opacity-90">Precision planning (by grams) with clinical warning limits.</p>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border flex items-center gap-1 font-bold ${dataSource === 'cloud' ? 'bg-green-500/20 text-green-200 border-green-400/30' : 'bg-orange-500/20 text-orange-200 border-orange-400/30'}`}>
+                            {dataSource === 'cloud' ? '☁️ Cloud DB' : '💾 Local Data'}
+                        </span>
+                    </div>
                 </div>
                 <button 
                     onClick={() => { if(confirm("Reset entire plan?")) setWeeklyPlan(DEFAULT_ADV_WEEKLY_PLAN); }}
@@ -326,11 +393,18 @@ export const AdvancedMealCreator: React.FC = () => {
                 {[1, 2, 3, 4, 5, 6, 7].map(d => (
                     <button key={d} onClick={() => setCurrentDay(d)} className={`px-6 py-2 rounded-t-lg font-bold text-sm transition-all whitespace-nowrap ${currentDay === d ? 'bg-purple-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>Day {d}</button>
                 ))}
+                <button 
+                    onClick={() => setCurrentDay('instructions')} 
+                    className={`px-6 py-2 rounded-t-lg font-bold text-sm transition-all border-b-2 whitespace-nowrap ${currentDay === 'instructions' ? 'bg-purple-600 text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                >
+                    📋 Instructions
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
-                {/* LEFT: Search & Database */}
+                {/* LEFT: Search & Database (Hidden in Instructions View) */}
+                {typeof currentDay === 'number' ? (
                 <div className="lg:col-span-3 space-y-4">
                     <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 sticky top-4 flex flex-col h-[calc(100vh-200px)]">
                         <div className="flex justify-between items-center mb-3">
@@ -355,6 +429,19 @@ export const AdvancedMealCreator: React.FC = () => {
                                 className="w-full p-2.5 pl-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none text-sm"
                             />
                             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                        </div>
+
+                        {/* Category Dropdown */}
+                        <div className="mb-3">
+                            <select 
+                                value={selectedCategory}
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg text-xs font-bold bg-white focus:ring-1 focus:ring-purple-400 outline-none"
+                            >
+                                {categories.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
                         </div>
 
                         {/* FILTERS PANEL */}
@@ -415,94 +502,114 @@ export const AdvancedMealCreator: React.FC = () => {
                         </div>
                     </div>
                 </div>
+                ) : <div className="lg:col-span-3"></div> }
 
-                {/* CENTER: Meal Planner */}
+                {/* CENTER: Meal Planner OR Instructions View */}
                 <div className="lg:col-span-6 space-y-4">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 flex justify-between items-center">
-                        <h2 className="text-lg font-bold text-gray-800">Day {currentDay} Plan</h2>
-                        <div className="flex gap-2">
-                            <button onClick={() => handleSelectAllDay('all')} className="text-[10px] bg-blue-100 text-blue-700 px-3 py-1 rounded font-bold hover:bg-blue-200 transition">Select All</button>
-                            <button onClick={() => handleSelectAllDay('main-only')} className="text-[10px] bg-green-100 text-green-700 px-3 py-1 rounded font-bold hover:bg-green-200 transition">Select Main</button>
-                            <button onClick={() => handleSelectAllDay('none')} className="text-[10px] bg-gray-100 text-gray-700 px-3 py-1 rounded font-bold hover:bg-gray-200 transition">Unselect</button>
-                        </div>
-                    </div>
-
-                    {MEAL_TIMES.map((time) => {
-                        const dayItems = weeklyPlan[currentDay]?.items?.[time] || [];
-                        const isActive = activeMealTime === time;
-                        const groups = Array.from(new Set(dayItems.map(i => i.optionGroup)));
-                        
-                        // Calculate Meal Total Kcal (Based on selection)
-                        const mealKcal = dayItems.reduce((acc, i) => i.selected ? acc + (i.item.energy * (i.weight/100)) : acc, 0);
-
-                        return (
-                            <div key={time} className={`rounded-xl shadow-sm border overflow-hidden transition-all ${isActive ? 'border-purple-400 ring-2 ring-purple-100' : 'border-gray-200'}`}>
-                                <div 
-                                    className={`px-4 py-3 flex flex-col md:flex-row justify-between items-center cursor-pointer ${isActive ? 'bg-purple-50' : 'bg-gray-50'}`} 
-                                    onClick={() => setActiveMealTime(time)}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-purple-500 animate-pulse' : 'bg-gray-300'}`}></div>
-                                        <h3 className={`font-bold text-lg flex items-center gap-2 ${isActive ? 'text-purple-900' : 'text-gray-700'}`}>{MEAL_ICONS[time]} {time}</h3>
-                                    </div>
-                                    <div className="text-xs font-bold text-gray-600">{mealKcal.toFixed(0)} kcal (Selected)</div>
-                                </div>
-                                
-                                {dayItems.length > 0 && (
-                                    <div className="bg-white p-4">
-                                        {groups.map(g => (
-                                            <div key={g} className="mb-4 last:mb-0">
-                                                <div className="text-xs font-bold uppercase text-gray-400 mb-2 border-b border-gray-100 pb-1">{g === 'main' ? 'Main Option' : g}</div>
-                                                {dayItems.map((item, idx) => {
-                                                    if(item.optionGroup !== g) return null;
-                                                    const kcal = (item.item.energy * (item.weight / 100)).toFixed(0);
-                                                    return (
-                                                        <div key={item.id} className={`flex items-center gap-2 mb-2 p-2 rounded border transition ${item.selected ? 'bg-white border-purple-200' : 'bg-gray-50 border-transparent opacity-60'}`}>
-                                                            <input 
-                                                                type="checkbox" 
-                                                                checked={item.selected} 
-                                                                onChange={e => updateItem(time, idx, 'selected', e.target.checked)} 
-                                                                className="cursor-pointer"
-                                                            />
-                                                            <div className="flex-grow text-sm">
-                                                                <div className="font-bold text-gray-800">{item.item.food}</div>
-                                                                <div className="text-[10px] text-gray-500 flex gap-2">
-                                                                    <span>P: {(item.item.protein * item.weight/100).toFixed(1)}</span>
-                                                                    <span>Na: {(item.item.sodium * item.weight/100).toFixed(0)}</span>
-                                                                    <span>K: {(item.item.potassium * item.weight/100).toFixed(0)}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex items-center gap-1">
-                                                                <input 
-                                                                    type="number" 
-                                                                    value={item.weight} 
-                                                                    onChange={e => updateItem(time, idx, 'weight', Number(e.target.value))} 
-                                                                    className="w-14 p-1 border rounded text-center text-sm font-bold bg-white focus:ring-1 focus:ring-purple-400 outline-none"
-                                                                />
-                                                                <span className="text-xs text-gray-500">g</span>
-                                                            </div>
-                                                            <div className="w-12 text-right text-xs font-bold text-purple-700">{kcal} kc</div>
-                                                            <select 
-                                                                value={item.optionGroup} 
-                                                                onChange={(e) => updateItem(time, idx, 'optionGroup', e.target.value)} 
-                                                                className="text-[10px] border rounded bg-white p-1 ml-2 w-16"
-                                                            >
-                                                                {ALT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                                                            </select>
-                                                            <button onClick={() => removeItem(time, idx)} className="text-red-400 hover:text-red-600 ml-1 font-bold text-lg">×</button>
-                                                        </div>
-                                                    )
-                                                })}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                    {currentDay === 'instructions' ? (
+                        <div className="bg-white rounded-2xl shadow-xl border border-purple-100 overflow-hidden animate-fade-in">
+                            <div className="p-6 bg-gradient-to-br from-purple-600 to-indigo-700 text-white flex justify-between items-center">
+                                <div><h2 className="text-2xl font-bold">Plan Instructions</h2></div>
+                                <button onClick={() => setShowInstructionsEditor(true)} className="bg-white/20 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 hover:bg-white/30 transition">
+                                    <span>📝</span> Edit Instructions
+                                </button>
                             </div>
-                        );
-                    })}
+                            <div className="p-8 prose max-w-none min-h-[400px]">
+                                {weeklyPlan.instructions ? 
+                                    <div className="bg-gray-50 p-6 rounded-xl border border-gray-100 leading-relaxed text-gray-800" dangerouslySetInnerHTML={{ __html: weeklyPlan.instructions }} /> 
+                                : <div className="flex flex-col items-center justify-center h-full text-gray-400 py-20 italic">No instructions set. Click Edit to add.</div>}
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4 flex justify-between items-center">
+                                <h2 className="text-lg font-bold text-gray-800">Day {currentDay} Plan</h2>
+                                <div className="flex gap-2">
+                                    <button onClick={() => handleSelectAllDay('all')} className="text-[10px] bg-blue-100 text-blue-700 px-3 py-1 rounded font-bold hover:bg-blue-200 transition">Select All</button>
+                                    <button onClick={() => handleSelectAllDay('main-only')} className="text-[10px] bg-green-100 text-green-700 px-3 py-1 rounded font-bold hover:bg-green-200 transition">Select Main</button>
+                                    <button onClick={() => handleSelectAllDay('none')} className="text-[10px] bg-gray-100 text-gray-700 px-3 py-1 rounded font-bold hover:bg-gray-200 transition">Unselect</button>
+                                </div>
+                            </div>
+
+                            {MEAL_TIMES.map((time) => {
+                                const dayItems = weeklyPlan[currentDay]?.items?.[time] || [];
+                                const isActive = activeMealTime === time;
+                                const groups = Array.from(new Set(dayItems.map(i => i.optionGroup)));
+                                
+                                // Calculate Meal Total Kcal (Based on selection)
+                                const mealKcal = dayItems.reduce((acc, i) => i.selected ? acc + (i.item.energy * (i.weight/100)) : acc, 0);
+
+                                return (
+                                    <div key={time} className={`rounded-xl shadow-sm border overflow-hidden transition-all ${isActive ? 'border-purple-400 ring-2 ring-purple-100' : 'border-gray-200'}`}>
+                                        <div 
+                                            className={`px-4 py-3 flex flex-col md:flex-row justify-between items-center cursor-pointer ${isActive ? 'bg-purple-50' : 'bg-gray-50'}`} 
+                                            onClick={() => setActiveMealTime(time)}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-purple-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                                                <h3 className={`font-bold text-lg flex items-center gap-2 ${isActive ? 'text-purple-900' : 'text-gray-700'}`}>{MEAL_ICONS[time]} {time}</h3>
+                                            </div>
+                                            <div className="text-xs font-bold text-gray-600">{mealKcal.toFixed(0)} kcal (Selected)</div>
+                                        </div>
+                                        
+                                        {dayItems.length > 0 && (
+                                            <div className="bg-white p-4">
+                                                {groups.map(g => (
+                                                    <div key={g} className="mb-4 last:mb-0">
+                                                        <div className="text-xs font-bold uppercase text-gray-400 mb-2 border-b border-gray-100 pb-1">{g === 'main' ? 'Main Option' : g}</div>
+                                                        {dayItems.map((item, idx) => {
+                                                            if(item.optionGroup !== g) return null;
+                                                            const kcal = (item.item.energy * (item.weight / 100)).toFixed(0);
+                                                            return (
+                                                                <div key={item.id} className={`flex items-center gap-2 mb-2 p-2 rounded border transition ${item.selected ? 'bg-white border-purple-200' : 'bg-gray-50 border-transparent opacity-60'}`}>
+                                                                    <input 
+                                                                        type="checkbox" 
+                                                                        checked={item.selected} 
+                                                                        onChange={e => updateItem(time, idx, 'selected', e.target.checked)} 
+                                                                        className="cursor-pointer"
+                                                                    />
+                                                                    <div className="flex-grow text-sm">
+                                                                        <div className="font-bold text-gray-800">{item.item.food}</div>
+                                                                        <div className="text-[10px] text-gray-500 flex gap-2">
+                                                                            <span>P: {(item.item.protein * item.weight/100).toFixed(1)}</span>
+                                                                            <span>Na: {(item.item.sodium * item.weight/100).toFixed(0)}</span>
+                                                                            <span>K: {(item.item.potassium * item.weight/100).toFixed(0)}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-1">
+                                                                        <input 
+                                                                            type="number" 
+                                                                            value={item.weight} 
+                                                                            onChange={e => updateItem(time, idx, 'weight', Number(e.target.value))} 
+                                                                            className="w-14 p-1 border rounded text-center text-sm font-bold bg-white focus:ring-1 focus:ring-purple-400 outline-none"
+                                                                        />
+                                                                        <span className="text-xs text-gray-500">g</span>
+                                                                    </div>
+                                                                    <div className="w-12 text-right text-xs font-bold text-purple-700">{kcal} kc</div>
+                                                                    <select 
+                                                                        value={item.optionGroup} 
+                                                                        onChange={(e) => updateItem(time, idx, 'optionGroup', e.target.value)} 
+                                                                        className="text-[10px] border rounded bg-white p-1 ml-2 w-16"
+                                                                    >
+                                                                        {ALT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                                                    </select>
+                                                                    <button onClick={() => removeItem(time, idx)} className="text-red-400 hover:text-red-600 ml-1 font-bold text-lg">×</button>
+                                                                </div>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </>
+                    )}
                 </div>
 
                 {/* RIGHT: Summary & Warnings */}
+                {typeof currentDay === 'number' ? (
                 <div className="lg:col-span-3 space-y-6">
                     <div className="bg-white p-6 rounded-xl shadow-lg border-t-4 border-purple-600 sticky top-4">
                         <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -604,6 +711,7 @@ export const AdvancedMealCreator: React.FC = () => {
                         </div>
                     </div>
                 </div>
+                ) : <div className="lg:col-span-3"></div> }
             </div>
         </div>
     );

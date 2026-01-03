@@ -13,6 +13,10 @@ Diet-Nova is a comprehensive web application for nutritionists and dietitians, o
     *   **Advanced Filtering:** Added the same advanced nutrient filtering capability (e.g., Protein > 10g) from the Food Composition tool to the planning interface.
     *   **Selection Controls:** Implemented "Select All", "Select Main", and "Unselect All" buttons to quickly toggle items for calculation.
     *   **Dynamic Totals:** Daily analysis now strictly calculates totals based on *selected* items, allowing users to toggle between calculating just the Main options or including Alternatives by simply selecting/deselecting them.
+    *   **Cloud Indicator:** Added visual indicator for cloud database connection.
+    *   **Instruction Editor:** Integrated rich text editor for planning instructions.
+*   **Meal Planner:**
+    *   **New Tab:** Added 'Advanced Day' tab to access the advanced planning features.
 
 ### v2.0.255
 *   **Advanced Day Menu (New Feature):**

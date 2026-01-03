@@ -7,6 +7,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { SavedMeal, Client, ClientVisit } from '../../types';
 import Toast from '../Toast';
 import MealCreator, { WeeklyPlan, DEFAULT_WEEKLY_PLAN } from './MealCreator';
+import { AdvancedMealCreator } from './AdvancedMealCreator'; // Import Advanced Creator
 import { DietType, DietPlanRow } from '../../data/dietTemplates';
 import DietGuidelinesView from './DietGuidelinesView';
 
@@ -194,7 +195,7 @@ interface MealPlannerProps {
 export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onBack, initialLoadId, autoOpenLoad, autoOpenNew, activeVisit, onNavigate }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
-  const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both' | 'day-menu' | 'guidelines'>('calculator');
+  const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both' | 'day-menu' | 'guidelines' | 'advanced-day-menu'>('calculator');
   const [useFatBreakdown, setUseFatBreakdown] = useState(false);
   
   // --- Diet Guidelines Persistent State ---
@@ -702,11 +703,12 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
            </div>
         </div>
 
-        <div className="flex bg-gray-100 p-1 rounded-lg">
+        <div className="flex bg-gray-100 p-1 rounded-lg flex-wrap justify-center">
             <button onClick={() => setViewMode('calculator')} className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'calculator' ? 'bg-white text-[var(--color-primary)] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{t.mealPlannerTool.modeCalculator}</button>
             <button onClick={() => setViewMode('planner')} className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'planner' ? 'bg-white text-[var(--color-primary)] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{t.mealPlannerTool.modePlanner}</button>
             <button onClick={() => setViewMode('day-menu')} className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'day-menu' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>🥗 Day Menu</button>
-            <button onClick={() => setViewMode('guidelines')} className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'guidelines' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>🥗 Guidelines</button>
+            <button onClick={() => setViewMode('advanced-day-menu')} className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'advanced-day-menu' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>🔬 Advanced Day</button>
+            <button onClick={() => setViewMode('guidelines')} className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'guidelines' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>📚 Guidelines</button>
         </div>
 
         <div className="flex gap-2 items-center">
@@ -1094,6 +1096,12 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                 onOpenAnalysis={() => onNavigate && onNavigate('food-composition')} // Dummy handler, real one is usually modal trigger
             />
         </div>
+
+        {viewMode === 'advanced-day-menu' && (
+            <div className="col-span-12">
+                <AdvancedMealCreator />
+            </div>
+        )}
 
         {viewMode === 'guidelines' && (
             <div className="col-span-12">
