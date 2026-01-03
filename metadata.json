@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova_Meal Creator 107 -  v2.0.247",
-  "description": "v2.0.247: Added Universal Meal Library to Simple Meal Builder. Users can now load meals from a public database or their own saved history, with search and delete functionality.",
+  "name": "Diet-Nova_Meal Creator 107 -  v2.0.248",
+  "description": "v2.0.248: Refactored Simple Meal Builder into a 3-column layout (Library | Builder | Summary). Fixed crash issues when loading saved meals. Moved Save/Load controls to the main interface.",
   "requestFramePermissions": []
 }

@@ -5,7 +5,14 @@ Diet-Nova is a comprehensive web application for nutritionists and dietitians, o
 
 ## Version History
 
-### v2.0.247 (Current)
+### v2.0.248 (Current)
+*   **Simple Meal Builder Overhaul:**
+    *   **3-Column Layout:** Redesigned interface to display Library, Builder, and Summary simultaneously for better workflow.
+    *   **Integrated Library:** Saved meals library is now a permanent column, removing the need for a modal.
+    *   **Crash Fix:** Implemented robust validation when loading meals to prevent crashes from malformed data.
+    *   **Smart Init:** Library automatically fetches saved meals on load.
+
+### v2.0.247
 *   **Simple Meal Builder Enhancement:**
     *   **Universal Meal Library:** Added a library column to load meals saved by the user or explore the universal library from all users.
     *   **Smart Loading:** Preview meal details (Kcal, Macros, Ingredients summary) before loading.
