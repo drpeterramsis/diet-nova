@@ -5,7 +5,17 @@ Diet-Nova is a comprehensive web application for nutritionists and dietitians, o
 
 ## Version History
 
-### v2.0.249 (Current)
+### v2.0.250 (Current)
+*   **Simple Meal Builder Enhancement:**
+    *   **Library UI:** Saved meals library now displays detailed content as a bulleted list for better visibility.
+    *   **Duplicate Warning:** Explicit warning message when attempting to overwrite an existing meal.
+*   **Dietary Assessment Update:**
+    *   **Standalone Access:** Tool is now accessible from the main Tools menu without needing to select a client first.
+    *   **Structure Update:** Added 'Pre-Breakfast' meal slot.
+    *   **Meal Time/Duration:** Added ability to record time or duration for each meal slot.
+    *   **Data Saving:** Standalone assessments can be saved to the library for authenticated users.
+
+### v2.0.249
 *   **Simple Meal Builder Enhancements:**
     *   **Duplicate Prevention:** Implemented a check when saving meals to prevent accidental duplicates. Users are prompted to overwrite existing meals if a name conflict occurs.
     *   **Ingredient Search:** Library search now scans both meal names and ingredient lists for matches.
@@ -46,6 +56,7 @@ Diet-Nova is a comprehensive web application for nutritionists and dietitians, o
 1.  **Clinical Workspace**:
     *   **Client Manager**: Full profile management, visit tracking, history charts.
     *   **NFPE Assessment**: Nutrition-Focused Physical Exam checklist.
+    *   **Dietary Assessment**: 24-Hour recall and food habits analysis.
     *   **Pediatric Tools**: STRONGkids, Growth Charts (WHO/CDC), Waist Percentiles, MAMC.
 
 2.  **Body & Energy**:

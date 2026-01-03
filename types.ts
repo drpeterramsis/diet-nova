@@ -13,7 +13,7 @@ export interface SavedMeal {
   id: string;
   user_id: string;
   name: string;
-  tool_type: 'meal-creator' | 'meal-planner' | 'day-planner' | 'food-composition';
+  tool_type: 'meal-creator' | 'meal-planner' | 'day-planner' | 'food-composition' | 'dietary-assessment';
   data: any;
   created_at: string;
 }
@@ -21,7 +21,8 @@ export interface SavedMeal {
 export interface DietaryAssessmentData {
   days: number;
   dates: string[];
-  recall: Record<string, Record<string, string>>;
+  recall: Record<string, Record<string, string>>; // Meal -> Day -> Description
+  times?: Record<string, Record<string, string>>; // Meal -> Day -> Time/Duration
 }
 
 export interface FoodQuestionnaireData {
@@ -195,6 +196,10 @@ export interface Translation {
         desc: string;
     };
     foodComposition: {
+        title: string;
+        desc: string;
+    };
+    dietaryAssessment: {
         title: string;
         desc: string;
     };
@@ -386,6 +391,7 @@ export interface Translation {
       days: string;
       date: string;
       meals: {
+          preBreakfast: string;
           breakfast: string;
           snack: string;
           lunch: string;

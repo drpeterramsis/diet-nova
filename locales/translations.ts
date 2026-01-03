@@ -122,6 +122,10 @@ export const en: Translation = {
     foodComposition: {
         title: "Food Analysis Table",
         desc: "Detailed nutrient analysis for common foods."
+    },
+    dietaryAssessment: {
+        title: "Dietary Assessment",
+        desc: "24-Hour Recall and detailed food habit analysis."
     }
   },
   clients: {
@@ -311,6 +315,7 @@ export const en: Translation = {
       days: "Number of Days",
       date: "Date",
       meals: {
+          preBreakfast: "Pre-Breakfast",
           breakfast: "Breakfast",
           snack: "Snack",
           lunch: "Lunch",
@@ -490,6 +495,10 @@ export const ar: Translation = {
     foodComposition: {
         title: "جدول تحليل الأغذية",
         desc: "تحليل مفصل للعناصر الغذائية للأطعمة الشائعة."
+    },
+    dietaryAssessment: {
+        title: "التقييم الغذائي (الاسترجاع)",
+        desc: "استرجاع الـ 24 ساعة وتحليل العادات الغذائية."
     }
   },
   clients: {
@@ -679,6 +688,7 @@ export const ar: Translation = {
       days: "عدد الأيام",
       date: "التاريخ",
       meals: {
+          preBreakfast: "قبل الإفطار",
           breakfast: "الفطار",
           snack: "سناك",
           lunch: "الغذاء",

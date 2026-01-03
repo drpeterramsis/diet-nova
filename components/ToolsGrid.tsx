@@ -42,6 +42,12 @@ const ToolsGrid: React.FC<ToolsGridProps> = ({ onToolClick, setBmiOpen, isAuthen
                     />
                 )}
                 <ToolCard
+                    title={t.tools.dietaryAssessment.title}
+                    desc={t.tools.dietaryAssessment.desc}
+                    onClick={() => onToolClick('dietary-assessment')}
+                    icon={<span className="text-2xl">📅</span>}
+                />
+                <ToolCard
                     title={t.tools.nfpe.title}
                     desc={t.tools.nfpe.desc}
                     onClick={() => onToolClick('nfpe')}

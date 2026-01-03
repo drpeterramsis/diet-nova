@@ -272,9 +272,6 @@ export const SimpleMealCreator: React.FC = () => {
           
           if (loadedMealId) {
               // We loaded a meal. Is the name same? Update.
-              // If name changed, treat as new or ask? 
-              // Simplest: Check if name matches existing loaded meal name -> update.
-              // If user changed name, we check if THAT name exists.
               isUpdate = true;
           } else {
               // Check if name exists in user's library
@@ -287,7 +284,7 @@ export const SimpleMealCreator: React.FC = () => {
               
               if (existing && existing.length > 0) {
                   // Duplicate found
-                  if (confirm(`A meal named "${mealName}" already exists. Overwrite it?`)) {
+                  if (confirm(`⚠️ Warning: A meal named "${mealName}" already exists!\n\n• Click OK to OVERWRITE the existing meal.\n• Click Cancel to go back and rename this meal.`)) {
                       isUpdate = true;
                       // Use the ID of the existing duplicate to overwrite it
                       setLoadedMealId(existing[0].id); 
@@ -391,22 +388,32 @@ export const SimpleMealCreator: React.FC = () => {
   // Render a single Library Meal Card
   const renderLibraryItem = (meal: SavedMeal) => {
         const stats = calculateSavedMealStats(meal.data?.addedFoods || []);
-        const contentPreview = meal.data?.addedFoods?.slice(0, 3).map((f: any) => f?.item?.name?.split(' ')[0] || '?').join(', ') + (meal.data?.addedFoods?.length > 3 ? '...' : '');
         const isOwner = session?.user.id === meal.user_id;
 
         return (
             <div key={meal.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-purple-300 transition group mb-3 last:mb-0">
                 <div className="flex justify-between items-start mb-2">
-                    <div>
+                    <div className="flex-grow pr-2">
                         <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-bold text-gray-800 text-sm">{meal.name}</h4>
                             {meal.data?.tag && meal.data.tag !== 'Unspecified' && (
                                 <span className="text-[9px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">{meal.data.tag}</span>
                             )}
                         </div>
-                        <p className="text-[10px] text-gray-500 mt-1 line-clamp-1">{contentPreview || 'No items'}</p>
+                        {/* Bulleted list of items limited to 4 */}
+                        <ul className="mt-1.5 space-y-0.5">
+                            {meal.data?.addedFoods?.slice(0, 4).map((f: any, i: number) => (
+                                <li key={i} className="text-[10px] text-gray-500 flex justify-between">
+                                    <span className="truncate max-w-[120px]">• {f?.item?.name?.split('(')[0]}</span>
+                                    <span className="font-bold text-gray-400">x{f.serves}</span>
+                                </li>
+                            ))}
+                            {meal.data?.addedFoods?.length > 4 && (
+                                <li className="text-[9px] text-blue-500 italic">+ {meal.data.addedFoods.length - 4} more items...</li>
+                            )}
+                        </ul>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right flex-shrink-0">
                         <div className="font-mono font-bold text-sm text-purple-700 leading-none">{stats.kcal.toFixed(0)}</div>
                         <div className="text-[8px] text-gray-400 uppercase">kcal</div>
                     </div>

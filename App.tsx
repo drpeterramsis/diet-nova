@@ -22,6 +22,7 @@ import PediatricMAMC from "./components/tools/PediatricMAMC"; // Import Pediatri
 import GrowthCharts from "./components/tools/GrowthCharts"; // Import GrowthCharts
 import InstructionsLibrary from "./components/tools/InstructionsLibrary"; // Import InstructionsLibrary
 import FoodComposition from "./components/tools/FoodComposition"; // Import FoodComposition
+import { DietaryAssessment } from "./components/tools/DietaryAssessment"; // Import Standalone DietaryAssessment
 import Profile from "./components/Profile";
 import UserDashboard from "./components/UserDashboard";
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -463,6 +464,13 @@ const AppContent = () => {
                 <FoodComposition 
                     onClose={handleNavHome} 
                 />
+            )}
+            {activeTool === 'dietary-assessment' && (
+                <div className="h-[calc(100vh-100px)]">
+                    <DietaryAssessment 
+                        onClose={handleNavHome}
+                    />
+                </div>
             )}
 
           </div>
