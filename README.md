@@ -5,7 +5,17 @@ Diet-Nova is a comprehensive web application for nutritionists and dietitians, o
 
 ## Version History
 
-### v2.0.253 (Current)
+### v2.0.254 (Current)
+*   **Meal Planner Overhaul:**
+    *   **3-Column Layout:** Redesigned interface to accommodate a new summary column.
+    *   **Meal Summary Table:** Added a new detailed breakdown table showing total servings, composition, calories, and % of target per meal slot (Breakfast, Lunch, etc.).
+*   **Simple Meal Creator Enhancement:**
+    *   **Analysis Shortcut:** Added a button to quickly open the Food Analysis tool in a modal for reference.
+*   **New Tool: Advanced Day Menu:**
+    *   **Analysis-Based Planning:** Created a dedicated tool for planning using the Food Composition Database (by weight) instead of exchanges.
+    *   **Clinical Warnings:** Includes a configurable warning system to alert when specific nutrient thresholds (e.g., Sodium < 2000mg) are breached.
+
+### v2.0.253
 *   **Meal Planner Enhancement:**
     *   **Diet Guidelines Tab:** Converted the Diet Guidelines popup into a persistent tab within the Meal Planner interface.
     *   **State Persistence:** Selected guideline remains active when switching between Calculator, Planner, and Day Menu tabs.
@@ -84,6 +94,7 @@ Diet-Nova is a comprehensive web application for nutritionists and dietitians, o
 3.  **Diet Planning**:
     *   **Meal Planner**: Comprehensive weekly meal planning with macro targeting.
     *   **Simple Meal Builder**: Quick single-meal construction using exchanges.
+    *   **Advanced Day Menu**: Planning using precise food composition analysis and clinical warning limits.
     *   **Food Exchange Lists**: Searchable Simple and Pro lists.
 
 4.  **Knowledge Hub**:

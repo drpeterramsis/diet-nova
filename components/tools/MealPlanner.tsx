@@ -91,6 +91,92 @@ const TargetKcalInput: React.FC<TargetKcalInputProps> = ({ value, onChange, labe
     </div>
 );
 
+// v2.0.254 - New Meal Plan Summary Table Component
+const MealPlanSummaryTable: React.FC<{ distribution: any, visibleGroups: string[], targetKcal: number }> = ({ distribution, visibleGroups, targetKcal }) => {
+    // Helper to get friendly name
+    const getFriendlyGroupName = (g: string) => {
+        if(g === 'starch') return 'Starch';
+        if(g === 'veg') return 'Veg';
+        if(g === 'fruit') return 'Fruit';
+        if(g === 'legumes') return 'Leg';
+        if(g.startsWith('meat')) return 'Meat';
+        if(g.startsWith('milk')) return 'Milk';
+        if(g === 'sugar') return 'Sug';
+        if(g.startsWith('fat')) return 'Fat';
+        return g;
+    };
+
+    return (
+        <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-200 overflow-hidden h-fit">
+            <h3 className="font-bold text-gray-700 mb-3 border-b pb-2 flex items-center gap-2">
+                <span>📑</span> Meal Breakdown
+            </h3>
+            <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                    <thead className="bg-gray-100 text-gray-600 font-bold uppercase">
+                        <tr>
+                            <th className="p-2 text-left">Meal</th>
+                            <th className="p-2 text-left">Composition</th>
+                            <th className="p-2 text-center">Kcal</th>
+                            <th className="p-2 text-right">%</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                        {MEALS.map((meal) => {
+                            let totalMealKcal = 0;
+                            const composition: string[] = [];
+                            
+                            visibleGroups.forEach(group => {
+                                const serves = Number(distribution[group]?.[meal] || 0);
+                                if (serves > 0) {
+                                    const factor = GROUP_FACTORS[group];
+                                    if(factor) totalMealKcal += serves * factor.kcal;
+                                    composition.push(`${serves} ${getFriendlyGroupName(group)}`);
+                                }
+                            });
+
+                            if (totalMealKcal === 0) return null;
+
+                            const percent = targetKcal > 0 ? (totalMealKcal / targetKcal) * 100 : 0;
+                            const isHigh = percent > 35; // Highlight main meals
+
+                            return (
+                                <tr key={meal} className={isHigh ? 'bg-orange-50' : 'hover:bg-gray-50'}>
+                                    <td className="p-2 font-bold text-gray-800 capitalize border-r border-gray-100">
+                                        {meal.replace(/(\d)/, ' $1')}
+                                    </td>
+                                    <td className="p-2 text-gray-600">
+                                        {composition.join(', ')}
+                                    </td>
+                                    <td className="p-2 text-center font-mono font-bold text-blue-600">
+                                        {totalMealKcal.toFixed(0)}
+                                    </td>
+                                    <td className="p-2 text-right font-bold text-gray-500">
+                                        {percent.toFixed(1)}%
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                        {/* Total Row */}
+                        <tr className="bg-gray-50 border-t border-gray-200">
+                            <td className="p-2 font-black text-gray-800" colSpan={2}>TOTAL PLAN</td>
+                            <td className="p-2 text-center font-black text-green-700">
+                                {visibleGroups.reduce((acc, g) => {
+                                    return acc + MEALS.reduce((mAcc, m) => mAcc + (Number(distribution[g]?.[m] || 0) * (GROUP_FACTORS[g]?.kcal || 0)), 0);
+                                }, 0).toFixed(0)}
+                            </td>
+                            <td className="p-2 text-right font-black text-green-700">
+                                100%
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+
 interface MealPlannerProps {
   initialTargetKcal?: number;
   onBack?: () => void;
@@ -859,7 +945,18 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
         {viewMode === 'planner' && (
             <div className="lg:col-span-12 flex flex-col lg:flex-row gap-6">
-                <div className="flex-grow card bg-white shadow-lg overflow-hidden">
+                
+                {/* 1. Meal Summary Table (New Col) v2.0.254 */}
+                <div className="w-full lg:w-1/4 flex-shrink-0 order-2 lg:order-1 no-print">
+                     <MealPlanSummaryTable 
+                        distribution={distribution}
+                        visibleGroups={VISIBLE_GROUPS}
+                        targetKcal={targetKcal}
+                     />
+                </div>
+
+                {/* 2. Main Planner Table (Center) v2.0.254 (Adapted to 3 col) */}
+                <div className="flex-grow card bg-white shadow-lg overflow-hidden order-1 lg:order-2">
                     <div className="overflow-x-auto">
                         <table className="w-full text-xs sm:text-sm border-collapse">
                             <thead className="bg-gray-800 text-white sticky top-0 z-10">
@@ -904,7 +1001,9 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                         </table>
                     </div>
                 </div>
-                <div className="w-full lg:w-80 flex-shrink-0 space-y-4 no-print">
+
+                {/* 3. Summary (Right Col) v2.0.254 (Adapted to 3 col) */}
+                <div className="w-full lg:w-1/4 flex-shrink-0 space-y-4 no-print order-3">
                      <div className="card bg-white p-4 sticky top-24">
                         <h3 className="font-bold text-gray-700 mb-4 border-b pb-2">Planner Snapshot</h3>
                         

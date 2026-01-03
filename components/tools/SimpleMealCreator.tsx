@@ -30,6 +30,11 @@ interface MealMeta {
     note: string;
 }
 
+// v2.0.254: Added Prop to trigger Food Analysis Modal
+interface SimpleMealCreatorProps {
+    onOpenAnalysis?: () => void;
+}
+
 // --- Helper to calculate stats for a saved meal item ---
 const calculateSavedMealStats = (addedFoods: { item: FoodItem, serves: number }[]) => {
     if (!addedFoods || !Array.isArray(addedFoods)) return { kcal: 0, cho: 0, protein: 0, fat: 0, fiber: 0 };
@@ -47,7 +52,7 @@ const calculateSavedMealStats = (addedFoods: { item: FoodItem, serves: number }[
     }, { kcal: 0, cho: 0, protein: 0, fat: 0, fiber: 0 });
 };
 
-export const SimpleMealCreator: React.FC = () => {
+export const SimpleMealCreator: React.FC<SimpleMealCreatorProps> = ({ onOpenAnalysis }) => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
   
@@ -482,13 +487,24 @@ export const SimpleMealCreator: React.FC = () => {
                 </div>
             </div>
             
-            {/* New Meal Button */}
-            <button 
-                onClick={startNewMeal}
-                className="bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition flex items-center gap-2"
-            >
-                <span>✨</span> New Meal
-            </button>
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+                {onOpenAnalysis && (
+                    <button 
+                        onClick={onOpenAnalysis}
+                        className="bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition flex items-center gap-2"
+                        title="Open Food Analysis"
+                    >
+                        <span>🧪</span> Check Analysis
+                    </button>
+                )}
+                <button 
+                    onClick={startNewMeal}
+                    className="bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition flex items-center gap-2"
+                >
+                    <span>✨</span> New Meal
+                </button>
+            </div>
         </div>
 
         {/* Main 3-Column Layout */}

@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -124,6 +123,9 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onClose, onNavigate, onLogi
                 </button>
                 <button onClick={() => handleNav('meal-creator')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 text-gray-600 text-sm">
                 <span>🥗</span> {t.tools.mealCreator.title}
+                </button>
+                <button onClick={() => handleNav('advanced-meal-creator')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 text-gray-600 text-sm">
+                <span>🔬</span> Day Menu (Advanced)
                 </button>
                 <button onClick={() => handleNav('exchange-pro')} className="w-full text-left px-4 py-2 rounded-lg hover:bg-orange-50 hover:text-orange-700 flex items-center gap-3 text-gray-600 text-sm">
                 <span>📋</span> {t.tools.exchangePro.title}

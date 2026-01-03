@@ -8,6 +8,7 @@ import BmiModal from "./components/BmiModal";
 import KcalCalculator from "./components/calculations/KcalCalculator";
 import MealCreator from "./components/tools/MealCreator";
 import { SimpleMealCreator } from "./components/tools/SimpleMealCreator"; // Import New Simple Tool
+import { AdvancedMealCreator } from "./components/tools/AdvancedMealCreator"; // Import New Advanced Tool
 import FoodExchange from "./components/tools/FoodExchange";
 import { MealPlanner } from "./components/tools/MealPlanner";
 import ClientManager from "./components/tools/ClientManager";
@@ -172,6 +173,9 @@ const AppContent = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [selectedLoadId, setSelectedLoadId] = useState<string | null>(null);
   
+  // v2.0.254 - Modal State for Food Analysis (Shortcut)
+  const [showFoodAnalysisModal, setShowFoodAnalysisModal] = useState(false);
+
   const [autoOpenLoad, setAutoOpenLoad] = useState(false);
   const [autoOpenNew, setAutoOpenNew] = useState(false);
 
@@ -207,6 +211,7 @@ const AppContent = () => {
     setCurrentClientForNFPE(undefined);
     setAutoOpenLoad(false);
     setAutoOpenNew(false);
+    setShowFoodAnalysisModal(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -400,14 +405,21 @@ const AppContent = () => {
 
             {/* Simple Meal Builder */}
             {activeTool === 'meal-creator' && (
-                <SimpleMealCreator />
+                <SimpleMealCreator 
+                    onOpenAnalysis={() => setShowFoodAnalysisModal(true)}
+                />
+            )}
+
+            {/* Advanced Meal Builder (New v2.0.254) */}
+            {activeTool === 'advanced-meal-creator' && (
+                <AdvancedMealCreator />
             )}
 
             {/* Complex Day Menu Planner (Was MealCreator.tsx) */}
             {activeTool === 'day-planner' && (
                 <MealCreator 
                     initialLoadId={selectedLoadId} 
-                    autoOpenLoad={autoOpenLoad}
+                    autoOpenLoad={autoOpenLoad} 
                     autoOpenNew={autoOpenNew}
                     activeVisit={currentVisit}
                     onNavigate={handleToolClick}
@@ -490,10 +502,28 @@ const AppContent = () => {
       {/* Hidden button for SideMenu to trigger BMI */}
       <button id="bmi-btn" className="hidden" onClick={() => setBmiOpen(true)}></button>
 
+      {/* Modals */}
       <BmiModal open={bmiOpen} onClose={() => setBmiOpen(false)} />
       
       {showLogin && (
         <Login onClose={() => setShowLogin(false)} />
+      )}
+
+      {/* Food Analysis Modal (Shortcut) v2.0.254 */}
+      {showFoodAnalysisModal && (
+          <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-white w-full max-w-6xl h-[90vh] rounded-2xl overflow-y-auto shadow-2xl relative">
+                  <button 
+                    onClick={() => setShowFoodAnalysisModal(false)}
+                    className="absolute top-4 right-4 z-50 bg-red-100 hover:bg-red-200 text-red-600 rounded-full w-10 h-10 flex items-center justify-center shadow-md font-bold"
+                  >
+                      ✕
+                  </button>
+                  <div className="p-2">
+                      <FoodComposition onClose={() => setShowFoodAnalysisModal(false)} />
+                  </div>
+              </div>
+          </div>
       )}
       
       <Footer />
