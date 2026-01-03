@@ -69,6 +69,9 @@ export const SimpleMealCreator: React.FC = () => {
   const [mealMeta, setMealMeta] = useState<MealMeta>({ tag: 'Unspecified', note: '' });
   const [loadedMealId, setLoadedMealId] = useState<string | null>(null); // Track loaded ID for updates
 
+  // v2.0.251: Save Options Modal State
+  const [showSaveOptions, setShowSaveOptions] = useState(false);
+
   // --- Library States (v2.0.247) ---
   const [libraryTab, setLibraryTab] = useState<'mine' | 'universal'>('mine');
   const [libraryMeals, setLibraryMeals] = useState<SavedMeal[]>([]);
@@ -244,15 +247,28 @@ export const SimpleMealCreator: React.FC = () => {
       setSearchQuery("");
   };
 
-  // --- Cloud Save Logic (v2.0.249: Duplication Check) ---
-  const handleSaveMeal = async () => {
+  // --- Main Save Handler (v2.0.251) ---
+  const handleSaveButton = () => {
       if (!mealName.trim()) {
           alert("Please enter a name for the meal.");
           return;
       }
       if (!session) return;
 
-      setSaveStatus("Checking...");
+      if (loadedMealId) {
+          // Meal is loaded, prompt user for action
+          setShowSaveOptions(true);
+      } else {
+          // New meal, proceed to standard save logic (checking duplicates)
+          performDatabaseSave('create_new');
+      }
+  };
+
+  // --- Database Execution Logic (v2.0.251 Refactor) ---
+  const performDatabaseSave = async (mode: 'update_current' | 'create_new') => {
+      if (!session) return;
+      setShowSaveOptions(false); // Close modal if open
+      setSaveStatus("Processing...");
 
       try {
           const payload = {
@@ -267,14 +283,11 @@ export const SimpleMealCreator: React.FC = () => {
               }
           };
 
-          // 1. Check Duplication if saving as new or changing name
-          let isUpdate = false;
-          
-          if (loadedMealId) {
-              // We loaded a meal. Is the name same? Update.
-              isUpdate = true;
-          } else {
-              // Check if name exists in user's library
+          let targetId = mode === 'update_current' ? loadedMealId : null;
+          let isInsert = false;
+
+          // If Create New (or initial save), check for name duplication first
+          if (mode === 'create_new') {
               const { data: existing } = await supabase
                   .from('saved_meals')
                   .select('id, name')
@@ -285,41 +298,39 @@ export const SimpleMealCreator: React.FC = () => {
               if (existing && existing.length > 0) {
                   // Duplicate found
                   if (confirm(`⚠️ Warning: A meal named "${mealName}" already exists!\n\n• Click OK to OVERWRITE the existing meal.\n• Click Cancel to go back and rename this meal.`)) {
-                      isUpdate = true;
-                      // Use the ID of the existing duplicate to overwrite it
-                      setLoadedMealId(existing[0].id); 
+                      targetId = existing[0].id; // We will update the duplicate record
                   } else {
                       setSaveStatus("Save Cancelled.");
                       setTimeout(() => setSaveStatus(""), 2000);
-                      return; // Cancel save
+                      return; // Cancel
                   }
+              } else {
+                  isInsert = true;
               }
           }
 
-          setSaveStatus("Saving to cloud...");
+          setSaveStatus(isInsert ? "Saving new meal..." : "Updating meal...");
 
-          let error = null;
-          if (isUpdate && loadedMealId) {
-              // Update
-              const { error: updateErr } = await supabase
-                  .from('saved_meals')
-                  .update(payload)
-                  .eq('id', loadedMealId);
-              error = updateErr;
-          } else {
-              // Insert New
-              const { error: insertErr } = await supabase
-                  .from('saved_meals')
-                  .insert(payload);
+          let data, error;
+          if (isInsert) {
+              const { data: inserted, error: insertErr } = await supabase.from('saved_meals').insert(payload).select().single();
+              data = inserted;
               error = insertErr;
+          } else if (targetId) {
+              const { data: updated, error: updateErr } = await supabase.from('saved_meals').update(payload).eq('id', targetId).select().single();
+              data = updated;
+              error = updateErr;
           }
-          
+
           if (error) throw error;
-          
-          setSaveStatus(isUpdate ? "Meal Updated!" : "Meal Saved!");
-          // Refresh library
-          if (libraryTab === 'mine') fetchLibraryMeals();
-          
+
+          if (data) {
+              setLoadedMealId(data.id); // Update context to the saved meal ID
+              setSaveStatus(isInsert ? "Meal Saved!" : "Meal Updated!");
+              // Refresh library if viewing 'mine'
+              if (libraryTab === 'mine') fetchLibraryMeals();
+          }
+
           setTimeout(() => {
               setSaveStatus("");
               setShowSaveModal(false);
@@ -493,7 +504,7 @@ export const SimpleMealCreator: React.FC = () => {
                             </h3>
                             {session && (
                                 <button 
-                                    onClick={handleSaveMeal}
+                                    onClick={handleSaveButton} // v2.0.251: Trigger new save flow
                                     className="bg-white text-purple-600 px-3 py-1 rounded border border-purple-200 hover:bg-purple-100 text-xs font-bold shadow-sm flex items-center gap-1"
                                     title="Save Current Meal"
                                 >
@@ -808,6 +819,43 @@ export const SimpleMealCreator: React.FC = () => {
                 </div>
             </div>
         </div>
+
+        {/* Save Options Modal v2.0.251 */}
+        {showSaveOptions && (
+            <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 className="font-bold text-gray-800">Save Options</h3>
+                        <button onClick={() => setShowSaveOptions(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                    </div>
+                    <div className="p-6 text-center space-y-4">
+                        <p className="text-sm text-gray-600">
+                            You are editing an existing meal. How would you like to save your changes?
+                        </p>
+                        <div className="flex flex-col gap-2">
+                            <button 
+                                onClick={() => performDatabaseSave('update_current')}
+                                className="w-full py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition"
+                            >
+                                Overwrite Current Meal
+                            </button>
+                            <button 
+                                onClick={() => performDatabaseSave('create_new')}
+                                className="w-full py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 transition"
+                            >
+                                Save as New Meal
+                            </button>
+                            <button 
+                                onClick={() => setShowSaveOptions(false)}
+                                className="w-full py-2 bg-gray-100 text-gray-600 rounded-lg font-bold hover:bg-gray-200 transition"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
   );
 };

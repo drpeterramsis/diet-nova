@@ -5,7 +5,11 @@ Diet-Nova is a comprehensive web application for nutritionists and dietitians, o
 
 ## Version History
 
-### v2.0.250 (Current)
+### v2.0.251 (Current)
+*   **Simple Meal Builder Enhancement:**
+    *   **Smart Save Options:** When saving a modified loaded meal, users are now prompted to either **Overwrite** the existing meal or **Save as New**, preventing accidental data loss.
+
+### v2.0.250
 *   **Simple Meal Builder Enhancement:**
     *   **Library UI:** Saved meals library now displays detailed content as a bulleted list for better visibility.
     *   **Duplicate Warning:** Explicit warning message when attempting to overwrite an existing meal.
