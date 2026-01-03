@@ -41,13 +41,23 @@ const GROUP_STYLES: Record<string, { bg: string, text: string, border: string, i
   sugar: { bg: 'bg-gray-100', text: 'text-gray-900', border: 'border-gray-300', icon: '🍬' },
   fats: { bg: 'bg-yellow-50', text: 'text-yellow-900', border: 'border-yellow-200', icon: '🥑' },
   fatsPufa: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: '🌻' },
-  // v2.0.238: Fixed Fat MUFA Emoji visibility
   fatsMufa: { bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-300', icon: '🥜' },
   fatsSat: { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-300', icon: '🥥' },
 };
 
 const MEALS = ['snack1', 'breakfast', 'snack2', 'lunch', 'snack3', 'dinner', 'snack4'];
 const BASE_GROUPS = Object.keys(GROUP_FACTORS);
+
+// v2.0.242: Static Balanced Diet Guidelines
+const STATIC_BALANCED_GUIDELINES = `
+• Diversity: Include all food groups in the plan.;
+• Added Sugar: Must be less than 10% of total daily calories.;
+• Saturated Fat: Must be less than 10% of total daily calories.;
+• PUFA: Up to 10% of total calories.;
+• MUFA: Up to 20% of total calories.;
+• Carbs & Fruit: Do not rely on fruit as your only carb source.;
+• Carbs & Fruit: Fruit servings should not exceed 15% of the total plan.
+`;
 
 // --- Extracted Component to prevent re-renders/focus loss ---
 interface TargetKcalInputProps {
@@ -231,7 +241,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       return (Number(servings['fatsPufa']) || 0) + (Number(servings['fatsMufa']) || 0) + (Number(servings['fatsSat']) || 0);
   }, [servings]);
 
-  // Explicitly typing calculation returns to avoid arithmetic operation errors on inferred objects.
+  // Explicitly typing calculation returns
   const calcTotals = useMemo<{ 
     cho: number; pro: number; fat: number; fiber: number; kcal: number; 
     kcalPufa: number; kcalMufa: number; kcalSat: number; 
@@ -342,12 +352,15 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       return plan ? plan.kcal : 0;
   }, [selectedDistribution, selectedPlanName]);
 
-  // Derived Notes for display throughout tool
-  const derivedNotes = useMemo(() => {
-      if (!selectedDistribution || !selectedPlanName) return null;
-      const plan = selectedDistribution.rows.find(r => (r.dietName || `Plan (${r.kcal} kcal)`) === selectedPlanName);
-      return plan?.dietNotes || null;
-  }, [selectedDistribution, selectedPlanName]);
+  // v2.0.242: Combined Diet Instructions + Dynamic Notes
+  const derivedCombinedNotes = useMemo(() => {
+      if (!selectedDiet || !selectedPlanName) return null;
+      const plan = selectedDistribution?.rows.find(r => (r.dietName || `Plan (${r.kcal} kcal)`) === selectedPlanName);
+      const dbNotes = plan?.dietNotes || '';
+      
+      // Combine static balanced rules with the database specific notes
+      return STATIC_BALANCED_GUIDELINES + (dbNotes ? '; ' + dbNotes : '');
+  }, [selectedDiet, selectedDistribution, selectedPlanName]);
 
   const applyTemplate = () => {
       if (!selectedDistribution || !selectedPlanName) return;
@@ -512,7 +525,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       setLastSavedName('');
       setUseFatBreakdown(false);
       setDayMenuPlan(DEFAULT_WEEKLY_PLAN);
-      // v2.0.238: Reset template selection to hide diet notes
       setSelectedDietId(dietTemplates.length > 0 ? dietTemplates[0].id : '');
       setSelectedDistId(dietTemplates.length > 0 && dietTemplates[0].distributions.length > 0 ? dietTemplates[0].distributions[0].id : '');
       setSelectedPlanName('');
@@ -672,6 +684,8 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                     <tr>
                                         <th className="p-3 text-left w-1/3">{t.mealPlannerTool.foodGroup}</th>
                                         <th className="p-3 text-center w-24">{t.mealPlannerTool.serves}</th>
+                                        {/* v2.0.242: New % Kcal column */}
+                                        <th className="p-3 text-center">% kcal</th>
                                         <th className="p-3 text-center">{t.mealPlannerTool.cho}</th>
                                         <th className="p-3 text-center">{t.mealPlannerTool.pro}</th>
                                         <th className="p-3 text-center">{t.mealPlannerTool.fat}</th>
@@ -686,19 +700,27 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                         const s = target;
                                         const f = GROUP_FACTORS[group];
                                         const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
+                                        
+                                        // v2.0.242: Calculation for group % of total target kcal
+                                        const groupKcal = s * Number(f.kcal);
+                                        const groupKcalPct = targetKcal > 0 ? (groupKcal / targetKcal) * 100 : 0;
+
                                         return (
                                             <tr key={group} className={`${style.bg} border-b ${style.border} bg-opacity-30`}>
                                                 <td className="p-3 font-medium transition-colors"><div className={`flex items-center gap-2 text-base ${style.text}`}><span className="text-xl">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className={`ml-2 text-[10px] px-2 py-0.5 rounded border transition font-bold ${useFatBreakdown ? 'bg-yellow-200 border-yellow-300 text-yellow-800' : 'bg-gray-100 border-gray-200 text-gray-500 hover:bg-gray-200'}`} title="Toggle detailed fat types">{useFatBreakdown ? 'Hide Details' : 'Show Breakdown'}</button>)}{isAutoFat && <span className="text-[10px] bg-gray-200 text-gray-600 px-1.5 rounded ml-2">Auto-Sum</span>}</div></td>
                                                 <td className="p-3 text-center bg-white/50">
                                                     <div className="flex flex-col items-center gap-1">
                                                         <input type="number" min="0" step="0.5" disabled={isAutoFat} className={`w-20 p-2 border border-gray-300 rounded text-center focus:ring-2 focus:ring-[var(--color-primary)] outline-none transition-all ${isAutoFat ? 'bg-gray-100 font-bold text-gray-500 cursor-not-allowed' : s === 0 ? 'text-red-300 bg-white' : 'font-bold text-lg text-gray-800 bg-white shadow-sm'}`} value={s || ''} placeholder="0" onChange={(e) => updateServing(group, parseFloat(e.target.value) || 0)} />
-                                                        {/* v2.0.239: Weekly limit alert for fractional serves */}
                                                         {s > 0 && s < 1 && (
-                                                            <div className="text-[9px] bg-red-100 text-red-600 px-1.5 rounded font-bold animate-pulse whitespace-nowrap" title="This serve is less than 1 daily unit - likely restricted to specific times per week. See Plan Notes.">
+                                                            <div className="text-[9px] bg-red-100 text-red-600 px-1.5 rounded font-bold animate-pulse whitespace-nowrap" title="Weekly Limit">
                                                                 ⚠️ Weekly Limit
                                                             </div>
                                                         )}
                                                     </div>
+                                                </td>
+                                                {/* v2.0.242: % kcal data cell */}
+                                                <td className="p-3 text-center text-[10px] font-bold text-gray-500">
+                                                    {groupKcalPct > 0 ? `${groupKcalPct.toFixed(1)}%` : '-'}
                                                 </td>
                                                 <td className="p-3 text-center"><div className={`font-mono text-base ${s*Number(f.cho) === 0 ? 'text-red-300' : 'text-gray-700 font-bold'}`}>{(s*Number(f.cho)).toFixed(1)}</div><div className="text-[10px] text-gray-400 font-medium">{f.cho}g</div></td>
                                                 <td className="p-3 text-center"><div className={`font-mono text-base ${s*Number(f.pro) === 0 ? 'text-red-300' : 'text-gray-700 font-bold'}`}>{(s*Number(f.pro)).toFixed(1)}</div><div className="text-[10px] text-gray-400 font-medium">{f.pro}g</div></td>
@@ -763,18 +785,19 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                  )}
                             </div>
 
-                            {/* v2.0.241: Relocated Template Instructions to the bottom of the calculator summary column */}
-                            {derivedNotes && (
+                            {/* v2.0.242: Updated Guidelines block with Combined logic */}
+                            {derivedCombinedNotes && (
                                 <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded shadow-sm animate-fade-in">
                                     <div className="flex items-center gap-2 mb-2 text-yellow-800 font-bold text-xs uppercase tracking-wider">
-                                        <span>💡</span> Template Instructions
+                                        <span>💡</span> {selectedDiet?.name || 'Diet'} Guidelines
                                     </div>
                                     <div className="text-xs text-yellow-900 space-y-1.5 leading-relaxed">
-                                        {derivedNotes.split(';').map((line, idx) => {
+                                        {derivedCombinedNotes.split(';').map((line, idx) => {
+                                            const isImportant = line.includes('%') || line.toLowerCase().includes('must');
                                             const isWeekly = line.toLowerCase().includes('/ week');
                                             return (
-                                                <div key={idx} className={`flex gap-2 ${isWeekly ? 'text-blue-700 font-bold' : ''}`}>
-                                                    <span className={`${isWeekly ? 'text-blue-500' : 'text-yellow-500'} mt-1`}>•</span>
+                                                <div key={idx} className={`flex gap-2 ${isImportant ? 'font-bold' : ''} ${isWeekly ? 'text-blue-700' : ''}`}>
+                                                    <span className={`${isImportant ? 'text-orange-500' : 'text-yellow-500'} mt-1`}>•</span>
                                                     <span>{line.trim()}</span>
                                                 </div>
                                             );
@@ -794,8 +817,14 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                     <div className="overflow-x-auto">
                         <table className="w-full text-xs sm:text-sm border-collapse">
                             <thead className="bg-gray-800 text-white sticky top-0 z-10">
-                                <tr><th className="p-2 text-left min-w-[140px] bg-gray-900 border-b border-gray-700">Food Group</th><th className="p-2 text-center bg-gray-700 min-w-[60px] border-b border-gray-600 font-bold border-r border-gray-600">Remain</th>{MEALS.map(m => (<th key={m} className="p-2 text-center min-w-[60px] border-b border-gray-700">{t.mealPlannerTool.meals[m as keyof typeof t.mealPlannerTool.meals]}</th>))}</tr>
-                                <tr><th colSpan={MEALS.length + 2} className="p-1 bg-blue-100 text-blue-900 text-center text-xs font-bold uppercase tracking-widest border-b border-blue-200">Serves Day Distribution</th></tr>
+                                <tr>
+                                    <th className="p-2 text-left min-w-[140px] bg-gray-900 border-b border-gray-700">Food Group</th>
+                                    {/* v2.0.242: Distribution % column */}
+                                    <th className="p-2 text-center bg-gray-800 border-b border-gray-700 font-bold">% kcal</th>
+                                    <th className="p-2 text-center bg-gray-700 min-w-[60px] border-b border-gray-600 font-bold border-r border-gray-600">Remain</th>
+                                    {MEALS.map(m => (<th key={m} className="p-2 text-center min-w-[60px] border-b border-gray-700">{t.mealPlannerTool.meals[m as keyof typeof t.mealPlannerTool.meals]}</th>))}
+                                </tr>
+                                <tr><th colSpan={MEALS.length + 3} className="p-1 bg-blue-100 text-blue-900 text-center text-xs font-bold uppercase tracking-widest border-b border-blue-200">Serves Day Distribution</th></tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {VISIBLE_GROUPS.map(group => {
@@ -805,14 +834,24 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                         displayDistributions = {};
                                         MEALS.forEach(m => { displayDistributions[m] = (Number(distribution['fatsPufa']?.[m]) || 0) + (Number(distribution['fatsMufa']?.[m]) || 0) + (Number(distribution['fatsSat']?.[m]) || 0); });
                                     }
-                                    const target = isAutoFat ? Number(calculatedFatsSum) : (Number(servings[group]) || 0);
-                                    const totalDist = MEALS.reduce((acc: number, m: string) => acc + (Number(displayDistributions[m]) || 0), 0);
-                                    const rem = target - totalDist;
-                                    const isOver = rem < 0, isComplete = rem === 0 && target > 0;
+                                    const targetServes = isAutoFat ? Number(calculatedFatsSum) : (Number(servings[group]) || 0);
+                                    const totalDistServes = MEALS.reduce((acc: number, m: string) => acc + (Number(displayDistributions[m]) || 0), 0);
+                                    const rem = targetServes - totalDistServes;
+                                    const isOver = rem < 0, isComplete = rem === 0 && targetServes > 0;
                                     const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
+                                    
+                                    // v2.0.242: % of total kcal for currently distributed items
+                                    const factor = GROUP_FACTORS[group];
+                                    const distKcal = totalDistServes * Number(factor.kcal);
+                                    const distPct = targetKcal > 0 ? (distKcal / targetKcal) * 100 : 0;
+
                                     return (
                                         <tr key={group} className={`${style.bg} bg-opacity-30 border-b border-gray-100`}>
-                                            <td className="p-2 font-medium border-r border-gray-200 sticky left-0 z-10 bg-white"><div className={`flex items-center gap-1.5 ${style.text}`}><span className="text-sm">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className={`ml-2 text-[8px] px-1.5 py-0.5 rounded border font-bold ${useFatBreakdown ? 'bg-yellow-200 text-yellow-800 border-yellow-300' : 'bg-gray-100 border-gray-200 text-gray-500 border-gray-200'}`}>{useFatBreakdown ? 'Hide' : 'Show'}</button>)}{isAutoFat && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded ml-1">Sum</span>}</div><div className="text-[10px] text-gray-500 font-normal no-print mt-1 ml-5 border-t border-black/10 pt-0.5">Total: <span className="font-bold">{target}</span></div></td>
+                                            <td className="p-2 font-medium border-r border-gray-200 sticky left-0 z-10 bg-white"><div className={`flex items-center gap-1.5 ${style.text}`}><span className="text-sm">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className={`ml-2 text-[8px] px-1.5 py-0.5 rounded border font-bold ${useFatBreakdown ? 'bg-yellow-200 text-yellow-800 border-yellow-300' : 'bg-gray-100 border-gray-200 text-gray-500 border-gray-200'}`}>{useFatBreakdown ? 'Hide' : 'Show'}</button>)}{isAutoFat && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded ml-1">Sum</span>}</div><div className="text-[10px] text-gray-500 font-normal no-print mt-1 ml-5 border-t border-black/10 pt-0.5">Target: <span className="font-bold">{targetServes}</span></div></td>
+                                            {/* v2.0.242: Distributed % Kcal Cell */}
+                                            <td className="p-2 text-center text-[10px] font-bold text-gray-400">
+                                                {distPct > 0 ? `${distPct.toFixed(1)}%` : '-'}
+                                            </td>
                                             <td className={`p-2 text-center font-bold border-r-2 border-gray-300 ${isOver ? 'bg-red-50 text-red-600' : isComplete ? 'bg-gray-50 text-gray-300' : 'bg-white text-gray-600'}`}>{rem === 0 ? '-' : rem.toFixed(1)}</td>
                                             {MEALS.map(meal => (<td key={meal} className="p-1 text-center border-r border-gray-100">{isAutoFat ? (<div className="text-gray-500 font-bold text-xs">{Number(displayDistributions[meal]) > 0 ? displayDistributions[meal] : '-'}</div>) : (<input type="number" className={`w-full h-8 text-center bg-transparent focus:bg-blue-50 outline-none rounded hover:bg-gray-100 transition ${(Number(displayDistributions?.[meal]) || 0) === 0 ? 'text-gray-300' : 'text-black font-bold'}`} placeholder="-" value={displayDistributions?.[meal] || ''} onChange={(e) => updateDistribution(group, meal, parseFloat(e.target.value) || 0)} />)}</td>))}
                                         </tr>
@@ -848,18 +887,19 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             <div className="p-2 bg-green-50 rounded text-center text-xs"><div className="font-bold text-green-700">{Number(distTotals.fiber).toFixed(1)}g</div><div className="text-green-500">Fiber</div></div>
                         </div>
 
-                        {/* v2.0.241: Relocated Plan Notes to the bottom of the Planner Snapshot sidebar */}
-                        {derivedNotes && (
+                        {/* v2.0.242: Combined Guidelines block for Planner View */}
+                        {derivedCombinedNotes && (
                             <div className="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-2.5 rounded shadow-sm animate-fade-in text-[11px] leading-relaxed">
                                 <div className="font-bold text-yellow-800 mb-1 flex items-center gap-1.5">
-                                    <span>💡</span> Plan Notes
+                                    <span>💡</span> {selectedDiet?.name || 'Diet'} Plan Notes
                                 </div>
                                 <div className="text-yellow-900 space-y-1">
-                                    {derivedNotes.split(';').map((line, idx) => {
+                                    {derivedCombinedNotes.split(';').map((line, idx) => {
+                                        const isImportant = line.includes('%') || line.toLowerCase().includes('must');
                                         const isWeekly = line.toLowerCase().includes('/ week');
                                         return (
-                                            <div key={idx} className={`flex gap-1.5 ${isWeekly ? 'text-blue-700 font-bold' : ''}`}>
-                                                <span className={`${isWeekly ? 'text-blue-500' : 'text-yellow-400'}`}>•</span>
+                                            <div key={idx} className={`flex gap-1.5 ${isImportant ? 'font-bold' : ''} ${isWeekly ? 'text-blue-700' : ''}`}>
+                                                <span className={`${isImportant ? 'text-orange-400' : 'text-yellow-400'}`}>•</span>
                                                 <span>{line.trim()}</span>
                                             </div>
                                         );
@@ -873,7 +913,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         )}
 
         <div className={`col-span-12 ${viewMode === 'day-menu' ? 'block' : 'hidden'}`}>
-            <MealCreator initialLoadId={initialLoadId} autoOpenLoad={autoOpenLoad} autoOpenNew={autoOpenNew} activeVisit={activeVisit} isEmbedded={true} externalTargetKcal={targetKcal} plannedExchanges={servings} externalWeeklyPlan={dayMenuPlan} onWeeklyPlanChange={setDayMenuPlan} externalNotes={derivedNotes} />
+            <MealCreator initialLoadId={initialLoadId} autoOpenLoad={autoOpenLoad} autoOpenNew={autoOpenNew} activeVisit={activeVisit} isEmbedded={true} externalTargetKcal={targetKcal} plannedExchanges={servings} externalWeeklyPlan={dayMenuPlan} onWeeklyPlanChange={setDayMenuPlan} externalNotes={derivedCombinedNotes} />
         </div>
 
       </div>

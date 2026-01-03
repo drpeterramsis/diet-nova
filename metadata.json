@@ -1,6 +1,6 @@
 
 {
-  "name": "Diet-Nova DayMenu_99_v2.0.241",
-  "description": "v2.0.241: Relocated 'Template Instructions' and 'Plan Notes' in Meal Planner tool from the top of the sidebars to the bottom, below the summary and calculation stats. v2.0.240: Relocated 'Plan Instructions' in Day Menu tab from top position to below the Day Summary card.",
+  "name": "Diet-Nova v2.0.242",
+  "description": "v2.0.242: Integrated Balanced Diet Guidelines into Template Notes; Added dynamic Diet Name headers to instruction blocks; Implemented % of Kcal tracking for exchange serves in Calculator, Planner, and Day Menu views.",
   "requestFramePermissions": []
 }
