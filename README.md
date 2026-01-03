@@ -1,20 +1,54 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
 
-# Run and deploy your AI Studio app
+# Diet-Nova Professional Nutrition Suite
 
-This contains everything you need to run your app locally.
+Diet-Nova is a comprehensive web application for nutritionists and dietitians, offering advanced tools for assessment, calculation, and meal planning.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Xgu2cn2lIallc0TxjlQ5G9933uoriD7X
+## Version History
 
-## Run Locally
+### v2.0.246 (Current)
+*   **Simple Meal Builder Enhancement:**
+    *   Added **Edit Mode** for meal items: Users can now modify the item name text directly. Numbers in brackets `(1)` are auto-formatted to red.
+    *   Added **% Kcal Column** to Serves Distribution summary table.
+    *   Added **Cloud Save** functionality: Save meals with Name, Tag (Breakfast/Lunch/etc), and Notes to the database.
+    *   Refactored Summary Logic to accurately calculate calorie distribution percentages.
 
-**Prerequisites:**  Node.js
+### v2.0.245
+*   **Enhanced Simple Meal Builder:** Cloud status indicator, formatted search results.
+*   **Detailed Nutrient Breakdowns:** Per item analysis in food composition.
+*   **Group Serve Summary:** Added aggregation logic for food groups.
 
+### v2.0.244
+*   **Plan Specific Notes:** Improved styling for weekly planning notes.
+*   **Consistency:** Unified note display across tools.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Key Features
+
+1.  **Clinical Workspace**:
+    *   **Client Manager**: Full profile management, visit tracking, history charts.
+    *   **NFPE Assessment**: Nutrition-Focused Physical Exam checklist.
+    *   **Pediatric Tools**: STRONGkids, Growth Charts (WHO/CDC), Waist Percentiles, MAMC.
+
+2.  **Body & Energy**:
+    *   **Kcal Calculator**: Advanced energy requirement calculations (Mifflin, Harris-Benedict, EER).
+    *   **BMR Calculator**: Basic metabolic rate.
+    *   **BMI Calculator**: Visual gauge and classification.
+    *   **Height Estimator**: Estimate height from Ulna/Knee height.
+
+3.  **Diet Planning**:
+    *   **Meal Planner**: Comprehensive weekly meal planning with macro targeting.
+    *   **Simple Meal Builder**: Quick single-meal construction using exchanges.
+    *   **Food Exchange Lists**: Searchable Simple and Pro lists.
+
+4.  **Knowledge Hub**:
+    *   **Food Composition**: Analysis of specific food items (Cloud/Local DB).
+    *   **Encyclopedia**: Vitamins, Minerals, Definitions.
+    *   **Lab Reference**: Biochemical reference ranges and interpretations.
+    *   **Instructions Library**: Printable patient instructions.
+
+## Technical Stack
+*   **Frontend**: React, TypeScript, Tailwind CSS
+*   **Build Tool**: Vite
+*   **Backend**: Supabase (PostgreSQL, Auth)
+
+## Deployment
+This project is configured for deployment on standard static hosting services or cloud platforms. Ensure environment variables for Supabase are correctly set.
