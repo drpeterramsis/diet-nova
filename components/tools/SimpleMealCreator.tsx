@@ -26,7 +26,7 @@ const renderHighlightedText = (text: string) => {
 
 // --- Interfaces for Save Functionality ---
 interface MealMeta {
-    tag: 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | 'Drink';
+    tag: 'Breakfast' | 'Lunch' | 'Dinner' | 'Snack' | 'Drink' | 'Unspecified'; // Added Unspecified
     note: string;
 }
 
@@ -66,14 +66,18 @@ export const SimpleMealCreator: React.FC = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
   const [mealName, setMealName] = useState("");
-  const [mealMeta, setMealMeta] = useState<MealMeta>({ tag: 'Lunch', note: '' });
+  const [mealMeta, setMealMeta] = useState<MealMeta>({ tag: 'Unspecified', note: '' });
+  const [loadedMealId, setLoadedMealId] = useState<string | null>(null); // Track loaded ID for updates
 
   // --- Library States (v2.0.247) ---
-  // Layout changed: No modal for library, it's now a column
   const [libraryTab, setLibraryTab] = useState<'mine' | 'universal'>('mine');
   const [libraryMeals, setLibraryMeals] = useState<SavedMeal[]>([]);
   const [librarySearch, setLibrarySearch] = useState('');
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+  
+  // --- New Filter States (v2.0.249) ---
+  const [filterOperator, setFilterOperator] = useState<'>' | '<' | '='>('>');
+  const [filterKcal, setFilterKcal] = useState<number | ''>('');
 
   // --- Fetch Cloud Data (Ingredients) ---
   const mapDBToItem = (row: FoodExchangeRow): FoodItem => ({
@@ -104,7 +108,6 @@ export const SimpleMealCreator: React.FC = () => {
 
   // --- Fetch Saved Meals Library (v2.0.247) ---
   const fetchLibraryMeals = async () => {
-      // Allow fetching universal even if logged out? For now logic remains same: Mine needs session.
       if (!session && libraryTab === 'mine') return;
       setIsLoadingLibrary(true);
       try {
@@ -114,13 +117,11 @@ export const SimpleMealCreator: React.FC = () => {
             .eq('tool_type', 'meal-creator')
             .order('created_at', { ascending: false });
 
-          // If "My Meals", filter by user ID
           if (libraryTab === 'mine' && session) {
               query = query.eq('user_id', session.user.id);
           }
-          // If "Universal", we query all
           
-          query = query.limit(50); // Limit results for performance
+          query = query.limit(50); // Limit results
 
           const { data, error } = await query;
           if (error) throw error;
@@ -144,12 +145,28 @@ export const SimpleMealCreator: React.FC = () => {
     return activeData.filter(f => f.name.toLowerCase().includes(q) || f.group.toLowerCase().includes(q));
   }, [searchQuery, activeData]);
 
-  // Filter Saved Meals for Library
+  // Filter Saved Meals for Library (v2.0.249: Enhanced Search + Kcal Filter)
   const filteredLibraryMeals = useMemo(() => {
-      if (!librarySearch) return libraryMeals;
-      const q = librarySearch.toLowerCase();
-      return libraryMeals.filter(m => m.name.toLowerCase().includes(q));
-  }, [libraryMeals, librarySearch]);
+      return libraryMeals.filter(meal => {
+          // 1. Text Search (Name + Ingredients)
+          const q = librarySearch.toLowerCase();
+          const nameMatch = meal.name.toLowerCase().includes(q);
+          const ingredientsMatch = meal.data?.addedFoods?.some((f: any) => f.item.name.toLowerCase().includes(q));
+          const textMatch = !q || nameMatch || ingredientsMatch;
+
+          // 2. Kcal Filter
+          let kcalMatch = true;
+          if (filterKcal !== '' && !isNaN(Number(filterKcal))) {
+              const mealStats = calculateSavedMealStats(meal.data?.addedFoods || []);
+              const target = Number(filterKcal);
+              if (filterOperator === '>') kcalMatch = mealStats.kcal > target;
+              else if (filterOperator === '<') kcalMatch = mealStats.kcal < target;
+              else if (filterOperator === '=') kcalMatch = Math.abs(mealStats.kcal - target) < 20; // 20 kcal tolerance
+          }
+
+          return textMatch && kcalMatch;
+      });
+  }, [libraryMeals, librarySearch, filterKcal, filterOperator]);
 
   const addToMeal = (item: FoodItem) => {
       // Create a deep copy of item so editing name doesn't affect source data
@@ -211,7 +228,23 @@ export const SimpleMealCreator: React.FC = () => {
       return groups;
   }, [mealItems]);
 
-  // --- Cloud Save Logic ---
+  // --- Reset/Clear Functions (v2.0.249) ---
+  const clearMealContent = () => {
+      if (mealItems.length > 0 && confirm("Clear all items from current meal?")) {
+          setMealItems([]);
+      }
+  };
+
+  const startNewMeal = () => {
+      if (mealItems.length > 0 && !confirm("Start a fresh meal? Unsaved changes will be lost.")) return;
+      setMealItems([]);
+      setMealName("");
+      setMealMeta({ tag: 'Unspecified', note: '' });
+      setLoadedMealId(null);
+      setSearchQuery("");
+  };
+
+  // --- Cloud Save Logic (v2.0.249: Duplication Check) ---
   const handleSaveMeal = async () => {
       if (!mealName.trim()) {
           alert("Please enter a name for the meal.");
@@ -219,26 +252,74 @@ export const SimpleMealCreator: React.FC = () => {
       }
       if (!session) return;
 
-      setSaveStatus("Saving to cloud...");
-      
+      setSaveStatus("Checking...");
+
       try {
           const payload = {
               user_id: session.user.id,
               name: mealName,
-              tool_type: 'meal-creator', // Standard identifier
+              tool_type: 'meal-creator',
               data: {
-                  addedFoods: mealItems, // Standard structure
-                  tag: mealMeta.tag, // New: Meal Tag
-                  note: mealMeta.note, // New: Meal Note
+                  addedFoods: mealItems,
+                  tag: mealMeta.tag,
+                  note: mealMeta.note,
                   savedAt: new Date().toISOString()
               }
           };
 
-          const { error } = await supabase.from('saved_meals').insert(payload);
+          // 1. Check Duplication if saving as new or changing name
+          let isUpdate = false;
+          
+          if (loadedMealId) {
+              // We loaded a meal. Is the name same? Update.
+              // If name changed, treat as new or ask? 
+              // Simplest: Check if name matches existing loaded meal name -> update.
+              // If user changed name, we check if THAT name exists.
+              isUpdate = true;
+          } else {
+              // Check if name exists in user's library
+              const { data: existing } = await supabase
+                  .from('saved_meals')
+                  .select('id, name')
+                  .eq('user_id', session.user.id)
+                  .eq('name', mealName)
+                  .eq('tool_type', 'meal-creator');
+              
+              if (existing && existing.length > 0) {
+                  // Duplicate found
+                  if (confirm(`A meal named "${mealName}" already exists. Overwrite it?`)) {
+                      isUpdate = true;
+                      // Use the ID of the existing duplicate to overwrite it
+                      setLoadedMealId(existing[0].id); 
+                  } else {
+                      setSaveStatus("Save Cancelled.");
+                      setTimeout(() => setSaveStatus(""), 2000);
+                      return; // Cancel save
+                  }
+              }
+          }
+
+          setSaveStatus("Saving to cloud...");
+
+          let error = null;
+          if (isUpdate && loadedMealId) {
+              // Update
+              const { error: updateErr } = await supabase
+                  .from('saved_meals')
+                  .update(payload)
+                  .eq('id', loadedMealId);
+              error = updateErr;
+          } else {
+              // Insert New
+              const { error: insertErr } = await supabase
+                  .from('saved_meals')
+                  .insert(payload);
+              error = insertErr;
+          }
           
           if (error) throw error;
           
-          setSaveStatus("Meal Saved Successfully!");
+          setSaveStatus(isUpdate ? "Meal Updated!" : "Meal Saved!");
           // Refresh library
           if (libraryTab === 'mine') fetchLibraryMeals();
           
@@ -253,14 +334,13 @@ export const SimpleMealCreator: React.FC = () => {
       }
   };
 
-  // --- Cloud Load Logic (v2.0.247 / Updated 2.0.248 for Crash Fix) ---
+  // --- Cloud Load Logic (v2.0.247 / 2.0.248) ---
   const loadMealFromLibrary = (meal: SavedMeal) => {
       if (!meal.data || !meal.data.addedFoods) {
           setSaveStatus("Error: Meal data empty.");
           return;
       }
       
-      // CRITICAL FIX: Validate items before setting state
       const validItems = meal.data.addedFoods.filter((entry: any) => 
           entry && 
           entry.item && 
@@ -273,11 +353,15 @@ export const SimpleMealCreator: React.FC = () => {
           return;
       }
 
-      // Load data into state
       setMealItems(validItems);
       setMealName(meal.name);
-      if (meal.data.tag) setMealMeta(prev => ({ ...prev, tag: meal.data.tag }));
-      if (meal.data.note) setMealMeta(prev => ({ ...prev, note: meal.data.note }));
+      setLoadedMealId(meal.id); // Set ID for updates
+      
+      // Load Meta (Tag, Note) - v2.0.249
+      setMealMeta({
+          tag: meal.data.tag || 'Unspecified',
+          note: meal.data.note || ''
+      });
       
       setSaveStatus(`Loaded "${meal.name}"!`);
       setTimeout(() => setSaveStatus(""), 2000);
@@ -293,6 +377,9 @@ export const SimpleMealCreator: React.FC = () => {
           
           // Remove locally
           setLibraryMeals(prev => prev.filter(m => m.id !== mealId));
+          // If deleted meal was loaded, clear ID
+          if (loadedMealId === mealId) setLoadedMealId(null);
+          
           setSaveStatus("Meal Deleted.");
           setTimeout(() => setSaveStatus(""), 2000);
       } catch (err: any) {
@@ -313,7 +400,7 @@ export const SimpleMealCreator: React.FC = () => {
                     <div>
                         <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-bold text-gray-800 text-sm">{meal.name}</h4>
-                            {meal.data?.tag && (
+                            {meal.data?.tag && meal.data.tag !== 'Unspecified' && (
                                 <span className="text-[9px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">{meal.data.tag}</span>
                             )}
                         </div>
@@ -376,6 +463,14 @@ export const SimpleMealCreator: React.FC = () => {
                     </span>
                 </div>
             </div>
+            
+            {/* New Meal Button */}
+            <button 
+                onClick={startNewMeal}
+                className="bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition flex items-center gap-2"
+            >
+                <span>✨</span> New Meal
+            </button>
         </div>
 
         {/* Main 3-Column Layout */}
@@ -391,11 +486,11 @@ export const SimpleMealCreator: React.FC = () => {
                             </h3>
                             {session && (
                                 <button 
-                                    onClick={() => setShowSaveModal(true)}
-                                    className="bg-white text-purple-600 px-3 py-1 rounded border border-purple-200 hover:bg-purple-100 text-xs font-bold shadow-sm"
-                                    title="Save Current Meal as Template"
+                                    onClick={handleSaveMeal}
+                                    className="bg-white text-purple-600 px-3 py-1 rounded border border-purple-200 hover:bg-purple-100 text-xs font-bold shadow-sm flex items-center gap-1"
+                                    title="Save Current Meal"
                                 >
-                                    + Save Current
+                                    <span>💾</span> Save
                                 </button>
                             )}
                         </div>
@@ -416,14 +511,34 @@ export const SimpleMealCreator: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Search */}
-                        <input 
-                            type="text" 
-                            placeholder="Search saved meals..." 
-                            value={librarySearch}
-                            onChange={(e) => setLibrarySearch(e.target.value)}
-                            className="w-full p-2 border border-purple-200 rounded text-xs focus:ring-2 focus:ring-purple-400 outline-none"
-                        />
+                        {/* Search & Filter (v2.0.249) */}
+                        <div className="space-y-2">
+                            <input 
+                                type="text" 
+                                placeholder="Search name or ingredients..." 
+                                value={librarySearch}
+                                onChange={(e) => setLibrarySearch(e.target.value)}
+                                className="w-full p-2 border border-purple-200 rounded text-xs focus:ring-2 focus:ring-purple-400 outline-none"
+                            />
+                            <div className="flex gap-1">
+                                <select 
+                                    value={filterOperator} 
+                                    onChange={(e) => setFilterOperator(e.target.value as any)}
+                                    className="p-1.5 border border-purple-200 rounded text-xs bg-white text-purple-800 font-bold outline-none"
+                                >
+                                    <option value=">">&gt;</option>
+                                    <option value="<">&lt;</option>
+                                    <option value="=">=</option>
+                                </select>
+                                <input 
+                                    type="number" 
+                                    placeholder="Kcal..." 
+                                    value={filterKcal}
+                                    onChange={(e) => setFilterKcal(e.target.value === '' ? '' : Number(e.target.value))}
+                                    className="flex-grow p-1.5 border border-purple-200 rounded text-xs focus:ring-1 focus:ring-purple-400 outline-none"
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     <div className="flex-grow overflow-y-auto p-3 bg-gray-50 space-y-2">
@@ -443,6 +558,47 @@ export const SimpleMealCreator: React.FC = () => {
 
             {/* COL 2: BUILDER (6 Cols) */}
             <div className="lg:col-span-6 space-y-4">
+                
+                {/* Meal Details Card (v2.0.249) */}
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                    <h3 className="font-bold text-gray-700 mb-3 flex items-center justify-between text-sm uppercase tracking-wide">
+                        <span className="flex items-center gap-2"><span>📝</span> Meal Details</span>
+                        {mealItems.length > 0 && (
+                            <button onClick={clearMealContent} className="text-xs text-red-500 hover:text-red-700 font-bold border border-red-100 bg-red-50 px-2 py-1 rounded">
+                                Clear Content
+                            </button>
+                        )}
+                    </h3>
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="col-span-2">
+                            <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Meal Name</label>
+                            <input 
+                                type="text" 
+                                value={mealName} 
+                                onChange={(e) => setMealName(e.target.value)}
+                                placeholder="e.g. Breakfast Oats" 
+                                className="w-full p-2 border rounded-lg text-sm font-bold text-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Tag</label>
+                            <select 
+                                value={mealMeta.tag} 
+                                onChange={(e) => setMealMeta({...mealMeta, tag: e.target.value as any})}
+                                className="w-full p-2 border rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option value="Unspecified">-</option>
+                                <option value="Breakfast">Breakfast</option>
+                                <option value="Lunch">Lunch</option>
+                                <option value="Dinner">Dinner</option>
+                                <option value="Snack">Snack</option>
+                                <option value="Drink">Drink</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Add Foods Card */}
                 <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 sticky top-4 z-20">
                     <h3 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm uppercase tracking-wide">
                         <span>🔍</span> Add Foods
@@ -499,7 +655,6 @@ export const SimpleMealCreator: React.FC = () => {
                             const c = (entry.item.cho * entry.serves).toFixed(1);
                             const p = (entry.item.protein * entry.serves).toFixed(1);
                             const f = (entry.item.fat * entry.serves).toFixed(1);
-                            const fib = (entry.item.fiber * entry.serves).toFixed(1);
                             const isEditing = editingIndex === idx;
 
                             return (
@@ -632,60 +787,20 @@ export const SimpleMealCreator: React.FC = () => {
                             </div>
                         </div>
                     )}
+                    
+                    {/* Notes Field (Syncs with Meal Meta) */}
+                    <div className="mt-4">
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Notes</label>
+                        <textarea 
+                            value={mealMeta.note}
+                            onChange={(e) => setMealMeta({...mealMeta, note: e.target.value})}
+                            className="w-full p-2 border rounded text-sm bg-gray-50 resize-none h-20"
+                            placeholder="Add notes..."
+                        ></textarea>
+                    </div>
                 </div>
             </div>
         </div>
-
-        {/* SAVE MODAL (Popup) */}
-        {showSaveModal && (
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
-                    <div className="p-5 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
-                        <h3 className="font-bold text-blue-900 text-lg">Save Meal to Cloud</h3>
-                        <button onClick={() => setShowSaveModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
-                    </div>
-                    <div className="p-6 space-y-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Meal Name *</label>
-                            <input 
-                                type="text" 
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" 
-                                placeholder="e.g., Post-Workout High Protein"
-                                value={mealName}
-                                onChange={e => setMealName(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tag</label>
-                            <div className="flex flex-wrap gap-2">
-                                {['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Drink'].map(tag => (
-                                    <button 
-                                        key={tag}
-                                        onClick={() => setMealMeta(prev => ({ ...prev, tag: tag as any }))}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition ${mealMeta.tag === tag ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
-                                    >
-                                        {tag}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Notes</label>
-                            <textarea 
-                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-none h-24" 
-                                placeholder="Add optional notes..."
-                                value={mealMeta.note}
-                                onChange={e => setMealMeta(prev => ({ ...prev, note: e.target.value }))}
-                            ></textarea>
-                        </div>
-                    </div>
-                    <div className="p-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
-                        <button onClick={() => setShowSaveModal(false)} className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition">Cancel</button>
-                        <button onClick={handleSaveMeal} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md">Save Meal</button>
-                    </div>
-                </div>
-            </div>
-        )}
     </div>
   );
 };
