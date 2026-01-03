@@ -7,6 +7,7 @@ import { FoodExchangeRow } from "../../data/exchangeData";
 import { MacroDonut } from "../Visuals";
 import { useAuth } from "../../contexts/AuthContext"; // Import Auth for Saving
 import Toast from "../Toast"; // Import Toast for notifications
+import { SavedMeal } from "../../types";
 
 // --- Helper for Text Highlighting (Matching Day Food Planner) ---
 const REGEX_HIGHLIGHT = /(\/|\(.*?\))/g;
@@ -29,6 +30,17 @@ interface MealMeta {
     note: string;
 }
 
+// --- Helper to calculate stats for a saved meal item ---
+const calculateSavedMealStats = (addedFoods: { item: FoodItem, serves: number }[]) => {
+    return addedFoods.reduce((acc, { item, serves }) => ({
+        kcal: acc.kcal + (item.kcal * serves),
+        cho: acc.cho + (item.cho * serves),
+        protein: acc.protein + (item.protein * serves),
+        fat: acc.fat + (item.fat * serves),
+        fiber: acc.fiber + (item.fiber * serves)
+    }), { kcal: 0, cho: 0, protein: 0, fat: 0, fiber: 0 });
+};
+
 export const SimpleMealCreator: React.FC = () => {
   const { t, isRTL } = useLanguage();
   const { session } = useAuth();
@@ -50,7 +62,14 @@ export const SimpleMealCreator: React.FC = () => {
   const [mealName, setMealName] = useState("");
   const [mealMeta, setMealMeta] = useState<MealMeta>({ tag: 'Lunch', note: '' });
 
-  // --- Fetch Cloud Data ---
+  // --- Library States (v2.0.247) ---
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [libraryTab, setLibraryTab] = useState<'mine' | 'universal'>('mine');
+  const [libraryMeals, setLibraryMeals] = useState<SavedMeal[]>([]);
+  const [librarySearch, setLibrarySearch] = useState('');
+  const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+
+  // --- Fetch Cloud Data (Ingredients) ---
   const mapDBToItem = (row: FoodExchangeRow): FoodItem => ({
       name: row.food, group: row.food_group, serves: Number(row.serve), cho: Number(row.cho), protein: Number(row.protein), fat: Number(row.fat), fiber: Number(row.fiber), kcal: Number(row.kcal)
   });
@@ -77,11 +96,56 @@ export const SimpleMealCreator: React.FC = () => {
       fetchDB();
   }, []);
 
+  // --- Fetch Saved Meals Library (v2.0.247) ---
+  const fetchLibraryMeals = async () => {
+      if (!session && libraryTab === 'mine') return;
+      setIsLoadingLibrary(true);
+      try {
+          let query = supabase
+            .from('saved_meals')
+            .select('*')
+            .eq('tool_type', 'meal-creator')
+            .order('created_at', { ascending: false });
+
+          // If "My Meals", filter by user ID
+          if (libraryTab === 'mine' && session) {
+              query = query.eq('user_id', session.user.id);
+          }
+          // If "Universal", we query all (assuming RLS allows public read, or limiting to public logic if applicable)
+          // For now, we assume universal simply means all available records.
+          
+          query = query.limit(50); // Limit results for performance
+
+          const { data, error } = await query;
+          if (error) throw error;
+          setLibraryMeals(data || []);
+      } catch (err: any) {
+          console.error("Library fetch error:", err);
+          setSaveStatus("Error loading library.");
+      } finally {
+          setIsLoadingLibrary(false);
+      }
+  };
+
+  // Re-fetch when tab changes or modal opens
+  useEffect(() => {
+      if (showLibraryModal) {
+          fetchLibraryMeals();
+      }
+  }, [showLibraryModal, libraryTab]);
+
   const filteredFoods = useMemo(() => {
     if (!searchQuery) return activeData;
     const q = searchQuery.toLowerCase();
     return activeData.filter(f => f.name.toLowerCase().includes(q) || f.group.toLowerCase().includes(q));
   }, [searchQuery, activeData]);
+
+  // Filter Saved Meals for Library
+  const filteredLibraryMeals = useMemo(() => {
+      if (!librarySearch) return libraryMeals;
+      const q = librarySearch.toLowerCase();
+      return libraryMeals.filter(m => m.name.toLowerCase().includes(q));
+  }, [libraryMeals, librarySearch]);
 
   const addToMeal = (item: FoodItem) => {
       // Create a deep copy of item so editing name doesn't affect source data
@@ -181,6 +245,39 @@ export const SimpleMealCreator: React.FC = () => {
       }
   };
 
+  // --- Cloud Load Logic (v2.0.247) ---
+  const loadMealFromLibrary = (meal: SavedMeal) => {
+      if (!meal.data || !meal.data.addedFoods) return;
+      
+      // Load data into state
+      setMealItems(meal.data.addedFoods);
+      setMealName(meal.name);
+      if (meal.data.tag) setMealMeta(prev => ({ ...prev, tag: meal.data.tag }));
+      if (meal.data.note) setMealMeta(prev => ({ ...prev, note: meal.data.note }));
+      
+      setShowLibraryModal(false);
+      setSaveStatus(`Loaded "${meal.name}"!`);
+      setTimeout(() => setSaveStatus(""), 2000);
+  };
+
+  // --- Cloud Delete Logic (v2.0.247) ---
+  const deleteMealFromLibrary = async (mealId: string) => {
+      if (!confirm("Are you sure you want to delete this meal? This action cannot be undone.")) return;
+      
+      try {
+          const { error } = await supabase.from('saved_meals').delete().eq('id', mealId).eq('user_id', session?.user.id);
+          if (error) throw error;
+          
+          // Remove locally
+          setLibraryMeals(prev => prev.filter(m => m.id !== mealId));
+          setSaveStatus("Meal Deleted.");
+          setTimeout(() => setSaveStatus(""), 2000);
+      } catch (err: any) {
+          console.error(err);
+          setSaveStatus("Error deleting: " + err.message);
+      }
+  };
+
   return (
     <div className="max-w-6xl mx-auto animate-fade-in pb-12">
         <Toast message={saveStatus} />
@@ -235,6 +332,14 @@ export const SimpleMealCreator: React.FC = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Library Load Button (New) */}
+                <button 
+                    onClick={() => setShowLibraryModal(true)}
+                    className="bg-purple-600 text-white px-4 py-3 rounded-lg font-bold shadow-md hover:bg-purple-700 transition flex items-center gap-2 whitespace-nowrap"
+                >
+                    <span>📂</span> Load
+                </button>
 
                 {/* Save Button */}
                 {session && (
@@ -444,6 +549,124 @@ export const SimpleMealCreator: React.FC = () => {
                     <div className="p-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
                         <button onClick={() => setShowSaveModal(false)} className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-200 rounded-lg transition">Cancel</button>
                         <button onClick={handleSaveMeal} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition shadow-md">Save Meal</button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* LIBRARY MODAL (v2.0.247) */}
+        {showLibraryModal && (
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col overflow-hidden animate-fade-in">
+                    {/* Modal Header */}
+                    <div className="p-5 bg-purple-50 border-b border-purple-100 flex justify-between items-center">
+                        <div>
+                            <h3 className="font-bold text-purple-900 text-lg flex items-center gap-2">
+                                <span>📚</span> Meal Library
+                            </h3>
+                            <p className="text-xs text-purple-700">Load pre-made meals or your saved templates.</p>
+                        </div>
+                        <button onClick={() => setShowLibraryModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
+                    </div>
+
+                    {/* Tabs */}
+                    <div className="flex border-b border-gray-100">
+                        <button 
+                            onClick={() => setLibraryTab('mine')}
+                            className={`flex-1 py-3 text-sm font-bold transition border-b-2 ${libraryTab === 'mine' ? 'border-purple-600 text-purple-700 bg-purple-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            My Saved Meals
+                        </button>
+                        <button 
+                            onClick={() => setLibraryTab('universal')}
+                            className={`flex-1 py-3 text-sm font-bold transition border-b-2 ${libraryTab === 'universal' ? 'border-purple-600 text-purple-700 bg-purple-50/50' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}
+                        >
+                            Universal Library 🌍
+                        </button>
+                    </div>
+
+                    {/* Search */}
+                    <div className="p-4 bg-gray-50 border-b border-gray-100">
+                        <input 
+                            type="text" 
+                            placeholder="Search meals..." 
+                            value={librarySearch}
+                            onChange={(e) => setLibrarySearch(e.target.value)}
+                            className="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                        />
+                    </div>
+
+                    {/* Meal List */}
+                    <div className="flex-grow overflow-y-auto p-4 space-y-4 bg-gray-50/30">
+                        {isLoadingLibrary ? (
+                            <div className="text-center py-10 text-gray-400">Loading library...</div>
+                        ) : filteredLibraryMeals.length === 0 ? (
+                            <div className="text-center py-10 text-gray-400 flex flex-col items-center">
+                                <span className="text-4xl mb-2 opacity-30">🥣</span>
+                                <p>No meals found.</p>
+                            </div>
+                        ) : (
+                            filteredLibraryMeals.map((meal) => {
+                                const stats = meal.data?.addedFoods ? calculateSavedMealStats(meal.data.addedFoods) : null;
+                                const contentPreview = meal.data?.addedFoods?.slice(0, 3).map((f: any) => f.item.name.split(' ')[0]).join(', ') + (meal.data?.addedFoods?.length > 3 ? '...' : '');
+                                const isOwner = session?.user.id === meal.user_id;
+
+                                return (
+                                    <div key={meal.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:border-purple-300 transition group">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="font-bold text-gray-800 text-base">{meal.name}</h4>
+                                                    {meal.data?.tag && (
+                                                        <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">{meal.data.tag}</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-1 line-clamp-1">{contentPreview || 'No items'}</p>
+                                            </div>
+                                            {stats && (
+                                                <div className="text-right">
+                                                    <div className="font-mono font-bold text-lg text-purple-700 leading-none">{stats.kcal.toFixed(0)}</div>
+                                                    <div className="text-[9px] text-gray-400 uppercase">kcal</div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Nutrient Grid */}
+                                        {stats && (
+                                            <div className="grid grid-cols-4 gap-2 mb-4 bg-gray-50 p-2 rounded text-center text-[10px] font-mono text-gray-600">
+                                                <div><span className="block font-bold text-blue-600">{stats.cho.toFixed(0)}g</span> Carb</div>
+                                                <div><span className="block font-bold text-red-600">{stats.protein.toFixed(0)}g</span> Prot</div>
+                                                <div><span className="block font-bold text-yellow-600">{stats.fat.toFixed(0)}g</span> Fat</div>
+                                                <div><span className="block font-bold text-green-600">{stats.fiber.toFixed(0)}g</span> Fib</div>
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                                            <div className="text-[10px] text-gray-400">
+                                                {new Date(meal.created_at).toLocaleDateString()}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                {isOwner && (
+                                                    <button 
+                                                        onClick={() => deleteMealFromLibrary(meal.id)}
+                                                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                                                        title="Delete Meal"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                )}
+                                                <button 
+                                                    onClick={() => loadMealFromLibrary(meal)}
+                                                    className="px-4 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition shadow-sm"
+                                                >
+                                                    Load Meal
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
                     </div>
                 </div>
             </div>

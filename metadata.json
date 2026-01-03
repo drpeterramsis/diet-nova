@@ -1,5 +1,6 @@
+
 {
-  "name": "Diet-Nova_Meal Creator 106 -  v2.0.246",
-  "description": "v2.0.246: Simple Meal Builder update: added Kcal % distribution, inline item text editing, and cloud saving with tags/notes.",
+  "name": "Diet-Nova_Meal Creator 107 -  v2.0.247",
+  "description": "v2.0.247: Added Universal Meal Library to Simple Meal Builder. Users can now load meals from a public database or their own saved history, with search and delete functionality.",
   "requestFramePermissions": []
 }
