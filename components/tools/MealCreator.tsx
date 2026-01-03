@@ -11,6 +11,7 @@ import { FoodExchangeRow } from "../../data/exchangeData";
 
 /**
  * v2.0.243 Clinical Data Structures
+ * Maintained for Day/Week Planning functionality.
  */
 export interface DayPlan {
     items: Record<string, PlannerItem[]>;
@@ -46,9 +47,9 @@ interface MealCreatorProps {
     plannedExchanges?: Record<string, number>;
     externalWeeklyPlan?: WeeklyPlan;
     onWeeklyPlanChange?: React.Dispatch<React.SetStateAction<WeeklyPlan>>;
-    externalGuidelines?: string | null; // v2.0.243: Separated Guidelines
-    externalNotes?: string | null;      // v2.0.243: Plan specific notes
-    dietTitle?: string;                 // v2.0.243: Name of the selected diet template
+    externalGuidelines?: string | null; 
+    externalNotes?: string | null;      
+    dietTitle?: string;                 
 }
 
 type MealTime = 'Pre-Breakfast' | 'Breakfast' | 'Morning Snack' | 'Lunch' | 'Afternoon Snack' | 'Dinner' | 'Late Snack';
@@ -845,6 +846,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                   {/**
                    * v2.0.243 - Separated Guidelines and Plan Notes
                    * Dynamic display based on standard diet type and individual plan customization.
+                   * v2.0.244 - Enhanced Notes Styling (Bold Blue for '/ week' lines)
                    */}
                   <div className="mt-8 pt-4 border-t border-gray-100 space-y-4">
                       {isEmbedded && externalGuidelines && (
@@ -869,12 +871,15 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                                   <span>📝</span> Plan Notes
                               </div>
                               <div className="text-[11px] text-blue-900 space-y-1.5 leading-relaxed">
-                                  {externalNotes.split(';').map((line, idx) => (
-                                      <div key={idx} className="flex gap-2">
-                                          <span className="text-blue-400 mt-1">→</span>
-                                          <span>{line.trim()}</span>
-                                      </div>
-                                  ))}
+                                  {externalNotes.split(';').map((line, idx) => {
+                                      const isWeek = line.toLowerCase().includes('/ week') || line.toLowerCase().includes('/week');
+                                      return (
+                                          <div key={idx} className="flex gap-2">
+                                              <span className="text-blue-400 mt-1">→</span>
+                                              <span className={isWeek ? "text-blue-700 font-bold" : ""}>{line.trim()}</span>
+                                          </div>
+                                      );
+                                  })}
                               </div>
                           </div>
                       )}

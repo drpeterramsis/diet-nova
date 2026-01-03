@@ -1,6 +1,5 @@
-
 {
-  "name": "Diet-Nova_edit_102 -  v2.0.243",
-  "description": "v2.0.243: Separated Diet Guidelines from Plan Notes into distinct titled sections; Implemented dynamic guidelines selection based on diet type (Balanced, DASH, etc.); Added internal code documentation for clinical maintenance.",
+  "name": "Diet-Nova_Meal Creator 103 -  v2.0.244",
+  "description": "v2.0.244: Separated Simple Meal Creator from Day Menu Planner; Implemented bold blue styling for weekly notes; Updated navigation structure.",
   "requestFramePermissions": []
 }

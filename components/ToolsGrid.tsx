@@ -114,11 +114,17 @@ const ToolsGrid: React.FC<ToolsGridProps> = ({ onToolClick, setBmiOpen, isAuthen
                     icon={<span className="text-2xl">📅</span>}
                 />
                 <ToolCard
-                    title={t.tools.mealCreator.title}
-                    desc={t.tools.mealCreator.desc}
-                    onClick={() => onToolClick('meal-creator')}
+                    title="Day Menu Planner"
+                    desc="Plan daily meals with detailed schedules (Breakfast, Lunch, etc)."
+                    onClick={() => onToolClick('day-planner')}
                     icon={<span className="text-2xl">🥗</span>}
                     locked={!isAuthenticated}
+                />
+                <ToolCard
+                    title="Meal Builder (Simple)"
+                    desc="Quickly build a single meal list using exchanges."
+                    onClick={() => onToolClick('meal-creator')}
+                    icon={<span className="text-2xl">🥘</span>}
                 />
                 <ToolCard
                     title={t.tools.exchangePro.title}

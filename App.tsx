@@ -7,6 +7,7 @@ import ToolCard from "./components/ToolCard";
 import BmiModal from "./components/BmiModal";
 import KcalCalculator from "./components/calculations/KcalCalculator";
 import MealCreator from "./components/tools/MealCreator";
+import { SimpleMealCreator } from "./components/tools/SimpleMealCreator"; // Import New Simple Tool
 import FoodExchange from "./components/tools/FoodExchange";
 import { MealPlanner } from "./components/tools/MealPlanner";
 import ClientManager from "./components/tools/ClientManager";
@@ -123,11 +124,11 @@ const Dashboard = ({
                       <button onClick={() => onToolClick('meal-planner')} className="w-full text-left px-3 py-2 rounded hover:bg-orange-50 text-orange-700 font-bold text-xs flex items-center justify-between">
                           <span>Meal Planner</span> <span>→</span>
                       </button>
-                      <button onClick={() => onToolClick('meal-creator')} className="w-full text-left px-3 py-2 rounded hover:bg-orange-50 text-orange-700 font-bold text-xs flex items-center justify-between">
-                          <span>Meal Creator</span> <span>→</span>
+                      <button onClick={() => onToolClick('day-planner')} className="w-full text-left px-3 py-2 rounded hover:bg-orange-50 text-orange-700 font-bold text-xs flex items-center justify-between">
+                          <span>Day Menu Planner</span> <span>→</span>
                       </button>
-                      <button onClick={() => onToolClick('exchange-pro')} className="w-full text-left px-3 py-2 rounded hover:bg-orange-50 text-orange-700 font-bold text-xs flex items-center justify-between">
-                          <span>Food Exchanges</span> <span>→</span>
+                      <button onClick={() => onToolClick('meal-creator')} className="w-full text-left px-3 py-2 rounded hover:bg-orange-50 text-orange-700 font-bold text-xs flex items-center justify-between">
+                          <span>Meal Builder (Simple)</span> <span>→</span>
                       </button>
                   </div>
               </div>
@@ -231,10 +232,12 @@ const AppContent = () => {
           return;
       }
       
-      if (toolId === 'meal-creator' && !session) {
+      // day-planner logic (Old MealCreator component)
+      if (toolId === 'day-planner' && !session) {
           setShowLogin(true);
           return;
       }
+
       if (toolId === 'client-manager') {
         if (!session) {
             setShowLogin(true);
@@ -288,7 +291,7 @@ const AppContent = () => {
 
   const handleDayPlanForClient = (client: Client, visit: ClientVisit) => {
       setCurrentVisit({ client, visit });
-      setActiveTool('meal-creator');
+      setActiveTool('day-planner'); // Map to correct tool
   };
 
   const handleRunNFPEForClient = (client: Client) => {
@@ -394,7 +397,13 @@ const AppContent = () => {
               </>
             )}
 
+            {/* Simple Meal Builder */}
             {activeTool === 'meal-creator' && (
+                <SimpleMealCreator />
+            )}
+
+            {/* Complex Day Menu Planner (Was MealCreator.tsx) */}
+            {activeTool === 'day-planner' && (
                 <MealCreator 
                     initialLoadId={selectedLoadId} 
                     autoOpenLoad={autoOpenLoad}
@@ -403,6 +412,7 @@ const AppContent = () => {
                     onNavigate={handleToolClick}
                 />
             )}
+
             {activeTool === 'exchange-simple' && <FoodExchange mode="simple" />}
             {activeTool === 'exchange-pro' && <FoodExchange mode="pro" />}
             {activeTool === 'client-manager' && (

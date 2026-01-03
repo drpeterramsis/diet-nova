@@ -808,7 +808,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
 
                             {/**
                              * v2.0.243 - Guidelines & Notes Display
-                             * Dynamic titles and split content for better professional readability.
+                             * v2.0.244 - Enhanced Note Styling
                              */}
                             <div className="space-y-4 mt-6">
                                 {currentGuidelines && (
@@ -833,12 +833,15 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                             <span>📝</span> Plan Specific Notes
                                         </div>
                                         <div className="text-xs text-blue-900 space-y-1.5 leading-relaxed">
-                                            {currentPlanNotes.split(';').map((line, idx) => (
-                                                <div key={idx} className="flex gap-2">
-                                                    <span className="text-blue-400 mt-1">→</span>
-                                                    <span>{line.trim()}</span>
-                                                </div>
-                                            ))}
+                                            {currentPlanNotes.split(';').map((line, idx) => {
+                                                const isWeek = line.toLowerCase().includes('/ week') || line.toLowerCase().includes('/week');
+                                                return (
+                                                    <div key={idx} className="flex gap-2">
+                                                        <span className="text-blue-400 mt-1">→</span>
+                                                        <span className={isWeek ? "text-blue-700 font-bold" : ""}>{line.trim()}</span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 )}
@@ -923,7 +926,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                         </div>
 
                         {/**
-                         * v2.0.243 - Guidelines & Notes Section for Planner View
+                         * v2.0.244 - Consistent Notes Display
                          */}
                         <div className="space-y-4 mt-8">
                             {currentGuidelines && (
@@ -948,12 +951,15 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                         <span>📝</span> Plan Specific Notes
                                     </div>
                                     <div className="text-blue-900 space-y-1">
-                                        {currentPlanNotes.split(';').map((line, idx) => (
-                                            <div key={idx} className="flex gap-1.5">
-                                                <span className="text-blue-400">→</span>
-                                                <span>{line.trim()}</span>
-                                            </div>
-                                        ))}
+                                        {currentPlanNotes.split(';').map((line, idx) => {
+                                            const isWeek = line.toLowerCase().includes('/ week') || line.toLowerCase().includes('/week');
+                                            return (
+                                                <div key={idx} className="flex gap-1.5">
+                                                    <span className="text-blue-400">→</span>
+                                                    <span className={isWeek ? "text-blue-700 font-bold" : ""}>{line.trim()}</span>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
