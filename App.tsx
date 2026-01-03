@@ -423,6 +423,7 @@ const AppContent = () => {
                     autoOpenNew={autoOpenNew}
                     activeVisit={currentVisit}
                     onNavigate={handleToolClick}
+                    onOpenAnalysis={() => setShowFoodAnalysisModal(true)} // v2.0.254: Hook up modal
                 />
             )}
 
@@ -512,7 +513,7 @@ const AppContent = () => {
       {/* Food Analysis Modal (Shortcut) v2.0.254 */}
       {showFoodAnalysisModal && (
           <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-              <div className="bg-white w-full max-w-6xl h-[90vh] rounded-2xl overflow-y-auto shadow-2xl relative">
+              <div className="bg-white w-full max-w-6xl h-[90vh] rounded-2xl overflow-y-auto shadow-2xl relative animate-fade-in">
                   <button 
                     onClick={() => setShowFoodAnalysisModal(false)}
                     className="absolute top-4 right-4 z-50 bg-red-100 hover:bg-red-200 text-red-600 rounded-full w-10 h-10 flex items-center justify-center shadow-md font-bold"

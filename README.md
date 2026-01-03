@@ -5,7 +5,18 @@ Diet-Nova is a comprehensive web application for nutritionists and dietitians, o
 
 ## Version History
 
-### v2.0.254 (Current)
+### v2.0.255 (Current)
+*   **Advanced Day Menu (New Feature):**
+    *   **Weekly Structure:** Refactored `AdvancedMealCreator` to support a full 7-day weekly plan with specific meal slots (Pre-Breakfast, Breakfast, etc.), mirroring the structure of the simple Day Planner.
+    *   **Precision Planning:** Plans are built using the specific Food Composition Database (by gram weight) rather than exchanges.
+    *   **Alternatives:** Added support for "Main" and "Alternative" options within meal slots.
+    *   **Daily Analysis:** Real-time aggregation of daily macros and micros based on the selected "Main" options.
+*   **Day Menu (Simple):**
+    *   **Quick Analysis:** Added a "Check Analysis" button to the Day Menu toolbar which opens the Food Composition tool in a modal for quick reference.
+*   **Meal Planner:**
+    *   **Label Fix:** Updated the Meal Breakdown summary table to explicitly label "Meat Lean", "Meat Med", and "Meat High" instead of shortening them to "Meat".
+
+### v2.0.254
 *   **Meal Planner Overhaul:**
     *   **3-Column Layout:** Redesigned interface to accommodate a new summary column.
     *   **Meal Summary Table:** Added a new detailed breakdown table showing total servings, composition, calories, and % of target per meal slot (Breakfast, Lunch, etc.).

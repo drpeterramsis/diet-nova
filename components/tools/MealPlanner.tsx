@@ -94,12 +94,16 @@ const TargetKcalInput: React.FC<TargetKcalInputProps> = ({ value, onChange, labe
 // v2.0.254 - New Meal Plan Summary Table Component
 const MealPlanSummaryTable: React.FC<{ distribution: any, visibleGroups: string[], targetKcal: number }> = ({ distribution, visibleGroups, targetKcal }) => {
     // Helper to get friendly name
+    // v2.0.255: Updated to show full meat names
     const getFriendlyGroupName = (g: string) => {
         if(g === 'starch') return 'Starch';
         if(g === 'veg') return 'Veg';
         if(g === 'fruit') return 'Fruit';
         if(g === 'legumes') return 'Leg';
-        if(g.startsWith('meat')) return 'Meat';
+        if(g === 'meatLean') return 'Meat Lean';
+        if(g === 'meatMed') return 'Meat Med';
+        if(g === 'meatHigh') return 'Meat High';
+        if(g.startsWith('meat')) return 'Meat'; // Fallback
         if(g.startsWith('milk')) return 'Milk';
         if(g === 'sugar') return 'Sug';
         if(g.startsWith('fat')) return 'Fat';
@@ -1087,6 +1091,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                 externalGuidelines={currentGuidelines}
                 externalNotes={currentPlanNotes} 
                 dietTitle={selectedDiet?.name || 'Selected Diet'}
+                onOpenAnalysis={() => onNavigate && onNavigate('food-composition')} // Dummy handler, real one is usually modal trigger
             />
         </div>
 

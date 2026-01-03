@@ -49,7 +49,8 @@ interface MealCreatorProps {
     onWeeklyPlanChange?: React.Dispatch<React.SetStateAction<WeeklyPlan>>;
     externalGuidelines?: string | null; 
     externalNotes?: string | null;      
-    dietTitle?: string;                 
+    dietTitle?: string;
+    onOpenAnalysis?: () => void; // v2.0.254: Added to trigger modal
 }
 
 type MealTime = 'Pre-Breakfast' | 'Breakfast' | 'Morning Snack' | 'Lunch' | 'Afternoon Snack' | 'Dinner' | 'Late Snack';
@@ -231,7 +232,7 @@ interface PrintOptions {
 
 const MealCreator: React.FC<MealCreatorProps> = ({ 
     initialLoadId, autoOpenLoad, autoOpenNew, activeVisit, onNavigate,
-    isEmbedded, externalTargetKcal, plannedExchanges, externalWeeklyPlan, onWeeklyPlanChange, externalGuidelines, externalNotes, dietTitle
+    isEmbedded, externalTargetKcal, plannedExchanges, externalWeeklyPlan, onWeeklyPlanChange, externalGuidelines, externalNotes, dietTitle, onOpenAnalysis
 }) => {
   const { t, isRTL } = useLanguage();
   const { session, profile } = useAuth();
@@ -599,6 +600,11 @@ const MealCreator: React.FC<MealCreatorProps> = ({
               </div>
 
               <div className="flex items-center gap-2 flex-wrap justify-center">
+                    {onOpenAnalysis && (
+                        <button onClick={onOpenAnalysis} className="bg-purple-600 text-white px-3 py-2 rounded-lg font-bold text-sm shadow-sm flex items-center gap-2">
+                            <span>🧪</span> Check Analysis
+                        </button>
+                    )}
                     {!isEmbedded && <button onClick={() => onNavigate?.('meal-planner', undefined, undefined, true)} className="bg-orange-600 text-white px-3 py-2 rounded-lg font-bold text-sm">📅 Meal Planner</button>}
                     <button onClick={() => { setPrintWeekMode(false); setShowPrintModal(true); }} className="bg-gray-700 text-white w-10 h-10 rounded-lg flex items-center justify-center shadow-sm" title="Print Day">🖨️</button>
                     <button onClick={() => { setPrintWeekMode(true); setShowPrintModal(true); }} className="bg-gray-700 text-white w-10 h-10 rounded-lg flex items-center justify-center shadow-sm font-bold text-xs" title="Print Week">WK</button>
