@@ -9,6 +9,10 @@ import Toast from '../Toast';
 import MealCreator, { WeeklyPlan, DEFAULT_WEEKLY_PLAN } from './MealCreator';
 import { DietType, DietPlanRow } from '../../data/dietTemplates';
 
+/**
+ * v2.0.243 Clinical Maintenance Constants
+ * Calculation factors for macronutrient and calorie conversion per exchange serve.
+ */
 const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; fiber: number; kcal: number }> = {
   starch: { cho: 15, pro: 3, fat: 1, fiber: 1.75, kcal: 80 },
   veg: { cho: 5, pro: 2, fat: 0, fiber: 1.5, kcal: 25 },
@@ -27,6 +31,9 @@ const GROUP_FACTORS: Record<string, { cho: number; pro: number; fat: number; fib
   fatsSat: { cho: 0, pro: 0, fat: 5, fiber: 0, kcal: 45 },
 };
 
+/**
+ * UI Styling Configuration
+ */
 const GROUP_STYLES: Record<string, { bg: string, text: string, border: string, icon: string }> = {
   starch: { bg: 'bg-orange-50', text: 'text-orange-900', border: 'border-orange-200', icon: '🍞' },
   veg: { bg: 'bg-green-50', text: 'text-green-900', border: 'border-green-200', icon: '🥦' },
@@ -48,16 +55,16 @@ const GROUP_STYLES: Record<string, { bg: string, text: string, border: string, i
 const MEALS = ['snack1', 'breakfast', 'snack2', 'lunch', 'snack3', 'dinner', 'snack4'];
 const BASE_GROUPS = Object.keys(GROUP_FACTORS);
 
-// v2.0.242: Static Balanced Diet Guidelines
-const STATIC_BALANCED_GUIDELINES = `
-• Diversity: Include all food groups in the plan.;
-• Added Sugar: Must be less than 10% of total daily calories.;
-• Saturated Fat: Must be less than 10% of total daily calories.;
-• PUFA: Up to 10% of total calories.;
-• MUFA: Up to 20% of total calories.;
-• Carbs & Fruit: Do not rely on fruit as your only carb source.;
-• Carbs & Fruit: Fruit servings should not exceed 15% of the total plan.
-`;
+/**
+ * v2.0.243 Dictionary for Diet-Specific Guidelines
+ * Allows the system to dynamically render instructions based on the selected Diet Type.
+ */
+const DIET_SPECIFIC_GUIDELINES: Record<string, string> = {
+  'Balanced': `• Diversity: Include all food groups in the plan.; • Added Sugar: Must be less than 10% of total daily calories.; • Saturated Fat: Must be less than 10% of total daily calories.; • PUFA: Up to 10% of total calories.; • MUFA: Up to 20% of total calories.; • Carbs & Fruit: Do not rely on fruit as your only carb source.; • Carbs & Fruit: Fruit servings should not exceed 15% of the total plan.`,
+  'DASH': `• Sodium: Limit to < 2,300 mg/day (ideally 1,500 mg).; • Potassium: Increase intake via fruits and vegetables.; • Low Fat Dairy: Emphasize 2-3 servings of low-fat dairy daily.; • Fiber: Target > 30g per day from whole grains and vegetables.; • Saturated Fat: Must be less than 6% of total calories.`,
+  'Low Carb': `• Carb Limit: Keep total carbs within 20-40% of total energy.; • Protein focus: Ensure adequate lean protein at every meal.; • Healthy Fats: Emphasize MUFA and PUFA sources.; • Non-starchy Veg: Minimum 3-5 servings of green leafy vegetables.`,
+  'Diabetes': `• Consistency: Distribute carb servings evenly across 5-6 meals.; • GI Focus: Prefer Low Glycemic Index starches (Oats, Whole Wheat).; • Fiber: High fiber intake to stabilize glucose levels.; • Added Sugar: 0% or strictly minimal added sugars.`
+};
 
 // --- Extracted Component to prevent re-renders/focus loss ---
 interface TargetKcalInputProps {
@@ -352,15 +359,32 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
       return plan ? plan.kcal : 0;
   }, [selectedDistribution, selectedPlanName]);
 
-  // v2.0.242: Combined Diet Instructions + Dynamic Notes
-  const derivedCombinedNotes = useMemo(() => {
-      if (!selectedDiet || !selectedPlanName) return null;
-      const plan = selectedDistribution?.rows.find(r => (r.dietName || `Plan (${r.kcal} kcal)`) === selectedPlanName);
-      const dbNotes = plan?.dietNotes || '';
+  /**
+   * v2.0.243 - Dynamic Guidelines Logic
+   * Fetches guidelines based on the Diet Type name (e.g., DASH, Balanced).
+   */
+  const currentGuidelines = useMemo(() => {
+      if (!selectedDiet) return '';
+      const name = selectedDiet.name;
       
-      // Combine static balanced rules with the database specific notes
-      return STATIC_BALANCED_GUIDELINES + (dbNotes ? '; ' + dbNotes : '');
-  }, [selectedDiet, selectedDistribution, selectedPlanName]);
+      // Match diet type to specific guidelines or fallback to Balanced
+      for (const key in DIET_SPECIFIC_GUIDELINES) {
+          if (name.toLowerCase().includes(key.toLowerCase())) {
+              return DIET_SPECIFIC_GUIDELINES[key];
+          }
+      }
+      return DIET_SPECIFIC_GUIDELINES['Balanced'];
+  }, [selectedDiet]);
+
+  /**
+   * v2.0.243 - Plan Specific Notes
+   * Fetches notes specific to the individual plan selected from the database.
+   */
+  const currentPlanNotes = useMemo(() => {
+      if (!selectedDistribution || !selectedPlanName) return '';
+      const plan = selectedDistribution.rows.find(r => (r.dietName || `Plan (${r.kcal} kcal)`) === selectedPlanName);
+      return plan?.dietNotes || '';
+  }, [selectedDistribution, selectedPlanName]);
 
   const applyTemplate = () => {
       if (!selectedDistribution || !selectedPlanName) return;
@@ -684,7 +708,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                     <tr>
                                         <th className="p-3 text-left w-1/3">{t.mealPlannerTool.foodGroup}</th>
                                         <th className="p-3 text-center w-24">{t.mealPlannerTool.serves}</th>
-                                        {/* v2.0.242: New % Kcal column */}
                                         <th className="p-3 text-center">% kcal</th>
                                         <th className="p-3 text-center">{t.mealPlannerTool.cho}</th>
                                         <th className="p-3 text-center">{t.mealPlannerTool.pro}</th>
@@ -701,7 +724,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                         const f = GROUP_FACTORS[group];
                                         const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
                                         
-                                        // v2.0.242: Calculation for group % of total target kcal
                                         const groupKcal = s * Number(f.kcal);
                                         const groupKcalPct = targetKcal > 0 ? (groupKcal / targetKcal) * 100 : 0;
 
@@ -718,7 +740,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                                         )}
                                                     </div>
                                                 </td>
-                                                {/* v2.0.242: % kcal data cell */}
                                                 <td className="p-3 text-center text-[10px] font-bold text-gray-500">
                                                     {groupKcalPct > 0 ? `${groupKcalPct.toFixed(1)}%` : '-'}
                                                 </td>
@@ -785,26 +806,43 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                  )}
                             </div>
 
-                            {/* v2.0.242: Updated Guidelines block with Combined logic */}
-                            {derivedCombinedNotes && (
-                                <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded shadow-sm animate-fade-in">
-                                    <div className="flex items-center gap-2 mb-2 text-yellow-800 font-bold text-xs uppercase tracking-wider">
-                                        <span>💡</span> {selectedDiet?.name || 'Diet'} Guidelines
-                                    </div>
-                                    <div className="text-xs text-yellow-900 space-y-1.5 leading-relaxed">
-                                        {derivedCombinedNotes.split(';').map((line, idx) => {
-                                            const isImportant = line.includes('%') || line.toLowerCase().includes('must');
-                                            const isWeekly = line.toLowerCase().includes('/ week');
-                                            return (
-                                                <div key={idx} className={`flex gap-2 ${isImportant ? 'font-bold' : ''} ${isWeekly ? 'text-blue-700' : ''}`}>
-                                                    <span className={`${isImportant ? 'text-orange-500' : 'text-yellow-500'} mt-1`}>•</span>
+                            {/**
+                             * v2.0.243 - Guidelines & Notes Display
+                             * Dynamic titles and split content for better professional readability.
+                             */}
+                            <div className="space-y-4 mt-6">
+                                {currentGuidelines && (
+                                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded shadow-sm animate-fade-in">
+                                        <div className="flex items-center gap-2 mb-2 text-yellow-800 font-bold text-xs uppercase tracking-wider">
+                                            <span>💡</span> {selectedDiet?.name || 'Diet'} Guidelines
+                                        </div>
+                                        <div className="text-xs text-yellow-900 space-y-1.5 leading-relaxed">
+                                            {currentGuidelines.split(';').map((line, idx) => (
+                                                <div key={idx} className="flex gap-2">
+                                                    <span className="text-yellow-500 mt-1">•</span>
                                                     <span>{line.trim()}</span>
                                                 </div>
-                                            );
-                                        })}
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
+
+                                {currentPlanNotes && (
+                                    <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded shadow-sm animate-fade-in">
+                                        <div className="flex items-center gap-2 mb-2 text-blue-800 font-bold text-xs uppercase tracking-wider">
+                                            <span>📝</span> Plan Specific Notes
+                                        </div>
+                                        <div className="text-xs text-blue-900 space-y-1.5 leading-relaxed">
+                                            {currentPlanNotes.split(';').map((line, idx) => (
+                                                <div key={idx} className="flex gap-2">
+                                                    <span className="text-blue-400 mt-1">→</span>
+                                                    <span>{line.trim()}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -819,7 +857,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             <thead className="bg-gray-800 text-white sticky top-0 z-10">
                                 <tr>
                                     <th className="p-2 text-left min-w-[140px] bg-gray-900 border-b border-gray-700">Food Group</th>
-                                    {/* v2.0.242: Distribution % column */}
                                     <th className="p-2 text-center bg-gray-800 border-b border-gray-700 font-bold">% kcal</th>
                                     <th className="p-2 text-center bg-gray-700 min-w-[60px] border-b border-gray-600 font-bold border-r border-gray-600">Remain</th>
                                     {MEALS.map(m => (<th key={m} className="p-2 text-center min-w-[60px] border-b border-gray-700">{t.mealPlannerTool.meals[m as keyof typeof t.mealPlannerTool.meals]}</th>))}
@@ -840,7 +877,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                     const isOver = rem < 0, isComplete = rem === 0 && targetServes > 0;
                                     const style = GROUP_STYLES[group] || { bg: 'bg-white', text: 'text-gray-800', border: 'border-gray-200', icon: '🍽️' };
                                     
-                                    // v2.0.242: % of total kcal for currently distributed items
                                     const factor = GROUP_FACTORS[group];
                                     const distKcal = totalDistServes * Number(factor.kcal);
                                     const distPct = targetKcal > 0 ? (distKcal / targetKcal) * 100 : 0;
@@ -848,7 +884,6 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                                     return (
                                         <tr key={group} className={`${style.bg} bg-opacity-30 border-b border-gray-100`}>
                                             <td className="p-2 font-medium border-r border-gray-200 sticky left-0 z-10 bg-white"><div className={`flex items-center gap-1.5 ${style.text}`}><span className="text-sm">{style.icon}</span> {getGroupLabel(group)}{group === 'fats' && (<button onClick={() => setUseFatBreakdown(!useFatBreakdown)} className={`ml-2 text-[8px] px-1.5 py-0.5 rounded border font-bold ${useFatBreakdown ? 'bg-yellow-200 text-yellow-800 border-yellow-300' : 'bg-gray-100 border-gray-200 text-gray-500 border-gray-200'}`}>{useFatBreakdown ? 'Hide' : 'Show'}</button>)}{isAutoFat && <span className="text-[9px] bg-gray-200 text-gray-600 px-1 rounded ml-1">Sum</span>}</div><div className="text-[10px] text-gray-500 font-normal no-print mt-1 ml-5 border-t border-black/10 pt-0.5">Target: <span className="font-bold">{targetServes}</span></div></td>
-                                            {/* v2.0.242: Distributed % Kcal Cell */}
                                             <td className="p-2 text-center text-[10px] font-bold text-gray-400">
                                                 {distPct > 0 ? `${distPct.toFixed(1)}%` : '-'}
                                             </td>
@@ -887,33 +922,62 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
                             <div className="p-2 bg-green-50 rounded text-center text-xs"><div className="font-bold text-green-700">{Number(distTotals.fiber).toFixed(1)}g</div><div className="text-green-500">Fiber</div></div>
                         </div>
 
-                        {/* v2.0.242: Combined Guidelines block for Planner View */}
-                        {derivedCombinedNotes && (
-                            <div className="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-2.5 rounded shadow-sm animate-fade-in text-[11px] leading-relaxed">
-                                <div className="font-bold text-yellow-800 mb-1 flex items-center gap-1.5">
-                                    <span>💡</span> {selectedDiet?.name || 'Diet'} Plan Notes
-                                </div>
-                                <div className="text-yellow-900 space-y-1">
-                                    {derivedCombinedNotes.split(';').map((line, idx) => {
-                                        const isImportant = line.includes('%') || line.toLowerCase().includes('must');
-                                        const isWeekly = line.toLowerCase().includes('/ week');
-                                        return (
-                                            <div key={idx} className={`flex gap-1.5 ${isImportant ? 'font-bold' : ''} ${isWeekly ? 'text-blue-700' : ''}`}>
-                                                <span className={`${isImportant ? 'text-orange-400' : 'text-yellow-400'}`}>•</span>
+                        {/**
+                         * v2.0.243 - Guidelines & Notes Section for Planner View
+                         */}
+                        <div className="space-y-4 mt-8">
+                            {currentGuidelines && (
+                                <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2.5 rounded shadow-sm animate-fade-in text-[11px] leading-relaxed">
+                                    <div className="font-bold text-yellow-800 mb-1 flex items-center gap-1.5">
+                                        <span>💡</span> {selectedDiet?.name || 'Diet'} Guidelines
+                                    </div>
+                                    <div className="text-yellow-900 space-y-1">
+                                        {currentGuidelines.split(';').map((line, idx) => (
+                                            <div key={idx} className="flex gap-1.5">
+                                                <span className="text-yellow-400">•</span>
                                                 <span>{line.trim()}</span>
                                             </div>
-                                        );
-                                    })}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+
+                            {currentPlanNotes && (
+                                <div className="bg-blue-50 border-l-4 border-blue-400 p-2.5 rounded shadow-sm animate-fade-in text-[11px] leading-relaxed">
+                                    <div className="font-bold text-blue-800 mb-1 flex items-center gap-1.5">
+                                        <span>📝</span> Plan Specific Notes
+                                    </div>
+                                    <div className="text-blue-900 space-y-1">
+                                        {currentPlanNotes.split(';').map((line, idx) => (
+                                            <div key={idx} className="flex gap-1.5">
+                                                <span className="text-blue-400">→</span>
+                                                <span>{line.trim()}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                      </div>
                 </div>
             </div>
         )}
 
         <div className={`col-span-12 ${viewMode === 'day-menu' ? 'block' : 'hidden'}`}>
-            <MealCreator initialLoadId={initialLoadId} autoOpenLoad={autoOpenLoad} autoOpenNew={autoOpenNew} activeVisit={activeVisit} isEmbedded={true} externalTargetKcal={targetKcal} plannedExchanges={servings} externalWeeklyPlan={dayMenuPlan} onWeeklyPlanChange={setDayMenuPlan} externalNotes={derivedCombinedNotes} />
+            <MealCreator 
+                initialLoadId={initialLoadId} 
+                autoOpenLoad={autoOpenLoad} 
+                autoOpenNew={autoOpenNew} 
+                activeVisit={activeVisit} 
+                isEmbedded={true} 
+                externalTargetKcal={targetKcal} 
+                plannedExchanges={servings} 
+                externalWeeklyPlan={dayMenuPlan} 
+                onWeeklyPlanChange={setDayMenuPlan} 
+                externalGuidelines={currentGuidelines}
+                externalNotes={currentPlanNotes} 
+                dietTitle={selectedDiet?.name || 'Selected Diet'}
+            />
         </div>
 
       </div>

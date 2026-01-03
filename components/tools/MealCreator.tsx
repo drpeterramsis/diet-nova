@@ -9,7 +9,9 @@ import { SavedMeal, Client, ClientVisit } from "../../types";
 import Toast from "../Toast";
 import { FoodExchangeRow } from "../../data/exchangeData";
 
-// v2.0.242: Updated instructions layout - unified diet guidelines and added % kcal tracking to sidebar.
+/**
+ * v2.0.243 Clinical Data Structures
+ */
 export interface DayPlan {
     items: Record<string, PlannerItem[]>;
     meta: Record<string, MealMeta>;
@@ -44,7 +46,9 @@ interface MealCreatorProps {
     plannedExchanges?: Record<string, number>;
     externalWeeklyPlan?: WeeklyPlan;
     onWeeklyPlanChange?: React.Dispatch<React.SetStateAction<WeeklyPlan>>;
-    externalNotes?: string | null; 
+    externalGuidelines?: string | null; // v2.0.243: Separated Guidelines
+    externalNotes?: string | null;      // v2.0.243: Plan specific notes
+    dietTitle?: string;                 // v2.0.243: Name of the selected diet template
 }
 
 type MealTime = 'Pre-Breakfast' | 'Breakfast' | 'Morning Snack' | 'Lunch' | 'Afternoon Snack' | 'Dinner' | 'Late Snack';
@@ -226,7 +230,7 @@ interface PrintOptions {
 
 const MealCreator: React.FC<MealCreatorProps> = ({ 
     initialLoadId, autoOpenLoad, autoOpenNew, activeVisit, onNavigate,
-    isEmbedded, externalTargetKcal, plannedExchanges, externalWeeklyPlan, onWeeklyPlanChange, externalNotes
+    isEmbedded, externalTargetKcal, plannedExchanges, externalWeeklyPlan, onWeeklyPlanChange, externalGuidelines, externalNotes, dietTitle
 }) => {
   const { t, isRTL } = useLanguage();
   const { session, profile } = useAuth();
@@ -477,7 +481,6 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           let pVal = planned[g.key] || 0;
           if (g.key === 'fats' && pVal === 0) pVal = (planned['fatsPufa'] || 0) + (planned['fatsMufa'] || 0) + (planned['fatsSat'] || 0);
           
-          // v2.0.242: Calculate % kcal for used and total planned serves
           const kcalFactor = KCAL_FACTORS[g.key] || 0;
           const usedKcalPct = targetKcal > 0 ? ((used[g.key] || 0) * kcalFactor / targetKcal) * 100 : 0;
           const plannedKcalPct = targetKcal > 0 ? (pVal * kcalFactor / targetKcal) * 100 : 0;
@@ -720,7 +723,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                   </tbody>
               </table>
               {weeklyPlan.instructions && <div className="mb-6 break-inside-avoid text-[9px] border border-gray-400 p-2 rounded"><h3 className="font-bold text-gray-900 mb-1 border-b uppercase">Global Instructions</h3><div dangerouslySetInnerHTML={{ __html: weeklyPlan.instructions }} /></div>}
-              <div className="text-center text-[8px] text-gray-400 mt-10 border-t pt-2">Diet-Nova System • v2.0.242</div>
+              <div className="text-center text-[8px] text-gray-400 mt-10 border-t pt-2">Diet-Nova System • v2.0.243</div>
           </div>
       )}
 
@@ -728,7 +731,7 @@ const MealCreator: React.FC<MealCreatorProps> = ({
           {/* Side View: Fixed Sidebar logic */}
           <div className="xl:col-span-3 space-y-6 order-2 xl:order-1">
               <div className="sticky top-40 h-[calc(100vh-200px)] flex flex-col gap-6">
-                {/* 1. Exchange Control - v2.0.242: Enhanced with % kcal tracking */}
+                {/* 1. Exchange Control - v2.0.243: Enhanced with % kcal tracking */}
                 <div className="bg-white rounded-xl shadow-lg border border-purple-100 p-4 shrink-0">
                     <h3 className="font-bold text-purple-800 mb-4 flex items-center gap-2 border-b pb-2"><span>📋</span> Exchange Control</h3>
                     <div className="space-y-3 max-h-[250px] overflow-y-auto pr-1">
@@ -839,28 +842,43 @@ const MealCreator: React.FC<MealCreatorProps> = ({
                     <ProgressBar current={summary.mainOnlyKcal} target={targetKcal} label="Planned (Main)" unit="kcal" color="bg-green-600" />
                   </div>
 
-                  {/* v2.0.242: Updated Plan Instructions block with combined dynamic rules */}
-                  {isEmbedded && externalNotes && (
-                      <div className="mt-8 pt-4 border-t border-gray-100">
+                  {/**
+                   * v2.0.243 - Separated Guidelines and Plan Notes
+                   * Dynamic display based on standard diet type and individual plan customization.
+                   */}
+                  <div className="mt-8 pt-4 border-t border-gray-100 space-y-4">
+                      {isEmbedded && externalGuidelines && (
                           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded shadow-sm">
                               <div className="flex items-center gap-2 mb-2 text-yellow-800 font-bold text-xs uppercase tracking-wider">
-                                  <span>💡</span> Plan Instructions
+                                  <span>💡</span> {dietTitle || 'Diet'} Guidelines
                               </div>
                               <div className="text-[11px] text-yellow-900 space-y-1.5 leading-relaxed">
-                                  {externalNotes.split(';').map((line, idx) => {
-                                      const isWeekly = line.toLowerCase().includes('/ week');
-                                      const isImportant = line.includes('%') || line.toLowerCase().includes('must');
-                                      return (
-                                          <div key={idx} className={`flex gap-2 ${isWeekly ? 'text-blue-700 font-bold' : ''} ${isImportant ? 'font-bold' : ''}`}>
-                                              <span className={`${isImportant ? 'text-orange-500' : 'text-yellow-500'} mt-1`}>•</span>
-                                              <span>{line.trim()}</span>
-                                          </div>
-                                      );
-                                  })}
+                                  {externalGuidelines.split(';').map((line, idx) => (
+                                      <div key={idx} className="flex gap-2">
+                                          <span className="text-yellow-500 mt-1">•</span>
+                                          <span>{line.trim()}</span>
+                                      </div>
+                                  ))}
                               </div>
                           </div>
-                      </div>
-                  )}
+                      )}
+
+                      {isEmbedded && externalNotes && (
+                          <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded shadow-sm">
+                              <div className="flex items-center gap-2 mb-2 text-blue-800 font-bold text-xs uppercase tracking-wider">
+                                  <span>📝</span> Plan Notes
+                              </div>
+                              <div className="text-[11px] text-blue-900 space-y-1.5 leading-relaxed">
+                                  {externalNotes.split(';').map((line, idx) => (
+                                      <div key={idx} className="flex gap-2">
+                                          <span className="text-blue-400 mt-1">→</span>
+                                          <span>{line.trim()}</span>
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+                      )}
+                  </div>
               </div>
           </div>
       </div>
