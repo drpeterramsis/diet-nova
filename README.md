@@ -5,7 +5,13 @@ Diet-Nova is a comprehensive web application for nutritionists and dietitians, o
 
 ## Version History
 
-### v2.0.251 (Current)
+### v2.0.252 (Current)
+*   **Meal Planner Enhancement:**
+    *   **Diet Guidelines Tool:** Added a new reference tool accessible from the Meal Planner toolbar.
+    *   **Comprehensive Data:** Includes detailed guidelines for 10 major diet types (DASH, TLC, Mediterranean, Anti-Inflammatory, MIND, FODMAP, Gluten-Free, Lactose-Free, Low GI, Balanced).
+    *   **Detailed View:** Modal displays Focus, Nutrient Targets, Characteristics, and Clinical Notes for each diet.
+
+### v2.0.251
 *   **Simple Meal Builder Enhancement:**
     *   **Smart Save Options:** When saving a modified loaded meal, users are now prompted to either **Overwrite** the existing meal or **Save as New**, preventing accidental data loss.
 

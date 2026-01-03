@@ -8,6 +8,7 @@ import { SavedMeal, Client, ClientVisit } from '../../types';
 import Toast from '../Toast';
 import MealCreator, { WeeklyPlan, DEFAULT_WEEKLY_PLAN } from './MealCreator';
 import { DietType, DietPlanRow } from '../../data/dietTemplates';
+import DietGuidelinesModal from './DietGuidelinesModal';
 
 /**
  * v2.0.243 Clinical Maintenance Constants
@@ -106,6 +107,9 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
   const [viewMode, setViewMode] = useState<'calculator' | 'planner' | 'both' | 'day-menu'>('calculator');
   const [useFatBreakdown, setUseFatBreakdown] = useState(false);
   
+  // --- Diet Guidelines Modal State ---
+  const [showGuidelines, setShowGuidelines] = useState(false);
+
   // --- Diet Templates Cloud State ---
   const [dietTemplates, setDietTemplates] = useState<DietType[]>([]);
   const [isTemplatesLoading, setIsTemplatesLoading] = useState(true);
@@ -576,6 +580,10 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
     <div className="max-w-[1920px] mx-auto animate-fade-in">
       <Toast message={statusMsg} />
       
+      {showGuidelines && (
+          <DietGuidelinesModal onClose={() => setShowGuidelines(false)} />
+      )}
+
       {activeVisit && (
           <div className="bg-purple-50 border border-purple-200 p-4 rounded-xl mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm no-print">
               <div>
@@ -615,6 +623,13 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
         </div>
 
         <div className="flex gap-2 items-center">
+            <button 
+                onClick={() => setShowGuidelines(true)}
+                className="bg-blue-50 text-blue-600 border border-blue-200 w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm hover:bg-blue-100"
+                title="Diet Guidelines Reference"
+            >
+                <span className="text-xl">🥗</span>
+            </button>
             {session && (
                 <><button onClick={() => savePlan()} className="bg-blue-500 hover:bg-blue-600 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm" title={t.common.save + " (As Template)"}><span className="text-xl">💾</span></button>
                 <button onClick={() => { fetchPlans(); setShowLoadModal(true); }} className="bg-purple-500 hover:bg-purple-600 text-white w-10 h-10 rounded-lg transition flex items-center justify-center shadow-sm" title={t.common.load + " (Template)"}><span className="text-xl">📂</span></button></>
