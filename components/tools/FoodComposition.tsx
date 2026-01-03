@@ -666,7 +666,7 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                     </h1>
                     <p className="text-sm text-gray-500 flex items-center gap-2 flex-wrap">
                         Analyze food composition, check nutrition facts, and build meals.
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${dataSource === 'cloud' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border flex items-center gap-1 font-bold ${dataSource === 'cloud' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
                             {dataSource === 'cloud' ? '☁️ Cloud DB' : '💾 Local Data'}
                         </span>
                     </p>
@@ -709,8 +709,8 @@ const FoodComposition: React.FC<FoodCompositionProps> = ({ onClose }) => {
                         </button>
                     )}
                     {onClose && (
-                        <button onClick={onClose} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition text-sm font-medium whitespace-nowrap">
-                            Close
+                        <button onClick={onClose} className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition text-sm font-medium whitespace-nowrap flex items-center gap-2">
+                            <span>←</span> Back / Close
                         </button>
                     )}
                 </div>
