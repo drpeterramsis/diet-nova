@@ -27,36 +27,36 @@ export const dietGuidelinesData: DietGuideline[] = [
         name: "1. DASH Diet (Master Integration)",
         focus: "Blood pressure control, Sodium reduction, High Mineral Intake.",
         macronutrients: {
-            carb: "45 – 55%",
-            protein: "18%",
-            fat: "Total not specified (Low SFA)",
-            sfa: "6-9%",
+            carb: "45 – 55% (Focus on complex)",
+            protein: "18% (Lean focus)",
+            fat: "Total variable (Healthy Fats)",
+            sfa: "6-9% (Minimize)",
             pufa: "Up to 10%",
             mufa: "Up to 20%"
         },
         micronutrients: {
-            sodium: "Standard <2300 mg | Low <1500 mg",
-            fiber: "25 - 30 g (High Priority)",
+            sodium: "Standard < 2300 mg | Low < 1500 mg",
+            fiber: "25 – 30 g (High Priority)",
             cholesterol: "150 mg",
-            minerals: "K: 4700mg, Ca: 1250mg, Mg: 500mg"
+            minerals: "K: 4700mg | Ca: 1250mg | Mg: 500mg"
         },
         characteristics: [
-            "Hydration: 8 servings (glasses) daily [Essential]",
-            "Grains: 6-8 servings (Focus on Whole Grains)",
-            "Vegetables: 4-5 servings (High Potassium, Mg, Fiber)",
-            "Fruits: 4-5 servings (High Potassium, Mg, Vit C)",
-            "Lean Protein: ≤ 6 servings (Poultry, Fish, Plant)",
-            "Low-fat Dairy: 2-3 servings (Calcium goal)",
-            "Nuts & Seeds: 4-5 times per week (Mg, Energy)",
-            "Oils & Fats: 2-3 servings (Prioritize MUFA/PUFA)"
+            "✅ Essential: Hydration ➔ 8 Servings (glasses) daily.",
+            "🧘 Control: Lifestyle ➔ Daily stress control & limit alcohol.",
+            "🌾 High Fiber: Grains ➔ 6–8 Servings (Focus on Whole Grains).",
+            "🥦 High Priority: Vegetables ➔ 4–5 Servings (Rich in Potassium, Mg).",
+            "🍎 High Priority: Fruits ➔ 4–5 Servings (Rich in Potassium, Mg, Vit C).",
+            "🍗 Lean Focus: Meat & Fish ➔ ≤ 6 Servings daily (Fish 2x/week).",
+            "🥛 Calcium Goal: Low-fat Dairy ➔ 2–3 Servings (Skim milk, yogurt).",
+            "🥜 Plant Power: Nuts & Seeds ➔ 4–5 Times/week (Energy, Mg).",
+            "🥑 Healthy Fats: Oils ➔ 2–3 Servings (Prioritize MUFA/PUFA)."
         ],
         notes: [
-            "Red Meat: Strict Limit (Never exceed once per week)",
-            "Eggs: Max 4 yolks per week (Swap: 2 whites = 1 oz meat)",
-            "Sweets: Use sparingly (Avoid soda, white sugar)",
-            "Dressing Rule: 1 Tbsp regular = 1 sv; Low-fat = 1/2 sv; Fat-free = 0 sv",
-            "Lifestyle: Daily stress control and limit alcohol",
-            "Salt: 0.5 tsp = 1150mg sodium. Use herbs/spices instead."
+            "🛑 Strict Limit: Red Meat ➔ Never exceed once per week.",
+            "⚠️ Warning: Eggs ➔ Max 4 yolks per week (Swap: 2 whites = 1 oz meat).",
+            "🛑 Limit: Sweets ➔ Use sparingly (Avoid soda, sugar).",
+            "💡 Dressing Rule: 1 Tbsp regular = 1 sv; Low-fat = 1/2 sv; Fat-free = 0 sv.",
+            "🧂 Reference: 0.5 tsp salt = 1150 mg sodium."
         ]
     },
     {
@@ -64,30 +64,32 @@ export const dietGuidelinesData: DietGuideline[] = [
         name: "2. TLC Diet (Therapeutic Lifestyle Changes)",
         focus: "Lowering LDL-Cholesterol and Cardiovascular risk management.",
         macronutrients: {
-            carb: "50 – 55%",
-            protein: "15 – 20%",
+            carb: "50 – 55% (Low GI)",
+            protein: "15 – 20% (Soy emphasis)",
             fat: "25 – 35%",
-            sfa: "< 7% of total calories",
+            sfa: "< 7% (Strict Limit)",
             pufa: "Up to 10%",
             mufa: "Up to 20%"
         },
         micronutrients: {
-            cholesterol: "< 200 mg per day",
-            fiber: "20 – 30 g (10-25g Soluble/Viscous)",
+            cholesterol: "< 200 mg / day",
+            fiber: "20 – 30 g (10-25g Viscous/Soluble)",
             sodium: "< 2400 mg"
         },
         characteristics: [
-            "Plant Sterols/Stanols: 2g/day (Spreads/Capsules)",
-            "Soy Protein: 50g daily (22.5g per 1000 kcal)",
-            "Almonds: 50g daily (23g per 1000 kcal)",
-            "Soluble Fiber: Oats, barley, psyllium, okra, eggplant",
-            "Exercise: 30 minutes moderate activity daily"
+            "📉 LDL Lowering Portfolio Components:",
+            "• Plant Sterols/Stanols ➔ 2g daily (1g/1000kcal).",
+            "• Soy Protein ➔ 50g daily (22.5g/1000kcal).",
+            "• Almonds ➔ 50g daily (23g/1000kcal).",
+            "• Soluble Fiber ➔ 10–25g daily (Oats, psyllium, okra).",
+            "🏃 Physical Activity ➔ 30 mins moderate daily."
         ],
         notes: [
-            "Hypertriglyceridemia (High TG): Weight loss, limit added sugar <10%, limit fructose <100g.",
-            "Very High TG (>500mg/dl): Strict fat control, SFA <5%, Omega-3 >2g.",
-            "Glycemic Index: Always choose Low-GI carbs.",
-            "Avoid: Butter, red meat, coconut oil, organ meats (brain)."
+            "🩸 Hypertriglyceridemia (High TG) Mgmt:",
+            "• Borderline (150-199): Wt loss <5%.",
+            "• High (200-499): Wt loss 5-10%, Added Sugar <10%, Fructose <100g.",
+            "• Very High (>500): SFA <5%, Added Sugar <5%, Fructose <50g, Omega-3 >2g.",
+            "🛑 Avoid: Butter, red meat, coconut oil, organ meats (brain)."
         ]
     },
     {
@@ -97,7 +99,7 @@ export const dietGuidelinesData: DietGuideline[] = [
         macronutrients: {
             carb: "40 – 55% (High Fiber 27-37g)",
             protein: "15 – 20% (Plant/Fish emphasis)",
-            fat: "25 – 40%",
+            fat: "25 – 40% (High Healthy Fat)",
             sfa: "9 – 10% (Low)",
             mufa: "Should be 1/2 of total fat"
         },
@@ -105,18 +107,19 @@ export const dietGuidelinesData: DietGuideline[] = [
             fiber: "27 - 37 g"
         },
         characteristics: [
-            "Starches: 3-6 Servings/day (Whole grains base)",
-            "Produce: 3 Veg + 3 Fruit Servings/day (Antioxidant boost)",
-            "Healthy Fats: 1-4 Tbsp Extra Virgin Olive Oil/day",
-            "Plant Protein: Legumes, Nuts & Seeds 3 Servings/week",
-            "Seafood: 3 Servings/week (High Omega-3)",
-            "Dairy: 3 Servings/week (Cheese/Yogurt preferred)"
+            "✅ Base: Starches ➔ 3–6 Servings/day (Whole grains).",
+            "✅ Base: Produce ➔ 3 Veg + 3 Fruit Servings/day.",
+            "🫒 Healthy Fats ➔ 1–4 Tbsp Olive Oil/day (Principal fat).",
+            "🐟 Seafood ➔ 3 Servings/week (High Omega-3).",
+            "🥜 Plant Protein ➔ Legumes/Nuts 3 Servings/week.",
+            "⚠️ Moderate: Dairy ➔ 3 Servings/week (Cheese/Yogurt).",
+            "⚠️ Moderate: Poultry ➔ 3 Servings/week."
         ],
         notes: [
-            "Red Meat: < 2 servings per week (Limit strictly).",
-            "Eggs: 4-6 per week (Moderate).",
-            "Sweets & Sugar: Minimal / Very little.",
-            "Protection: Reduced risk of Stroke, Dementia, Alzheimer's."
+            "🛑 Strict Limit: Red Meat ➔ < 2 servings/week.",
+            "⚠️ Moderate: Eggs ➔ 4–6 per week (1/day max).",
+            "🍬 Limit: Sweets & Sugar ➔ Minimal / Very little.",
+            "🧠 Protection: Reduced risk of Stroke, Dementia, Alzheimer's."
         ]
     },
     {
@@ -229,10 +232,10 @@ export const dietGuidelinesData: DietGuideline[] = [
             "Big 3 Elements: Every main meal includes Cereal, Veg, Fruit"
         ],
         notes: [
-            "Model A: 40% C / 20% P / 40% F (Lower Carb)",
-            "Model B: 50-55% C / 20% P / 25-30% F (Higher Carb)",
-            "Model C: 50% C / 15% P / 35% F (Moderate)",
-            "Model D: 45% C / 15% P / 40% F (Higher Fat)",
+            "Option 1: 40% C / 20% P / 40% F (Lower Carb).",
+            "Option 2: 50-55% C / 20% P / 25-30% F (Higher Carb).",
+            "Option 3: 50% C / 15% P / 35% F (Moderate).",
+            "Option 4: 45% C / 15% P / 40% F (Higher Fat).",
             "Healthy Swaps: Replace butter/margarine with Olive/Canola oil."
         ]
     }

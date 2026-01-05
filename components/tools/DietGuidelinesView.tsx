@@ -99,7 +99,8 @@ const DietGuidelinesView: React.FC<DietGuidelinesViewProps> = ({ selectedId, onS
                                 <ul className="space-y-2">
                                     {selectedDiet.characteristics.map((char, idx) => (
                                         <li key={idx} className="text-sm text-gray-700 flex gap-2 items-start">
-                                            <span className="text-green-500 mt-1">✔</span>
+                                            {/* Don't render a default checkmark if text starts with one */}
+                                            {char.trim().startsWith('✅') || char.trim().startsWith('📉') || char.trim().startsWith('•') ? null : <span className="text-green-500 mt-1">✔</span>}
                                             <span>{char}</span>
                                         </li>
                                     ))}
@@ -112,7 +113,8 @@ const DietGuidelinesView: React.FC<DietGuidelinesViewProps> = ({ selectedId, onS
                                 <ul className="space-y-2">
                                     {selectedDiet.notes.map((note, idx) => (
                                         <li key={idx} className="text-sm text-gray-700 flex gap-2 items-start bg-yellow-50 p-2 rounded border border-yellow-100">
-                                            <span className="text-orange-500 mt-0.5">⚠️</span>
+                                            {/* Don't render default warning if note starts with emoji */}
+                                            {note.trim().startsWith('🛑') || note.trim().startsWith('⚠️') || note.trim().startsWith('🩸') || note.trim().startsWith('🍬') || note.trim().startsWith('🧠') ? null : <span className="text-orange-500 mt-0.5">⚠️</span>}
                                             <span>{note}</span>
                                         </li>
                                     ))}
