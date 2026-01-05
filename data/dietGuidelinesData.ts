@@ -24,8 +24,8 @@ export interface DietGuideline {
 export const dietGuidelinesData: DietGuideline[] = [
     {
         id: "dash",
-        name: "1. DASH Diet (Dietary Approaches to Stop Hypertension)",
-        focus: "Blood pressure control and sodium reduction.",
+        name: "1. DASH Diet (Master Integration)",
+        focus: "Blood pressure control, Sodium reduction, High Mineral Intake.",
         macronutrients: {
             carb: "45 – 55%",
             protein: "18%",
@@ -35,67 +35,88 @@ export const dietGuidelinesData: DietGuideline[] = [
             mufa: "Up to 20%"
         },
         micronutrients: {
-            sodium: "2300 mg or less (Lower: 1500 mg)",
-            fiber: "25 - 30 g",
+            sodium: "Standard <2300 mg | Low <1500 mg",
+            fiber: "25 - 30 g (High Priority)",
             cholesterol: "150 mg",
             minerals: "K: 4700mg, Ca: 1250mg, Mg: 500mg"
         },
         characteristics: [
-            "Whole grain: Depend on whole grains",
-            "Fibers: Increase fiber intake",
-            "Legumes: 4 to 5 Serving per week",
-            "Protein Source: Fish, legumes, nuts, poultry (Limit red meat)",
-            "Fats: Very limited fats",
-            "Dairy: Low fat dairy 2-3 serving/day (Milk + Cheese)",
-            "Vegetables: Fresh vegetables 4 to 5 serving per day (Source of K)",
-            "Fruits: Fresh fruits 4 to 5 serving per day (Source of K)"
+            "Hydration: 8 servings (glasses) daily [Essential]",
+            "Grains: 6-8 servings (Focus on Whole Grains)",
+            "Vegetables: 4-5 servings (High Potassium, Mg, Fiber)",
+            "Fruits: 4-5 servings (High Potassium, Mg, Vit C)",
+            "Lean Protein: ≤ 6 servings (Poultry, Fish, Plant)",
+            "Low-fat Dairy: 2-3 servings (Calcium goal)",
+            "Nuts & Seeds: 4-5 times per week (Mg, Energy)",
+            "Oils & Fats: 2-3 servings (Prioritize MUFA/PUFA)"
         ],
         notes: [
-            "Alcohol & Caffeine: Reduction required (due to xanthine)",
-            "Lower Sodium option: 1500 mg/day for high risk",
-            "Avoid: Pickled foods, canned goods, processed meats (Pastrami, sausage, burger)",
-            "ممنوع الأطعمة المخللة والمعلبة واللحوم المصنعة",
-            "زيادة البوتاسيوم والكالسيوم والمغنيسيوم يساعد في استرخاء الأوعية الدموية"
+            "Red Meat: Strict Limit (Never exceed once per week)",
+            "Eggs: Max 4 yolks per week (Swap: 2 whites = 1 oz meat)",
+            "Sweets: Use sparingly (Avoid soda, white sugar)",
+            "Dressing Rule: 1 Tbsp regular = 1 sv; Low-fat = 1/2 sv; Fat-free = 0 sv",
+            "Lifestyle: Daily stress control and limit alcohol",
+            "Salt: 0.5 tsp = 1150mg sodium. Use herbs/spices instead."
         ]
     },
     {
         id: "tlc",
         name: "2. TLC Diet (Therapeutic Lifestyle Changes)",
-        focus: "Lowering LDL-Cholesterol and Cardiovascular risk.",
+        focus: "Lowering LDL-Cholesterol and Cardiovascular risk management.",
         macronutrients: {
+            carb: "50 – 55%",
+            protein: "15 – 20%",
             fat: "25 – 35%",
-            sfa: "< 7% of total calories"
+            sfa: "< 7% of total calories",
+            pufa: "Up to 10%",
+            mufa: "Up to 20%"
         },
         micronutrients: {
             cholesterol: "< 200 mg per day",
-            fiber: "10g – 25g (Soluble)"
+            fiber: "20 – 30 g (10-25g Soluble/Viscous)",
+            sodium: "< 2400 mg"
         },
         characteristics: [
-            "Plant Sterols: 2g/day to block cholesterol absorption",
-            "Exercise: 30 minutes of moderate activity daily",
-            "Focus on MUFA/PUFA fats"
+            "Plant Sterols/Stanols: 2g/day (Spreads/Capsules)",
+            "Soy Protein: 50g daily (22.5g per 1000 kcal)",
+            "Almonds: 50g daily (23g per 1000 kcal)",
+            "Soluble Fiber: Oats, barley, psyllium, okra, eggplant",
+            "Exercise: 30 minutes moderate activity daily"
         ],
         notes: [
-            "Designed by the NIH for cholesterol management."
+            "Hypertriglyceridemia (High TG): Weight loss, limit added sugar <10%, limit fructose <100g.",
+            "Very High TG (>500mg/dl): Strict fat control, SFA <5%, Omega-3 >2g.",
+            "Glycemic Index: Always choose Low-GI carbs.",
+            "Avoid: Butter, red meat, coconut oil, organ meats (brain)."
         ]
     },
     {
         id: "mediterranean",
         name: "3. Mediterranean & Nordic Diets",
-        focus: "Longevity and healthy fats.",
+        focus: "CVD Prevention, Diabetes, Fatty Liver, Longevity.",
         macronutrients: {
-            // General balanced ratios usually apply
+            carb: "40 – 55% (High Fiber 27-37g)",
+            protein: "15 – 20% (Plant/Fish emphasis)",
+            fat: "25 – 40%",
+            sfa: "9 – 10% (Low)",
+            mufa: "Should be 1/2 of total fat"
         },
-        micronutrients: {},
+        micronutrients: {
+            fiber: "27 - 37 g"
+        },
         characteristics: [
-            "Primary Fat: Extra Virgin Olive Oil (Med) / Canola Oil (Nordic)",
-            "Carbs: Ancient grains (Farro/Bulgur), Rye, Barley, Oats",
-            "Protein: Seafood, Legumes, Cold-water fish, Wild Game",
-            "Phytochemicals: High intake of seasonal fruits and vegetables (6+ servings)",
-            "Red List: Red meat and sweets limited to few times per month"
+            "Starches: 3-6 Servings/day (Whole grains base)",
+            "Produce: 3 Veg + 3 Fruit Servings/day (Antioxidant boost)",
+            "Healthy Fats: 1-4 Tbsp Extra Virgin Olive Oil/day",
+            "Plant Protein: Legumes, Nuts & Seeds 3 Servings/week",
+            "Seafood: 3 Servings/week (High Omega-3)",
+            "Dairy: 3 Servings/week (Cheese/Yogurt preferred)"
         ],
         notes: [
-            "Alcohol: Moderate red wine consumption acceptable in Mediterranean version."
+            "Red Meat: < 2 servings per week (Limit strictly).",
+            "Eggs: 4-6 per week (Moderate).",
+            "Sweets & Sugar: Minimal / Very little.",
+            "Protection: Reduced risk of Stroke, Dementia, Alzheimer's."
         ]
     },
     {
@@ -192,20 +213,27 @@ export const dietGuidelinesData: DietGuideline[] = [
     },
     {
         id: "balanced",
-        name: "10. Balanced Diet",
-        focus: "General health maintenance and metabolic balance.",
+        name: "10. Balanced Diet (Standard Options)",
+        focus: "General health maintenance and metabolic balance. Flexible Models.",
         macronutrients: {
-            carb: "45% – 65%",
-            protein: "10% – 35%",
-            fat: "20% – 35%"
+            carb: "40% – 55%",
+            protein: "15% – 20%",
+            fat: "25% – 40%"
         },
         micronutrients: {
             sodium: "< 2300 mg"
         },
         characteristics: [
             "The Plate Method: 1/2 Veg, 1/4 Lean Protein, 1/4 Whole Grains",
-            "Hydration: 2–3 Liters of water daily"
+            "Hydration: 2–3 Liters of water daily",
+            "Big 3 Elements: Every main meal includes Cereal, Veg, Fruit"
         ],
-        notes: []
+        notes: [
+            "Model A: 40% C / 20% P / 40% F (Lower Carb)",
+            "Model B: 50-55% C / 20% P / 25-30% F (Higher Carb)",
+            "Model C: 50% C / 15% P / 35% F (Moderate)",
+            "Model D: 45% C / 15% P / 40% F (Higher Fat)",
+            "Healthy Swaps: Replace butter/margarine with Olive/Canola oil."
+        ]
     }
 ];

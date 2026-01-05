@@ -724,7 +724,7 @@ export const MealPlanner: React.FC<MealPlannerProps> = ({ initialTargetKcal, onB
             <button onClick={() => setViewMode('planner')} className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'planner' ? 'bg-white text-[var(--color-primary)] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>{t.mealPlannerTool.modePlanner}</button>
             <button onClick={() => setViewMode('day-menu')} className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'day-menu' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>🥗 Day Menu</button>
             <button onClick={() => setViewMode('advanced-day-menu')} className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'advanced-day-menu' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>🔬 Advanced Day</button>
-            <button onClick={() => setViewMode('guidelines')} className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'guidelines' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>📚 Guidelines</button>
+            <button onClick={() => setViewMode('guidelines')} className={`px-4 py-2 rounded-md text-sm font-medium transition ${viewMode === 'guidelines' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>📚 Diet Guide</button>
         </div>
 
         <div className="flex gap-2 items-center">

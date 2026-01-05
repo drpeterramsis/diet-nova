@@ -5,7 +5,13 @@ Diet-Nova is a comprehensive web application for nutritionists and dietitians, o
 
 ## Version History
 
-### v2.0.258 (Current)
+### v2.0.259 (Current)
+*   **Diet Guide Enhancement:**
+    *   **New "Diet Guide" Title:** Renamed from "Guidelines" to reflect comprehensive content.
+    *   **Master Integration:** Updated DASH, TLC, and Mediterranean diet data with the latest "Master Integration Guide" specifications, including precise clinical targets, detailed serving instructions, and rich notes.
+    *   **Balanced Diet Update:** Refined the "Balanced" diet entry to include the new standard flexible models (A, B, C, D) for macronutrient distribution.
+
+### v2.0.258
 *   **Meal Planner Update:**
     *   **Full Food Group Names:** The "Meal Breakdown" summary table now displays full descriptive names for food groups instead of shortened codes.
     *   **Specific Updates:**

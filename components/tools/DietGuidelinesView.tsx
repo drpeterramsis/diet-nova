@@ -17,7 +17,7 @@ const DietGuidelinesView: React.FC<DietGuidelinesViewProps> = ({ selectedId, onS
             <div className="w-full md:w-1/3 lg:w-1/4 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-200 overflow-y-auto">
                 <div className="p-4 bg-gray-100 border-b border-gray-200 sticky top-0 z-10">
                     <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                        <span>🥗</span> Select Diet
+                        <span>🥗</span> Diet Guide Reference
                     </h3>
                 </div>
                 <div className="p-2 space-y-1">
